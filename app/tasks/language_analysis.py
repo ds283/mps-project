@@ -467,6 +467,74 @@ def _strip_math_lines(text: str) -> str:
     return "\n".join(kept)
 
 
+_MIN_CODE_BLOCK_LINES = 3  # runs shorter than this are kept (false-positive protection)
+
+
+def _strip_code_blocks(text: str, min_run: int = _MIN_CODE_BLOCK_LINES) -> str:
+    """Remove contiguous blocks of source-code lines from *text*.
+
+    Uses _looks_like_code() per line, but only strips lines that belong to a
+    run of >= min_run consecutive code-like lines.  Blank lines inside a run
+    are treated as neutral and do not break it — a blank line between two code
+    lines stays in the run, matching how code is commonly extracted from PDFs.
+
+    Mirrors strip_code_blocks() in language_analysis_core.py.
+    """
+    lines = text.splitlines()
+
+    # Tag each line: True = code-like, False = prose, None = blank
+    tags: list[bool | None] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            tags.append(None)
+        else:
+            tags.append(_looks_like_code(stripped))
+
+    # Resolve blank lines: a blank line is treated as code only when both its
+    # preceding and following non-blank lines are code-like.
+    # Forward pass: tentatively propagate True through blanks.
+    resolved: list[bool] = [False] * len(tags)
+    last = False
+    for i, t in enumerate(tags):
+        if t is True:
+            last = True
+        elif t is False:
+            last = False
+        else:  # blank
+            pass  # keep last unchanged
+        resolved[i] = last
+
+    # Backward pass: un-mark blank lines whose next non-blank line is prose.
+    last = False
+    for i in range(len(tags) - 1, -1, -1):
+        t = tags[i]
+        if t is True:
+            last = True
+        elif t is False:
+            last = False
+        # blank inherits from forward pass unless backward pass disagrees
+        if tags[i] is None and not last:
+            resolved[i] = False
+
+    # Remove runs of True that are long enough.
+    keep = [True] * len(lines)
+    i = 0
+    while i < len(resolved):
+        if resolved[i]:
+            j = i
+            while j < len(resolved) and resolved[j]:
+                j += 1
+            if (j - i) >= min_run:
+                for k in range(i, j):
+                    keep[k] = False
+            i = j
+        else:
+            i += 1
+
+    return "\n".join(line for line, k in zip(lines, keep) if k)
+
+
 def _word_count(main_text: str) -> int:
     """
     Count words in *main_text*, excluding caption lines.
@@ -599,11 +667,14 @@ def _compute_mattr_mtld(main_text: str) -> tuple[float | None, float | None]:
     Compute MATTR (window=100) and MTLD for *main_text*.
     Returns (mattr, mtld), either of which may be None on failure.
     Requires at least 100 words; fewer returns (None, None).
+
+    Code blocks are stripped before analysis to prevent source-code identifiers
+    from artificially inflating vocabulary diversity.
     """
     try:
         from lexicalrichness import LexicalRichness
 
-        lex = LexicalRichness(main_text)
+        lex = LexicalRichness(_strip_code_blocks(main_text))
         if lex.words < 100:
             print(
                 f"_compute_matr_mtld: too few words to compute MATTR and MTLD statistics ({lex.words} words detected)"

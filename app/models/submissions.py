@@ -2941,15 +2941,37 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         # --- AI USE METRICS ---
         au = data.get(self.RISK_AI_USE, {})
         if au.get("present", False):
-            elevated = au.get("elevated_metrics", [])
             metric_labels = {"mattr": "MATTR", "mtld": "MTLD", "burstiness": "Burstiness", "sentence_cv": "Sentence-length CV"}
+            ai_concern = au.get("ai_concern", "unknown")
+            sigma = au.get("mahalanobis_sigma")
+            pvalue = au.get("mahalanobis_pvalue")
+            # Build description from Mahalanobis distance result
+            concern_label = {"medium": "medium", "high": "high"}.get(ai_concern, ai_concern)
+            if sigma is not None and pvalue is not None:
+                description = (
+                    f"The lexical metrics for this submission are statistically unusual compared to "
+                    f"the pre-LLM reference distribution (Mahalanobis distance σ\u202f=\u202f{sigma:.2f}, "
+                    f"p\u202f=\u202f{pvalue:.4f}), indicating a {concern_label} AI-use concern. "
+                    f"Please review the submission and resolve this flag if the concern has been addressed."
+                )
+            else:
+                description = (
+                    f"The lexical metrics for this submission indicate a {concern_label} AI-use concern. "
+                    f"Please review the submission and resolve this flag if the concern has been addressed."
+                )
+            # Summary: lead with Mahalanobis result, then per-metric breakdown
             summary = []
+            if sigma is not None:
+                summary.append(("Mahalanobis σ", f"{sigma:.2f}"))
+            if pvalue is not None:
+                summary.append(("p-value", f"{pvalue:.4f}"))
+            summary.append(("Concern level", concern_label.capitalize()))
             for m in ("mattr", "mtld", "burstiness", "sentence_cv"):
                 flag = flags.get(f"{m}_flag", "ok")
                 val = metrics.get(m)
                 label_str = metric_labels.get(m, m)
                 flag_str = {"ok": "Normal", "note": "Elevated", "strong": "Strongly elevated"}.get(flag, flag)
-                summary.append((label_str, f"{val:.3f}" if val is not None else "—" + f" ({flag_str})"))
+                summary.append((label_str, (f"{val:.3f}" if val is not None else "—") + f" ({flag_str})"))
             items.append({
                 "key": self.RISK_AI_USE,
                 "label": self.RISK_FACTOR_LABELS[self.RISK_AI_USE],
@@ -2959,7 +2981,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 "resolved_at": au.get("resolved_at"),
                 "annotation": au.get("annotation"),
                 "severity": "warning",
-                "description": f"Two or more AI-use metrics ({', '.join(metric_labels[m] for m in elevated)}) are elevated, which may indicate AI-assisted writing.",
+                "description": description,
                 "summary_items": summary,
             })
 

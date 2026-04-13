@@ -664,15 +664,21 @@ def recalculate_ai_concern(tenant_id):
         pclass_ids = [p.id for p in form.project_classes.data] if form.project_classes.data else None
         years = [int(y) for y in form.years.data] if form.years.data else None
 
+        full_recalculate = form.full_recalculate.data
+        task_description = (
+            "Re-process cached extracted text and recompute all lexical metrics before reclassifying."
+            if full_recalculate
+            else "Re-evaluate Mahalanobis AI concern flags for existing submissions."
+        )
         task_id = register_task(
             f"Recalculate AI concern — {tenant.name}",
             owner=current_user,
-            description="Re-evaluate Mahalanobis AI concern flags for existing submissions.",
+            description=task_description,
         )
         if task_id is not None:
             celery = current_app.extensions["celery"]
             t = celery.tasks["app.tasks.language_analysis.recalculate_ai_concern"]
-            t.apply_async(args=[task_id, tenant_id, pclass_ids, years], queue="default")
+            t.apply_async(args=[task_id, tenant_id, pclass_ids, years, full_recalculate], queue="default")
             flash(
                 "Recalculation task has been launched. It will run in the background.",
                 "success",

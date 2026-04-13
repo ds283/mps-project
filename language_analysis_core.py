@@ -325,6 +325,74 @@ def strip_math_lines(text: str) -> str:
     return "\n".join(kept)
 
 
+_MIN_CODE_BLOCK_LINES = 3  # runs shorter than this are kept (false-positive protection)
+
+
+def strip_code_blocks(text: str, min_run: int = _MIN_CODE_BLOCK_LINES) -> str:
+    """Remove contiguous blocks of source-code lines from *text*.
+
+    Uses _looks_like_code() per line, but only strips lines that belong to a
+    run of >= min_run consecutive code-like lines.  Blank lines inside a run
+    are treated as neutral and do not break it — a blank line between two code
+    lines stays in the run, matching how code is commonly extracted from PDFs.
+
+    Mirrors _strip_code_blocks() in app/tasks/language_analysis.py.
+    """
+    lines = text.splitlines()
+
+    # Tag each line: True = code-like, False = prose, None = blank
+    tags: list[bool | None] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            tags.append(None)
+        else:
+            tags.append(_looks_like_code(stripped))
+
+    # Resolve blank lines: a blank line is treated as code only when both its
+    # preceding and following non-blank lines are code-like.
+    # Forward pass: tentatively propagate True through blanks.
+    resolved: list[bool] = [False] * len(tags)
+    last = False
+    for i, t in enumerate(tags):
+        if t is True:
+            last = True
+        elif t is False:
+            last = False
+        else:  # blank
+            pass  # keep last unchanged
+        resolved[i] = last
+
+    # Backward pass: un-mark blank lines whose next non-blank line is prose.
+    last = False
+    for i in range(len(tags) - 1, -1, -1):
+        t = tags[i]
+        if t is True:
+            last = True
+        elif t is False:
+            last = False
+        # blank inherits from forward pass unless backward pass disagrees
+        if tags[i] is None and not last:
+            resolved[i] = False
+
+    # Remove runs of True that are long enough.
+    keep = [True] * len(lines)
+    i = 0
+    while i < len(resolved):
+        if resolved[i]:
+            j = i
+            while j < len(resolved) and resolved[j]:
+                j += 1
+            if (j - i) >= min_run:
+                for k in range(i, j):
+                    keep[k] = False
+            i = j
+        else:
+            i += 1
+
+    return "\n".join(line for line, k in zip(lines, keep) if k)
+
+
 # ---------------------------------------------------------------------------
 # Word count
 # ---------------------------------------------------------------------------
@@ -440,12 +508,15 @@ def check_figure_table_refs(text: str) -> tuple[list[str], list[str]]:
 def compute_mattr_mtld(text: str) -> tuple[float | None, float | None]:
     """Compute MATTR (window=100) and MTLD (threshold=0.72) on *text*.
 
+    Code blocks are stripped before analysis to prevent source-code identifiers
+    from artificially inflating vocabulary diversity.
     Returns (None, None) when fewer than 100 words are present or on error.
     Mirrors _compute_mattr_mtld() in app/tasks/language_analysis.py.
     """
     try:
         from lexicalrichness import LexicalRichness  # noqa: PLC0415
-        lex = LexicalRichness(text)
+        clean = strip_code_blocks(text)
+        lex = LexicalRichness(clean)
         if lex.words < 100:
             return None, None
         return float(lex.mattr(window_size=100)), float(lex.mtld(threshold=0.72))

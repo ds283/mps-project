@@ -116,6 +116,15 @@ def RecalculateAIConcernFormFactory(tenant_id: int):
             description="Select which academic years to recalculate. Leave all selected to recalculate all years.",
         )
 
+        full_recalculate = BooleanField(
+            "Full recalculation (re-process cached text and recompute all lexical metrics)",
+            default=False,
+            description="Re-process the cached extracted text through the current metric "
+                        "pipeline (MATTR, MTLD, burstiness, sentence CV) before reclassifying. "
+                        "Picks up algorithm improvements in the metric implementation. "
+                        "Slower than reclassification only.",
+        )
+
         submit = SubmitField("Recalculate AI concern")
 
     return RecalculateAIConcernForm

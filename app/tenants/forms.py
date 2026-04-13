@@ -55,7 +55,14 @@ def CalibrateAIConcernFormFactory(tenant_id: int):
     """
 
     def _get_pclasses():
-        return ProjectClass.query.filter_by(tenant_id=tenant_id).order_by(ProjectClass.name).all()
+        return (
+            ProjectClass.query.filter(
+                ProjectClass.tenant_id == tenant_id,
+                ProjectClass.publish.is_(True),
+            )
+            .order_by(ProjectClass.name)
+            .all()
+        )
 
     class CalibrateAIConcernForm(Form):
         project_classes = QuerySelectMultipleField(
@@ -85,7 +92,14 @@ def RecalculateAIConcernFormFactory(tenant_id: int):
     """
 
     def _get_pclasses():
-        return ProjectClass.query.filter_by(tenant_id=tenant_id).order_by(ProjectClass.name).all()
+        return (
+            ProjectClass.query.filter(
+                ProjectClass.tenant_id == tenant_id,
+                ProjectClass.publish.is_(True),
+            )
+            .order_by(ProjectClass.name)
+            .all()
+        )
 
     class RecalculateAIConcernForm(Form):
         project_classes = QuerySelectMultipleField(

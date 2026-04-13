@@ -323,7 +323,8 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
             except (TypeError, ValueError):
                 pass
 
-        if record.has_unresolved_risk_factors:
+        ai_use = record.risk_factors_data.get(record.RISK_AI_USE, {})
+        if ai_use.get("present", False) and not ai_use.get("resolved", False):
             n_ai_flagged += 1
 
     def _stats(values: List[float]) -> Optional[Dict]:

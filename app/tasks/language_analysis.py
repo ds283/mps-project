@@ -2998,7 +2998,9 @@ def register_language_analysis_tasks(celery):
           6. Re-runs compute_risk_factors().
           7. Commits in batches of 50.
 
-        Records without cached _extracted_text are skipped.
+        When _extracted_text is absent (removed by finalize() after the original
+        analysis), the report asset is re-downloaded from the object store.
+        Records with no report asset or a missing object-store file are skipped.
         Per-record errors are caught so that the chord callback always fires.
 
         Returns {"updated": int, "skipped": int, "errors": int}.
@@ -3032,14 +3034,47 @@ def register_language_analysis_tasks(celery):
 
                 la = record.language_analysis_data
                 raw_text = la.get("_extracted_text")
-                if not raw_text:
-                    current_app.logger.warning(
-                        f"recalculate_ai_concern_batch: record #{record_id} has no cached extracted text — skipping"
-                    )
-                    skipped += 1
-                    continue
 
-                # Re-process from cached text using the current pipeline.
+                if not raw_text:
+                    # Cached text was removed by finalize() after the original analysis.
+                    # Fall back to re-downloading the report asset from the object store.
+                    if record.report is None:
+                        current_app.logger.warning(
+                            f"recalculate_ai_concern_batch: record #{record_id} has no report asset — skipping"
+                        )
+                        skipped += 1
+                        continue
+
+                    asset = record.report
+                    storage = current_app.config["OBJECT_STORAGE_ASSETS"]
+                    adapter = AssetCloudAdapter(
+                        asset,
+                        storage,
+                        audit_data=f"recalculate_ai_concern_batch (record #{record_id})",
+                    )
+                    if not adapter.exists():
+                        current_app.logger.warning(
+                            f"recalculate_ai_concern_batch: report asset not found in object store for record #{record_id} — skipping"
+                        )
+                        skipped += 1
+                        continue
+
+                    mimetype = (asset.mimetype or "").lower()
+                    with adapter.download_to_scratch() as scratch:
+                        path = str(scratch.path)
+                        if "pdf" in mimetype or path.lower().endswith(".pdf"):
+                            raw_text, _ = _extract_pdf_text(path)
+                        elif (
+                            "word" in mimetype
+                            or "officedocument" in mimetype
+                            or path.lower().endswith((".docx", ".doc"))
+                        ):
+                            raw_text, _ = _extract_docx_text(path)
+                        else:
+                            raw_text, _ = _extract_pdf_text(path)
+                    raw_text = unicodedata.normalize("NFKC", raw_text)
+
+                # Re-process from text using the current pipeline.
                 _core, _references, _appendices = _split_document(raw_text)
                 content_text = (_core + "\n\n" + _appendices) if _appendices else _core
                 clean_content = _strip_math_lines(content_text)

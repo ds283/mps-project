@@ -91,7 +91,8 @@
                     before reclassifying. Work is distributed across Celery workers by project class and year.
                     This is significantly slower than reclassification only, but picks up any
                     improvements made to the metric implementation.
-                    Submissions without cached text (very old analyses) will be skipped.
+                    Where cached text is no longer available the report PDF will be
+                    re-downloaded from the object store.
                 </div>
             </div>
 

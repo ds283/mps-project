@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 from flask_login import current_user
 from sqlalchemy import and_, or_
@@ -57,7 +57,10 @@ def GetActiveDegreeTypes():
     return DegreeType.query.filter_by(active=True).order_by(DegreeType.name.asc())
 
 
-def GetActiveDegreeProgrammes(allowed_tenants: Optional[List[Tenant]]):
+def GetActiveDegreeProgrammes(allowed_tenants: Optional[Union[List[Tenant], Tenant]]):
+    if not isinstance(allowed_tenants, Iterable):
+        allowed_tenants = [allowed_tenants]
+
     if len(allowed_tenants) == 0:
         raise RuntimeError(
             "GetActiveDegreeProgrammes requires at least one allowed tenant"
@@ -621,6 +624,9 @@ def BuildCanvasLoginUserName(data: FacultyData):
 
 
 def GetActiveTags(allowed_tenants: List[Tenant]):
+    if not isinstance(allowed_tenants, Iterable):
+        allowed_tenants = [allowed_tenants]
+
     if len(allowed_tenants) == 0:
         raise RuntimeError("GetActiveTags requires at least one allowed tenant")
 
@@ -722,12 +728,19 @@ def GetWorkflowTemplates(template_type, pclass_id=None, tenant_id=None):
     elif tenant_id is not None:
         q = q.filter(
             or_(
-                and_(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id == tenant_id),
-                and_(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None)),
+                and_(
+                    EmailTemplate.pclass_id.is_(None),
+                    EmailTemplate.tenant_id == tenant_id,
+                ),
+                and_(
+                    EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None)
+                ),
             )
         )
     else:
-        q = q.filter(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None))
+        q = q.filter(
+            EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None)
+        )
 
     return q.order_by(
         EmailTemplate.pclass_id.desc(),

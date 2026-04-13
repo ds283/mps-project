@@ -204,6 +204,11 @@ _DOI = re.compile(r"\bdoi:\s*10\.\d{4,}", re.IGNORECASE)
 
 _MIN_APPENDIX_FRACTION = 0.25
 
+# Code-listing detection used to exclude source-code sentences from sentence CV.
+_CODE_CHARS = frozenset("=()[]{}#")
+_CODE_CHAR_RATIO_THRESHOLD = 0.04   # >4 % of chars are code punctuation
+_UNDERSCORE_TOKEN_THRESHOLD = 0.15  # >15 % of whitespace-split tokens contain '_'
+
 # ---------------------------------------------------------------------------
 # spaCy model — lazy singleton
 # ---------------------------------------------------------------------------
@@ -493,10 +498,32 @@ def compute_burstiness(raw_text: str) -> float | None:
 # ---------------------------------------------------------------------------
 
 
+def _looks_like_code(text: str) -> bool:
+    """Return True when *text* looks more like source code than prose.
+
+    Two independent signals, either of which is sufficient:
+      1. High density of code-typical punctuation (=, (, ), [, ], {, }, #).
+      2. High fraction of whitespace-split tokens that contain an underscore
+         (Python/C-style identifiers).
+    """
+    if not text:
+        return False
+    code_ratio = sum(1 for ch in text if ch in _CODE_CHARS) / len(text)
+    if code_ratio > _CODE_CHAR_RATIO_THRESHOLD:
+        return True
+    tokens = text.split()
+    if tokens:
+        underscore_ratio = sum(1 for t in tokens if "_" in t) / len(tokens)
+        if underscore_ratio > _UNDERSCORE_TOKEN_THRESHOLD:
+            return True
+    return False
+
+
 def compute_sentence_cv(clean_content_text: str) -> float | None:
     """Compute coefficient of variation of sentence lengths (CV = σ/μ).
 
     Sentence length = count of non-punctuation, non-space tokens per sentence.
+    Sentences that look like source code are excluded before computing the CV.
     Returns None if spaCy is unavailable or fewer than 5 sentences are found.
     Mirrors _compute_sentence_cv() in app/tasks/language_analysis.py.
     """
@@ -509,6 +536,7 @@ def compute_sentence_cv(clean_content_text: str) -> float | None:
     lengths = [
         sum(1 for tok in sent if not tok.is_punct and not tok.is_space)
         for sent in doc.sents
+        if not _looks_like_code(sent.text)
     ]
     lengths = [ln for ln in lengths if ln > 1]
     if len(lengths) < 5:

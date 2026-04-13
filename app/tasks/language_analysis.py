@@ -400,6 +400,11 @@ def _split_document(raw_text: str) -> tuple[str, str, str]:
 
 _ENGLISH_WORD = re.compile(r"[a-zA-Z]{5,}")
 
+# Code-listing detection used to exclude source-code sentences from sentence CV.
+_CODE_CHARS = frozenset("=()[]{}#")
+_CODE_CHAR_RATIO_THRESHOLD = 0.04   # >4 % of chars are code punctuation
+_UNDERSCORE_TOKEN_THRESHOLD = 0.15  # >15 % of whitespace-split tokens contain '_'
+
 
 def _strip_math_lines(text: str) -> str:
     """
@@ -658,6 +663,27 @@ def _compute_burstiness(text: str) -> tuple[dict, float | None]:
     return group_results, aggregate
 
 
+def _looks_like_code(text: str) -> bool:
+    """Return True when *text* looks more like source code than prose.
+
+    Two independent signals, either of which is sufficient:
+      1. High density of code-typical punctuation (=, (, ), [, ], {, }, #).
+      2. High fraction of whitespace-split tokens that contain an underscore
+         (Python/C-style identifiers).
+    """
+    if not text:
+        return False
+    code_ratio = sum(1 for ch in text if ch in _CODE_CHARS) / len(text)
+    if code_ratio > _CODE_CHAR_RATIO_THRESHOLD:
+        return True
+    tokens = text.split()
+    if tokens:
+        underscore_ratio = sum(1 for t in tokens if "_" in t) / len(tokens)
+        if underscore_ratio > _UNDERSCORE_TOKEN_THRESHOLD:
+            return True
+    return False
+
+
 def _compute_sentence_cv(text: str) -> float | None:
     """
     Compute the coefficient of variation (CV = σ/μ) of sentence lengths for *text*.
@@ -665,6 +691,9 @@ def _compute_sentence_cv(text: str) -> float | None:
     Sentence length is measured as the number of non-punctuation, non-space tokens
     per sentence, using spaCy's sentence segmentation.  Returns None if fewer than
     5 sentences are found (insufficient data for a stable estimate).
+
+    Sentences that look like source code (high code-punctuation density or high
+    underscore-identifier fraction) are excluded before computing the CV.
     """
     nlp = _get_nlp()
     doc = nlp(text)
@@ -672,6 +701,7 @@ def _compute_sentence_cv(text: str) -> float | None:
     lengths = [
         sum(1 for tok in sent if not tok.is_punct and not tok.is_space)
         for sent in doc.sents
+        if not _looks_like_code(sent.text)
     ]
     # Discard empty or single-token sentences (e.g. section headings misread as sentences)
     lengths = [ln for ln in lengths if ln > 1]

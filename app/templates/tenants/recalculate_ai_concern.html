@@ -18,6 +18,15 @@
                 selectionCssClass: 'select2--small',
                 dropdownCssClass: 'select2--small',
             });
+            function toggleFullRecalcWarning() {
+                if ($('#full_recalculate').is(':checked')) {
+                    $('#full_recalculate_warning').show();
+                } else {
+                    $('#full_recalculate_warning').hide();
+                }
+            }
+            $('#full_recalculate').on('change', toggleFullRecalcWarning);
+            toggleFullRecalcWarning();
         });
     </script>
 {% endblock %}
@@ -68,6 +77,22 @@
 
             <div class="mb-3">
                 {{ wtf.render_field(form.years) }}
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.full_recalculate(class="form-check-input", id="full_recalculate") }}
+                    {{ form.full_recalculate.label(class="form-check-label") }}
+                </div>
+                <div id="full_recalculate_warning" class="alert alert-secondary small py-2 mt-2" style="display:none">
+                    <i class="fas fa-clock fa-fw me-1"></i>
+                    <strong>Full recalculation</strong> re-processes the cached extracted text for each
+                    submission through the current metric pipeline (MATTR, MTLD, burstiness, sentence CV)
+                    before reclassifying. Work is distributed across Celery workers by project class and year.
+                    This is significantly slower than reclassification only, but picks up any
+                    improvements made to the metric implementation.
+                    Submissions without cached text (very old analyses) will be skipped.
+                </div>
             </div>
 
             <div class="mt-3">

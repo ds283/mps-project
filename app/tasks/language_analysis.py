@@ -16,7 +16,7 @@ from datetime import datetime
 
 import numpy as np
 from billiard.exceptions import SoftTimeLimitExceeded
-from celery import states
+from celery import chord, group as cgroup, states
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -2946,25 +2946,217 @@ def register_language_analysis_tasks(celery):
             )
 
     # ---------------------------------------------------------------------------
+    # Helpers shared by both recalculate modes
+    # ---------------------------------------------------------------------------
+
+    def _reclassify_record(record, calibration) -> bool:
+        """Re-run _ai_concern_flag and risk factors for *record* using stored metrics.
+
+        Returns True on success.  Caller is responsible for committing.
+        """
+        la = record.language_analysis_data
+        metrics = la.get("metrics", {})
+        flags = la.get("flags", {})
+
+        ai_result = _ai_concern_flag(
+            metrics.get("mattr"),
+            metrics.get("mtld"),
+            metrics.get("sentence_cv"),
+            calibration,
+        )
+        flags["ai_concern"] = ai_result["concern"]
+        flags["mahalanobis_sigma"] = ai_result["sigma"]
+        flags["mahalanobis_pvalue"] = ai_result["p_value"]
+        la["flags"] = flags
+        record.set_language_analysis_data(la)
+
+        try:
+            config = record.period.config if record.period else None
+            record.compute_risk_factors(config)
+        except Exception as exc:
+            current_app.logger.warning(
+                f"recalculate_ai_concern: could not recompute risk factors for record #{record.id}: {exc}"
+            )
+        return True
+
+    # ---------------------------------------------------------------------------
+    # Fan-out sub-task: process one pclass×year batch for full metric recompute
+    # ---------------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30)
-    def recalculate_ai_concern(self, task_id: str, tenant_id: int, pclass_ids=None, years=None):
+    def recalculate_ai_concern_batch(self, task_id: str, tenant_id: int, record_ids: list):
+        """
+        Process a batch of SubmissionRecord IDs for full lexical-metrics recomputation.
+
+        For each record the task:
+          1. Reads _extracted_text from the cached language_analysis JSON blob.
+          2. Re-runs _split_document, _strip_math_lines.
+          3. Recomputes MATTR, MTLD, burstiness, and sentence CV via the current
+             pipeline implementations (including any code-block filtering).
+          4. Updates metric values and classification flags in the JSON blob.
+          5. Re-evaluates the Mahalanobis AI concern flag.
+          6. Re-runs compute_risk_factors().
+          7. Commits in batches of 50.
+
+        Records without cached _extracted_text are skipped.
+        Per-record errors are caught so that the chord callback always fires.
+
+        Returns {"updated": int, "skipped": int, "errors": int}.
+        """
+        updated = skipped = errors = 0
+
+        try:
+            tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_id).first()
+        except SQLAlchemyError as exc:
+            current_app.logger.exception(
+                f"recalculate_ai_concern_batch: DB error loading tenant #{tenant_id}", exc_info=exc
+            )
+            return {"updated": 0, "skipped": len(record_ids), "errors": 0}
+
+        if tenant is None:
+            current_app.logger.error(f"recalculate_ai_concern_batch: Tenant #{tenant_id} not found")
+            return {"updated": 0, "skipped": len(record_ids), "errors": 0}
+
+        calibration = tenant.ai_calibration_data
+        if calibration is None:
+            current_app.logger.warning("recalculate_ai_concern_batch: no calibration data — skipping batch")
+            return {"updated": 0, "skipped": len(record_ids), "errors": 0}
+
+        for i, record_id in enumerate(record_ids, start=1):
+            try:
+                record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+                if record is None:
+                    current_app.logger.warning(f"recalculate_ai_concern_batch: record #{record_id} not found")
+                    skipped += 1
+                    continue
+
+                la = record.language_analysis_data
+                raw_text = la.get("_extracted_text")
+                if not raw_text:
+                    current_app.logger.warning(
+                        f"recalculate_ai_concern_batch: record #{record_id} has no cached extracted text — skipping"
+                    )
+                    skipped += 1
+                    continue
+
+                # Re-process from cached text using the current pipeline.
+                _core, _references, _appendices = _split_document(raw_text)
+                content_text = (_core + "\n\n" + _appendices) if _appendices else _core
+                clean_content = _strip_math_lines(content_text)
+
+                mattr, mtld = _compute_mattr_mtld(clean_content)
+                burstiness_groups, burstiness = _compute_burstiness(raw_text)
+                sentence_cv = _compute_sentence_cv(clean_content)
+
+                metrics = la.get("metrics", {})
+                metrics["mattr"] = mattr
+                metrics["mtld"] = mtld
+                metrics["burstiness"] = burstiness
+                metrics["burstiness_by_group"] = burstiness_groups
+                metrics["sentence_cv"] = sentence_cv
+                metrics["mattr_flag"] = classify_mattr(mattr)
+                metrics["mtld_flag"] = classify_mtld(mtld)
+                metrics["burstiness_flag"] = classify_burstiness(burstiness)
+                metrics["sentence_cv_flag"] = classify_sentence_cv(sentence_cv)
+                la["metrics"] = metrics
+
+                # Re-classify using fresh metric values.
+                flags = la.get("flags", {})
+                ai_result = _ai_concern_flag(mattr, mtld, sentence_cv, calibration)
+                flags["ai_concern"] = ai_result["concern"]
+                flags["mahalanobis_sigma"] = ai_result["sigma"]
+                flags["mahalanobis_pvalue"] = ai_result["p_value"]
+                la["flags"] = flags
+                record.set_language_analysis_data(la)
+
+                try:
+                    config = record.period.config if record.period else None
+                    record.compute_risk_factors(config)
+                except Exception as exc:
+                    current_app.logger.warning(
+                        f"recalculate_ai_concern_batch: could not recompute risk factors for record #{record.id}: {exc}"
+                    )
+
+                updated += 1
+
+                if updated % 50 == 0:
+                    try:
+                        db.session.commit()
+                    except SQLAlchemyError as exc:
+                        db.session.rollback()
+                        current_app.logger.exception(
+                            "recalculate_ai_concern_batch: DB error during batch commit", exc_info=exc
+                        )
+
+            except Exception as exc:
+                current_app.logger.warning(
+                    f"recalculate_ai_concern_batch: error on record #{record_id}: {exc}"
+                )
+                errors += 1
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception("recalculate_ai_concern_batch: final commit error", exc_info=exc)
+
+        return {"updated": updated, "skipped": skipped, "errors": errors}
+
+    # ---------------------------------------------------------------------------
+    # Chord finalize / error callbacks for fan-out full recalculation
+    # ---------------------------------------------------------------------------
+
+    @celery.task(bind=False)
+    def recalculate_ai_concern_finalize(results, task_id: str, total: int):
+        """
+        Chord callback: aggregate per-batch results and mark the TaskRecord SUCCESS.
+
+        *results* is the list of {"updated": int, "skipped": int, "errors": int}
+        dicts returned by each recalculate_ai_concern_batch sub-task.
+        """
+        updated = sum(r.get("updated", 0) for r in results if isinstance(r, dict))
+        skipped = sum(r.get("skipped", 0) for r in results if isinstance(r, dict))
+        errors = sum(r.get("errors", 0) for r in results if isinstance(r, dict))
+
+        parts = [f"updated {updated}/{total}"]
+        if skipped:
+            parts.append(f"skipped {skipped} (no cached text)")
+        if errors:
+            parts.append(f"errors {errors}")
+        msg = "Full lexical-metrics recalculation complete — " + ", ".join(parts) + "."
+
+        progress_update(task_id, TaskRecord.SUCCESS, 100, msg, autocommit=True)
+
+    @celery.task(bind=False)
+    def recalculate_ai_concern_error(task_id: str):
+        """Error callback for the full recalculation chord."""
+        progress_update(
+            task_id,
+            TaskRecord.FAILURE,
+            100,
+            "Full recalculation failed — see worker logs for details.",
+            autocommit=True,
+        )
+
+    # ---------------------------------------------------------------------------
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def recalculate_ai_concern(self, task_id: str, tenant_id: int, pclass_ids=None, years=None, full_recalculate=False):
         """
         Re-evaluate the Mahalanobis-based AI concern flag for all completed
         SubmissionRecords belonging to *tenant_id*, optionally filtered to
         specific project class IDs and/or academic years.
 
-        This task is launched after the tenant's AI calibration has been updated,
-        so that existing submissions reflect the new centroid without needing a
-        full re-run of the language analysis pipeline.
+        When *full_recalculate* is False (default) the task re-runs only the
+        Mahalanobis classification from already-stored metric values — fast,
+        DB-only, sequential.
 
-        For each eligible record the task:
-          1. Loads the language_analysis JSON blob.
-          2. Fetches the tenant's current calibration data.
-          3. Re-evaluates _ai_concern_flag() for the stored (MATTR, MTLD, CV) values.
-          4. Updates the flags sub-dict (ai_concern, mahalanobis_sigma, mahalanobis_pvalue).
-          5. Re-runs compute_risk_factors() to keep the risk_factors blob in sync.
-          6. Commits.
+        When *full_recalculate* is True the task re-processes the cached
+        extracted text through the current metric pipeline (MATTR, MTLD,
+        burstiness, sentence CV) before reclassifying.  Work is distributed
+        across Celery workers by fanning out one sub-task per (pclass × year)
+        batch via a Celery chord.  Records without cached extracted text are
+        skipped.
         """
         self.update_state(state="STARTED", meta={"msg": "Preparing AI concern recalculation"})
         progress_update(task_id, TaskRecord.RUNNING, 5, "Querying submissions…")
@@ -2978,22 +3170,20 @@ def register_language_analysis_tasks(celery):
             return
 
         if tenant is None:
-            msg = f"recalculate_ai_concern: Tenant #{tenant_id} not found"
-            current_app.logger.error(msg)
+            current_app.logger.error(f"recalculate_ai_concern: Tenant #{tenant_id} not found")
             progress_update(task_id, TaskRecord.FAILURE, 100, "Tenant not found", autocommit=True)
             return
 
         calibration = tenant.ai_calibration_data
         if calibration is None:
-            msg = "recalculate_ai_concern: tenant has no calibration data — aborting"
-            current_app.logger.warning(msg)
+            current_app.logger.warning("recalculate_ai_concern: tenant has no calibration data — aborting")
             progress_update(task_id, TaskRecord.FAILURE, 100, "No calibration data available", autocommit=True)
             return
 
-        # Build query for target records.
+        # Build query for target records, fetching pclass_id and year for grouping.
         try:
             q = (
-                db.session.query(SubmissionRecord)
+                db.session.query(SubmissionRecord, ProjectClass.id, ProjectClassConfig.year)
                 .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
                 .join(ProjectClassConfig, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
                 .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
@@ -3005,47 +3195,75 @@ def register_language_analysis_tasks(celery):
             if years:
                 q = q.filter(ProjectClassConfig.year.in_(years))
 
-            records = q.all()
+            rows = q.all()
         except SQLAlchemyError as exc:
             current_app.logger.exception("recalculate_ai_concern: DB error querying records", exc_info=exc)
             progress_update(task_id, TaskRecord.FAILURE, 100, "Database error querying records", autocommit=True)
             return
 
-        total = len(records)
+        total = len(rows)
+        if total == 0:
+            progress_update(task_id, TaskRecord.SUCCESS, 100, "No eligible submissions found.", autocommit=True)
+            return
+
+        # ── Full recalculation: fan out by (pclass × year) ───────────────────
+        if full_recalculate:
+            # Group record IDs by (pclass_id, year).
+            from collections import defaultdict
+            batch_map: dict[tuple, list[int]] = defaultdict(list)
+            for record, pclass_id, year in rows:
+                batch_map[(pclass_id, year)].append(record.id)
+
+            batches = list(batch_map.values())
+            n_batches = len(batches)
+
+            progress_update(
+                task_id,
+                TaskRecord.RUNNING,
+                10,
+                f"Dispatching full metric recomputation for {total} submission(s) across {n_batches} batch(es)…",
+            )
+
+            if n_batches == 1:
+                # Only one batch — run inline to avoid chord overhead.
+                result = recalculate_ai_concern_batch.run(task_id, tenant_id, batches[0])
+                updated = result.get("updated", 0)
+                skipped = result.get("skipped", 0)
+                errors = result.get("errors", 0)
+                parts = [f"updated {updated}/{total}"]
+                if skipped:
+                    parts.append(f"skipped {skipped} (no cached text)")
+                if errors:
+                    parts.append(f"errors {errors}")
+                progress_update(
+                    task_id,
+                    TaskRecord.SUCCESS,
+                    100,
+                    "Full lexical-metrics recalculation complete — " + ", ".join(parts) + ".",
+                    autocommit=True,
+                )
+                return
+
+            # Two or more batches — fan out via chord.
+            sub_tasks = cgroup([
+                recalculate_ai_concern_batch.si(task_id, tenant_id, batch_ids)
+                for batch_ids in batches
+            ])
+            finalize = recalculate_ai_concern_finalize.s(task_id, total)
+            error_cb = recalculate_ai_concern_error.si(task_id)
+            self.replace(chord(sub_tasks, finalize).on_error(error_cb))
+            return
+
+        # ── Classify-only: sequential loop (existing behaviour) ───────────────
+        records = [row[0] for row in rows]
         progress_update(task_id, TaskRecord.RUNNING, 10, f"Recalculating AI concern for {total} submission(s)…")
 
         updated = 0
         for i, record in enumerate(records, start=1):
             try:
-                la = record.language_analysis_data
-                metrics = la.get("metrics", {})
-                flags = la.get("flags", {})
-
-                ai_result = _ai_concern_flag(
-                    metrics.get("mattr"),
-                    metrics.get("mtld"),
-                    metrics.get("sentence_cv"),
-                    calibration,
-                )
-
-                flags["ai_concern"] = ai_result["concern"]
-                flags["mahalanobis_sigma"] = ai_result["sigma"]
-                flags["mahalanobis_pvalue"] = ai_result["p_value"]
-                la["flags"] = flags
-                record.set_language_analysis_data(la)
-
-                # Re-compute risk factors to keep them in sync with the new concern level.
-                try:
-                    config = record.period.config if record.period else None
-                    record.compute_risk_factors(config)
-                except Exception as exc:
-                    current_app.logger.warning(
-                        f"recalculate_ai_concern: could not recompute risk factors for record #{record.id}: {exc}"
-                    )
-
+                _reclassify_record(record, calibration)
                 updated += 1
 
-                # Commit in batches of 50 to bound memory and reduce lock contention.
                 if updated % 50 == 0:
                     try:
                         db.session.commit()
@@ -3063,7 +3281,6 @@ def register_language_analysis_tasks(celery):
                     f"recalculate_ai_concern: error processing record #{record.id}: {exc}"
                 )
 
-        # Final commit for any remaining records.
         try:
             db.session.commit()
         except SQLAlchemyError as exc:

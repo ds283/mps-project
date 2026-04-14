@@ -22,7 +22,7 @@ from flask import (
     url_for,
 )
 from flask_security import current_user, roles_accepted
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, exists, or_
 
 import app.ajax as ajax
 from app.convenor import convenor
@@ -39,6 +39,8 @@ from ..models import (
     ProjectClass,
     ProjectClassConfig,
     ProjectDescription,
+    ProjectTag,
+    ProjectTagGroup,
     SubmissionPeriodRecord,
     Tenant,
     TransferableSkill,
@@ -66,6 +68,7 @@ from ..shared.validators import (
 )
 from ..tools import ServerSideInMemoryHandler
 from .forms import (
+    AttachedFilterFormFactory,
     ChangeDeadlineFormFactory,
     GoLiveFormFactory,
     IssueFacultyConfirmRequestFormFactory,
@@ -425,12 +428,66 @@ def attached(id):
         return redirect(redirect_url())
 
     valid_filter = request.args.get("valid_filter")
+    active_filter = request.args.get("active_filter")
+    supervisor_filter = request.args.get("supervisor_filter")
+    generic_filter = request.args.get("generic_filter")
+    atas_filter = request.args.get("atas_filter")
+    tag_ids_raw = request.args.get("tag_ids")  # None = absent; "" = explicitly cleared
 
     if valid_filter is None and session.get("convenor_attached_valid_filter"):
         valid_filter = session["convenor_attached_valid_filter"]
-
     if valid_filter is not None:
         session["convenor_attached_valid_filter"] = valid_filter
+
+    if active_filter is None and session.get("convenor_attached_active_filter"):
+        active_filter = session["convenor_attached_active_filter"]
+    if active_filter is not None:
+        session["convenor_attached_active_filter"] = active_filter
+
+    if supervisor_filter is None and session.get("convenor_attached_supervisor_filter"):
+        supervisor_filter = session["convenor_attached_supervisor_filter"]
+    if supervisor_filter is not None:
+        session["convenor_attached_supervisor_filter"] = supervisor_filter
+
+    if generic_filter is None and session.get("convenor_attached_generic_filter"):
+        generic_filter = session["convenor_attached_generic_filter"]
+    if generic_filter is not None:
+        session["convenor_attached_generic_filter"] = generic_filter
+
+    if atas_filter is None and session.get("convenor_attached_atas_filter"):
+        atas_filter = session["convenor_attached_atas_filter"]
+    if atas_filter is not None:
+        session["convenor_attached_atas_filter"] = atas_filter
+
+    if tag_ids_raw is None:
+        # Parameter absent from URL — restore from session (e.g. navigating via other filter buttons)
+        tag_ids_raw = session.get("convenor_attached_tag_ids", "")
+    else:
+        # Parameter explicitly present (even as "") — save to session (clears it when empty)
+        session["convenor_attached_tag_ids"] = tag_ids_raw
+
+    # apply defaults
+    if active_filter is None:
+        active_filter = "1"
+    if supervisor_filter is None:
+        supervisor_filter = "1"
+    if generic_filter is None:
+        generic_filter = "0"
+    if atas_filter is None:
+        atas_filter = "0"
+
+    # build tag filter form pre-populated with current selection
+    tag_ids = [int(x) for x in tag_ids_raw.split(",") if x.strip().isdigit()]
+    tag_filter_form = AttachedFilterFormFactory(tenant=pclass.tenant)()
+    if tag_ids:
+        tag_filter_form.tag_filter.data = (
+            db.session.query(ProjectTag)
+            .filter(
+                ProjectTag.id.in_(tag_ids),
+            )
+            .all(),
+            [],
+        )
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -452,6 +509,12 @@ def attached(id):
         skill_list=skill_list,
         filter_record=filter_record,
         valid_filter=valid_filter,
+        active_filter=active_filter,
+        supervisor_filter=supervisor_filter,
+        generic_filter=generic_filter,
+        atas_filter=atas_filter,
+        tag_ids_raw=tag_ids_raw,
+        tag_filter_form=tag_filter_form,
     )
 
 
@@ -479,6 +542,11 @@ def attached_ajax(id):
         return jsonify({})
 
     valid_filter = request.args.get("valid_filter")
+    active_filter = request.args.get("active_filter", "1")
+    supervisor_filter = request.args.get("supervisor_filter", "1")
+    generic_filter = request.args.get("generic_filter", "0")
+    atas_filter = request.args.get("atas_filter", "0")
+    tag_ids_raw = request.args.get("tag_ids", "")
 
     # build list of projects attached to this project class
     base_query = db.session.query(Project).filter(Project.project_classes.any(id=id))
@@ -535,6 +603,37 @@ def attached_ajax(id):
         base_query = base_query.filter(
             Project.skills.any(TransferableSkill.id.in_(valid_skill_ids))
         )
+
+    # active projects only (default ON)
+    if active_filter != "0":
+        base_query = base_query.filter(Project.active.is_(True))
+
+    # supervisor enrolled filter (default ON) — use correlated EXISTS to avoid join conflicts
+    if supervisor_filter != "0":
+        supervisor_enrolled = exists().where(
+            and_(
+                EnrollmentRecord.owner_id == Project.owner_id,
+                EnrollmentRecord.pclass_id == pclass.id,
+                EnrollmentRecord.supervisor_state
+                == EnrollmentRecord.SUPERVISOR_ENROLLED,
+            )
+        )
+        base_query = base_query.filter(
+            or_(Project.generic.is_(True), supervisor_enrolled)
+        )
+
+    # generic projects only (default OFF)
+    if generic_filter == "1":
+        base_query = base_query.filter(Project.generic.is_(True))
+
+    # ATAS-restricted projects only (default OFF)
+    if atas_filter == "1":
+        base_query = base_query.filter(Project.ATAS_restricted.is_(True))
+
+    # tag filter
+    tag_ids = [int(x) for x in tag_ids_raw.split(",") if x.strip().isdigit()]
+    if tag_ids:
+        base_query = base_query.filter(Project.tags.any(ProjectTag.id.in_(tag_ids)))
 
     return project_list_SQL_handler(
         request,

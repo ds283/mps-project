@@ -72,9 +72,12 @@ from ..shared.forms.queries import (
     BuildActiveFacultyName,
     BuildCanvasLoginUserName,
     BuildSupervisorName,
+    BuildTagGroup,
+    BuildTagName,
     BuildWorkflowTemplateLabel,
     GetAccommodatableMatchings,
     GetActiveFaculty,
+    GetActiveTags,
     GetAllPossibleSupervisors,
     GetCanvasEnabledConvenors,
     GetPossibleSupervisors,
@@ -89,7 +92,24 @@ from ..shared.forms.wtf_validators import (
     valid_marking_schema,
     valid_python_identifier,
 )
+from ..shared.forms.widgets import GroupedTagSelectField
 from ..shared.utils import get_current_year
+
+
+def AttachedFilterFormFactory(tenant: Tenant):
+    get_tags = partial(GetActiveTags, allowed_tenants=[tenant])
+
+    class AttachedFilterForm(Form):
+        tag_filter = GroupedTagSelectField(
+            "Filter by tags",
+            query_factory=get_tags,
+            get_pk=lambda t: t.id,
+            get_label=BuildTagName,
+            get_group=BuildTagGroup,
+            blank_text="Filter by tags...",
+        )
+
+    return AttachedFilterForm
 
 
 def GoLiveFormFactory(

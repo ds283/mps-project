@@ -612,6 +612,12 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                 f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()'
             )
 
+        branding_label = current_app.config.get(
+            "BRANDING_LABEL", "MPS projects management"
+        )
+        subject_kwargs["branding_label"] = branding_label
+        body_kwargs["branding_label"] = branding_label
+
         subject_str: str = (
             template.subject.format(**subject_kwargs)
             if subject_kwargs is not None

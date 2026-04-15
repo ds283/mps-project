@@ -7,8 +7,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, date, timedelta
-
+from datetime import date, datetime, timedelta
 
 import holidays
 from celery import chain, group
@@ -19,17 +18,17 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    User,
-    TaskRecord,
-    EmailNotification,
     ConfirmRequest,
-    LiveProject,
-    Role,
-    SelectingStudent,
-    ProjectClassConfig,
+    EmailNotification,
     EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
+    LiveProject,
+    ProjectClassConfig,
+    Role,
+    SelectingStudent,
+    TaskRecord,
+    User,
 )
 from ..models.emails import encode_email_payload
 from ..shared.utils import get_current_year
@@ -619,12 +618,6 @@ def register_email_notification_tasks(celery):
                 )
             )
 
-        branding_label = current_app.config.get("BRANDING_LABEL")
-        if branding_label is not None:
-            subject = f"{branding_label}: summary of notifications and events"
-        else:
-            subject = "Projects web portal: summary of notifications and events"
-
         template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP)
         workflow = EmailWorkflow.build_(
             name=f"Faculty notification rollup email: {user.name}",
@@ -636,7 +629,7 @@ def register_email_notification_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"subject": subject}),
+            subject_payload=encode_email_payload({}),
             body_payload=encode_email_payload({
                 "user": user,
                 "notifications": notifications,
@@ -829,12 +822,6 @@ def register_email_notification_tasks(celery):
                 )
             )
 
-        branding_label = current_app.config.get("BRANDING_LABEL")
-        if branding_label is not None:
-            subject = f"{branding_label}: summary of notifications and events"
-        else:
-            subject = "Projects web portal: summary of notifications and events"
-
         template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP)
         workflow = EmailWorkflow.build_(
             name=f"Student notification rollup email: {user.name}",
@@ -846,7 +833,7 @@ def register_email_notification_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"subject": subject}),
+            subject_payload=encode_email_payload({}),
             body_payload=encode_email_payload({
                 "user": user,
                 "notifications": notifications,

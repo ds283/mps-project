@@ -83,7 +83,8 @@
                 {%- set nproj_c = current_user.faculty_data.number_projects_offered(cfg.project_class) -%}
                 {%- set _wc = cfg.selector_lifecycle == cfg.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and cfg.is_confirmation_required(current_user.faculty_data) -%}
                 {%- set _np = rec.supervisor_state == rec.SUPERVISOR_ENROLLED and cfg.uses_supervisor and nproj_c is defined and nproj_c == 0 -%}
-                {%- if _wc or _np -%}{%- set ns.alert_count = ns.alert_count + 1 -%}{%- endif -%}
+                {%- set _ma = cfg.number_supervisor_missing_attendance(current_user.faculty_data.id) > 0 -%}
+                {%- if _wc or _np or _ma -%}{%- set ns.alert_count = ns.alert_count + 1 -%}{%- endif -%}
             {%- endfor -%}
             <li class="nav-item">
                 <a class="nav-link {% if pane_is_enrollment %}active{% endif %}"
@@ -210,7 +211,8 @@
                                                     {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
                                                     &mdash; submitted by <strong>{{ report.user.name }}</strong>
                                                     {% if report.grade_submitted_timestamp %}
-                                                        on {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y") }}
+                                                        on
+                                                        {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y") }}
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -273,28 +275,29 @@
                                     {% endif %}
                                     <table class="table table-sm table-borderless mb-0">
                                         <tbody>
-                                            {% for pa in item.attachments %}
-                                                {% set asset = pa.attachment %}
-                                                <tr>
-                                                    <td class="text-center align-middle" style="width:50px;">
-                                                        {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
-                                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
-                                                                 class="img-thumbnail" style="max-width:40px; max-height:40px;" alt="">
-                                                        {% else %}
-                                                            <i class="fas fa-file text-muted fa-fw"></i>
-                                                        {% endif %}
-                                                    </td>
-                                                    <td class="align-middle">
-                                                        <a class="text-decoration-none"
-                                                           href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
-                                                            {{ asset.target_name or asset.filename }}
-                                                        </a>
-                                                    </td>
-                                                    <td class="align-middle text-muted small">
-                                                        {% if pa.description %}{{ pa.description }}{% endif %}
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
+                                        {% for pa in item.attachments %}
+                                            {% set asset = pa.attachment %}
+                                            <tr>
+                                                <td class="text-center align-middle" style="width:50px;">
+                                                    {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                                                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                                             class="img-thumbnail"
+                                                             style="max-width:40px; max-height:40px;" alt="">
+                                                    {% else %}
+                                                        <i class="fas fa-file text-muted fa-fw"></i>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="align-middle">
+                                                    <a class="text-decoration-none"
+                                                       href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
+                                                        {{ asset.target_name or asset.filename }}
+                                                    </a>
+                                                </td>
+                                                <td class="align-middle text-muted small">
+                                                    {% if pa.description %}{{ pa.description }}{% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
                                         </tbody>
                                     </table>
                                 {% endfor %}
@@ -325,31 +328,31 @@
                             {%- set no_projects = is_enrolled and config.uses_supervisor and nproj is defined and nproj == 0 -%}
                             {%- set marking_underway = sub_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY -%}
                             {%- set selections_open = sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN -%}
-                            {%- set has_alert = waiting_confirmation or no_projects -%}
+                            {%- set missing_att = config.number_supervisor_missing_attendance(current_user.faculty_data.id) -%}
                             <div class="col">
-                                <div class="card h-100 {% if has_alert %}border-danger{% elif marking_underway %}border-success{% elif selections_open %}border-primary{% endif %}">
-                                    <div class="card-header d-flex justify-content-between align-items-center {% if has_alert %}bg-danger text-white{% elif marking_underway %}bg-success text-white{% elif selections_open %}bg-primary text-white{% endif %}">
+                                <div class="card h-100 {% if no_projects %}border-warning{% elif waiting_confirmation %}border-success{% elif marking_underway %}border-primary{% elif selections_open %}border-success{% endif %}">
+                                    <div class="card-header d-flex justify-content-between align-items-center {% if no_projects %}bg-warning text-dark{% elif waiting_confirmation %}bg-success text-white{% elif marking_underway %}bg-primary text-white{% elif selections_open %}bg-success text-white{% endif %}">
                                         <strong>{{ config.name }}</strong>
-                                        <span class="small {% if has_alert or marking_underway or selections_open %}opacity-75{% else %}text-muted{% endif %}">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
+                                        <span class="small {% if no_projects or waiting_confirmation or marking_underway or selections_open %}opacity-75{% else %}text-muted{% endif %}">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
                                     </div>
                                     <div class="card-body">
-                                        {% if waiting_confirmation %}
-                                            <div class="alert alert-danger py-1 px-2 small mb-2 d-flex align-items-center gap-2">
-                                                <i class="fas fa-exclamation-triangle fa-fw"></i>
-                                                Project confirmations required
-                                            </div>
-                                        {% elif no_projects %}
+                                        {% if no_projects %}
                                             <div class="alert alert-warning py-1 px-2 small mb-2 d-flex align-items-center gap-2">
                                                 <i class="fas fa-exclamation-triangle fa-fw"></i>
                                                 No projects attached
                                             </div>
-                                        {% elif marking_underway %}
+                                        {% elif waiting_confirmation %}
                                             <div class="alert alert-success py-1 px-2 small mb-2 d-flex align-items-center gap-2">
+                                                <i class="fas fa-check-circle fa-fw"></i>
+                                                Project confirmations required
+                                            </div>
+                                        {% elif marking_underway %}
+                                            <div class="alert alert-primary py-1 px-2 small mb-2 d-flex align-items-center gap-2">
                                                 <i class="fas fa-marker fa-fw"></i>
                                                 Marking and feedback underway
                                             </div>
                                         {% elif selections_open %}
-                                            <div class="alert alert-primary py-1 px-2 small mb-2 d-flex align-items-center gap-2">
+                                            <div class="alert alert-success py-1 px-2 small mb-2 d-flex align-items-center gap-2">
                                                 <i class="fas fa-door-open fa-fw"></i>
                                                 Student selections open
                                             </div>
@@ -360,18 +363,25 @@
                                         {% endif %}
                                         <div class="d-flex flex-wrap gap-3 small text-muted mb-2">
                                             {% if num_students %}
-                                                <span><i class="fas fa-users fa-fw"></i> {{ num_students }} student{{ '' if num_students == 1 else 's' }}</span>
+                                                <span><i
+                                                        class="fas fa-users fa-fw"></i> {{ num_students }} student{{ '' if num_students == 1 else 's' }}</span>
                                             {% endif %}
                                             {% if config.uses_supervisor and nproj is defined %}
-                                                <span><i class="fas fa-project-diagram fa-fw"></i> {{ nproj }} project{{ '' if nproj == 1 else 's' }}</span>
+                                                <span><i
+                                                        class="fas fa-project-diagram fa-fw"></i> {{ nproj }} project{{ '' if nproj == 1 else 's' }}</span>
+                                            {% endif %}
+                                            {% if missing_att > 0 %}
+                                                <span class="text-danger"><i
+                                                        class="fas fa-calendar-check fa-fw"></i> {{ missing_att }} attendance{{ '' if missing_att == 1 else 's' }} required</span>
                                             {% endif %}
                                         </div>
                                         <div class="small text-muted">
-                                            Convenor: <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+                                            Convenor: <a class="text-decoration-none"
+                                                         href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
                                         </div>
                                     </div>
                                     <div class="card-footer d-flex justify-content-end">
-                                        <a class="btn btn-sm {% if has_alert %}btn-danger{% elif marking_underway %}btn-success{% elif selections_open %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                        <a class="btn btn-sm {% if no_projects %}btn-warning text-dark{% elif waiting_confirmation %}btn-success{% elif marking_underway %}btn-primary{% elif selections_open %}btn-success{% else %}btn-outline-secondary{% endif %}"
                                            href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                                             View details <i class="fas fa-arrow-right fa-fw"></i>
                                         </a>
@@ -394,7 +404,8 @@
                         </p>
                         <hr class="intro-divider">
                         <p>
-                            <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">View my settings</a>
+                            <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">View my
+                                settings</a>
                         </p>
                     </div>
                 {% endif %}

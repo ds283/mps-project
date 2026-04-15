@@ -1941,6 +1941,14 @@ class ProjectClassConfig(
     def number_supervisor_records(self, faculty) -> int:
         return sum(p.number_supervisor_records(faculty) for p in self.periods)
 
+    def number_supervisor_missing_attendance(self, faculty_id: int) -> int:
+        """Total past supervision events missing attendance across all periods for a given faculty member."""
+        total = 0
+        for period in self.periods:
+            for role in period.get_supervisor_records(faculty_id):
+                total += role.number_owned_events_missing_attendance()
+        return total
+
     @property
     def canvas_enabled(self):
         return (

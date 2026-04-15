@@ -372,8 +372,12 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     )
 
     __table_args__ = (
-        db.UniqueConstraint("event_id", "name"),
-        db.UniqueConstraint("event_id", "key"),
+        db.UniqueConstraint(
+            "event_id", "name", name="uq_marking_workflows_event_id_name"
+        ),
+        db.UniqueConstraint(
+            "event_id", "key", name="uq_marking_workflows_event_id_key"
+        ),
     )
 
     # role that this workflow targets. All SubmissionRole instances that belong to the ProjectClassConfig for the parent MarkingEvent
@@ -785,7 +789,11 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # holds a FK back to SubmitterReport.
     accepted_moderator_report_id = db.Column(
         db.Integer(),
-        db.ForeignKey("moderator_reports.id", use_alter=True, name="fk_submitter_report_accepted_moderator"),
+        db.ForeignKey(
+            "moderator_reports.id",
+            use_alter=True,
+            name="fk_submitter_report_accepted_moderator",
+        ),
         nullable=True,
     )
     accepted_moderator_report = db.relationship(
@@ -811,7 +819,9 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
 
     # who completed this SubmitterReport?
     completed_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    completed_by = db.relationship("User", foreign_keys=[completed_by_id], uselist=False)
+    completed_by = db.relationship(
+        "User", foreign_keys=[completed_by_id], uselist=False
+    )
 
     # timestamp when the completion was recorded
     completed_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1100,7 +1110,9 @@ class ConflationReport(db.Model, EditingMetadataMixin):
 
     # who generated this report?
     generated_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    generated_by = db.relationship("User", foreign_keys=[generated_by_id], uselist=False)
+    generated_by = db.relationship(
+        "User", foreign_keys=[generated_by_id], uselist=False
+    )
 
     # when was this report generated?
     generated_timestamp = db.Column(db.DateTime(), nullable=True)

@@ -11,13 +11,21 @@
 from flask_security.forms import Form
 
 from ..shared.forms.mixins import (
-    SaveChangesMixin,
-    EmailSettingsMixin,
     DefaultLicenseMixin,
+    EmailSettingsMixin,
+    OnlineServicesMixinFactory,
+    SaveChangesMixin,
 )
 
 
-class StudentSettingsForm(
-    Form, EmailSettingsMixin, SaveChangesMixin, DefaultLicenseMixin
-):
-    pass
+def StudentSettingsFormFactory(enable_canvas=False):
+    class StudentSettingsForm(
+        Form,
+        OnlineServicesMixinFactory(enable_canvas=enable_canvas),
+        EmailSettingsMixin,
+        SaveChangesMixin,
+        DefaultLicenseMixin,
+    ):
+        pass
+
+    return StudentSettingsForm

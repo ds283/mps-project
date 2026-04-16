@@ -59,6 +59,7 @@ from ..shared.context.global_context import render_template_context
 from ..shared.utils import (
     get_count,
     get_current_year,
+    get_main_config,
     home_dashboard,
     home_dashboard_url,
     redirect_url,
@@ -73,7 +74,7 @@ from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from . import student
 from .actions import store_selection
-from .forms import StudentSettingsForm
+from .forms import StudentSettingsFormFactory
 from .utils import (
     verify_open,
     verify_selector,
@@ -1496,6 +1497,8 @@ def settings():
     """
     user = User.query.get_or_404(current_user.id)
 
+    main_config = get_main_config()
+    StudentSettingsForm = StudentSettingsFormFactory(enable_canvas=main_config.enable_canvas_sync)
     form = StudentSettingsForm(obj=user)
     form.user = user
 
@@ -1504,6 +1507,11 @@ def settings():
 
         user.group_summaries = form.group_summaries.data
         user.summary_frequency = form.summary_frequency.data
+
+        if main_config.enable_canvas_sync and hasattr(form, "canvas_API_token"):
+            user.canvas_API_token = form.canvas_API_token.data
+        else:
+            user.canvas_API_token = None
 
         flash("All changes saved", "success")
         log_db_commit(
@@ -1514,7 +1522,10 @@ def settings():
         return home_dashboard()
 
     return render_template_context(
-        "student/settings.html", settings_form=form, user=user
+        "student/settings.html",
+        settings_form=form,
+        user=user,
+        enable_canvas=main_config.enable_canvas_sync,
     )
 
 

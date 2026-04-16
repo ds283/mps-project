@@ -520,7 +520,6 @@ def _faculty_create_record(item: FacultyBatchItem, batch: FacultyBatch, user_id)
         CATS_marking=item.CATS_marking,
         CATS_moderation=item.CATS_moderation,
         CATS_presentation=item.CATS_presentation,
-        canvas_API_token=None,
         creator_id=user_id,
         creation_timestamp=datetime.now(),
     )

@@ -31,6 +31,7 @@ from ..shared.forms.mixins import (
     FacultyDataMixinFactory,
     FeedbackMixin,
     FirstLastNameMixin,
+    OnlineServicesMixinFactory,
     SaveChangesMixin,
 )
 from ..shared.forms.queries import (
@@ -502,7 +503,8 @@ def FacultySettingsFormFactory(user=None, current_user=None, enable_canvas=False
     class FacultySettingsForm(
         Form,
         EditUserNameMixin,
-        FacultyDataMixinFactory(admin=False, enable_canvas=enable_canvas),
+        FacultyDataMixinFactory(admin=False),
+        OnlineServicesMixinFactory(enable_canvas=enable_canvas),
         FirstLastNameMixin,
         SaveChangesMixin,
         EmailSettingsMixin,

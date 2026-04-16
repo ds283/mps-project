@@ -15,8 +15,6 @@ from flask import current_app
 from flask_security import current_user
 from sqlalchemy import and_, or_, orm
 from sqlalchemy.event import listens_for
-from sqlalchemy_utils import EncryptedType
-from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
 
 from ..cache import cache
 from ..database import db
@@ -26,7 +24,6 @@ from .associations import (
     faculty_affiliations,
     faculty_batch_to_tenants,
 )
-from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
 from .matching import MatchingAttempt, MatchingRecord, MatchingRole, _MatchingRecord_is_valid
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin, _get_current_year
@@ -111,23 +108,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
         (4, "Every four weeks"),
     ]
     reminder_frequency = db.Column(db.Integer(), default=2, nullable=False)
-
-    # CANVAS INTEGRATION
-
-    # used only for convenors
-
-    # API access token for this user; AesGcmEngine is more secure but cannot perform queries
-    # here, that's OK because we don't expect to have to query against the token
-    canvas_API_token = db.Column(
-        EncryptedType(
-            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
-            get_AES_key,
-            AesGcmEngine,
-            "pkcs5",
-        ),
-        default=None,
-        nullable=True,
-    )
 
     @property
     def name(self):

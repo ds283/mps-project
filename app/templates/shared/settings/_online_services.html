@@ -1,0 +1,34 @@
+{# Partial: "Add accounts for online services" settings card.
+   Included by faculty/settings.html, office/settings.html, student/settings.html.
+   Context variables expected:
+     settings_form  — the WTForms form object
+     enable_canvas  — bool, True if Canvas integration is globally enabled for this user
+#}
+{% import "bootstrap/form.html" as wtf %}
+
+{% if enable_canvas %}
+<div class="card mt-3 mb-3 card-body bg-well">
+    <div class="form-group-heading">Add accounts for online services</div>
+    <p class="text-muted small mt-1 mb-3">
+        Connect your account to external services used by this platform.
+        Credentials are stored in encrypted form and are never visible to other users.
+    </p>
+
+    {% if settings_form.canvas_API_token is defined %}
+    <div class="mb-2">
+        <h6 class="fw-semibold small text-uppercase text-secondary mb-2">Canvas LMS</h6>
+        {{ wtf.render_field(settings_form.canvas_API_token) }}
+    </div>
+    {% endif %}
+
+    {# Future services can be added here in the same pattern, e.g.:
+    {% if settings_form.box_oauth_token is defined %}
+    <hr class="my-3">
+    <div class="mb-2">
+        <h6 class="fw-semibold small text-uppercase text-secondary mb-2">Box</h6>
+        {{ wtf.render_field(settings_form.box_oauth_token) }}
+    </div>
+    {% endif %}
+    #}
+</div>
+{% endif %}

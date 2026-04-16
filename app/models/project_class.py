@@ -827,10 +827,10 @@ class ProjectClassConfig(
     # Canvas id for the module corresponding to this ProjectClassConfig
     canvas_module_id = db.Column(db.Integer(), default=None, nullable=True)
 
-    # Link to FacultyData record for convenor whose access token we are using
-    canvas_login_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"))
+    # Link to User record for convenor whose access token we are using
+    canvas_login_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
     canvas_login = db.relationship(
-        "FacultyData",
+        "User",
         uselist=False,
         foreign_keys=[canvas_login_id],
         backref=db.backref("canvas_logins", lazy="dynamic"),
@@ -1955,6 +1955,7 @@ class ProjectClassConfig(
             self.main_config.enable_canvas_sync
             and self.canvas_module_id is not None
             and self.canvas_login is not None
+            and self.canvas_login.canvas_API_token is not None
         )
 
     # EFFECTIVE DOCUMENT LIMIT ACCESSORS

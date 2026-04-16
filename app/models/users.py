@@ -16,11 +16,14 @@ from flask_security import AsaList, RoleMixin, UserMixin
 from sqlalchemy import or_
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy_utils import EncryptedType
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
 
 from ..database import db
 from ..shared.sqlalchemy import get_count
 from .associations import roles_to_users, mask_roles_to_users, tenant_to_users
 from .choices import short_academic_titles_dict
+from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH
 from .model_mixins import ColouredLabelMixin
 
@@ -156,6 +159,21 @@ class User(db.Model, UserMixin):
         uselist=False,
         post_update=True,
         backref=db.backref("users", lazy="dynamic"),
+    )
+
+    # ONLINE SERVICE CREDENTIALS
+
+    # Canvas LMS API access token; AesGcmEngine cannot be queried against,
+    # but that is acceptable here because we never need to filter by token value.
+    canvas_API_token = db.Column(
+        EncryptedType(
+            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+            get_AES_key,
+            AesGcmEngine,
+            "pkcs5",
+        ),
+        default=None,
+        nullable=True,
     )
 
     # KEEP-ALIVE TRACKING

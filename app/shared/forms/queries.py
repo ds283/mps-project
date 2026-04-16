@@ -604,23 +604,23 @@ def BuildSubmissionRecordLabel(period: SubmissionPeriodRecord):
 
 def GetCanvasEnabledConvenors(config: ProjectClassConfig):
     return (
-        db.session.query(FacultyData)
-        .filter(FacultyData.canvas_API_token != None)
+        db.session.query(User)
+        .join(FacultyData, FacultyData.id == User.id)
         .filter(
+            User.canvas_API_token != None,
+            User.active.is_(True),
             or_(
                 FacultyData.id == config.convenor_id,
                 FacultyData.id == config.project_class.convenor_id,
                 FacultyData.coconvenor_for.any(id=config.pclass_id),
-            )
+            ),
         )
-        .join(User, User.id == FacultyData.id)
-        .filter(User.active.is_(True))
         .order_by(User.last_name.asc(), User.first_name.asc())
     )
 
 
-def BuildCanvasLoginUserName(data: FacultyData):
-    return data.user.name_and_username
+def BuildCanvasLoginUserName(user: User):
+    return user.name_and_username
 
 
 def GetActiveTags(allowed_tenants: List[Tenant]):

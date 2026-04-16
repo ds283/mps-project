@@ -227,7 +227,7 @@ class ConfirmRegisterOfficeForm(
 
 
 class RegisterFacultyForm(
-    RegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)
+    RegisterOfficeForm, FacultyDataMixinFactory(admin=True)
 ):
     save_and_exit = SubmitField("Save and exit")
 
@@ -237,7 +237,7 @@ class RegisterFacultyForm(
 
 
 class ConfirmRegisterFacultyForm(
-    ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)
+    ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True)
 ):
     save_and_exit = SubmitField("Save and exit")
 
@@ -302,7 +302,7 @@ class EditOfficeForm(
 
 
 class EditFacultyForm(
-    EditOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)
+    EditOfficeForm, FacultyDataMixinFactory(admin=True)
 ):
     pass
 

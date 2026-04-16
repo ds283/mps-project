@@ -3184,10 +3184,10 @@ def settings():
 
         # store Canvas API token if present on form and Canvas integration is enabled
         if main_config.enable_canvas_sync and hasattr(form, "canvas_API_token"):
-            fd.canvas_API_token = form.canvas_API_token.data
+            user.canvas_API_token = form.canvas_API_token.data
         else:
             # automatically delete for safety
-            fd.canvas_API_token = None
+            user.canvas_API_token = None
 
         fd.academic_title = form.academic_title.data
         fd.use_academic_title = form.use_academic_title.data
@@ -3229,7 +3229,15 @@ def settings():
             if hasattr(form, "mask_roles"):
                 form.mask_roles.data = user.mask_roles
 
-    return render_template_context("faculty/settings.html", settings_form=form, data=fd)
+            if hasattr(form, "canvas_API_token"):
+                form.canvas_API_token.data = user.canvas_API_token
+
+    return render_template_context(
+        "faculty/settings.html",
+        settings_form=form,
+        data=fd,
+        enable_canvas=main_config.enable_canvas_sync and fd.is_convenor,
+    )
 
 
 @faculty.route("/past_feedback/<int:student_id>")

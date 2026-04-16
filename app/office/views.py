@@ -13,12 +13,12 @@ from flask import request, flash, session
 from flask_security import current_user, roles_required
 
 from . import office
-from .forms import OfficeSettingsForm
+from .forms import OfficeSettingsFormFactory
 from ..database import db
 from ..models import User, MessageOfTheDay
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
-from ..shared.utils import home_dashboard, get_approval_queue_data
+from ..shared.utils import home_dashboard, get_approval_queue_data, get_main_config
 from ..shared.workflow_logging import log_db_commit
 
 
@@ -73,6 +73,8 @@ def settings():
     """
     user = User.query.get_or_404(current_user.id)
 
+    main_config = get_main_config()
+    OfficeSettingsForm = OfficeSettingsFormFactory(enable_canvas=main_config.enable_canvas_sync)
     form = OfficeSettingsForm(obj=user)
     form.user = user
 
@@ -82,11 +84,19 @@ def settings():
         user.group_summaries = form.group_summaries.data
         user.summary_frequency = form.summary_frequency.data
 
+        if main_config.enable_canvas_sync and hasattr(form, "canvas_API_token"):
+            user.canvas_API_token = form.canvas_API_token.data
+        else:
+            user.canvas_API_token = None
+
         flash("All changes saved", "success")
         log_db_commit("Saved office user settings", user=current_user)
 
         return home_dashboard()
 
     return render_template_context(
-        "office/settings.html", settings_form=form, user=user
+        "office/settings.html",
+        settings_form=form,
+        user=user,
+        enable_canvas=main_config.enable_canvas_sync,
     )

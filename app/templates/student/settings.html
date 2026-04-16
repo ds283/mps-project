@@ -45,6 +45,8 @@
         {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>
 
+    {% include "shared/settings/_online_services.html" %}
+
     {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

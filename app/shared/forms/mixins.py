@@ -85,7 +85,7 @@ class EmailSettingsMixin:
     )
 
 
-def FacultyDataMixinFactory(admin=False, enable_canvas=False):
+def FacultyDataMixinFactory(admin=False):
     class FacultyDataMixin:
         academic_title = SelectField(
             "Academic title", choices=academic_titles, coerce=int
@@ -195,14 +195,19 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
                 validators=[Optional()],
             )
 
+    return FacultyDataMixin
+
+
+def OnlineServicesMixinFactory(enable_canvas=False):
+    class OnlineServicesMixin:
         if enable_canvas:
             canvas_API_token = StringField(
                 "Canvas API token",
                 validators=[Length(max=DEFAULT_STRING_LENGTH)],
-                description="Optional. Enter an API token to support Canvas sync for projects convened by this user.",
+                description="Optional. Enter a Canvas API token to enable Canvas sync for projects you convene.",
             )
 
-    return FacultyDataMixin
+    return OnlineServicesMixin
 
 
 class FeedbackMixin:

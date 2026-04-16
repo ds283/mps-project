@@ -1,0 +1,37 @@
+{% from "convenor/dashboard/overview_cards/popular_projects_delta.html" import data_with_delta %}
+
+{% for item in popular_data %}
+    {% set p = item['project'] %}
+    {% set delta = item.get('delta') %}
+    <tr>
+        <td>
+            <a class="link-primary text-decoration-none small"
+               href="{{ url_for('faculty.live_project', pid=p.id, text='convenor dashboard', url=url_for('convenor.status', id=config_pclass_id)) }}">{{ p.name }}</a>
+        </td>
+        <td>
+            {% if not p.generic %}
+                {% if p.owner %}
+                    <a class="link-primary text-decoration-none small"
+                       href="mailto:{{ p.owner.user.email }}">{{ p.owner.user.name }}</a>
+                {% else %}
+                    <span class="badge bg-danger text-white">Owner missing</span>
+                {% endif %}
+            {% else %}
+                <span class="badge bg-secondary text-white">Generic</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if p.last_view %}
+                <span class="text-secondary small">{{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            {% else %}
+                <span class="text-secondary small"><i class="fas fa-ban"></i> None</span>
+            {% endif %}
+        </td>
+        <td>{{ data_with_delta('score_rank', item, delta, user_classes='small', period=none, negative_is_higher=true) }}</td>
+        <td>{{ data_with_delta('selections', item, delta, user_classes='small', period=none) }}</td>
+        <td>{{ data_with_delta('bookmarks', item, delta, user_classes='small', period=none) }}</td>
+        <td>{{ data_with_delta('views', item, delta, user_classes='small', period=none) }}</td>
+    </tr>
+{% else %}
+    <tr><td colspan="7" class="text-muted small text-center">No popularity data available</td></tr>
+{% endfor %}

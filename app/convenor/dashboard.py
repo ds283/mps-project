@@ -9,7 +9,7 @@
 #
 
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from functools import partial
 from typing import Tuple
 
@@ -17,6 +17,7 @@ from flask import (
     flash,
     jsonify,
     redirect,
+    render_template,
     request,
     session,
     url_for,
@@ -73,6 +74,14 @@ from .forms import (
     GoLiveFormFactory,
     IssueFacultyConfirmRequestFormFactory,
 )
+
+_POPULAR_INTERVAL_MAP = {
+    "1h": timedelta(hours=1),
+    "12h": timedelta(hours=12),
+    "1d": timedelta(days=1),
+    "3d": timedelta(days=3),
+    "1w": timedelta(weeks=1),
+}
 
 
 @convenor.route("/overview")
@@ -217,6 +226,32 @@ def status(id):
         return_url=return_url,
         return_text=return_text,
     )
+
+
+@convenor.route("/popular_projects_ajax/<int:config_id>")
+@roles_accepted("faculty", "admin", "root")
+def popular_projects_ajax(config_id):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
+
+    if not validate_is_convenor(config.project_class):
+        return jsonify({"error": "Forbidden"}), 403
+
+    interval_key = request.args.get("interval", "3d")
+    compare_interval = _POPULAR_INTERVAL_MAP.get(interval_key, timedelta(days=3))
+
+    popular_data = config.most_popular_projects(limit=5, compare_interval=compare_interval)
+
+    tbody_html = render_template(
+        "convenor/dashboard/overview_cards/popular_projects_tbody.html",
+        popular_data=popular_data,
+        config_pclass_id=config.pclass_id,
+    )
+
+    return jsonify({
+        "tbody": tbody_html,
+        "updated_at": datetime.now().strftime("%a %d %b %Y %H:%M:%S"),
+        "period": interval_key,
+    })
 
 
 @convenor.route("/comms/<int:id>")

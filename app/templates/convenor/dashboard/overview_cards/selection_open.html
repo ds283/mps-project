@@ -3,56 +3,7 @@
 {% from "icon_block.html" import icon_block %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
-{% macro data_with_delta(key, item, delta, period=none, user_classes=none, negative_is_higher=false) %}
-    {% set value = item.get(key) %}
-    {% if value %}
-        <div class="d-flex flex-row justify-content-between align-items-baseline">
-            <span class="fw-semibold text-primary
-                {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ value }}</span>
-            {% if delta is not none %}
-                {% set d = delta.get(key) %}
-                {% if d is not none %}
-                    <span class="me-3">
-                        {% if d > 0 %}
-                            {% if negative_is_higher %}
-                                <span class="ms-2 text-danger
-                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                                    <i class="fas fa-caret-down"></i> {{ d }}
-                                </span>
-                            {% else %}
-                                <span class="ms-2 text-success
-                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                                    <i class="fas fa-caret-up"></i> {{ d }}
-                                </span>
-                            {% endif %}
-                        {% elif d < 0 %}
-                            {% if negative_is_higher %}
-                                <span class="ms-2 text-success
-                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                                    <i class="fas fa-caret-up"></i> {{ -d }}
-                                </span>
-                            {% else %}
-                                <span class="ms-2 text-danger
-                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                                    <i class="fas fa-caret-down"></i> {{ -d }}
-                                </span>
-                            {% endif %}
-                        {% else %}
-                            <span class="ms-2 text-secondary
-                                    {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                                <i class="fas fa-equals"></i>
-                            </span>
-                        {% endif %}
-                        {% if period is not none %}
-                            <span class="ms-2 text-muted
-                                    {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ period }}</span>
-                        {% endif %}
-                    </span>
-                {% endif %}
-            {% endif %}
-        </div>
-    {% endif %}
-{% endmacro %}
+{% from "convenor/dashboard/overview_cards/popular_projects_delta.html" import data_with_delta %}
 
 {% macro selection_open(config, change_form, data, current_time) %}
     <div class="card border-secondary mt-3 mb-3">
@@ -338,80 +289,77 @@
                     </div>
                 </div>
             {% endif %}
-            {% set popular_data = config.most_popular_projects() %}
-            {% if popular_data is not none %}
-                <div class="row mb-3">
-                    <div class="col">
-                        {% call(blk) dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none, user_block_classes="w-100") %}
-                            {% if blk == 'body' %}
-                                <table class="table table-sm table-striped">
-                                    <thead>
-                                    <tr>
-                                        <th width="25% small">Project</th>
-                                        <th width="15% small">Owner</th>
-                                        <th width="20% small">Last view</th>
-                                        <th width="10% small">Popularity</th>
-                                        <th width="10% small">Selections</th>
-                                        <th width="10% small">Bookmarks</th>
-                                        <th width="10% small">Views</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody class="table-group-divider">
-                                    {% for item in popular_data %}
-                                        {% set p = item['project'] %}
-                                        {% set delta = item.get('delta') %}
-                                        <tr>
-                                            <td>
-                                                <a class="link-primary text-decoration-none small"
-                                                   href="{{ url_for('faculty.live_project', pid=p.id, text='convenor dashboard', url=url_for('convenor.status', id=config.pclass_id)) }}">{{ p.name }}</a>
-                                            </td>
-                                            <td>
-                                                {% if not p.generic %}
-                                                    {% if p.owner %}
-                                                        <a class="link-primary text-decoration-none small"
-                                                           href="mailto:{{ p.owner.user.email }}">{{ p.owner.user.name }}</a>
-                                                    {% else %}
-                                                        <span class="badge bg-danger text-white">Owner missing</span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="badge bg-info text-white">Generic</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if p.last_view %}
-                                                    <span class="text-secondary small">{{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                                {% else %}
-                                                    <span class="text-secondary small"><i
-                                                            class="fas fa-ban"></i> None</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {{ data_with_delta('score_rank', item, delta, user_classes='small', period=none, negative_is_higher=true) }}
-                                            </td>
-                                            <td>
-                                                {{ data_with_delta('selections', item, delta, user_classes='small', period=none) }}
-                                            </td>
-                                            <td>
-                                                {{ data_with_delta('bookmarks', item, delta, user_classes='small', period=none) }}
-                                            </td>
-                                            <td>
-                                                {{ data_with_delta('views', item, delta, user_classes='small', period=none) }}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            {% elif blk == 'footer' %}
-                                <div class="d-flex flex-row justify-content-between align-items-baseline mt-3">
-                                    <div class="small text-muted">Comparison to 3 days ago</div>
-                                    <div class="small text-muted">Last
-                                        updated: {{ current_time.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+            <div class="row mb-3">
+                <div class="col">
+                    {% call(blk) dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none, user_block_classes="w-100") %}
+                        {% if blk == 'body' %}
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                <tr>
+                                    <th width="25%" class="small">Project</th>
+                                    <th width="15%" class="small">Owner</th>
+                                    <th width="20%" class="small">Last view</th>
+                                    <th width="10%" class="small">Popularity</th>
+                                    <th width="10%" class="small">Selections</th>
+                                    <th width="10%" class="small">Bookmarks</th>
+                                    <th width="10%" class="small">Views</th>
+                                </tr>
+                                </thead>
+                                <tbody id="popular-projects-tbody" class="table-group-divider">
+                                    <tr><td colspan="7" class="text-muted small text-center">
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        Loading&hellip;
+                                    </td></tr>
+                                </tbody>
+                            </table>
+                        {% elif blk == 'footer' %}
+                            <div class="d-flex flex-row justify-content-between align-items-baseline mt-3">
+                                <div class="d-flex flex-row align-items-baseline gap-2 small text-muted">
+                                    <span>Comparison to</span>
+                                    <select id="popular-compare-interval" class="form-select form-select-sm d-inline-block w-auto">
+                                        <option value="1h">1 hour</option>
+                                        <option value="12h">12 hours</option>
+                                        <option value="1d">1 day</option>
+                                        <option value="3d" selected>3 days</option>
+                                        <option value="1w">1 week</option>
+                                    </select>
                                 </div>
-                            {% endif %}
-                        {% endcall %}
-                    </div>
+                                <div class="small text-muted" id="popular-last-updated">Last updated: &mdash;</div>
+                            </div>
+                        {% endif %}
+                    {% endcall %}
                 </div>
-            {% endif %}
+            </div>
+            <script>
+            (function () {
+                var _url = {{ url_for('convenor.popular_projects_ajax', config_id=config.id)|tojson }};
+                var _timer = null;
+                var _interval = '3d';
+
+                function refresh() {
+                    fetch(_url + '?interval=' + encodeURIComponent(_interval))
+                        .then(function (r) { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.json(); })
+                        .then(function (data) {
+                            document.getElementById('popular-projects-tbody').innerHTML = data.tbody;
+                            document.getElementById('popular-last-updated').textContent = 'Last updated: ' + data.updated_at;
+                        })
+                        .catch(function (err) { console.error('Popular projects refresh failed:', err); });
+                }
+
+                function startPolling() {
+                    refresh();
+                    if (_timer) { clearInterval(_timer); }
+                    _timer = setInterval(refresh, 15 * 60 * 1000);
+                }
+
+                document.getElementById('popular-compare-interval').addEventListener('change', function () {
+                    _interval = this.value;
+                    startPolling();
+                });
+
+                startPolling();
+            })();
+            </script>
             <div class="mt-3">
                 <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST"
                       name="adjust_selection_deadline">

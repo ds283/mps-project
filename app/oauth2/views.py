@@ -8,10 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import secrets
 from urllib.parse import urlparse
 
-from boxsdk import OAuth2
-from flask import redirect, url_for, session, flash, request, current_app
+from box_sdk_gen import BoxOAuth, GetAuthorizeUrlOptions, OAuthConfig
+from flask import current_app, flash, redirect, request, session, url_for
 from flask_login import current_user, login_required
 
 from . import oauth2
@@ -60,12 +61,16 @@ def box_login():
     next_url = _safe_next_url(request.args.get("next"))
     session["box_oauth_next"] = next_url
 
+    # Generate a random CSRF state token and store it in the session.
+    csrf_token = secrets.token_urlsafe(32)
+    session["box_oauth_state"] = csrf_token
+
     redirect_url = url_for("oauth2.box_callback", _external=True)
 
-    box_oauth = OAuth2(client_id=client_id, client_secret=client_secret)
-    auth_url, csrf_token = box_oauth.get_authorization_url(redirect_url=redirect_url)
-
-    session["box_oauth_state"] = csrf_token
+    box_oauth = BoxOAuth(config=OAuthConfig(client_id=client_id, client_secret=client_secret))
+    auth_url = box_oauth.get_authorize_url(
+        options=GetAuthorizeUrlOptions(redirect_uri=redirect_url, state=csrf_token)
+    )
 
     return redirect(auth_url)
 
@@ -99,16 +104,16 @@ def box_callback():
     client_secret = current_app.config.get("BOX_CLIENT_SECRET")
 
     try:
-        box_oauth = OAuth2(client_id=client_id, client_secret=client_secret)
-        access_token, refresh_token = box_oauth.authenticate(auth_code)
+        box_oauth = BoxOAuth(config=OAuthConfig(client_id=client_id, client_secret=client_secret))
+        token = box_oauth.get_tokens_authorization_code_grant(auth_code)
     except Exception as e:
         current_app.logger.exception("Box OAuth2 authentication error", exc_info=e)
         flash("Box authorisation failed: could not exchange code for tokens. Please try again.", "error")
         return redirect(fallback_url)
 
     try:
-        current_user.box_access_token = access_token
-        current_user.box_refresh_token = refresh_token
+        current_user.box_access_token = token.access_token
+        current_user.box_refresh_token = token.refresh_token
         current_user.box_token_valid = True
         db.session.commit()
 

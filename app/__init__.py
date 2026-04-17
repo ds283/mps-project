@@ -130,6 +130,7 @@ def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile("config.py")
     app.config.from_pyfile("llm.py")
     app.config.from_pyfile("orchestration.py")
+    app.config.from_pyfile("online_services.py")
 
     app.config.from_pyfile("local.py")
 

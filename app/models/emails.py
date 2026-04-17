@@ -615,6 +615,10 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         branding_label = current_app.config.get(
             "BRANDING_LABEL", "MPS projects management"
         )
+        if subject_kwargs is None:
+            subject_kwargs = {}
+        if body_kwargs is None:
+            body_kwargs = {}
         subject_kwargs["branding_label"] = branding_label
         body_kwargs["branding_label"] = branding_label
 

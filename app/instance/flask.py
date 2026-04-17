@@ -18,3 +18,7 @@ MAX_CONTENT_LENGTH = 96 * 1024 * 1024
 
 # Flask secret key (used to encrypt client-side cookies)
 SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
+
+# Box OAuth2 credentials
+BOX_CLIENT_ID = os.environ.get("BOX_CLIENT_ID")
+BOX_CLIENT_SECRET = os.environ.get("BOX_CLIENT_SECRET")

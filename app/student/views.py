@@ -1526,6 +1526,7 @@ def settings():
         settings_form=form,
         user=user,
         enable_canvas=main_config.enable_canvas_sync,
+        enable_box=bool(current_app.config.get("BOX_CLIENT_ID")),
     )
 
 

@@ -3,10 +3,11 @@
    Context variables expected:
      settings_form  — the WTForms form object
      enable_canvas  — bool, True if Canvas integration is globally enabled for this user
+     enable_box     — bool, True if Box OAuth2 integration is globally enabled (BOX_CLIENT_ID is set)
 #}
 {% import "bootstrap/form.html" as wtf %}
 
-{% if enable_canvas %}
+{% if enable_canvas or enable_box %}
 <div class="card mt-3 mb-3 card-body bg-well">
     <div class="form-group-heading">Add accounts for online services</div>
     <p class="text-muted small mt-1 mb-3">
@@ -14,21 +15,39 @@
         Credentials are stored in encrypted form and are never visible to other users.
     </p>
 
-    {% if settings_form.canvas_API_token is defined %}
+    {% if enable_canvas and settings_form.canvas_API_token is defined %}
     <div class="mb-2">
         <h6 class="fw-semibold small text-uppercase text-secondary mb-2">Canvas LMS</h6>
         {{ wtf.render_field(settings_form.canvas_API_token) }}
     </div>
     {% endif %}
 
-    {# Future services can be added here in the same pattern, e.g.:
-    {% if settings_form.box_oauth_token is defined %}
+    {% if enable_box %}
+    {% if enable_canvas and settings_form.canvas_API_token is defined %}
     <hr class="my-3">
+    {% endif %}
     <div class="mb-2">
-        <h6 class="fw-semibold small text-uppercase text-secondary mb-2">Box</h6>
-        {{ wtf.render_field(settings_form.box_oauth_token) }}
+        <h6 class="fw-semibold small text-uppercase text-secondary mb-2">
+            <i class="fab fa-box me-1"></i> Box
+        </h6>
+
+        {% if current_user.box_token_valid %}
+        <div class="alert alert-success d-flex align-items-center py-2 mb-2" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            Box account linked successfully.
+        </div>
+        {% elif current_user.box_access_token is not none or current_user.box_refresh_token is not none %}
+        <div class="alert alert-warning d-flex align-items-center py-2 mb-2" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Your linked Box account has been logged out. Please re-link to restore access.
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('oauth2.box_login', next=request.path) }}" class="btn btn-sm btn-outline-primary">
+            <i class="fab fa-box me-1"></i>
+            {% if current_user.box_token_valid %}Re-link Box account{% else %}Link Box account{% endif %}
+        </a>
     </div>
     {% endif %}
-    #}
 </div>
 {% endif %}

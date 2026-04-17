@@ -9,7 +9,7 @@
 #
 
 
-from flask import request, flash, session
+from flask import current_app, request, flash, session
 from flask_security import current_user, roles_required
 
 from . import office
@@ -99,4 +99,5 @@ def settings():
         settings_form=form,
         user=user,
         enable_canvas=main_config.enable_canvas_sync,
+        enable_box=bool(current_app.config.get("BOX_CLIENT_ID")),
     )

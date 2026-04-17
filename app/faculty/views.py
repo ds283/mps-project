@@ -3237,6 +3237,7 @@ def settings():
         settings_form=form,
         data=fd,
         enable_canvas=main_config.enable_canvas_sync and fd.is_convenor,
+        enable_box=bool(current_app.config.get("BOX_CLIENT_ID")),
     )
 
 

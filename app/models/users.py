@@ -176,6 +176,37 @@ class User(db.Model, UserMixin):
         nullable=True,
     )
 
+    # Box OAuth2 access token; AesGcmEngine cannot be queried against,
+    # but that is acceptable here because we never need to filter by token value.
+    box_access_token = db.Column(
+        EncryptedType(
+            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+            get_AES_key,
+            AesGcmEngine,
+            "pkcs5",
+        ),
+        default=None,
+        nullable=True,
+    )
+
+    # Box OAuth2 refresh token; encrypted as above.
+    box_refresh_token = db.Column(
+        EncryptedType(
+            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+            get_AES_key,
+            AesGcmEngine,
+            "pkcs5",
+        ),
+        default=None,
+        nullable=True,
+    )
+
+    # True if the Box refresh token is still valid (can be used to re-acquire the access token).
+    box_token_valid = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # Timestamp of last Box token update.
+    box_updated_at = db.Column(db.DateTime(), default=datetime.now, onupdate=datetime.now, nullable=True)
+
     # KEEP-ALIVE TRACKING
 
     # keep track of when this user was last active on the site

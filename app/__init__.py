@@ -524,6 +524,10 @@ def create_app():
 
     app.register_blueprint(services_blueprint, url_prefix="/services")
 
+    from .oauth2 import oauth2 as oauth2_blueprint
+
+    app.register_blueprint(oauth2_blueprint, url_prefix="/oauth2")
+
     from .projecthub import projecthub as projecthub_blueprint
 
     app.register_blueprint(projecthub_blueprint, url_prefix="/hub")

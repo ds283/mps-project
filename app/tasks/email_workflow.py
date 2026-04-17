@@ -28,6 +28,7 @@ from typing import Dict, List, Optional
 from celery import group
 from flask import current_app
 from flask_mailman import Mail
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -68,6 +69,14 @@ from ..models.emails import (
     _OBJECT_PREFIX,
 )
 from ..shared.workflow_logging import log_db_commit
+
+# ---------------------------------------------------------------------------
+# Exponential backoff parameters for per-item retry scheduling.
+# After a failed send attempt, the item's next_retry_time is set to:
+#   now + min(_BACKOFF_BASE_SECONDS * 2^(send_attempts - 1), _BACKOFF_MAX_SECONDS)
+# ---------------------------------------------------------------------------
+_BACKOFF_BASE_SECONDS: int = 120   # 2 minutes
+_BACKOFF_MAX_SECONDS: int = 7200   # 2 hours (cap)
 
 # ---------------------------------------------------------------------------
 # Mapping from encoded model class name → SQLAlchemy model class.
@@ -198,6 +207,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
                     EmailWorkflowItem.paused.is_(False),
                     EmailWorkflowItem.send_in_progress_timestamp.is_(None),
                     EmailWorkflowItem.celery_send_in_progress_task_id.is_(None),
+                    or_(
+                        EmailWorkflowItem.next_retry_time.is_(None),
+                        EmailWorkflowItem.next_retry_time <= now,
+                    ),
                 )
                 .all()
             )
@@ -305,8 +318,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                         f"for EmailWorkflowItem id={item_id}",
                         exc_info=lookup_err,
                     )
-                    item.error_condition = True
-                    item.error_message = f"Payload decode error — database object not found: {lookup_err}"
+                    item.append_error(f"Payload decode error — database object not found: {lookup_err}")
                     item.send_in_progress_timestamp = None
                     item.celery_send_in_progress_task_id = None
                     try:
@@ -336,8 +348,9 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 f"send_workflow_item: exception building email for item id={item_id}",
                 exc_info=e,
             )
-            item.error_condition = True
-            item.error_message = f"Failed to build email message: {e}"
+            item.append_error(f"Failed to build email message: {e}")
+            delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
+            item.next_retry_time = datetime.now() + timedelta(seconds=delay)
             item.send_in_progress_timestamp = None
             item.celery_send_in_progress_task_id = None
             try:
@@ -372,8 +385,9 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 f"send_workflow_item: TimeoutError for item id={item_id}"
             )
             current_app.logger.exception("TimeoutError exception", exc_info=e)
-            item.error_condition = True
-            item.error_message = f"TimeoutError: {e}"
+            item.append_error(f"TimeoutError: {e}")
+            delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
+            item.next_retry_time = datetime.now() + timedelta(seconds=delay)
             item.send_in_progress_timestamp = None
             item.celery_send_in_progress_task_id = None
             try:
@@ -401,8 +415,9 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 f"send_workflow_item: SMTP exception for item id={item_id}"
             )
             current_app.logger.exception("SMTP exception", exc_info=e)
-            item.error_condition = True
-            item.error_message = f"{type(e).__name__}: {e}"
+            item.append_error(f"{type(e).__name__}: {e}")
+            delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
+            item.next_retry_time = datetime.now() + timedelta(seconds=delay)
             item.send_in_progress_timestamp = None
             item.celery_send_in_progress_task_id = None
             try:
@@ -424,7 +439,8 @@ def register_email_workflow_tasks(celery, mail: Mail):
         item.send_in_progress_timestamp = None
         item.celery_send_in_progress_task_id = None
         item.error_condition = False
-        item.error_message = None
+        item.error_log = None
+        item.next_retry_time = None
 
         # Build EmailLog record only when running on a live email platform.
         log = None
@@ -585,10 +601,9 @@ def register_email_workflow_tasks(celery, mail: Mail):
 
                 item.celery_send_in_progress_task_id = None
                 item.send_in_progress_timestamp = None
-                if not item.error_condition:
-                    item.error_condition = True
-                if not item.error_message:
-                    item.error_message = f"Celery send task {task_id} was killed after exceeding the 10-minute timeout"
+                item.append_error(f"Celery send task {task_id} was killed after exceeding the 10-minute timeout")
+                delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
+                item.next_retry_time = datetime.now() + timedelta(seconds=delay)
                 cleaned += 1
 
             else:
@@ -604,10 +619,9 @@ def register_email_workflow_tasks(celery, mail: Mail):
                     revoked += 1
 
                 item.celery_send_in_progress_task_id = None
-                if not item.error_condition:
-                    item.error_condition = True
-                if not item.error_message:
-                    item.error_message = f"Celery send task {task_id} was found with no timestamp and was killed"
+                item.append_error(f"Celery send task {task_id} was found with no timestamp and was killed")
+                delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
+                item.next_retry_time = datetime.now() + timedelta(seconds=delay)
                 cleaned += 1
 
         if cleaned > 0:

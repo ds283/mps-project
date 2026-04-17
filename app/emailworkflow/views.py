@@ -666,3 +666,32 @@ def preview_item(id):
         url=url,
         text=text,
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 5 – item error log
+# ---------------------------------------------------------------------------
+
+
+@emailworkflow.route("/item_error_log/<int:id>")
+@roles_accepted(*_ROLES)
+def item_error_log(id):
+    item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
+    workflow = item.workflow
+
+    url = request.args.get(
+        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
+    )
+    text = request.args.get("text", "Workflow items")
+
+    # Error entries in descending timestamp order.
+    entries = list(reversed(item.error_log_list))
+
+    return render_template_context(
+        "emailworkflow/item_error_log.html",
+        item=item,
+        workflow=workflow,
+        entries=entries,
+        url=url,
+        text=text,
+    )

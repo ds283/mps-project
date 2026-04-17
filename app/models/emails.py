@@ -954,8 +954,13 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     # is there a current error condition?
     error_condition = db.Column(db.Boolean(), nullable=False, default=False)
 
-    # any error message
-    error_message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+    # timestamped error log, stored as a JSON-serialized list of
+    # {"timestamp": <ISO 8601 str>, "message": <str>} dicts; capped at _ERROR_LOG_MAX entries
+    error_log = db.Column(db.Text(), nullable=True)
+
+    # per-item retry gate: the item will not be dispatched until this time has passed;
+    # None means "dispatch as soon as the parent workflow's send_time is reached"
+    next_retry_time = db.Column(db.DateTime(), index=True, nullable=True)
 
     # callbacks to invoke after a successful send, serialized as a JSON list of
     # {"task": <task_name>, "args": [...], "kwargs": {...}} dicts;
@@ -1009,6 +1014,25 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         if self.callbacks is None:
             return []
         return json.loads(self.callbacks)
+
+    # Maximum number of error log entries to retain.
+    _ERROR_LOG_MAX: int = 40
+
+    @property
+    def error_log_list(self) -> List[Dict]:
+        """Deserialize the JSON-encoded error log."""
+        if self.error_log is None:
+            return []
+        return json.loads(self.error_log)
+
+    def append_error(self, message: str) -> None:
+        """Append a timestamped error entry and trim to _ERROR_LOG_MAX entries."""
+        entries = self.error_log_list
+        entries.append({"timestamp": datetime.now().isoformat(), "message": message})
+        if len(entries) > self._ERROR_LOG_MAX:
+            entries = entries[-self._ERROR_LOG_MAX :]
+        self.error_log = json.dumps(entries)
+        self.error_condition = True
 
     @classmethod
     def build_(
@@ -1082,7 +1106,8 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             celery_send_in_progress_task_id=None,
             send_attempts=0,
             error_condition=False,
-            error_message=None,
+            error_log=None,
+            next_retry_time=None,
             creator_id=creator_id_,
             creation_timestamp=datetime.now(),
             last_edit_timestamp=None,

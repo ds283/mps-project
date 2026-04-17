@@ -1,0 +1,94 @@
+{% extends "base_app.html" %}
+
+{% block title %}Error log – item #{{ item.id }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-exclamation-triangle fa-fw text-danger me-1"></i>
+            Error log &ndash; item #{{ item.id }}
+        </h4>
+    </div>
+
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary bg-opacity-10 border-secondary d-flex align-items-center gap-2 py-2">
+            <span class="fw-semibold text-secondary">Item summary</span>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3">Workflow</dt>
+                <dd class="col-sm-9">
+                    {% if workflow %}
+                        <a href="{{ url_for('emailworkflow.workflow_items', id=workflow.id) }}">{{ workflow.name }}</a>
+                    {% else %}
+                        <span class="text-muted">Unknown</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Recipients</dt>
+                <dd class="col-sm-9">
+                    {% set rcpts = item.recipient_addresses %}
+                    {% if rcpts %}
+                        {% for r in rcpts %}<span class="me-2">{{ r }}</span>{% endfor %}
+                    {% else %}
+                        <span class="text-muted">None</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Send attempts</dt>
+                <dd class="col-sm-9">
+                    <span class="badge {% if item.send_attempts > 1 %}bg-warning text-dark{% elif item.send_attempts == 1 %}bg-secondary{% else %}bg-light text-dark border{% endif %}">
+                        {{ item.send_attempts }}
+                    </span>
+                </dd>
+
+                {% if item.next_retry_time and not item.sent_timestamp %}
+                    <dt class="col-sm-3">Next retry</dt>
+                    <dd class="col-sm-9">
+                        <i class="fas fa-clock fa-fw text-muted"></i>
+                        {{ item.next_retry_time.strftime("%a %d %b %Y %H:%M") }}
+                    </dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <div class="card border-danger mb-3">
+        <div class="card-header bg-danger bg-opacity-10 border-danger d-flex align-items-center justify-content-between py-2">
+            <span class="fw-semibold text-danger">
+                <i class="fas fa-exclamation-triangle fa-fw"></i>
+                Error entries
+            </span>
+            <span class="badge bg-danger">{{ entries | length }}</span>
+        </div>
+        <div class="card-body p-0">
+            {% if entries %}
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 200px;">Timestamp</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries %}
+                            <tr>
+                                <td class="text-muted small text-nowrap">
+                                    {{ entry.timestamp | replace("T", " ") }}
+                                </td>
+                                <td class="text-danger small">{{ entry.message }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="p-3">
+                    <span class="text-muted fst-italic">No errors recorded.</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

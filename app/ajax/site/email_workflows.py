@@ -292,6 +292,10 @@ _item_status_col = """
 
 # language=jinja2
 _item_error_col = """
+{% set err_list = item.error_log_list %}
+{% set err_count = err_list | length %}
+{% set recent = err_list[-5:] | reverse | list %}
+{% set hidden = err_count - recent | length %}
 <div class="small">
     <div>
         <span class="text-muted">Attempts:</span>
@@ -303,11 +307,26 @@ _item_error_col = """
         <div class="mt-1">
             <span class="badge bg-danger"><i class="fas fa-exclamation-triangle fa-fw"></i> Error</span>
         </div>
-        {% if item.error_message %}
-            <div class="mt-1 text-danger small" style="max-width: 280px; word-wrap: break-word;">
-                {{ item.error_message|truncate(120) }}
+        {% for entry in recent %}
+            <div class="mt-1 border-start border-danger ps-2" style="max-width: 300px;">
+                <div class="text-muted" style="font-size: 0.75em;">
+                    {{ entry.timestamp | replace("T", " ") | truncate(16, end="") }}
+                </div>
+                <div class="text-danger" style="word-wrap: break-word;">
+                    {{ entry.message | truncate(120) }}
+                </div>
+            </div>
+        {% endfor %}
+        {% if hidden > 0 %}
+            <div class="mt-1 text-muted" style="font-size: 0.8em;">
+                (+{{ hidden }} older — <a href="{{ url_for('emailworkflow.item_error_log', id=item.id, url=return_url, text=return_text) }}">see full log</a>)
             </div>
         {% endif %}
+    {% endif %}
+    {% if item.next_retry_time and not item.sent_timestamp %}
+        <div class="mt-1 text-muted" style="font-size: 0.8em;">
+            <i class="fas fa-clock fa-fw"></i> Retry after {{ item.next_retry_time.strftime("%d %b %H:%M") }}
+        </div>
     {% endif %}
 </div>
 """
@@ -448,6 +467,13 @@ _item_menu = """
                 <i class="fas fa-pen fa-fw"></i> Overrides...
             </a>
         {% endif %}
+        {% if item.error_condition %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2 text-danger"
+               href="{{ url_for('emailworkflow.item_error_log', id=item.id, url=return_url, text=return_text) }}">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> Error log...
+            </a>
+        {% endif %}
     </div>
 </div>
 """
@@ -460,7 +486,12 @@ def email_workflow_item_data(items, return_url, return_text):
             {
                 "name": render_template_string(_item_name_col, item=item),
                 "status": render_template_string(_item_status_col, item=item),
-                "error": render_template_string(_item_error_col, item=item),
+                "error": render_template_string(
+                    _item_error_col,
+                    item=item,
+                    return_url=return_url,
+                    return_text=return_text,
+                ),
                 "task": render_template_string(
                     _item_task_col,
                     item=item,

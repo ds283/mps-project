@@ -328,7 +328,7 @@ def register_email_notification_tasks(celery):
                     dispatch_new_request_notification.s(c_id) for c_id in c_ids
                 )
 
-        task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
+        task = task | reset_last_email_time.s(user_id)
         return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -393,7 +393,7 @@ def register_email_notification_tasks(celery):
         if not has_summary:
             task = task | no_summary_adapter.s()
 
-        task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
+        task = task | reset_last_email_time.s(user_id)
         return self.replace(task)
 
     @celery.task(bind=True, defaut_retry_delay=1)
@@ -413,63 +413,31 @@ def register_email_notification_tasks(celery):
         return email_outcomes, []
 
     @celery.task(bind=True, default_retry_delay=30)
-    def reset_notifications(self, reported_ids):
-        if (
-                not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list))
-                or len(reported_ids) != 2
-        ):
-            print("!!!! reported_ids = {x}".format(x=reported_ids))
-            print("!!!! type of reported_ids = {x}".format(x=type(reported_ids)))
-            raise RuntimeError(
-                "Could not interpret reported_ids argument in reset_notifications"
-            )
+    def delete_notifications(self, email_log_id, n_ids):
+        # email_log_id is prepended by the callback dispatch system; not used here.
+        # n_ids is the list of EmailNotification primary keys to delete.
+        if not n_ids:
+            return
 
-        # weed out duplicates; there shouldn't be any, but doesn't hurt
-        n_ids_set = set(reported_ids[0])
-        n_ids = list(n_ids_set)
-
-        # return value from this group will become the return value from this task;
-        # each delete_notification task will return its own n_id, so we will reproduce
-        # the same singleton/list of n_ids that we were provided with
-        task = group(delete_notification.si(n_id) for n_id in n_ids)
-        return self.replace(task)
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def delete_notification(self, n_id):
-        if not isinstance(n_id, int):
-            raise RuntimeError(
-                "Could not interpret n_id argument in delete_notification"
-            )
-
+        n_ids_set = set(n_ids)
         try:
-            notification = (
-                db.session.query(EmailNotification).filter_by(id=n_id).first()
+            db.session.query(EmailNotification).filter(
+                EmailNotification.id.in_(n_ids_set)
+            ).delete(synchronize_session=False)
+            log_db_commit(
+                f"Delete {len(n_ids_set)} EmailNotification records",
+                endpoint=self.name,
             )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if notification is None:
-            msg = "Could not read database records"
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        try:
-            db.session.delete(notification)
-            log_db_commit(f"Delete EmailNotification #{n_id}", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        # return our value of n_id which will be passed through to reset_last_email_time
-        return n_id
-
     @celery.task(bind=True, default_retry_delay=30)
     def reset_last_email_time(self, reported_ids, user_id):
         if (
-                not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list))
-                or len(reported_ids) != 2
+            not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list))
+            or len(reported_ids) != 2
         ):
             print("!!!! reported_ids = {x}".format(x=reported_ids))
             print("!!!! type of reported_ids = {x}".format(x=type(reported_ids)))
@@ -502,7 +470,9 @@ def register_email_notification_tasks(celery):
 
         user.last_email = datetime.now()
         try:
-            log_db_commit("Update last email timestamp for user", user=user, endpoint=self.name)
+            log_db_commit(
+                "Update last email timestamp for user", user=user, endpoint=self.name
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -531,7 +501,9 @@ def register_email_notification_tasks(celery):
 
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 
-        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE)
+        template = EmailTemplate.find_template_(
+            EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE
+        )
         workflow = EmailWorkflow.build_(
             name=f"Faculty notification email: {user.name}",
             template=template,
@@ -542,19 +514,35 @@ def register_email_notification_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"subject": notification.msg_subject()}),
-            body_payload=encode_email_payload({
-                "user": user,
-                "notification": notification,
-                "outstanding": outstanding_crqs,
-            }),
+            subject_payload=encode_email_payload(
+                {"subject": notification.msg_subject()}
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "user": user,
+                    "notification": notification,
+                    "outstanding": outstanding_crqs,
+                }
+            ),
             recipient_list=[user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.email_notifications.delete_notifications",
+                    "args": [[n_id]],
+                    "kwargs": {},
+                    "needs_log": False,
+                }
+            ],
         )
         item.workflow = workflow
         db.session.add(item)
 
         try:
-            log_db_commit(f"Create faculty single notification email workflow for {user.name}", user=user, endpoint=self.name)
+            log_db_commit(
+                f"Create faculty single notification email workflow for {user.name}",
+                user=user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -603,7 +591,7 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if any(n is None for n in notifications) or any(
-                cr is None for cr in outstanding_crqs
+            cr is None for cr in outstanding_crqs
         ):
             msg = "Could not read database records"
             current_app.logger.error(msg)
@@ -618,7 +606,9 @@ def register_email_notification_tasks(celery):
                 )
             )
 
-        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP)
+        template = EmailTemplate.find_template_(
+            EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP
+        )
         workflow = EmailWorkflow.build_(
             name=f"Faculty notification rollup email: {user.name}",
             template=template,
@@ -630,18 +620,32 @@ def register_email_notification_tasks(celery):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({}),
-            body_payload=encode_email_payload({
-                "user": user,
-                "notifications": notifications,
-                "outstanding": outstanding_crqs,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": user,
+                    "notifications": notifications,
+                    "outstanding": outstanding_crqs,
+                }
+            ),
             recipient_list=[user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.email_notifications.delete_notifications",
+                    "args": [n_ids],
+                    "kwargs": {},
+                    "needs_log": False,
+                }
+            ],
         )
         item.workflow = workflow
         db.session.add(item)
 
         try:
-            log_db_commit(f"Create faculty summary notification email workflow for {user.name}", user=user, endpoint=self.name)
+            log_db_commit(
+                f"Create faculty summary notification email workflow for {user.name}",
+                user=user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -698,12 +702,14 @@ def register_email_notification_tasks(celery):
                 subject_payload=encode_email_payload(
                     {"name": req.project.config.project_class.name}
                 ),
-                body_payload=encode_email_payload({
-                    "supervisor": req.project.owner.user,
-                    "student": req.owner.student,
-                    "config": req.project.config,
-                    "project": req.project,
-                }),
+                body_payload=encode_email_payload(
+                    {
+                        "supervisor": req.project.owner.user,
+                        "student": req.owner.student,
+                        "config": req.project.config,
+                        "project": req.project,
+                    }
+                ),
                 recipient_list=[
                     req.owner.student.user.email,
                     req.project.owner.user.email,
@@ -714,7 +720,10 @@ def register_email_notification_tasks(celery):
             db.session.add(item)
 
             try:
-                log_db_commit(f"Create new meeting request notification email workflow for project {req.project.name}", endpoint=self.name)
+                log_db_commit(
+                    f"Create new meeting request notification email workflow for project {req.project.name}",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -741,7 +750,9 @@ def register_email_notification_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE)
+        template = EmailTemplate.find_template_(
+            EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE
+        )
         workflow = EmailWorkflow.build_(
             name=f"Student notification email: {user.name}",
             template=template,
@@ -752,15 +763,31 @@ def register_email_notification_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"subject": notification.msg_subject()}),
-            body_payload=encode_email_payload({"user": user, "notification": notification}),
+            subject_payload=encode_email_payload(
+                {"subject": notification.msg_subject()}
+            ),
+            body_payload=encode_email_payload(
+                {"user": user, "notification": notification}
+            ),
             recipient_list=[user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.email_notifications.delete_notifications",
+                    "args": [[n_id]],
+                    "kwargs": {},
+                    "needs_log": False,
+                }
+            ],
         )
         item.workflow = workflow
         db.session.add(item)
 
         try:
-            log_db_commit(f"Create student single notification email workflow for {user.name}", user=user, endpoint=self.name)
+            log_db_commit(
+                f"Create student single notification email workflow for {user.name}",
+                user=user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -807,7 +834,7 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if any(n is None for n in notifications) or any(
-                cr is None for cr in outstanding_crqs
+            cr is None for cr in outstanding_crqs
         ):
             msg = "Could not read database records"
             current_app.logger.error(msg)
@@ -822,7 +849,9 @@ def register_email_notification_tasks(celery):
                 )
             )
 
-        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP)
+        template = EmailTemplate.find_template_(
+            EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP
+        )
         workflow = EmailWorkflow.build_(
             name=f"Student notification rollup email: {user.name}",
             template=template,
@@ -834,18 +863,32 @@ def register_email_notification_tasks(celery):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({}),
-            body_payload=encode_email_payload({
-                "user": user,
-                "notifications": notifications,
-                "outstanding": outstanding_crqs,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": user,
+                    "notifications": notifications,
+                    "outstanding": outstanding_crqs,
+                }
+            ),
             recipient_list=[user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.email_notifications.delete_notifications",
+                    "args": [n_ids],
+                    "kwargs": {},
+                    "needs_log": False,
+                }
+            ],
         )
         item.workflow = workflow
         db.session.add(item)
 
         try:
-            log_db_commit(f"Create student summary notification email workflow for {user.name}", user=user, endpoint=self.name)
+            log_db_commit(
+                f"Create student summary notification email workflow for {user.name}",
+                user=user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

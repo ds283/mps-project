@@ -513,13 +513,18 @@ def register_email_workflow_tasks(celery, mail: Mail):
 
         # Dispatch any registered callbacks now that the email has been sent and
         # the EmailLog item (if any) has been persisted.
+        # Callbacks with needs_log=True (the default) only fire when an EmailLog record exists,
+        # i.e. when EMAIL_IS_LIVE=True. Callbacks with needs_log=False fire unconditionally.
         callbacks: List[dict] = item.callbacks_list
-        if callbacks and log is not None:
+        if callbacks:
             celery_app = current_app.extensions["celery"]
             callback_tasks = []
             for cb in callbacks:
+                needs_log = cb.get("needs_log", True)
+                if needs_log and log is None:
+                    continue
                 task_name = cb["task"]
-                args = [log.id] + list(cb.get("args", []))
+                args = [log.id if log is not None else None] + list(cb.get("args", []))
                 kwargs = cb.get("kwargs", {})
                 tk = celery_app.tasks[task_name]
                 callback_tasks.append(tk.signature(args, kwargs, immutable=True))

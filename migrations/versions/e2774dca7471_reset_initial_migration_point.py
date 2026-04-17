@@ -7,6 +7,7 @@ Create Date: 2026-04-16 22:49:43.833933
 """
 from alembic import op
 import sqlalchemy as sa
+import sqlalchemy_utils
 
 
 # revision identifiers, used by Alembic.
@@ -64,7 +65,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255, collation='utf8_bin'), nullable=True),
     sa.Column('description', sa.String(length=255, collation='utf8_bin'), nullable=True),
-    sa.Column('permissions', flask_security.datastore.AsaList(), nullable=True),
+    sa.Column('permissions', sa.UnicodeText(), nullable=True),
     sa.Column('colour', sa.String(length=255, collation='utf8_bin'), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_roles')),
     sa.UniqueConstraint('name', name=op.f('uq_roles_name'))
@@ -747,7 +748,7 @@ def upgrade():
     op.create_table('presentation_sessions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('owner_id', sa.Integer(), nullable=True),
-    sa.Column('name', sa.String(length=String(length=255, collation='utf8_bin')), nullable=True),
+    sa.Column('name', sa.String(length=255, collation='utf8_bin'), nullable=True),
     sa.Column('date', sa.Date(), nullable=True),
     sa.Column('session_type', sa.Integer(), nullable=True),
     sa.Column('creation_timestamp', sa.DateTime(), nullable=True),

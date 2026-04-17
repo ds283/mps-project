@@ -10,11 +10,6 @@
 
 DEBUG = False
 
-# Ensure url_for(..., _external=True) generates https:// URLs in production.
-# The app sits behind an nginx TLS-terminating proxy; without this Flask would
-# emit http:// for external URLs, which external OAuth2 providers (e.g. Box) reject.
-PREFERRED_URL_SCHEME = "https"
-
 # Flask-Limiter
 # RATELIMIT_STORAGE_URI is set in instance/ratelimit.py
 RATELIMIT_DEFAULT = "5000/hour;300/minute"

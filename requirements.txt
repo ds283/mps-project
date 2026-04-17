@@ -4,6 +4,7 @@ APScheduler==3.10.4
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0
 babel==2.18.0
+bcrypt==5.0.0
 billiard==4.2.4
 bleach==6.3.0
 bleach-whitelist==0.0.11

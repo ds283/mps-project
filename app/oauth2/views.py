@@ -15,10 +15,10 @@ from box_sdk_gen import BoxOAuth, GetAuthorizeUrlOptions, OAuthConfig
 from flask import current_app, flash, redirect, request, session, url_for
 from flask_login import current_user, login_required
 
-from . import oauth2
 from ..database import db
 from ..shared.utils import home_dashboard_url
 from ..shared.workflow_logging import log_db_commit
+from . import oauth2
 
 
 def _safe_next_url(next_url):
@@ -65,9 +65,12 @@ def box_login():
     csrf_token = secrets.token_urlsafe(32)
     session["box_oauth_state"] = csrf_token
 
-    redirect_url = url_for("oauth2.box_callback", _external=True)
+    scheme = current_app.config.get("PREFERRED_URL_SCHEME", "https")
+    redirect_url = url_for("oauth2.box_callback", _external=True, _scheme=scheme)
 
-    box_oauth = BoxOAuth(config=OAuthConfig(client_id=client_id, client_secret=client_secret))
+    box_oauth = BoxOAuth(
+        config=OAuthConfig(client_id=client_id, client_secret=client_secret)
+    )
     auth_url = box_oauth.get_authorize_url(
         options=GetAuthorizeUrlOptions(redirect_uri=redirect_url, state=csrf_token)
     )
@@ -92,23 +95,33 @@ def box_callback():
     # Verify CSRF state.
     returned_state = request.args.get("state")
     if not expected_state or returned_state != expected_state:
-        flash("Box authorisation failed: invalid state token. Please try again.", "error")
+        flash(
+            "Box authorisation failed: invalid state token. Please try again.", "error"
+        )
         return redirect(fallback_url)
 
     auth_code = request.args.get("code")
     if not auth_code:
-        flash("Box authorisation failed: no authorisation code returned. Please try again.", "error")
+        flash(
+            "Box authorisation failed: no authorisation code returned. Please try again.",
+            "error",
+        )
         return redirect(fallback_url)
 
     client_id = current_app.config.get("BOX_CLIENT_ID")
     client_secret = current_app.config.get("BOX_CLIENT_SECRET")
 
     try:
-        box_oauth = BoxOAuth(config=OAuthConfig(client_id=client_id, client_secret=client_secret))
+        box_oauth = BoxOAuth(
+            config=OAuthConfig(client_id=client_id, client_secret=client_secret)
+        )
         token = box_oauth.get_tokens_authorization_code_grant(auth_code)
     except Exception as e:
         current_app.logger.exception("Box OAuth2 authentication error", exc_info=e)
-        flash("Box authorisation failed: could not exchange code for tokens. Please try again.", "error")
+        flash(
+            "Box authorisation failed: could not exchange code for tokens. Please try again.",
+            "error",
+        )
         return redirect(fallback_url)
 
     try:
@@ -124,7 +137,10 @@ def box_callback():
     except Exception as e:
         current_app.logger.exception("Error saving Box tokens", exc_info=e)
         db.session.rollback()
-        flash("Box account was authorised but tokens could not be saved. Please try again.", "error")
+        flash(
+            "Box account was authorised but tokens could not be saved. Please try again.",
+            "error",
+        )
         return redirect(fallback_url)
 
     flash("Your Box account has been linked successfully.", "success")

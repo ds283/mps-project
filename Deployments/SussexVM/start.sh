@@ -1,46 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMPOSE="docker-compose -f /its/home/docker/mpsprojects/docker-compose.yml -p mpsprojects"
-PROJECT="mpsprojects"
+STACK="mpsprojects"
+STACK_FILE="/its/home/docker/mpsprojects/docker-stack.yml"
 
-wait_for_healthy() {
-    local service="$1"
-    local container="${PROJECT}_${service}_1"
-    local elapsed=0
-    local timeout=120
+# Pull all service images before deploying
+docker pull quay.io/ds283/mpsproject:master
+docker pull quay.io/ds283/mpsproject-celery:master
+docker pull quay.io/ds283/mpsproject-nginx:master
 
-    echo "Waiting for ${service} to become healthy..."
-    while [ $elapsed -lt $timeout ]; do
-        status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "unknown")
-        case "$status" in
-            healthy)
-                echo "${service} is healthy."
-                return 0
-                ;;
-            unhealthy)
-                echo "  ${service}: unhealthy at ${elapsed}s — still waiting..." ;;
-            *)
-                echo "  ${service}: ${status} (${elapsed}s elapsed)" ;;
-        esac
-        sleep 5
-        elapsed=$((elapsed + 5))
-    done
-    echo "WARNING: ${service} did not become healthy within ${timeout}s, proceeding anyway" >&2
-}
+# Deploy (or update) the stack
+docker stack deploy -c "$STACK_FILE" "$STACK" --with-registry-auth
 
-# Pull all images before taking the stack down to minimise downtime
-$COMPOSE pull
+# Wait for all replicas across all services to reach running state
+echo "Waiting for all stack services to reach running state..."
+timeout=180
+elapsed=0
+while [ $elapsed -lt $timeout ]; do
+    total=$(docker stack ps "$STACK" --filter "desired-state=running" --format '{{.ID}}' 2>/dev/null | wc -l)
+    running=$(docker stack ps "$STACK" --filter "desired-state=running" --format '{{.CurrentState}}' 2>/dev/null | grep -c "^Running" || true)
+    if [ "$running" -ge "$total" ] && [ "$total" -gt 0 ]; then
+        echo "All $total replica(s) running."
+        break
+    fi
+    echo "  $running/$total replicas running (${elapsed}s elapsed)..."
+    sleep 10
+    elapsed=$((elapsed + 10))
+done
 
-# Bring everything down cleanly
-$COMPOSE down --remove-orphans
+if [ $elapsed -ge $timeout ]; then
+    echo "WARNING: not all replicas reached running state within ${timeout}s" >&2
+    docker stack ps "$STACK"
+fi
 
-# Start all services
-$COMPOSE up -d
-
-# Wait for web services to pass their health checks before declaring success
-wait_for_healthy web1
-wait_for_healthy web2
-wait_for_healthy web3
-
-docker rmi $(docker images --filter "dangling=true" -q --no-trunc) 2>/dev/null || true
+# Remove dangling images
+docker image prune -f

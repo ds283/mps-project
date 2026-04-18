@@ -85,7 +85,7 @@ def email_templates_ajax(pclass_id):
     :param pclass_id: project class ID
     :return: JSON response for DataTables
     """
-    from ..models.emails import PCLASS_SPECIALIZABLE_TEMPLATES
+    from ..models.emails import PCLASS_SPECIALIZABLE_TEMPLATES, _TYPE_NAMES
 
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
@@ -119,6 +119,10 @@ def email_templates_ajax(pclass_id):
         type_id, _ = row
         return type_id
 
+    def _type_name(row):
+        type_id, _ = row
+        return _TYPE_NAMES.get(type_id, f"Unknown type ({type_id})")
+
     def _subject(row):
         _, template = row
         if template is None:
@@ -143,7 +147,7 @@ def email_templates_ajax(pclass_id):
             return ""
         return template.comment
 
-    type_col = {"order": _type_value}
+    type_col = {"search": _type_name, "order": _type_value}
     subject_col = {"search": _subject, "order": _subject}
     version_col = {"order": _version}
     status_col = {"order": _active}

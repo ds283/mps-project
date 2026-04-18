@@ -1548,31 +1548,37 @@ def global_email_templates_ajax():
     AJAX data point for email templates list
     :return:
     """
-    base_query = db.session.query(EmailTemplate)
+    from ..models.emails import _TYPE_NAMES
 
-    type_col = {"order": EmailTemplate.type}
-    subject = {
-        "search": EmailTemplate.subject,
-        "order": EmailTemplate.subject,
-        "search_collation": "utf8_general_ci",
-    }
-    version = {"order": EmailTemplate.version}
-    status = {"order": EmailTemplate.active}
-    comment = {
-        "search": EmailTemplate.comment,
-        "order": EmailTemplate.comment,
-        "search_collation": "utf8_general_ci",
-    }
+    base_query = FakeQuery(db.session.query(EmailTemplate).all())
+
+    def _type_name(row: EmailTemplate):
+        return _TYPE_NAMES.get(row.type, f"Unknown type ({row.type})")
+
+    def _type_value(row: EmailTemplate):
+        return row.type
+
+    def _subject(row: EmailTemplate):
+        return row.subject or ""
+
+    def _version(row: EmailTemplate):
+        return row.version
+
+    def _active(row: EmailTemplate):
+        return row.active
+
+    def _comment(row: EmailTemplate):
+        return row.comment or ""
 
     columns = {
-        "type": type_col,
-        "subject": subject,
-        "version": version,
-        "status": status,
-        "comment": comment,
+        "type": {"search": _type_name, "order": _type_value},
+        "subject": {"search": _subject, "order": _subject},
+        "version": {"order": _version},
+        "status": {"order": _active},
+        "comment": {"search": _comment, "order": _comment},
     }
 
-    with ServerSideSQLHandler(request, base_query, columns) as handler:
+    with ServerSideInMemoryHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.email_templates_data)
 
 

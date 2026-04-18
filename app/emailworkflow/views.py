@@ -20,7 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import app.ajax as ajax
 
 from ..database import db
-from ..models import EmailWorkflow, EmailWorkflowItem
+from ..models import EmailWorkflow, EmailWorkflowItem, User
 from ..models.emails import EmailTemplate
 from ..shared.context.global_context import render_template_context
 from ..shared.email_templates import clone_email_template
@@ -68,7 +68,9 @@ def email_workflows_ajax():
     show_paused = dt_args.get("show_paused", "1") not in ("0", "false", "False")
     show_not_paused = dt_args.get("show_not_paused", "1") not in ("0", "false", "False")
 
-    base_query = db.session.query(EmailWorkflow)
+    base_query = db.session.query(EmailWorkflow).outerjoin(
+        User, EmailWorkflow.creator_id == User.id
+    )
 
     # apply completion filter
     if show_complete and not show_incomplete:
@@ -83,7 +85,15 @@ def email_workflows_ajax():
         base_query = base_query.filter(EmailWorkflow.paused.is_(False))
 
     columns = {
-        "name": {"order": EmailWorkflow.name, "search": EmailWorkflow.name},
+        "name": {
+            "order": EmailWorkflow.name,
+            "search": EmailWorkflow.name,
+            "search_collation": "utf8_general_ci",
+        },
+        "creator_name": {
+            "search": User.name,
+            "search_collation": "utf8_general_ci",
+        },
         "send_time": {"order": EmailWorkflow.send_time},
         "created": {"order": EmailWorkflow.creation_timestamp},
     }

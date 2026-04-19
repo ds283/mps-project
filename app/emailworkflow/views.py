@@ -90,8 +90,12 @@ def email_workflows_ajax():
             "search": EmailWorkflow.name,
             "search_collation": "utf8_general_ci",
         },
-        "creator_name": {
-            "search": User.name,
+        "creator_first_name": {
+            "search": User.first_name,
+            "search_collation": "utf8_general_ci",
+        },
+        "creator_last_name": {
+            "search": User.last_name,
             "search_collation": "utf8_general_ci",
         },
         "send_time": {"order": EmailWorkflow.send_time},

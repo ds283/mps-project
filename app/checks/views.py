@@ -28,13 +28,15 @@ def liveness():
 
 def readiness():
     """
-    Check all required services are reachable:
+    Check that the three services the web container cannot function without are reachable:
       - MariaDB (SQL database)
-      - Redis (cache / broker)
+      - Redis (cache / session broker)
       - MongoDB (session store)
-      - Object-storage buckets (MinIO/S3)
-      - Celery workers (at least one must be responding)
-    Raises HealthError if any check fails.
+
+    Object-storage (MinIO/S3) and Celery workers are intentionally excluded. A storage outage
+    degrades specific features but does not prevent the web tier from serving requests; marking
+    the web container unhealthy for a storage failure causes Swarm to kill it unnecessarily.
+    Celery worker health is monitored separately by each worker's own healthcheck.
     """
     # --- MariaDB ---
     try:
@@ -59,27 +61,3 @@ def readiness():
         mongo_client.admin.command("ping")
     except PyMongoError as e:
         raise HealthError(f"Can't connect to MongoDB: {e}")
-
-    # --- Object-storage buckets ---
-    buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS", {})
-    for bucket_key, store in buckets.items():
-        try:
-            store.ping()
-        except Exception as e:
-            raise HealthError(f"Object bucket '{bucket_key}' is not accessible: {e}")
-
-    # --- Celery workers ---
-    # Broadcasts a ping over the broker and waits up to 2 s for any worker to reply.
-    # If no workers respond the endpoint reports unhealthy.
-    try:
-        celery = current_app.extensions.get("celery")
-        if celery is None:
-            raise HealthError("Celery is not configured")
-        inspector = celery.control.inspect(timeout=2.0)
-        ping_result = inspector.ping()
-        if not ping_result:
-            raise HealthError("No Celery workers are responding")
-    except HealthError:
-        raise
-    except Exception as e:
-        raise HealthError(f"Cannot reach Celery workers: {e}")

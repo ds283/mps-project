@@ -2,7 +2,7 @@ FROM nginx:1.29.6
 LABEL authors="ds283"
 
 # logs expected to be located in /logs
-RUN apt-get update && apt-get -y install anacron cron logrotate procps
+RUN apt-get update && apt-get -y install cron logrotate procps
 
 # copy logrotate configuration file
 COPY logrotate.d/nginx /etc/logrotate.d/nginx

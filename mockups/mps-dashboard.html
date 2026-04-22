@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPS Projects — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Muted, desaturated Bootstrap-inspired palette */
+    --clr-bg:        #f5f3ef;
+    --clr-surface:   #ffffff;
+    --clr-sidebar:   #2d3640;
+    --clr-sidebar-active: #3d4f5e;
+    --clr-sidebar-text: #c8d3dc;
+    --clr-sidebar-muted: #7a8fa0;
+
+    --clr-border:    #e0dbd3;
+    --clr-text:      #2a2a2a;
+    --clr-muted:     #7a7570;
+
+    /* Softer semantic colours */
+    --clr-success:   #3a7d5c;
+    --clr-success-bg:#eaf4ef;
+    --clr-success-light: #6aaa89;
+
+    --clr-warning:   #b06d20;
+    --clr-warning-bg:#fdf3e7;
+
+    --clr-danger:    #a03040;
+    --clr-danger-bg: #fbedef;
+
+    --clr-info:      #2c6b9a;
+    --clr-info-bg:   #e8f2fa;
+
+    --clr-accent:    #4a7fa5;
+
+    --radius:        6px;
+    --sidebar-w:     260px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    background: var(--clr-bg);
+    color: var(--clr-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    height: 44px;
+    background: #1e2730;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  .topbar-brand {
+    color: #e8edf2;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .topbar-nav { display: flex; gap: 4px; margin-left: auto; }
+  .topbar-nav a {
+    color: #9ab0c2;
+    text-decoration: none;
+    font-size: 12.5px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .topbar-nav a:hover { background: rgba(255,255,255,0.08); color: #e8edf2; }
+  .topbar-nav a.active { background: rgba(255,255,255,0.12); color: #e8edf2; }
+  .badge-count {
+    display: inline-block;
+    background: var(--clr-danger);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-left: 3px;
+    vertical-align: middle;
+  }
+  .badge-count.muted { background: #5a6a78; }
+
+  /* ── Body layout ── */
+  .layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--clr-sidebar);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 24px;
+  }
+
+  .sidebar-section {
+    padding: 16px 0 8px;
+  }
+  .sidebar-section-label {
+    padding: 0 16px 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--clr-sidebar-muted);
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.12s;
+    text-decoration: none;
+  }
+  .sidebar-item:hover { background: rgba(255,255,255,0.05); }
+  .sidebar-item.active {
+    background: var(--clr-sidebar-active);
+    border-left-color: var(--clr-accent);
+  }
+
+  .sidebar-item-icon {
+    width: 18px;
+    margin-top: 1px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+  .sidebar-item-body { flex: 1; min-width: 0; }
+  .sidebar-item-title {
+    color: var(--clr-sidebar-text);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .sidebar-item-meta {
+    color: var(--clr-sidebar-muted);
+    font-size: 11.5px;
+    margin-top: 1px;
+  }
+  .sidebar-pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .pill-warn { background: #6b3d10; color: #f0c080; }
+  .pill-ok   { background: #1d4d37; color: #7ecfa5; }
+  .pill-info { background: #1b3f5c; color: #89c0e0; }
+
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    margin: 4px 16px;
+  }
+
+  /* Student list in sidebar */
+  .student-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: background 0.12s;
+    text-decoration: none;
+  }
+  .student-item:hover { background: rgba(255,255,255,0.05); }
+  .student-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--clr-accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .student-avatar.warn { background: #8a5020; }
+  .student-info { flex: 1; min-width: 0; }
+  .student-name {
+    color: var(--clr-sidebar-text);
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .student-sub {
+    color: var(--clr-sidebar-muted);
+    font-size: 11px;
+  }
+  .student-status {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-ok   { background: var(--clr-success-light); }
+  .status-warn { background: #d08840; }
+  .status-miss { background: var(--clr-danger); }
+
+  .student-type-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    color: var(--clr-sidebar-muted);
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── Main content ── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    min-width: 0;
+  }
+
+  .page-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--clr-muted);
+    margin-bottom: 24px;
+  }
+
+  /* ── Alert banners ── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid transparent;
+  }
+  .alert-warning {
+    background: var(--clr-warning-bg);
+    border-color: #e5c090;
+    color: #7a4a10;
+  }
+  .alert-danger {
+    background: var(--clr-danger-bg);
+    border-color: #e0a8b0;
+    color: #7a2030;
+  }
+  .alert-info {
+    background: var(--clr-info-bg);
+    border-color: #9ac4e0;
+    color: #1a4a6a;
+  }
+  .alert-success {
+    background: var(--clr-success-bg);
+    border-color: #9ad0b8;
+    color: #205040;
+  }
+  .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 0px; }
+  .alert-body { flex: 1; }
+  .alert strong { font-weight: 600; }
+  .alert a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* ── Section headers ── */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 28px 0 12px;
+    border-bottom: 1px solid var(--clr-border);
+    padding-bottom: 8px;
+  }
+  .section-head h2 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .section-head a {
+    font-size: 12px;
+    color: var(--clr-accent);
+    text-decoration: none;
+  }
+
+  /* ── Task cards ── */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-card {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius);
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .task-card:hover { border-color: #c8c0b8; }
+  .task-stripe {
+    width: 3px;
+    border-radius: 2px;
+    align-self: stretch;
+    flex-shrink: 0;
+  }
+  .stripe-danger { background: var(--clr-danger); }
+  .stripe-warn   { background: var(--clr-warning); }
+  .stripe-info   { background: var(--clr-info); }
+
+  .task-main { flex: 1; min-width: 0; }
+  .task-title {
+    font-size: 13.5px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .task-meta {
+    font-size: 12px;
+    color: var(--clr-muted);
+  }
+  .task-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tb-danger { background: var(--clr-danger-bg); color: var(--clr-danger); border: 1px solid #e0a8b0; }
+  .tb-warn   { background: var(--clr-warning-bg); color: var(--clr-warning); border: 1px solid #e5c090; }
+  .tb-info   { background: var(--clr-info-bg); color: var(--clr-info); border: 1px solid #9ac4e0; }
+  .task-action {
+    flex-shrink: 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--clr-accent);
+    text-decoration: none;
+    padding: 5px 12px;
+    border: 1px solid var(--clr-accent);
+    border-radius: 4px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .task-action:hover { background: var(--clr-accent); color: white; }
+
+  /* ── Student supervision cards ── */
+  .student-cards { display: flex; flex-direction: column; gap: 8px; }
+  .student-card {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius);
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.12s;
+  }
+  .student-card:hover { border-color: #b8b0a8; }
+  .card-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--clr-info-bg);
+    border: 1px solid #9ac4e0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--clr-info);
+    flex-shrink: 0;
+  }
+  .card-body { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+  .card-project {
+    font-size: 12px;
+    color: var(--clr-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .card-stats {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .stat-item { text-align: right; }
+  .stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .stat-label {
+    font-size: 10.5px;
+    color: var(--clr-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .stat-ok   { color: var(--clr-success); }
+  .stat-warn { color: var(--clr-warning); }
+  .stat-miss { color: var(--clr-danger); }
+
+  .attend-bar {
+    width: 80px;
+    height: 5px;
+    background: #e5e0d8;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .attend-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+  .fill-ok   { background: var(--clr-success-light); }
+  .fill-warn { background: #d08840; }
+  .fill-miss { background: var(--clr-danger); }
+
+  /* ── Presentation groups ── */
+  .pres-group {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .pres-group-head {
+    padding: 10px 16px;
+    background: #f8f6f2;
+    border-bottom: 1px solid var(--clr-border);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .pres-group-title { font-weight: 600; font-size: 13px; }
+  .pres-group-meta  { font-size: 12px; color: var(--clr-muted); }
+  .pres-row {
+    display: flex;
+    align-items: center;
+    padding: 9px 16px;
+    gap: 14px;
+    border-bottom: 1px solid #f0ece6;
+    font-size: 13px;
+  }
+  .pres-row:last-child { border-bottom: none; }
+  .pres-name { width: 160px; flex-shrink: 0; font-weight: 500; color: var(--clr-accent); }
+  .pres-supervisor { width: 170px; flex-shrink: 0; color: var(--clr-muted); }
+  .pres-project { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-text); }
+  .pres-feedback-missing {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: var(--clr-warning-bg);
+    color: var(--clr-warning);
+    border: 1px solid #e5c090;
+    flex-shrink: 0;
+  }
+
+  /* ── Progress ring ── */
+  .ring-wrap { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
+  .ring-svg { transform: rotate(-90deg); }
+  .ring-bg   { fill: none; stroke: #e5e0d8; stroke-width: 4; }
+  .ring-fill { fill: none; stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+  .ring-pct {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--clr-text);
+  }
+
+  /* ── Hand-in deadline chip ── */
+  .deadline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .chip-soon { background: var(--clr-warning-bg); color: var(--clr-warning); border: 1px solid #e5c090; }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c8c0b8; border-radius: 3px; }
+
+  /* Mono ids */
+  .mono { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--clr-muted); }
+
+  /* ── Sidebar time rules ── */
+  .student-time-rule {
+    padding: 6px 16px 3px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--clr-sidebar-muted);
+    text-transform: uppercase;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 4px;
+  }
+  .student-time-rule:first-child { border-top: none; margin-top: 0; }
+
+  /* ── View toggle ── */
+  .view-toggle {
+    display: flex;
+    background: #f0ece6;
+    border: 1px solid var(--clr-border);
+    border-radius: 5px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .vt-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--clr-muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .vt-btn:hover { color: var(--clr-text); }
+  .vt-btn.active {
+    background: var(--clr-surface);
+    color: var(--clr-text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+  }
+
+  /* ── Session tally chip ── */
+  .pres-group-tally {
+    margin-left: auto;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 10px;
+  }
+  .tally-ok   { background: var(--clr-success-bg); color: var(--clr-success); }
+  .tally-warn { background: var(--clr-warning-bg); color: var(--clr-warning); }
+
+  /* ── Presentation row badges (replacing old pres-feedback-missing) ── */
+  .pres-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .pb-missing   { background: var(--clr-warning-bg); color: var(--clr-warning);  border: 1px solid #e5c090; }
+  .pb-submitted { background: var(--clr-success-bg); color: var(--clr-success);  border: 1px solid #9ad0b8; }
+
+  /* ── Flat table view ── */
+  .flat-table-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .flat-label { font-size: 12.5px; color: var(--clr-muted); font-weight: 500; }
+
+  .flat-table {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .ft-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    background: #f8f6f2;
+    border-bottom: 1px solid var(--clr-border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--clr-muted);
+  }
+  .ft-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    border-bottom: 1px solid #f0ece6;
+    font-size: 13px;
+    transition: background 0.1s;
+  }
+  .ft-row:last-child { border-bottom: none; }
+  .ft-row:hover { background: #faf8f5; }
+  .ft-row[data-status="submitted"] { opacity: 0.65; }
+
+  .ft-col-name       { width: 140px; flex-shrink: 0; font-weight: 500; }
+  .ft-col-session    { width: 120px; flex-shrink: 0; color: var(--clr-muted); font-size: 12px; }
+  .ft-col-supervisor { width: 140px; flex-shrink: 0; color: var(--clr-muted); }
+  .ft-col-project    { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ft-col-status     { width: 90px; flex-shrink: 0; text-align: right; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<header class="topbar">
+  <span class="topbar-brand">MPS Projects</span>
+  <nav class="topbar-nav">
+    <a href="#">My projects</a>
+    <a href="#">Reports</a>
+    <a href="#">Dashboards</a>
+    <a href="#">Archive</a>
+    <a href="#">Convenor</a>
+    <a href="#">Admin</a>
+    <a href="#" class="active">ds283 (Faculty)</a>
+  </nav>
+</header>
+
+<!-- Body -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Enrolments</div>
+
+      <a href="#" class="sidebar-item active">
+        <svg class="sidebar-item-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" color="#9ab0c2"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M7 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title">Final Year Project (BSc)</div>
+          <div class="sidebar-item-meta">3 students · hand-in 13 May</div>
+        </div>
+        <span class="sidebar-pill pill-warn">⚠ 1</span>
+      </a>
+
+      <a href="#" class="sidebar-item">
+        <svg class="sidebar-item-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" color="#9ab0c2"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M7 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title">Final Year Project (MPhys)</div>
+          <div class="sidebar-item-meta">Selections open</div>
+        </div>
+        <span class="sidebar-pill pill-ok">✓</span>
+      </a>
+
+      <a href="#" class="sidebar-item">
+        <svg class="sidebar-item-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" color="#9ab0c2"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M7 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title">Mathematical Physics Project</div>
+          <div class="sidebar-item-meta">Selections open</div>
+        </div>
+        <span class="sidebar-pill pill-ok">✓</span>
+      </a>
+
+      <a href="#" class="sidebar-item">
+        <svg class="sidebar-item-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" color="#9ab0c2"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M7 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title">Research Placement</div>
+          <div class="sidebar-item-meta">Selections open</div>
+        </div>
+        <span class="sidebar-pill pill-ok">✓</span>
+      </a>
+
+      <a href="#" class="sidebar-item">
+        <svg class="sidebar-item-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" color="#9ab0c2"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M7 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title">Junior Research Associate</div>
+          <div class="sidebar-item-meta">Selections open</div>
+        </div>
+        <span class="sidebar-pill pill-ok">✓</span>
+      </a>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">My students · next meeting</div>
+
+      <!-- Mon 15:00 group -->
+      <div class="student-time-rule">Mon 22 Apr · 15:00</div>
+
+      <a href="#" class="student-item">
+        <div class="student-avatar">CC</div>
+        <div class="student-info">
+          <div class="student-name">Cameron Carr</div>
+          <div class="student-sub"><span class="student-type-tag">BSc</span> Pev 3 4C12</div>
+        </div>
+        <div class="student-status status-warn" title="Attendance not recorded this week"></div>
+      </a>
+
+      <a href="#" class="student-item">
+        <div class="student-avatar">CD</div>
+        <div class="student-info">
+          <div class="student-name">Christianna Davis</div>
+          <div class="student-sub"><span class="student-type-tag">BSc</span> Pev 3 4C12</div>
+        </div>
+        <div class="student-status status-warn" title="Attendance not recorded this week"></div>
+      </a>
+
+      <a href="#" class="student-item">
+        <div class="student-avatar">AK</div>
+        <div class="student-info">
+          <div class="student-name">Abberinna Kulendran</div>
+          <div class="student-sub"><span class="student-type-tag">BSc</span> Pev 3 4C12</div>
+        </div>
+        <div class="student-status status-ok" title="Up to date"></div>
+      </a>
+
+      <!-- Tue 10:00 group -->
+      <div class="student-time-rule">Tue 23 Apr · 10:00</div>
+
+      <a href="#" class="student-item">
+        <div class="student-avatar">TN</div>
+        <div class="student-info">
+          <div class="student-name">Tomáš Novák</div>
+          <div class="student-sub"><span class="student-type-tag">MPP</span> Pev 2 2A6</div>
+        </div>
+        <div class="student-status status-miss" title="Meeting missed last week"></div>
+      </a>
+
+      <!-- Wed 14:00 group -->
+      <div class="student-time-rule">Wed 24 Apr · 14:00</div>
+
+      <a href="#" class="student-item">
+        <div class="student-avatar">RH</div>
+        <div class="student-info">
+          <div class="student-name">Rosa Hartmann</div>
+          <div class="student-sub"><span class="student-type-tag">MPhys</span> Pev 3 3A10</div>
+        </div>
+        <div class="student-status status-ok" title="Up to date"></div>
+      </a>
+
+      <!-- Thu 11:00 group -->
+      <div class="student-time-rule">Thu 25 Apr · 11:00</div>
+
+      <a href="#" class="student-item">
+        <div class="student-avatar">SP</div>
+        <div class="student-info">
+          <div class="student-name">Sunita Pillai</div>
+          <div class="student-sub"><span class="student-type-tag">JRA</span> Pev 1 1B4</div>
+        </div>
+        <div class="student-status status-ok" title="Up to date"></div>
+      </a>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Quick links</div>
+      <a href="#" class="sidebar-item">
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title" style="color:#8ab0c8; font-size:12.5px;">Project library →</div>
+        </div>
+      </a>
+      <a href="#" class="sidebar-item">
+        <div class="sidebar-item-body">
+          <div class="sidebar-item-title" style="color:#8ab0c8; font-size:12.5px;">Canvas submission page →</div>
+        </div>
+      </a>
+    </div>
+
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <div class="page-title">Final Year Project (BSc) · 2025–2026</div>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+      <span class="page-subtitle" style="margin:0;">Convenor: Prof David Seery &nbsp;·&nbsp; Submission Period #1 commenced Mon 29 Sep 2025</span>
+      <span class="deadline-chip chip-soon">⏱ Hand-in Wed 13 May 2026 · 3 weeks</span>
+    </div>
+
+    <!-- Urgent tasks -->
+    <div class="alert alert-danger">
+      <span class="alert-icon">⚠</span>
+      <div class="alert-body">
+        <strong>2 marking reports overdue</strong> — Mathematical Physics Project examiner reports were due <strong>Wed 14 Jan 2026</strong> and have not been submitted. <a href="#">Enter reports →</a>
+      </div>
+    </div>
+
+    <div class="alert alert-warning">
+      <span class="alert-icon">📋</span>
+      <div class="alert-body">
+        <strong>Attendance not recorded</strong> for Spring Week 10 supervision meeting with Cameron Carr and Christianna Davis (Mon 20 Apr 15:00).
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ</span>
+      <div class="alert-body">
+        Student selections for <strong>2026–2027</strong> are open. You have 1 active project in the library. <a href="#">Selection closes Fri 08 May 2026 →</a>
+      </div>
+    </div>
+
+    <!-- Marking tasks -->
+    <div class="section-head">
+      <h2>Marking &amp; feedback tasks</h2>
+      <a href="#">View all →</a>
+    </div>
+
+    <div class="task-list">
+      <div class="task-card">
+        <div class="task-stripe stripe-danger"></div>
+        <div class="task-main">
+          <div class="task-title">Report <span class="mono">#267131</span></div>
+          <div class="task-meta">Mathematical Physics Project — Examiners · deadline <strong>Wed 14 Jan 2026</strong></div>
+        </div>
+        <span class="task-badge tb-danger">Awaiting report &amp; feedback</span>
+        <a href="#" class="task-action">Enter report</a>
+      </div>
+
+      <div class="task-card">
+        <div class="task-stripe stripe-danger"></div>
+        <div class="task-main">
+          <div class="task-title">Report <span class="mono">#283240</span></div>
+          <div class="task-meta">Mathematical Physics Project — Examiners · deadline <strong>Wed 14 Jan 2026</strong></div>
+        </div>
+        <span class="task-badge tb-danger">Awaiting report &amp; feedback</span>
+        <a href="#" class="task-action">Enter report</a>
+      </div>
+    </div>
+
+    <!-- Supervised students -->
+    <div class="section-head">
+      <h2>Supervised students</h2>
+      <a href="#">All students →</a>
+    </div>
+
+    <div class="student-cards">
+
+      <div class="student-card">
+        <div class="card-avatar">CC</div>
+        <div class="card-body">
+          <div class="card-name">Cameron Carr <span style="font-size:11px; color: var(--clr-muted); font-weight:400;">2023 cohort · Phys+Astro BSc</span></div>
+          <div class="card-project">Topics in early universe cosmology</div>
+        </div>
+        <div class="card-stats">
+          <div class="stat-item">
+            <div class="stat-value stat-warn">20/21</div>
+            <div class="stat-label">Attendance</div>
+            <div class="attend-bar"><div class="attend-fill fill-warn" style="width:95%"></div></div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value stat-warn" style="font-size:12px;">⚠ missing</div>
+            <div class="stat-label">Wk 10 record</div>
+          </div>
+          <div class="ring-wrap">
+            <svg class="ring-svg" width="48" height="48" viewBox="0 0 48 48">
+              <circle class="ring-bg" cx="24" cy="24" r="20"/>
+              <circle class="ring-fill" cx="24" cy="24" r="20"
+                stroke="#d08840"
+                stroke-dasharray="125.66"
+                stroke-dashoffset="6.28"/>
+            </svg>
+            <div class="ring-pct">95%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="student-card">
+        <div class="card-avatar">CD</div>
+        <div class="card-body">
+          <div class="card-name">Christianna Davis <span style="font-size:11px; color: var(--clr-muted); font-weight:400;">2022 cohort · Phys+Astro BSc</span></div>
+          <div class="card-project">Topics in early universe cosmology</div>
+        </div>
+        <div class="card-stats">
+          <div class="stat-item">
+            <div class="stat-value stat-warn">20/21</div>
+            <div class="stat-label">Attendance</div>
+            <div class="attend-bar"><div class="attend-fill fill-warn" style="width:95%"></div></div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value stat-warn" style="font-size:12px;">⚠ missing</div>
+            <div class="stat-label">Wk 10 record</div>
+          </div>
+          <div class="ring-wrap">
+            <svg class="ring-svg" width="48" height="48" viewBox="0 0 48 48">
+              <circle class="ring-bg" cx="24" cy="24" r="20"/>
+              <circle class="ring-fill" cx="24" cy="24" r="20"
+                stroke="#d08840"
+                stroke-dasharray="125.66"
+                stroke-dashoffset="6.28"/>
+            </svg>
+            <div class="ring-pct">95%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="student-card">
+        <div class="card-avatar">AK</div>
+        <div class="card-body">
+          <div class="card-name">Abberinna Kulendran <span style="font-size:11px; color: var(--clr-muted); font-weight:400;">2023 cohort · Phys+Astro BSc</span></div>
+          <div class="card-project">Topics in early universe cosmology</div>
+        </div>
+        <div class="card-stats">
+          <div class="stat-item">
+            <div class="stat-value stat-ok">20/20</div>
+            <div class="stat-label">Attendance</div>
+            <div class="attend-bar"><div class="attend-fill fill-ok" style="width:100%"></div></div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value stat-ok" style="font-size:12px;">✓ recorded</div>
+            <div class="stat-label">Wk 10 record</div>
+          </div>
+          <div class="ring-wrap">
+            <svg class="ring-svg" width="48" height="48" viewBox="0 0 48 48">
+              <circle class="ring-bg" cx="24" cy="24" r="20"/>
+              <circle class="ring-fill" cx="24" cy="24" r="20"
+                stroke="#6aaa89"
+                stroke-dasharray="125.66"
+                stroke-dashoffset="0"/>
+            </svg>
+            <div class="ring-pct">100%</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Presentations to mark -->
+    <div class="section-head">
+      <h2>Presentation assessments</h2>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="view-toggle" id="presToggle">
+          <button class="vt-btn active" data-view="sessions" onclick="switchPresView('sessions')">By session</button>
+          <button class="vt-btn" data-view="table" onclick="switchPresView('table')">All assessments</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SESSION VIEW ── -->
+    <div id="presSessionView">
+
+      <div class="pres-group">
+        <div class="pres-group-head">
+          <span class="pres-group-title">Week 2 BSc — Morning A</span>
+          <span class="pres-group-meta">04/02/2026 · 09:30–11:00 · Pevensey 3 3C8</span>
+          <span class="pres-group-tally tally-warn">0 / 4 submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name mono">#265161</span>
+          <span class="pres-supervisor">Dr Christian Byrnes</span>
+          <span class="pres-project">Inflation with the curvaton and the hot big bang (No. 4)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Bree Bailey</span>
+          <span class="pres-supervisor">Prof Kathy Romer</span>
+          <span class="pres-project">From Observations of Clusters of Galaxies… (No. 44)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Harriet Copeman</span>
+          <span class="pres-supervisor">Prof Kathy Romer</span>
+          <span class="pres-project">Continuing to work with your placement employer (No. 43)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Harry Shrimpton</span>
+          <span class="pres-supervisor">Prof Jacob Dunningham</span>
+          <span class="pres-project">Quantum-enhanced metrology (No. 7)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+      </div>
+
+      <div class="pres-group">
+        <div class="pres-group-head">
+          <span class="pres-group-title">Week 2 BSc — Morning B</span>
+          <span class="pres-group-meta">04/02/2026 · 11:30–13:00 · Pevensey 3 3C8</span>
+          <span class="pres-group-tally tally-warn">1 / 4 submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Charlie Veale</span>
+          <span class="pres-supervisor">Dr Elisabeth Falk</span>
+          <span class="pres-project">Neutrino oscillations (No. 8)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Shayan Afsharian</span>
+          <span class="pres-supervisor">Dr Alice King</span>
+          <span class="pres-project">2D Layered Nanomaterials as Cellular Vectors (No. 35)</span>
+          <span class="pres-badge pb-submitted">Submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Curtis Bridge</span>
+          <span class="pres-supervisor">Prof Winfried Hensinger</span>
+          <span class="pres-project">Cooling of ytterbium ions using lasers and microwaves (No. 27)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">George Carlier</span>
+          <span class="pres-supervisor">Prof Jose Verdu</span>
+          <span class="pres-project">Development of a quantum microwave microscope (No. 54)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+      </div>
+
+      <div class="pres-group">
+        <div class="pres-group-head">
+          <span class="pres-group-title">Week 2 BSc — Afternoon</span>
+          <span class="pres-group-meta">04/02/2026 · 15:30–17:00 · Pevensey 1 1A3</span>
+          <span class="pres-group-tally tally-ok">4 / 4 submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Peter Harwin</span>
+          <span class="pres-supervisor">Prof Robert Smith</span>
+          <span class="pres-project">Weak Gravitational Lensing (No. 51)</span>
+          <span class="pres-badge pb-submitted">Submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Alice Chapman</span>
+          <span class="pres-supervisor">Prof Jeff Hartnell</span>
+          <span class="pres-project">Prototyping a totally new type of particle detector (No. 19)</span>
+          <span class="pres-badge pb-submitted">Submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Natacha Hartnett</span>
+          <span class="pres-supervisor">Prof Matthias Keller</span>
+          <span class="pres-project">Lasers for the quantum internet (No. 32)</span>
+          <span class="pres-badge pb-submitted">Submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Daniel Salaman</span>
+          <span class="pres-supervisor">Prof Daniel Litim</span>
+          <span class="pres-project">Fixed points and phase transitions in QFT (No. 36)</span>
+          <span class="pres-badge pb-submitted">Submitted</span>
+        </div>
+      </div>
+
+      <div class="pres-group">
+        <div class="pres-group-head">
+          <span class="pres-group-title">Week 3 MPhys/MPP</span>
+          <span class="pres-group-meta">11/02/2026 · 13:30–15:00 · Pevensey 1 1A3</span>
+          <span class="pres-group-tally tally-warn">0 / 2 submitted</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Fadi Tadros</span>
+          <span class="pres-supervisor">Prof Matthias Keller</span>
+          <span class="pres-project">Lasers for the quantum internet (No. 32)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+        <div class="pres-row">
+          <span class="pres-name">Will Clark</span>
+          <span class="pres-supervisor">Dr Kate Shaw</span>
+          <span class="pres-project">LHC Data Visualisation (No. 50)</span>
+          <span class="pres-badge pb-missing">Missing</span>
+        </div>
+      </div>
+
+    </div><!-- /presSessionView -->
+
+    <!-- ── TABLE VIEW ── -->
+    <div id="presTableView" style="display:none;">
+
+      <div class="flat-table-controls">
+        <span class="flat-label">Show:</span>
+        <div class="view-toggle" id="feedbackFilter">
+          <button class="vt-btn active" data-filter="all"    onclick="filterTable('all')">All (14)</button>
+          <button class="vt-btn"        data-filter="missing" onclick="filterTable('missing')">Missing (9)</button>
+          <button class="vt-btn"        data-filter="submitted" onclick="filterTable('submitted')">Submitted (5)</button>
+        </div>
+      </div>
+
+      <div class="flat-table">
+        <div class="ft-header">
+          <span class="ft-col-name">Student</span>
+          <span class="ft-col-session">Session</span>
+          <span class="ft-col-supervisor">Supervisor</span>
+          <span class="ft-col-project">Project</span>
+          <span class="ft-col-status">Feedback</span>
+        </div>
+
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name mono">#265161</span>
+          <span class="ft-col-session">Wk2 BSc A · 04/02</span>
+          <span class="ft-col-supervisor">Dr C. Byrnes</span>
+          <span class="ft-col-project">Inflation with the curvaton… (No. 4)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Bree Bailey</span>
+          <span class="ft-col-session">Wk2 BSc A · 04/02</span>
+          <span class="ft-col-supervisor">Prof K. Romer</span>
+          <span class="ft-col-project">Clusters of Galaxies… (No. 44)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Harriet Copeman</span>
+          <span class="ft-col-session">Wk2 BSc A · 04/02</span>
+          <span class="ft-col-supervisor">Prof K. Romer</span>
+          <span class="ft-col-project">Placement employer (No. 43)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Harry Shrimpton</span>
+          <span class="ft-col-session">Wk2 BSc A · 04/02</span>
+          <span class="ft-col-supervisor">Prof J. Dunningham</span>
+          <span class="ft-col-project">Quantum-enhanced metrology (No. 7)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Charlie Veale</span>
+          <span class="ft-col-session">Wk2 BSc B · 04/02</span>
+          <span class="ft-col-supervisor">Dr E. Falk</span>
+          <span class="ft-col-project">Neutrino oscillations (No. 8)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="submitted">
+          <span class="ft-col-name">Shayan Afsharian</span>
+          <span class="ft-col-session">Wk2 BSc B · 04/02</span>
+          <span class="ft-col-supervisor">Dr A. King</span>
+          <span class="ft-col-project">2D Nanomaterials as Cellular Vectors (No. 35)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-submitted">Submitted</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Curtis Bridge</span>
+          <span class="ft-col-session">Wk2 BSc B · 04/02</span>
+          <span class="ft-col-supervisor">Prof W. Hensinger</span>
+          <span class="ft-col-project">Cooling ytterbium ions (No. 27)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">George Carlier</span>
+          <span class="ft-col-session">Wk2 BSc B · 04/02</span>
+          <span class="ft-col-supervisor">Prof J. Verdu</span>
+          <span class="ft-col-project">Quantum microwave microscope (No. 54)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="submitted">
+          <span class="ft-col-name">Peter Harwin</span>
+          <span class="ft-col-session">Wk2 BSc C · 04/02</span>
+          <span class="ft-col-supervisor">Prof R. Smith</span>
+          <span class="ft-col-project">Weak Gravitational Lensing (No. 51)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-submitted">Submitted</span></span>
+        </div>
+        <div class="ft-row" data-status="submitted">
+          <span class="ft-col-name">Alice Chapman</span>
+          <span class="ft-col-session">Wk2 BSc C · 04/02</span>
+          <span class="ft-col-supervisor">Prof J. Hartnell</span>
+          <span class="ft-col-project">New particle detector (No. 19)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-submitted">Submitted</span></span>
+        </div>
+        <div class="ft-row" data-status="submitted">
+          <span class="ft-col-name">Natacha Hartnett</span>
+          <span class="ft-col-session">Wk2 BSc C · 04/02</span>
+          <span class="ft-col-supervisor">Prof M. Keller</span>
+          <span class="ft-col-project">Lasers for the quantum internet (No. 32)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-submitted">Submitted</span></span>
+        </div>
+        <div class="ft-row" data-status="submitted">
+          <span class="ft-col-name">Daniel Salaman</span>
+          <span class="ft-col-session">Wk2 BSc C · 04/02</span>
+          <span class="ft-col-supervisor">Prof D. Litim</span>
+          <span class="ft-col-project">Fixed points in QFT (No. 36)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-submitted">Submitted</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Fadi Tadros</span>
+          <span class="ft-col-session">Wk3 MPhys · 11/02</span>
+          <span class="ft-col-supervisor">Prof M. Keller</span>
+          <span class="ft-col-project">Lasers for the quantum internet (No. 32)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+        <div class="ft-row" data-status="missing">
+          <span class="ft-col-name">Will Clark</span>
+          <span class="ft-col-session">Wk3 MPhys · 11/02</span>
+          <span class="ft-col-supervisor">Dr K. Shaw</span>
+          <span class="ft-col-project">LHC Data Visualisation (No. 50)</span>
+          <span class="ft-col-status"><span class="pres-badge pb-missing">Missing</span></span>
+        </div>
+
+      </div><!-- /flat-table -->
+    </div><!-- /presTableView -->
+
+  </main>
+</div>
+
+<script>
+  function switchPresView(view) {
+    document.getElementById('presSessionView').style.display = view === 'sessions' ? '' : 'none';
+    document.getElementById('presTableView').style.display   = view === 'table'    ? '' : 'none';
+    document.querySelectorAll('#presToggle .vt-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+    // Reset filter when switching back to table
+    if (view === 'table') filterTable('all');
+  }
+
+  function filterTable(filter) {
+    document.querySelectorAll('#feedbackFilter .vt-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === filter);
+    });
+    document.querySelectorAll('.ft-row').forEach(row => {
+      const show = filter === 'all' || row.dataset.status === filter;
+      row.style.display = show ? '' : 'none';
+    });
+  }
+</script>
+</body>
+</html>

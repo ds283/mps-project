@@ -26,7 +26,7 @@ Outputs (written to OUTPUT_DIR)
     03_mahal_kde.png                - KDE of Mahalanobis distances, all datasets
     04a_scatter_students_zoom.png   - (MATTR+MTLD, CV) scatter, student core
     04b_scatter_students_full.png   - (MATTR+MTLD, CV) scatter, all outliers
-    04c_scatter_all.png             - (MATTR+MTLD, CV) scatter, all datasets
+    04c_scatter_control.png         - (MATTR+MTLD, CV) scatter, arXiv controls only
     05_metric_kde.png               - KDE per metric, all datasets
     stats_summary.txt               - Statistical test results
 
@@ -792,17 +792,11 @@ def plot_scatters(
     if x_ctrl_all:
         xc_cat = np.concatenate(x_ctrl_all)
         yc_cat = np.concatenate(y_ctrl_all)
-        xlim_arx = (
-            min(xs.min(), xc_cat.min()) - pad,
-            max(xs.max(), xc_cat.max()) + pad,
-        )
-        ylim_arx = (
-            min(ys.min(), yc_cat.min()) - pad,
-            max(ys.max(), yc_cat.max()) + pad,
-        )
+        xlim_ctrl = (xc_cat.min() - pad, xc_cat.max() + pad)
+        ylim_ctrl = (yc_cat.min() - pad, yc_cat.max() + pad)
     else:
-        xlim_arx = xlim_full
-        ylim_arx = ylim_full
+        xlim_ctrl = xlim_full
+        ylim_ctrl = ylim_full
 
     n_pre = len(pre.dropna(subset=["MATTR", "MTLD", "CV"]))
     n_post = len(post.dropna(subset=["MATTR", "MTLD", "CV"]))
@@ -824,9 +818,12 @@ def plot_scatters(
         thresh_01=thresh_01,
     )
     leg = _scatter_legend(controls, colors, markers)
-    # Student-only legend: strip the per-control marker entries from the middle
-    n_fixed_top = 6  # region patches + student patches
-    leg_no_controls = leg[:n_fixed_top] + leg[n_fixed_top + len(controls) :]
+    # Student-only legend: strip the per-control marker entries from the middle.
+    # Structure: [4 region/contour patches] [2 student patches] [N control markers] [2 tail entries]
+    n_fixed_top = 6  # region patches (4) + student patches (2)
+    leg_no_controls = leg[:n_fixed_top] + leg[n_fixed_top + len(controls):]
+    # Control-only legend: keep region/contour patches and tail, drop student patches.
+    leg_ctrl_only = leg[:4] + leg[n_fixed_top:]
 
     def _hn_labels(ax, xlim, ylim):
         ax.text(
@@ -905,24 +902,22 @@ def plot_scatters(
     plt.close()
     print(f"  Saved: {path}")
 
-    # 4c: all datasets
+    # 4c: control samples only, axes fitted to control extent
     fig, ax = plt.subplots(figsize=(11, 9))
     fig.patch.set_facecolor("#fafafa")
-    _draw_scatter_base(ax, xlim_arx, ylim_arx, **ell_kw)
-    _plot_scatter_points(ax, pre, PRE_COL, "o", 0.45, 25, "Pre-LLM students", **base_kw)
-    _plot_scatter_points(
-        ax, post, POST_COL, "o", 0.65, 30, "Post-LLM students", **base_kw
-    )
+    _draw_scatter_base(ax, xlim_ctrl, ylim_ctrl, **ell_kw)
     for name, df in controls.items():
         _plot_scatter_points(
-            ax, df, colors[name], markers[name], 0.60, 28, name, **base_kw
+            ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw
         )
-    _hn_labels(ax, xlim_arx, ylim_arx)
+    _hn_labels(ax, xlim_ctrl, ylim_ctrl)
     ax.set_title(
-        "All datasets — students + arXiv controls", fontsize=10, fontweight="bold"
+        "arXiv control samples — Mahalanobis contours from pre-LLM reference",
+        fontsize=10,
+        fontweight="bold",
     )
     fig.legend(
-        handles=leg,
+        handles=leg_ctrl_only,
         loc="lower center",
         ncol=4,
         fontsize=8.5,
@@ -931,7 +926,7 @@ def plot_scatters(
         edgecolor="#cccccc",
     )
     plt.tight_layout(rect=[0, 0.11, 1, 1])
-    path = os.path.join(output_dir, "04c_scatter_all.png")
+    path = os.path.join(output_dir, "04c_scatter_control.png")
     plt.savefig(path, dpi=150, bbox_inches="tight", facecolor="#fafafa")
     plt.close()
     print(f"  Saved: {path}")

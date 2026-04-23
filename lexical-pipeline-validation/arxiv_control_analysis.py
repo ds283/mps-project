@@ -4,9 +4,11 @@ arxiv_control_analysis.py — Download arXiv papers and run the full language
 analysis pipeline (MATTR, MTLD, Goh-Barabási burstiness, sentence-length CV)
 to build a control-sample distribution from known-human, non-LLM text.
 
-Two paper sets are analysed:
-  1. All papers by arXiv author (scraped from their arXiv author page)
-  2. ~200 recent papers from the astro-ph.CO category
+Paper sets analysed:
+  1. All papers by each arXiv author (scraped from their arXiv author page).
+     Default authors: Seery (djs61), Byrnes (byrnes_c), Burrage (burrage_c).
+  2. ~200 papers from the astro-ph.CO category submitted before a fixed cutoff
+     date (default: 2026-04-20) to ensure a stable, reproducible reference set.
 
 Results are written to an Excel file with one worksheet per set.
 
@@ -18,11 +20,12 @@ Options
 -------
   --output PATH              Output .xlsx path  [default: arxiv_control_results.xlsx]
   --pdf-cache DIR            Directory for downloaded PDFs  [default: arxiv_pdf_cache/]
-  --author-page URL          arXiv author page URL  [default: https://arxiv.org/a/seery_d_1.html]
-  --author-sheet NAME        Worksheet name for author results  [default: djs61]
+  --author SHEET URL         Worksheet name + author page URL (repeatable)
+                             [default: three authors listed above]
   --category CAT             arXiv subject category  [default: astro-ph.CO]
   --category-max N           Max papers to fetch from category  [default: 200]
-  --no-author                Skip the author set
+  --category-before DATE     Cutoff date YYYY-MM-DD for category papers  [default: 2026-04-20]
+  --no-author                Skip all author sets
   --no-category              Skip the category set
 
 Requirements (run inside arxiv_analysis_venv)
@@ -312,8 +315,28 @@ def write_excel(output_path: Path, sheets: dict[str, list[dict]]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_category_query(category: str, before_date: str | None) -> str:
+    """Build an arXiv API search query for *category*, optionally capped at *before_date* (YYYY-MM-DD)."""
+    query = f"cat:{category}"
+    if before_date:
+        date_compact = before_date.replace("-", "")
+        query += f" AND submittedDate:[19000101 TO {date_compact}]"
+    return query
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
+_DEFAULT_AUTHORS = [
+    ["djs61",     "https://arxiv.org/a/seery_d_1.html"],
+    ["byrnes_c",  "https://arxiv.org/a/0000-0003-2583-6536.html"],
+    ["burrage_c", "https://arxiv.org/a/burrage_c_1.html"],
+]
 
 
 def main() -> None:
@@ -332,16 +355,13 @@ def main() -> None:
         help="Directory for downloaded PDFs (default: arxiv_pdf_cache/)",
     )
     parser.add_argument(
-        "--author-page",
-        default="https://arxiv.org/a/seery_d_1.html",
-        dest="author_page",
-        help="arXiv author page URL (default: https://arxiv.org/a/seery_d_1.html)",
-    )
-    parser.add_argument(
-        "--author-sheet",
-        default="djs61",
-        dest="author_sheet",
-        help="Worksheet name for author results (default: djs61)",
+        "--author",
+        nargs=2,
+        metavar=("SHEET_NAME", "PAGE_URL"),
+        action="append",
+        dest="authors",
+        help="Worksheet name and arXiv author page URL (repeatable). "
+             "Default: Seery, Byrnes, Burrage.",
     )
     parser.add_argument(
         "--category",
@@ -355,9 +375,19 @@ def main() -> None:
         dest="category_max",
         help="Max papers to fetch from category (default: 200)",
     )
-    parser.add_argument("--no-author", action="store_true", help="Skip author paper set")
+    parser.add_argument(
+        "--category-before",
+        default="2026-04-20",
+        dest="category_before",
+        metavar="YYYY-MM-DD",
+        help="Only include category papers submitted before this date (default: 2026-04-20).",
+    )
+    parser.add_argument("--no-author", action="store_true", help="Skip all author paper sets")
     parser.add_argument("--no-category", action="store_true", help="Skip category paper set")
     args = parser.parse_args()
+
+    if not args.authors:
+        args.authors = _DEFAULT_AUTHORS
 
     cache_dir = Path(args.pdf_cache)
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -370,28 +400,27 @@ def main() -> None:
     sheets: dict[str, list[dict]] = {}
     first_download = True
 
-    # ---- Author set ---------------------------------------------------------
+    # ---- Author sets --------------------------------------------------------
     if not args.no_author:
-        print(f"=== Fetching papers from author page: {args.author_page} ===")
-        author_papers = fetch_author_page(args.author_page)
-        print(f"Found {len(author_papers)} papers.\n")
+        for sheet_name, page_url in args.authors:
+            print(f"\n=== Fetching papers from author page: {page_url} ===")
+            author_papers = fetch_author_page(page_url)
+            print(f"Found {len(author_papers)} papers.\n")
 
-        if author_papers:
-            print(f"=== Analysing author papers ({len(author_papers)}) ===")
-            rows = process_paper_set(
-                args.author_sheet, author_papers, cache_dir, first_download=first_download
-            )
-            sheets[args.author_sheet] = rows
-            first_download = False
+            if author_papers:
+                print(f"=== Analysing {sheet_name} papers ({len(author_papers)}) ===")
+                rows = process_paper_set(sheet_name, author_papers, cache_dir, first_download=first_download)
+                sheets[sheet_name] = rows
+                first_download = False
 
-        time.sleep(_API_DELAY)
+            time.sleep(_API_DELAY)
 
     # ---- Category set -------------------------------------------------------
     if not args.no_category:
-        print(f"\n=== Fetching papers from category: {args.category} (max {args.category_max}) ===")
-        cat_papers = fetch_arxiv_papers(
-            f"cat:{args.category}", max_results=args.category_max
-        )
+        search_query = _build_category_query(args.category, args.category_before)
+        date_note = f" (before {args.category_before})" if args.category_before else ""
+        print(f"\n=== Fetching papers from category: {args.category}{date_note} (max {args.category_max}) ===")
+        cat_papers = fetch_arxiv_papers(search_query, max_results=args.category_max)
         print(f"Found {len(cat_papers)} papers.\n")
 
         if cat_papers:

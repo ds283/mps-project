@@ -25,8 +25,11 @@ Options
   --category CAT             arXiv subject category  [default: astro-ph.CO]
   --category-max N           Max papers to fetch from category  [default: 200]
   --category-before DATE     Cutoff date YYYY-MM-DD for category papers  [default: 2026-04-20]
+  --pdf-folder SHEET DIR     Worksheet name + local folder of PDFs (repeatable)
+                             [default: Claude-ai → ai_cache/]
   --no-author                Skip all author sets
   --no-category              Skip the category set
+  --no-pdf-folder            Skip all local PDF folder sets
 
 Requirements (run inside arxiv_analysis_venv)
 ---------------------------------------------
@@ -284,6 +287,55 @@ def process_paper_set(
 
 
 # ---------------------------------------------------------------------------
+# Process a local folder of PDFs
+# ---------------------------------------------------------------------------
+
+
+def process_local_folder(label: str, folder_path: Path) -> list[dict]:
+    """Run analysis on every PDF in folder_path.
+
+    Returns rows in the same format as process_paper_set, using the PDF
+    filename stem as the arxiv_id/title placeholder (no download needed).
+    """
+    pdfs = sorted(folder_path.glob("*.pdf"))
+    rows = []
+    total = len(pdfs)
+    if total == 0:
+        print(f"  WARNING: no PDF files found in {folder_path}", file=sys.stderr)
+        return rows
+
+    for idx, pdf_path in enumerate(pdfs, 1):
+        stem = pdf_path.stem
+        print(f"  [{idx}/{total}] {stem[:60]}")
+        meta = {
+            "arxiv_id": stem,
+            "title": stem,
+            "authors": "",
+            "published": "",
+        }
+        print(f"    Analysing …", end=" ", flush=True)
+        metrics = analyse_paper(pdf_path)
+        row = meta | metrics
+        if metrics["error"]:
+            print(f"ERROR: {metrics['error']}")
+        else:
+            all_numeric = all(
+                metrics.get(k) is not None
+                for k in ("mattr", "mtld", "burstiness", "sentence_cv")
+            )
+            if all_numeric:
+                print(
+                    f"MATTR={metrics['mattr']:.3f}  MTLD={metrics['mtld']:.1f}  "
+                    f"B={metrics['burstiness']:.3f}  CV={metrics['sentence_cv']:.3f}"
+                )
+            else:
+                print("done (some metrics None)")
+        rows.append(row)
+
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # Excel output
 # ---------------------------------------------------------------------------
 
@@ -338,6 +390,10 @@ _DEFAULT_AUTHORS = [
     ["burrage_c", "https://arxiv.org/a/burrage_c_1.html"],
 ]
 
+_DEFAULT_PDF_FOLDERS = [
+    ["Claude-ai", "ai_cache"],
+]
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -382,12 +438,25 @@ def main() -> None:
         metavar="YYYY-MM-DD",
         help="Only include category papers submitted before this date (default: 2026-04-20).",
     )
+    parser.add_argument(
+        "--pdf-folder",
+        nargs=2,
+        metavar=("SHEET_NAME", "FOLDER_PATH"),
+        action="append",
+        dest="pdf_folders",
+        help="Worksheet name and path to a local folder of PDFs (repeatable). "
+             "Default: Claude-ai → ai_cache/",
+    )
     parser.add_argument("--no-author", action="store_true", help="Skip all author paper sets")
     parser.add_argument("--no-category", action="store_true", help="Skip category paper set")
+    parser.add_argument("--no-pdf-folder", action="store_true", help="Skip all local PDF folder sets")
     args = parser.parse_args()
 
     if not args.authors:
         args.authors = _DEFAULT_AUTHORS
+
+    if not args.pdf_folders:
+        args.pdf_folders = _DEFAULT_PDF_FOLDERS
 
     cache_dir = Path(args.pdf_cache)
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -414,6 +483,21 @@ def main() -> None:
                 first_download = False
 
             time.sleep(_API_DELAY)
+
+    # ---- Local PDF folder sets ----------------------------------------------
+    if not args.no_pdf_folder:
+        for sheet_name, folder_str in args.pdf_folders:
+            folder_path = Path(folder_str)
+            if not folder_path.is_dir():
+                print(
+                    f"  WARNING: PDF folder {folder_path!r} does not exist — skipping.",
+                    file=sys.stderr,
+                )
+                continue
+            print(f"\n=== Analysing local PDFs: {folder_path}  →  sheet '{sheet_name}' ===")
+            rows = process_local_folder(sheet_name, folder_path)
+            if rows:
+                sheets[sheet_name] = rows
 
     # ---- Category set -------------------------------------------------------
     if not args.no_category:

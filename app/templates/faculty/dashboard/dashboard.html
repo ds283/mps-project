@@ -331,7 +331,7 @@
                             {%- set missing_att = config.number_supervisor_missing_attendance(current_user.faculty_data.id) -%}
                             <div class="col">
                                 <div class="card h-100 {% if no_projects %}border-warning{% elif waiting_confirmation %}border-success{% elif marking_underway %}border-primary{% elif selections_open %}border-success{% endif %}">
-                                    <div class="card-header d-flex justify-content-between align-items-center {% if no_projects %}bg-warning text-dark{% elif waiting_confirmation %}bg-success text-white{% elif marking_underway %}bg-primary text-white{% elif selections_open %}bg-success text-white{% endif %}">
+                                    <div class="card-header d-flex justify-content-between align-items-center {% if no_projects %}bg-warning-subtle text-warning-emphasis{% elif waiting_confirmation %}bg-success-subtle text-success-emphasis{% elif marking_underway %}bg-primary-subtle text-primary-emphasis{% elif selections_open %}bg-success-subtle text-success-emphasis{% endif %}">
                                         <strong>{{ config.name }}</strong>
                                         <span class="small {% if no_projects or waiting_confirmation or marking_underway or selections_open %}opacity-75{% else %}text-body-secondary{% endif %}">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
                                     </div>
@@ -381,7 +381,7 @@
                                         </div>
                                     </div>
                                     <div class="card-footer d-flex justify-content-end">
-                                        <a class="btn btn-sm {% if no_projects %}btn-warning text-dark{% elif waiting_confirmation %}btn-success{% elif marking_underway %}btn-primary{% elif selections_open %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                                        <a class="btn btn-sm {% if no_projects %}btn-outline-warning{% elif waiting_confirmation %}btn-outline-success{% elif marking_underway %}btn-outline-primary{% elif selections_open %}btn-outline-success{% else %}btn-outline-secondary{% endif %}"
                                            href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                                             View details <i class="fas fa-arrow-right fa-fw"></i>
                                         </a>

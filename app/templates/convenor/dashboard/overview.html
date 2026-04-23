@@ -48,7 +48,7 @@
 
                         <div class="col">
                             <div class="card h-100 {% if has_alert %}border-danger{% elif has_warning %}border-warning{% elif lifecycle_action %}border-primary{% endif %}">
-                                <div class="card-header d-flex justify-content-between align-items-center {% if has_alert %}bg-danger text-white{% elif has_warning %}bg-warning text-dark{% elif lifecycle_action %}bg-primary text-white{% endif %}">
+                                <div class="card-header d-flex justify-content-between align-items-center {% if has_alert %}bg-danger-subtle text-danger-emphasis{% elif has_warning %}bg-warning-subtle text-warning-emphasis{% elif lifecycle_action %}bg-primary-subtle text-primary-emphasis{% endif %}">
                                     <strong>{{ pclass.name }}</strong>
                                     <span class="small {% if has_alert or has_warning or lifecycle_action %}opacity-75{% else %}text-body-secondary{% endif %}">
                                         {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
@@ -114,7 +114,7 @@
                                     </div>
                                 </div>
                                 <div class="card-footer d-flex justify-content-end">
-                                    <a class="btn btn-sm {% if has_alert %}btn-danger{% elif has_warning %}btn-warning text-dark{% elif lifecycle_action %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    <a class="btn btn-sm {% if has_alert %}btn-outline-danger{% elif has_warning %}btn-outline-warning{% elif lifecycle_action %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}"
                                        href="{{ url_for('convenor.status', id=pclass.id) }}">
                                         Open dashboard <i class="fas fa-arrow-right fa-fw"></i>
                                     </a>

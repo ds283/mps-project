@@ -14,16 +14,16 @@
                 <li class="list-group-item">
                     <div class="fs-6 fw-semibold text-secondary">Presentation assessment</div>
                     {% set messages = period.presentation_messages %}
-                    <span class="text-muted">{{ messages|join(', ') }}</span>
+                    <span class="text-body-secondary">{{ messages|join(', ') }}</span>
                 </li>
                 <li class="list-group-item">
                     <div class="fs-6 fw-semibold text-secondary">Morning session</div>
-                    <span class="text-muted">{% if period.morning_session and period.morning_session|length > 0 %}
+                    <span class="text-body-secondary">{% if period.morning_session and period.morning_session|length > 0 %}
                         {{ period.morning_session }}{% else %}Not set{% endif %}</span>
                 </li>
                 <li class="list-group-item">
                     <div class="fs-6 fw-semibold text-secondary">Afternoon session</div>
-                    <span class="text-muted">{% if period.afternoon_session and period.afternoon_session|length > 0 %}
+                    <span class="text-body-secondary">{% if period.afternoon_session and period.afternoon_session|length > 0 %}
                         {{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
                 </li>
             </ul>
@@ -44,7 +44,7 @@
         </div>
         {% set units = period.ordered_units.all() %}
         {% if units|length == 0 %}
-            <span class="text-muted small">No supervision units defined for this period.</span>
+            <span class="text-body-secondary small">No supervision units defined for this period.</span>
         {% else %}
             <div class="list-group border-0 list-group-flush">
                 {% for unit in units %}
@@ -53,7 +53,7 @@
                             <div class="small">
                                 <span class="fw-semibold">{{ unit.name if unit.name else '(unnamed unit)' }}</span>
                                 {% if unit.start_date or unit.end_date %}
-                                    <span class="text-muted ms-1">
+                                    <span class="text-body-secondary ms-1">
                                         {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
                                         {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
                                         {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
@@ -62,7 +62,7 @@
                                 {% set num_templates = unit.number_templates %}
                                 {% set num_events = unit.number_events %}
                                 {% if num_templates > 0 or num_events > 0 %}
-                                    <span class="text-muted ms-1">&middot;
+                                    <span class="text-body-secondary ms-1">&middot;
                                         {% if num_templates > 0 %}{{ num_templates }} template{{ 's' if num_templates != 1 }}{% endif %}
                                         {% if num_templates > 0 and num_events > 0 %}, {% endif %}
                                         {% if num_events > 0 %}{{ num_events }} event{{ 's' if num_events != 1 }}{% endif %}

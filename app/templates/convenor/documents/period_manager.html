@@ -72,12 +72,12 @@
                         {% else %}
                             <div class="d-flex align-items-center justify-content-center bg-light border rounded"
                                  style="width:60px; height:60px; margin:0 auto;">
-                                <i class="fas fa-file fa-2x text-muted"></i>
+                                <i class="fas fa-file fa-2x text-body-secondary"></i>
                             </div>
                         {% endif %}
                     </div>
                     {% if attachment and attachment.description and attachment.description|length > 0 %}
-                        <div class="mt-1 small text-muted">
+                        <div class="mt-1 small text-body-secondary">
                             <i class="fas fa-paperclip"></i> {{ attachment.description }}
                         </div>
                     {% endif %}

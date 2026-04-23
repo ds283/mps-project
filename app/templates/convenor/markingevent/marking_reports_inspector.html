@@ -62,27 +62,27 @@
             <div class="row">
                 <div class="col-md-6">
                     <dl class="row mb-0 small">
-                        <dt class="col-sm-5 text-muted">Workflow</dt>
+                        <dt class="col-sm-5 text-body-secondary">Workflow</dt>
                         <dd class="col-sm-7">{{ workflow.name }}</dd>
-                        <dt class="col-sm-5 text-muted">Event</dt>
+                        <dt class="col-sm-5 text-body-secondary">Event</dt>
                         <dd class="col-sm-7">{{ event.name }}</dd>
-                        <dt class="col-sm-5 text-muted">Period</dt>
+                        <dt class="col-sm-5 text-body-secondary">Period</dt>
                         <dd class="col-sm-7">{{ event.period.display_name }}</dd>
                     </dl>
                 </div>
                 <div class="col-md-6">
                     <dl class="row mb-0 small">
-                        <dt class="col-sm-5 text-muted">Role</dt>
+                        <dt class="col-sm-5 text-body-secondary">Role</dt>
                         <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
-                        <dt class="col-sm-5 text-muted">Marking scheme</dt>
+                        <dt class="col-sm-5 text-body-secondary">Marking scheme</dt>
                         <dd class="col-sm-7">
                             {% if workflow.scheme is not none %}
                                 {{ workflow.scheme.name }}
                             {% else %}
-                                <span class="text-muted">No scheme</span>
+                                <span class="text-body-secondary">No scheme</span>
                             {% endif %}
                         </dd>
-                        <dt class="col-sm-5 text-muted">Total reports</dt>
+                        <dt class="col-sm-5 text-body-secondary">Total reports</dt>
                         <dd class="col-sm-7">
                             {{ workflow.number_marking_reports }}
                         </dd>
@@ -120,7 +120,7 @@
                 Validation warnings — convenor intervention may be required
             </div>
             <div class="card-body">
-                <p class="small text-muted mb-3">
+                <p class="small text-body-secondary mb-3">
                     The following marking reports contain answers that triggered validation warnings.
                     These do not prevent submission but may require your attention.
                 </p>

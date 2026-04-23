@@ -8,7 +8,8 @@
 {% endblock %}
 
 {% block formtitle %}
-    Edit <strong>{{ config.name }}</strong> configuration for academic year <strong>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
+    Edit <strong>{{ config.name }}</strong> configuration for academic year
+    <strong>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
 {% endblock %}
 
 {% block form_content %}
@@ -16,7 +17,7 @@
 
         {{ form.hidden_tag() }}
 
-{#        {{ wtf.form_errors(form) }}#}
+        {#        {{ wtf.form_errors(form) }}#}
 
         <p class="form-group-heading">Settings</p>
         <div class="row vertical-top">
@@ -84,7 +85,8 @@
         </div>
 
         <p class="form-group-heading mt-2">Document limits</p>
-        <p class="small text-muted">Leave fields blank to inherit the project class defaults. Enabling a limit here overrides the project class setting for this cycle only.</p>
+        <p class="small text-body-secondary">Leave fields blank to inherit the project class defaults. Enabling a limit
+            here overrides the project class setting for this cycle only.</p>
         <div class="row vertical-top">
             <div class="col-6">
                 {{ wtf.render_field(form.word_limit_enabled) }}
@@ -106,13 +108,14 @@
             </div>
         </div>
         <script>
-            (function() {
+            (function () {
                 function toggleConfigLimitFields() {
                     var wlEnabled = document.getElementById('word_limit_enabled');
                     var plEnabled = document.getElementById('page_limit_enabled');
                     if (wlEnabled) document.getElementById('config-word-limit-field').style.display = wlEnabled.checked ? '' : 'none';
                     if (plEnabled) document.getElementById('config-page-limit-field').style.display = plEnabled.checked ? '' : 'none';
                 }
+
                 var wlCb = document.getElementById('word_limit_enabled');
                 var plCb = document.getElementById('page_limit_enabled');
                 if (wlCb) wlCb.addEventListener('change', toggleConfigLimitFields);

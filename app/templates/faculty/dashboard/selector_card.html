@@ -76,7 +76,7 @@
                     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
                         <span class="small text-success">Meeting confirmation required</span>
                         {% if not faculty_data.sign_off_students %}
-                            <span class="small text-muted">|</span>
+                            <span class="small text-body-secondary">|</span>
                             <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a
                                     class="text-decoration-none"
                                     href="{{ url_for('faculty.settings') }}">Fix...</a></span>
@@ -84,7 +84,7 @@
                     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
                         <span class="small text-dark">Meeting confirmation optional</span>
                         {% if not faculty_data.sign_off_students %}
-                            <span class="small text-muted">|</span>
+                            <span class="small text-body-secondary">|</span>
                             <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a
                                     class="text-decoration-none"
                                     href="{{ url_for('faculty.settings') }}">Fix...</a></span>
@@ -92,14 +92,14 @@
                     {% elif project.meeting_reqd == project.MEETING_NONE %}
                         <span class="small text-dark">Meeting confirmation not required</span>
                     {% endif %}
-                    <span class="small text-muted">|</span>
+                    <span class="small text-body-secondary">|</span>
                     {% set num_assessors = project.number_assessors(pclass) %}
                     {% if num_assessors > 0 %}
                         <span class="small text-dark">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}
                             s{%- endif -%}</span>
                         <i class="small fas fa-info-circle text-secondary" tabindex="0" data-bs-toggle="popover"
                            data-bs-container="body" data-bs-trigger="focus" title="Assessors for this project"
-                           data-bs-content="<div class='small text-muted'><ul>{%- for assessor in project.get_assessor_list(pclass) -%}<li>{{ assessor.user.name }}</li>{%- endfor -%}</ul></div>"></i>
+                           data-bs-content="<div class='small text-body-secondary'><ul>{%- for assessor in project.get_assessor_list(pclass) -%}<li>{{ assessor.user.name }}</li>{%- endfor -%}</ul></div>"></i>
                     {% else %}
                         <span class="small text-danger">No assessors assigned</span>
                     {% endif %}

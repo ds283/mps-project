@@ -33,5 +33,7 @@
         <td>{{ data_with_delta('views', item, delta, user_classes='small', period=none) }}</td>
     </tr>
 {% else %}
-    <tr><td colspan="7" class="text-muted small text-center">No popularity data available</td></tr>
+    <tr>
+        <td colspan="7" class="text-body-secondary small text-center">No popularity data available</td>
+    </tr>
 {% endfor %}

@@ -24,7 +24,7 @@
                     {% if workflow %}
                         <a href="{{ url_for('emailworkflow.workflow_items', id=workflow.id) }}">{{ workflow.name }}</a>
                     {% else %}
-                        <span class="text-muted">Unknown</span>
+                        <span class="text-body-secondary">Unknown</span>
                     {% endif %}
                 </dd>
 
@@ -34,7 +34,7 @@
                     {% if rcpts %}
                         {% for r in rcpts %}<span class="me-2">{{ r }}</span>{% endfor %}
                     {% else %}
-                        <span class="text-muted">None</span>
+                        <span class="text-body-secondary">None</span>
                     {% endif %}
                 </dd>
 
@@ -48,7 +48,7 @@
                 {% if item.next_retry_time and not item.sent_timestamp %}
                     <dt class="col-sm-3">Next retry</dt>
                     <dd class="col-sm-9">
-                        <i class="fas fa-clock fa-fw text-muted"></i>
+                        <i class="fas fa-clock fa-fw text-body-secondary"></i>
                         {{ item.next_retry_time.strftime("%a %d %b %Y %H:%M") }}
                     </dd>
                 {% endif %}
@@ -76,7 +76,7 @@
                     <tbody>
                         {% for entry in entries %}
                             <tr>
-                                <td class="text-muted small text-nowrap">
+                                <td class="text-body-secondary small text-nowrap">
                                     {{ entry.timestamp | replace("T", " ") }}
                                 </td>
                                 <td class="text-danger small">{{ entry.message }}</td>
@@ -86,7 +86,7 @@
                 </table>
             {% else %}
                 <div class="p-3">
-                    <span class="text-muted fst-italic">No errors recorded.</span>
+                    <span class="text-body-secondary fst-italic">No errors recorded.</span>
                 </div>
             {% endif %}
         </div>

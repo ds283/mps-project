@@ -5,7 +5,8 @@
         <div class="d-flex flex-column justify-content-start align-items-start gap-1
                 {% if user_classes is not none %}{{ user_classes }}{% endif %}">
             {% if project.last_view %}
-                <div class="text-muted small">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+                <div class="text-body-secondary small">last
+                    view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</div>
             {% endif %}
         </div>
     {% else %}

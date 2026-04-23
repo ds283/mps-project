@@ -23,18 +23,18 @@ else:
 
 
 # central definition of used versions
-VERSION_BOOTSTRAP = "5.2.3"
+VERSION_BOOTSTRAP = "5.3.8"
 VERSION_JQUERY = "3.7.1"
-VERSION_POPPER = "2.11.6"
+VERSION_POPPER = "2.11.8"
 
 BOOTSTRAP_JS_SHA = (
-    "sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+    "sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
 )
 BOOTSTRAP_CSS_SHA = (
-    "sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+    "sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
 )
 POPPER_JS_SHA = (
-    "sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3"
+    "sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
 )
 
 

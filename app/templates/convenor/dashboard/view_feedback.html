@@ -50,7 +50,9 @@
                         {% set marking_reports = submitter_report.marking_reports.all() %}
                         {% set visible_reports = marking_reports | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
                         {% if visible_reports | length == 0 %}
-                            <div class="text-muted small">No marking reports have been created for this event.</div>
+                            <div class="text-body-secondary small">No marking reports have been created for this
+                                event.
+                            </div>
                         {% else %}
                             {% for mr in visible_reports %}
                                 <div class="card mt-2 mb-2 border-secondary-subtle">
@@ -59,7 +61,7 @@
                                             <div>
                                                 <i class="fas fa-user-circle me-1"></i>
                                                 <strong>{{ mr.role.user.name }}</strong>
-                                                <span class="ms-1 text-muted small">({{ mr.workflow.role_as_str }})</span>
+                                                <span class="ms-1 text-body-secondary small">({{ mr.workflow.role_as_str }})</span>
                                             </div>
                                             <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                                 {% if mr.feedback_submitted and mr.feedback_timestamp %}

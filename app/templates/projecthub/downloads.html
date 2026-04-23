@@ -76,21 +76,21 @@
                                             {% else %}
                                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded"
                                                      style="width:60px; height:60px; margin: 0 auto;">
-                                                    <i class="fas fa-file fa-2x text-muted"></i>
+                                                    <i class="fas fa-file fa-2x text-body-secondary"></i>
                                                 </div>
                                             {% endif %}
                                         </td>
                                         <td class="align-middle">
                                             <div class="fw-semibold">{{ asset.target_name or asset.filename }}</div>
                                             {% if asset.file_size %}
-                                                <div class="small text-muted">{{ asset.file_size|filesizeformat }}</div>
+                                                <div class="small text-body-secondary">{{ asset.file_size|filesizeformat }}</div>
                                             {% endif %}
                                         </td>
                                         <td class="align-middle">
                                             {% if pa.description %}
                                                 {{ pa.description }}
                                             {% else %}
-                                                <span class="text-muted">No description provided.</span>
+                                                <span class="text-body-secondary">No description provided.</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-center align-middle">
@@ -104,7 +104,7 @@
                             </tbody>
                         </table>
                     {% else %}
-                        <div class="text-muted">
+                        <div class="text-body-secondary">
                             <i class="fas fa-info-circle me-1"></i>
                             No documents are currently available for download.
                         </div>

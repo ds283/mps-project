@@ -109,7 +109,7 @@
     <div class="mb-3">
         <label class="form-label fw-semibold">{{ form.title.label.text }}</label>
         {% if form.title.description %}
-            <div class="form-text text-muted mb-2">{{ form.title.description }}</div>
+            <div class="form-text text-body-secondary mb-2">{{ form.title.description }}</div>
         {% endif %}
         {{ form.title(id='title-editor', class='form-control') }}
         {% if form.title.errors %}
@@ -121,7 +121,7 @@
     <div class="mb-3">
         <label class="form-label fw-semibold">{{ form.rubric.label.text }}</label>
         {% if form.rubric.description %}
-            <div class="form-text text-muted mb-2">{{ form.rubric.description }}</div>
+            <div class="form-text text-body-secondary mb-2">{{ form.rubric.description }}</div>
         {% endif %}
         {{ form.rubric(id='rubric-editor', class='form-control') }}
         {% if form.rubric.errors %}
@@ -142,7 +142,7 @@
     <div>
         <label class="form-label fw-semibold">{{ form.schema.label.text }}</label>
         {% if form.schema.label.description %}
-            <div class="form-text text-muted mb-2">{{ form.schema.description }}</div>
+            <div class="form-text text-body-secondary mb-2">{{ form.schema.description }}</div>
         {% endif %}
         {{ form.schema(id='schema-editor', class='form-control', style='font-family: monospace; font-size: 0.875rem;') }}
         {% if form.schema.errors %}

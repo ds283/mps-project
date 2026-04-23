@@ -19,7 +19,7 @@
             </div>
         </div>
         {% if events|length == 0 %}
-            <span class="text-muted small">No marking events defined for this period.</span>
+            <span class="text-body-secondary small">No marking events defined for this period.</span>
         {% else %}
             <div class="list-group border-0 list-group-flush">
                 {% for event in events %}
@@ -36,7 +36,7 @@
                                 {% endif %}
                                 {% set wf_count = event.workflows.count() %}
                                 {% if wf_count > 0 %}
-                                    <span class="small text-muted ms-1">{{ wf_count }} workflow{{ 's' if wf_count != 1 }}</span>
+                                    <span class="small text-body-secondary ms-1">{{ wf_count }} workflow{{ 's' if wf_count != 1 }}</span>
                                 {% endif %}
                             </div>
                             <a href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id) }}"

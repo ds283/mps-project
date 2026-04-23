@@ -3,7 +3,8 @@
 
 {% macro student_offcanvas(sel, emails, attempt_id=none, return_text=none, return_url=none) %}
     {% set config = sel.config %}
-    <a class="text-muted text-decoration-none small" role="button" data-bs-toggle="offcanvas" href="#edit_{{ sel.id }}"
+    <a class="text-body-secondary text-decoration-none small" role="button" data-bs-toggle="offcanvas"
+       href="#edit_{{ sel.id }}"
        aria-controls="edit_{{ sel.id }}">Show details <i class="fas fa-chevron-right"></i></a>
     <div class="offcanvas offcanvas-start text-bg-light" tabindex="-1" id="edit_{{ sel.id }}"
          aria-labelledby="editLabel_{{ sel.id }}">

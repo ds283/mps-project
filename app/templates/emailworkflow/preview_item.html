@@ -20,7 +20,7 @@
         </div>
         <div class="card-body">
             <dl class="row mb-0">
-                <dt class="col-sm-2 text-muted">Subject</dt>
+                <dt class="col-sm-2 text-body-secondary">Subject</dt>
                 <dd class="col-sm-10">
                     <strong>{{ subject_str }}</strong>
                     {% if item.subject_override %}
@@ -30,7 +30,7 @@
                     {% endif %}
                 </dd>
 
-                <dt class="col-sm-2 text-muted">To</dt>
+                <dt class="col-sm-2 text-body-secondary">To</dt>
                 <dd class="col-sm-10">
                     {% if recipients %}
                         {% for addr in recipients %}
@@ -43,13 +43,13 @@
                 </dd>
 
                 {% if from_email_addr %}
-                    <dt class="col-sm-2 text-muted">From</dt>
+                    <dt class="col-sm-2 text-body-secondary">From</dt>
                     <dd class="col-sm-10"><a class="text-decoration-none"
                                              href="mailto:{{ from_email_addr }}">{{ from_email_addr }}</a></dd>
                 {% endif %}
 
                 {% if reply_to_list %}
-                    <dt class="col-sm-2 text-muted">Reply-to</dt>
+                    <dt class="col-sm-2 text-body-secondary">Reply-to</dt>
                     <dd class="col-sm-10">
                         {% for addr in reply_to_list %}
                             <span class="me-2"><a class="text-decoration-none"
@@ -58,10 +58,10 @@
                     </dd>
                 {% endif %}
 
-                <dt class="col-sm-2 text-muted">Template</dt>
+                <dt class="col-sm-2 text-body-secondary">Template</dt>
                 <dd class="col-sm-10">{{ email_template.type_name }}</dd>
 
-                <dt class="col-sm-2 text-muted">Workflow</dt>
+                <dt class="col-sm-2 text-body-secondary">Workflow</dt>
                 <dd class="col-sm-10">
                     <a class="text-decoration-none"
                        href="{{ url_for('emailworkflow.workflow_items', id=workflow.id, url=url, text=text) }}">
@@ -85,7 +85,7 @@
         <div class="card-body p-0">
             {# Rendered HTML preview in sandboxed iframe #}
             <div class="border-bottom p-3 bg-light">
-                <small class="text-muted fw-semibold">Rendered preview</small>
+                <small class="text-body-secondary fw-semibold">Rendered preview</small>
             </div>
             <div class="p-3">
                 <iframe id="html-preview"
@@ -97,7 +97,7 @@
             </div>
             {# Raw HTML source #}
             <div class="border-top p-3 bg-light">
-                <small class="text-muted fw-semibold">Raw HTML source</small>
+                <small class="text-body-secondary fw-semibold">Raw HTML source</small>
             </div>
             <div class="p-3">
                 <pre class="mb-0 small"
@@ -128,7 +128,7 @@
                 {% for info in attachment_infos %}
                     {% if info.asset_type != ns.current_type %}
                         {% set ns.current_type = info.asset_type %}
-                        <h6 class="text-muted mt-{% if not loop.first %}3{% else %}0{% endif %} mb-2">
+                        <h6 class="text-body-secondary mt-{% if not loop.first %}3{% else %}0{% endif %} mb-2">
                             {% if info.asset_type == 'GeneratedAsset' %}
                                 <i class="fas fa-cog fa-fw"></i> Generated assets
                             {% elif info.asset_type == 'SubmittedAsset' %}
@@ -149,7 +149,7 @@
                                         {{ att.name or asset.target_name or asset.unique_name or '(unnamed)' }}
                                     </div>
                                     {% if att.description %}
-                                        <div class="text-muted small">{{ att.description }}</div>
+                                        <div class="text-body-secondary small">{{ att.description }}</div>
                                     {% endif %}
                                 </div>
                                 {% if info.download_url %}
@@ -159,7 +159,7 @@
                                     </a>
                                 {% endif %}
                             </div>
-                            <div class="mt-2 small text-muted d-flex flex-wrap gap-3">
+                            <div class="mt-2 small text-body-secondary d-flex flex-wrap gap-3">
                                 {% if asset.filesize %}
                                     <span>
                                         <i class="fas fa-weight-hanging fa-fw"></i>
@@ -193,7 +193,7 @@
         </div>
     {% else %}
         <div class="card border-light mb-3">
-            <div class="card-body text-muted">
+            <div class="card-body text-body-secondary">
                 <i class="fas fa-paperclip fa-fw me-1"></i> No attachments
             </div>
         </div>

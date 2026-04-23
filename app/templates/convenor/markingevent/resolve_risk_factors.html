@@ -47,13 +47,13 @@
                     {% endif %}
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small mb-2">{{ item.description }}</p>
+                    <p class="text-body-secondary small mb-2">{{ item.description }}</p>
 
                     {# Summary data table #}
                     {% if item.summary_items %}
                         <dl class="row small mb-3">
                             {% for label, value in item.summary_items %}
-                                <dt class="col-sm-4 text-muted">{{ label }}</dt>
+                                <dt class="col-sm-4 text-body-secondary">{{ label }}</dt>
                                 <dd class="col-sm-8">{{ value }}</dd>
                             {% endfor %}
                         </dl>
@@ -84,8 +84,8 @@
                         </label>
                     </div>
                     <div class="mb-0">
-                        <label class="form-label small text-muted" for="annotation_{{ item.key }}">
-                            Annotation <span class="text-muted fst-italic">(optional — explain your review decision or action taken)</span>
+                        <label class="form-label small text-body-secondary" for="annotation_{{ item.key }}">
+                            Annotation <span class="text-body-secondary fst-italic">(optional — explain your review decision or action taken)</span>
                         </label>
                         <textarea class="form-control form-control-sm"
                                   id="annotation_{{ item.key }}"

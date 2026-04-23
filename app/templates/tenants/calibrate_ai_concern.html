@@ -25,149 +25,149 @@
 {% block title %}AI concern calibration – {{ tenant.name }}{% endblock %}
 
 {% block bodyblock %}
-<div class="d-flex align-items-center mt-3 mb-3 gap-2">
-    <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
-        <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
-    </a>
-    <h4 class="mb-0">
-        <i class="fas fa-ruler-combined fa-fw me-1"></i> AI concern calibration
-        <span class="text-muted fw-normal fs-6 ms-2">{{ tenant.name }}</span>
-    </h4>
-</div>
-
-{# ── CURRENT CALIBRATION STATUS ── #}
-<div class="card mb-3 {% if calibration %}border-success{% else %}border-secondary{% endif %}">
-    <div class="card-header {% if calibration %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
-        <i class="fas fa-info-circle fa-fw me-1"></i>
-        <strong>Current calibration status</strong>
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-ruler-combined fa-fw me-1"></i> AI concern calibration
+            <span class="text-body-secondary fw-normal fs-6 ms-2">{{ tenant.name }}</span>
+        </h4>
     </div>
-    <div class="card-body">
-        {% if calibration %}
-            <div class="row g-3 small">
-                <div class="col-md-6">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-5 text-muted">Calibrated at</dt>
-                        <dd class="col-sm-7">
-                            {% set ts = calibration.calibrated_at %}
-                            {% if ts %}{{ ts[:19].replace("T", " ") }}{% else %}—{% endif %}
-                        </dd>
-                        <dt class="col-sm-5 text-muted">Samples used</dt>
-                        <dd class="col-sm-7">
-                            <strong>{{ calibration.n_samples }}</strong>
-                            {% if calibration.n_samples < min_samples %}
-                                <span class="badge bg-warning text-dark ms-1">Low sample count</span>
-                            {% elif calibration.n_samples < 30 %}
-                                <span class="badge bg-warning text-dark ms-1">Borderline</span>
-                            {% else %}
-                                <span class="badge bg-success ms-1">OK</span>
+
+    {# ── CURRENT CALIBRATION STATUS ── #}
+    <div class="card mb-3 {% if calibration %}border-success{% else %}border-secondary{% endif %}">
+        <div class="card-header {% if calibration %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
+            <i class="fas fa-info-circle fa-fw me-1"></i>
+            <strong>Current calibration status</strong>
+        </div>
+        <div class="card-body">
+            {% if calibration %}
+                <div class="row g-3 small">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5 text-body-secondary">Calibrated at</dt>
+                            <dd class="col-sm-7">
+                                {% set ts = calibration.calibrated_at %}
+                                {% if ts %}{{ ts[:19].replace("T", " ") }}{% else %}—{% endif %}
+                            </dd>
+                            <dt class="col-sm-5 text-body-secondary">Samples used</dt>
+                            <dd class="col-sm-7">
+                                <strong>{{ calibration.n_samples }}</strong>
+                                {% if calibration.n_samples < min_samples %}
+                                    <span class="badge bg-warning text-dark ms-1">Low sample count</span>
+                                {% elif calibration.n_samples < 30 %}
+                                    <span class="badge bg-warning text-dark ms-1">Borderline</span>
+                                {% else %}
+                                    <span class="badge bg-success ms-1">OK</span>
+                                {% endif %}
+                            </dd>
+                            <dt class="col-sm-5 text-body-secondary">Project classes</dt>
+                            <dd class="col-sm-7">
+                                {% if included_pclass_names %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for name in included_pclass_names %}
+                                            <span class="badge bg-secondary">{{ name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-body-secondary">—</span>
+                                {% endif %}
+                            </dd>
+                            <dt class="col-sm-5 text-body-secondary">Academic years</dt>
+                            <dd class="col-sm-7">
+                                {% if calibration.included_years %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for yr in calibration.included_years %}
+                                            <span class="badge bg-secondary">{{ yr }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-body-secondary">—</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5 text-body-secondary">Centroid μ</dt>
+                            <dd class="col-sm-7">
+                                {% if calibration.mu %}
+                                    <div class="small font-monospace">
+                                        MATTR&nbsp;=&nbsp;{{ "%.4f"|format(calibration.mu[0]) }}<br>
+                                        MTLD&nbsp;&nbsp;=&nbsp;{{ "%.4f"|format(calibration.mu[1]) }}<br>
+                                        CV&nbsp;&nbsp;&nbsp;=&nbsp;{{ "%.4f"|format(calibration.mu[2]) }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-body-secondary">—</span>
+                                {% endif %}
+                            </dd>
+                            {% if eigenvalues %}
+                                <dt class="col-sm-5 text-body-secondary">Σ⁻¹ eigenvalues</dt>
+                                <dd class="col-sm-7">
+                                    <div class="small font-monospace">
+                                        {% for ev in eigenvalues %}
+                                            {{ "%.4g"|format(ev) }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% if eigenvalues | min < 1e-6 %}
+                                        <div class="small text-warning mt-1">
+                                            <i class="fas fa-exclamation-triangle fa-fw"></i>
+                                            One or more near-zero eigenvalues detected — covariance matrix is
+                                            ill-conditioned (expected due to MATTR/MTLD correlation); the
+                                            Moore-Penrose pseudoinverse is used automatically.
+                                        </div>
+                                    {% endif %}
+                                </dd>
                             {% endif %}
-                        </dd>
-                        <dt class="col-sm-5 text-muted">Project classes</dt>
-                        <dd class="col-sm-7">
-                            {% if included_pclass_names %}
-                                <div class="d-flex flex-wrap gap-1">
-                                {% for name in included_pclass_names %}
-                                    <span class="badge bg-secondary">{{ name }}</span>
-                                {% endfor %}
-                                </div>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </dd>
-                        <dt class="col-sm-5 text-muted">Academic years</dt>
-                        <dd class="col-sm-7">
-                            {% if calibration.included_years %}
-                                <div class="d-flex flex-wrap gap-1">
-                                {% for yr in calibration.included_years %}
-                                    <span class="badge bg-secondary">{{ yr }}</span>
-                                {% endfor %}
-                                </div>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </dd>
-                    </dl>
+                        </dl>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-5 text-muted">Centroid μ</dt>
-                        <dd class="col-sm-7">
-                            {% if calibration.mu %}
-                                <div class="small font-monospace">
-                                    MATTR&nbsp;=&nbsp;{{ "%.4f"|format(calibration.mu[0]) }}<br>
-                                    MTLD&nbsp;&nbsp;=&nbsp;{{ "%.4f"|format(calibration.mu[1]) }}<br>
-                                    CV&nbsp;&nbsp;&nbsp;=&nbsp;{{ "%.4f"|format(calibration.mu[2]) }}
-                                </div>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </dd>
-                        {% if eigenvalues %}
-                        <dt class="col-sm-5 text-muted">Σ⁻¹ eigenvalues</dt>
-                        <dd class="col-sm-7">
-                            <div class="small font-monospace">
-                            {% for ev in eigenvalues %}
-                                {{ "%.4g"|format(ev) }}{% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                            </div>
-                            {% if eigenvalues | min < 1e-6 %}
-                                <div class="small text-warning mt-1">
-                                    <i class="fas fa-exclamation-triangle fa-fw"></i>
-                                    One or more near-zero eigenvalues detected — covariance matrix is
-                                    ill-conditioned (expected due to MATTR/MTLD correlation); the
-                                    Moore-Penrose pseudoinverse is used automatically.
-                                </div>
-                            {% endif %}
-                        </dd>
-                        {% endif %}
-                    </dl>
+                <div class="mt-3">
+                    <a href="{{ url_for('tenants.recalculate_ai_concern', tenant_id=tenant.id) }}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync fa-fw me-1"></i> Recalculate AI concern for submissions…
+                    </a>
                 </div>
-            </div>
-            <div class="mt-3">
-                <a href="{{ url_for('tenants.recalculate_ai_concern', tenant_id=tenant.id) }}"
-                   class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-sync fa-fw me-1"></i> Recalculate AI concern for submissions…
-                </a>
-            </div>
-        {% else %}
-            <div class="text-muted small">
-                <i class="fas fa-times-circle fa-fw me-1 text-secondary"></i>
-                No calibration data is available for this tenant. The AI concern system will show
-                <strong>"Not calibrated"</strong> for all submissions until calibration is run.
-            </div>
-        {% endif %}
+            {% else %}
+                <div class="text-body-secondary small">
+                    <i class="fas fa-times-circle fa-fw me-1 text-secondary"></i>
+                    No calibration data is available for this tenant. The AI concern system will show
+                    <strong>"Not calibrated"</strong> for all submissions until calibration is run.
+                </div>
+            {% endif %}
+        </div>
     </div>
-</div>
 
-{# ── CALIBRATION FORM ── #}
-<div class="card border-primary mb-3">
-    <div class="card-header bg-primary text-white">
-        <i class="fas fa-calculator fa-fw me-1"></i>
-        <strong>{% if calibration %}Re-run calibration{% else %}Run calibration{% endif %}</strong>
+    {# ── CALIBRATION FORM ── #}
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-calculator fa-fw me-1"></i>
+            <strong>{% if calibration %}Re-run calibration{% else %}Run calibration{% endif %}</strong>
+        </div>
+        <div class="card-body">
+            <p class="small text-body-secondary mb-3">
+                Select the project classes and academic years to use as the pre-LLM baseline.
+                The calibration computes the mean vector μ and covariance matrix Σ in
+                (MATTR, MTLD, sentence-length CV) space, then stores Σ⁻¹ (Moore-Penrose pseudoinverse)
+                for use in the Mahalanobis distance classifier.
+                Defaults are set to all project classes and pre-LLM academic years (≤ 2022).
+            </p>
+            <form action="{{ request.path }}" method="POST" name="calibrate_form">
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    {{ wtf.render_field(form.project_classes) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ wtf.render_field(form.years) }}
+                </div>
+
+                <div class="mt-3">
+                    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                </div>
+            </form>
+        </div>
     </div>
-    <div class="card-body">
-        <p class="small text-muted mb-3">
-            Select the project classes and academic years to use as the pre-LLM baseline.
-            The calibration computes the mean vector μ and covariance matrix Σ in
-            (MATTR, MTLD, sentence-length CV) space, then stores Σ⁻¹ (Moore-Penrose pseudoinverse)
-            for use in the Mahalanobis distance classifier.
-            Defaults are set to all project classes and pre-LLM academic years (≤ 2022).
-        </p>
-        <form action="{{ request.path }}" method="POST" name="calibrate_form">
-            {{ form.hidden_tag() }}
-
-            <div class="mb-3">
-                {{ wtf.render_field(form.project_classes) }}
-            </div>
-
-            <div class="mb-3">
-                {{ wtf.render_field(form.years) }}
-            </div>
-
-            <div class="mt-3">
-                {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
-            </div>
-        </form>
-    </div>
-</div>
 {% endblock %}

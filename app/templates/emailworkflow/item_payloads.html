@@ -19,7 +19,7 @@
         </div>
         <div class="card-body p-0">
             {% if subject_payload_content == '(empty)' %}
-                <div class="p-3"><span class="text-muted fst-italic">(empty)</span></div>
+                <div class="p-3"><span class="text-body-secondary fst-italic">(empty)</span></div>
             {% else %}
                 <pre class="mb-0 p-3"
                      style="background: #1e1e1e; color: #d4d4d4; font-size: 0.85em; border-radius: 0 0 4px 4px; overflow-x: auto; max-height: 400px; overflow-y: auto;"><code>{{ subject_payload_content }}</code></pre>
@@ -33,7 +33,7 @@
         </div>
         <div class="card-body p-0">
             {% if body_payload_content == '(empty)' %}
-                <div class="p-3"><span class="text-muted fst-italic">(empty)</span></div>
+                <div class="p-3"><span class="text-body-secondary fst-italic">(empty)</span></div>
             {% else %}
                 <pre class="mb-0 p-3"
                      style="background: #1e1e1e; color: #d4d4d4; font-size: 0.85em; border-radius: 0 0 4px 4px; overflow-x: auto; max-height: 600px; overflow-y: auto;"><code>{{ body_payload_content }}</code></pre>
@@ -47,7 +47,7 @@
         </div>
         <div class="card-body p-0">
             {% if callbacks_content == '(empty)' %}
-                <div class="p-3"><span class="text-muted fst-italic">No callbacks configured</span></div>
+                <div class="p-3"><span class="text-body-secondary fst-italic">No callbacks configured</span></div>
             {% else %}
                 <pre class="mb-0 p-3"
                      style="background: #1e1e1e; color: #d4d4d4; font-size: 0.85em; border-radius: 0 0 4px 4px; overflow-x: auto; max-height: 400px; overflow-y: auto;"><code>{{ callbacks_content }}</code></pre>

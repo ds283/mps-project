@@ -99,7 +99,7 @@
                             <a class="text-decoration-none link-primary" href="{{ url_for('convenor.status', id=pclass.id) }}">{% if not published %}<s>{% else %}<strong>{% endif %}{{ pclass.name }}{% if not published %}</s>{% else %}</strong>{% endif %}</a>
                         </div>
                         {% if published %}
-                            <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
+                            <div class="mt-1 small text-body-secondary d-flex flex-row justify-content-start align-items-start gap-2">
                                 <strong {% if rollover_ready %}class="text-danger"{% endif %}>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
                                 {% if rollover_ready %}
                                     <span class="text-danger">Rollover available</span>
@@ -109,7 +109,7 @@
                                 {% endif %}
                             </div>
                         {% else %}
-                            <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
+                            <div class="mt-1 small text-body-secondary d-flex flex-row justify-content-start align-items-start gap-2">
                                 <span class="text-danger"><i class="fas fa-eye-slash"></i> Not published</span>
                             </div>
                         {% endif %}
@@ -141,7 +141,7 @@
                                 <div class="row mt-1 bg-light">
                                     {% if config.uses_submission %}
                                         <div class="col-6">
-                                            <div><span class="small text-muted">Submission</span></div>
+                                            <div><span class="small text-body-secondary">Submission</span></div>
                                             {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
                                                 <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
                                             {% else %}
@@ -158,22 +158,27 @@
                                     {% endif %}
                                     {% if config.uses_selection %}
                                         <div class="col-6">
-                                            <div><span class="small text-muted">Selection</span></div>
+                                            <div><span class="small text-body-secondary">Selection</span></div>
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
                                                 <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
                                                 {% if config.do_matching %}
                                                     {% if config.select_in_previous_cycle %}
                                                         {% set match = config.allocated_match %}
                                                         {% if match is not none %}
-                                                            <div class="small text-muted">Selected matching: <strong>{{ match.name }}</strong></div>
+                                                            <div class="small text-body-secondary">Selected matching:
+                                                                <strong>{{ match.name }}</strong></div>
                                                         {% else %}
-                                                            <div class="small text-muted">No matching selected</div>
+                                                            <div class="small text-body-secondary">No matching
+                                                                selected
+                                                            </div>
                                                         {% endif %}
                                                     {% else %}
-                                                        <div class="small text-muted">No matching, selection in same cycle</div>
+                                                        <div class="small text-body-secondary">No matching, selection in
+                                                            same cycle
+                                                        </div>
                                                     {% endif %}
                                                 {% else %}
-                                                    <div class="small text-muted">Not using matching</div>
+                                                    <div class="small text-body-secondary">Not using matching</div>
                                                 {% endif %}
                                             {% else %}
                                                 <div>

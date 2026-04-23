@@ -23,7 +23,7 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold">{{ form.reason.label.text }}</label>
                             {% if form.reason.description %}
-                                <div class="form-text text-muted mb-2">{{ form.reason.description }}</div>
+                                <div class="form-text text-body-secondary mb-2">{{ form.reason.description }}</div>
                             {% endif %}
                             {{ form.reason(class='form-control', rows=4) }}
                             {% if form.reason.errors %}

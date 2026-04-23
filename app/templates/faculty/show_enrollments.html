@@ -75,9 +75,9 @@
                                     {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
                                         <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.supervisor_reenroll is not none %}
-                                            <span class="text-muted">(ends {{ record.supervisor_reenroll }})</span>
+                                            <span class="text-body-secondary">(ends {{ record.supervisor_reenroll }})</span>
                                         {% else %}
-                                            <span class="text-muted">(no end date)</span>
+                                            <span class="text-body-secondary">(no end date)</span>
                                         {% endif %}
                                     {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
                                         <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
@@ -86,7 +86,7 @@
                                                 class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
+                                    <span class="text-body-secondary"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
@@ -96,9 +96,9 @@
                                     {% elif record.marker_state == record.MARKER_SABBATICAL %}
                                         <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.marker_reenroll is not none %}
-                                            <span class="text-muted">(ends {{ record.marker_reenroll }})</span>
+                                            <span class="text-body-secondary">(ends {{ record.marker_reenroll }})</span>
                                         {% else %}
-                                            <span class="text-muted">(no end date)</span>
+                                            <span class="text-body-secondary">(no end date)</span>
                                         {% endif %}
                                     {% elif record.marker_state == record.MARKER_EXEMPT %}
                                         <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
@@ -107,7 +107,7 @@
                                                 class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
+                                    <span class="text-body-secondary"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
@@ -117,9 +117,9 @@
                                     {% elif record.moderator_state == record.MODERATOR_SABBATICAL %}
                                         <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.moderator_reenroll is not none %}
-                                            <span class="text-muted">(ends {{ record.moderator_reenroll }})</span>
+                                            <span class="text-body-secondary">(ends {{ record.moderator_reenroll }})</span>
                                         {% else %}
-                                            <span class="text-muted">(no end date)</span>
+                                            <span class="text-body-secondary">(no end date)</span>
                                         {% endif %}
                                     {% elif record.moderator_state == record.MODERATOR_EXEMPT %}
                                         <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
@@ -128,7 +128,7 @@
                                                 class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
+                                    <span class="text-body-secondary"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
@@ -138,9 +138,9 @@
                                     {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
                                         <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.presentations_reenroll is not none %}
-                                            <span class="text-muted">(ends {{ record.presentations_reenroll }})</span>
+                                            <span class="text-body-secondary">(ends {{ record.presentations_reenroll }})</span>
                                         {% else %}
-                                            <span class="text-muted">(no end date)</span>
+                                            <span class="text-body-secondary">(no end date)</span>
                                         {% endif %}
                                     {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
                                         <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
@@ -149,7 +149,7 @@
                                                 class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
+                                    <span class="text-body-secondary"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                         </div>

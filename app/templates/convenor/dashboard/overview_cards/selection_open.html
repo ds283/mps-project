@@ -124,7 +124,7 @@
                     {% call(blk) dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-danger{% endif %}">{{ submitted }}</span>
-                            <span class="fs-4 text-muted">/{{ total }}</span>
+                            <span class="fs-4 text-body-secondary">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
                                 <a class="text-decoration-none link-primary"
@@ -138,7 +138,7 @@
                     {% call(blk) dashboard_tile("Confirmations", title_icon="circle", icon_state=confirmations_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-danger{% endif %}">{{ outstanding_confirm }}</span>
-                            <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
+                            <span class="text-body-secondary"><span class="fs-4">/{{ confirm_total }}</span> <span
                                     class="text-uppercase">outstanding</span></span>
                             <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                 {% if confirm_accepted > 0 %}
@@ -165,7 +165,7 @@
                     {% call(blk) dashboard_tile("Bookmarks", title_icon="circle", icon_state=bookmarks_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-danger{% endif %}">{{ bookmarks }}</span>
-                            <span class="fs-4 text-muted">/{{ total }}</span>
+                            <span class="fs-4 text-body-secondary">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
                                 <a class="text-decoration-none link-primary"
@@ -179,7 +179,7 @@
                     {% call(blk) dashboard_tile("No bookmarks", title_icon="circle", icon_state=missing_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-danger{% endif %}">{{ missing }}</span>
-                            <span class="fs-4 text-muted">/{{ total }}</span>
+                            <span class="fs-4 text-body-secondary">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
                                 <a class="text-decoration-none link-primary"
@@ -193,7 +193,7 @@
                     {% call(blk) dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-danger{% endif %}">{{ outstanding_custom }}</span>
-                            <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
+                            <span class="text-body-secondary"><span class="fs-4">/{{ custom_total }}</span> <span
                                     class="text-uppercase">outstanding</span></span>
                             <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                 {% if custom_accepted > 0 %}
@@ -249,21 +249,21 @@
                                                         {{ prev_sub_config.submit_year_a }}&ndash;
                                                         {{ prev_sub_config.submit_year_b }}
                                                     </div>
-                                                    <div class="text-muted">
+                                                    <div class="text-body-secondary">
                                                         {{ prev_sub_config.abbreviation }}
                                                     </div>
                                                 {% else %}
-                                                    <span class="text-muted">Unknown</span>
+                                                    <span class="text-body-secondary">Unknown</span>
                                                 {% endif %}
                                             </td>
                                             <td class="small">
                                                 {% if prev_proj %}{{ prev_proj.name }}
-                                                {% else %}<span class="text-muted">Unknown</span>{% endif %}
+                                                {% else %}<span class="text-body-secondary">Unknown</span>{% endif %}
                                             </td>
                                             <td class="small">
                                                 {% if hint.faculty and hint.faculty.user %}
                                                     {{ hint.faculty.user.name }}
-                                                {% else %}<span class="text-muted">Unknown</span>{% endif %}
+                                                {% else %}<span class="text-body-secondary">Unknown</span>{% endif %}
                                             </td>
                                             <td>
                                                 <div class="d-flex flex-row gap-1">
@@ -280,7 +280,7 @@
                                     </tbody>
                                 </table>
                             {% elif blk == 'footer' %}
-                                <div class="small text-muted mt-2">
+                                <div class="small text-body-secondary mt-2">
                                     Hints are based on previous supervision history. Accepting creates custom offers for
                                     all current projects by the supervisor.
                                 </div>
@@ -306,17 +306,20 @@
                                 </tr>
                                 </thead>
                                 <tbody id="popular-projects-tbody" class="table-group-divider">
-                                    <tr><td colspan="7" class="text-muted small text-center">
+                                <tr>
+                                    <td colspan="7" class="text-body-secondary small text-center">
                                         <span class="spinner-border spinner-border-sm" role="status"></span>
                                         Loading&hellip;
-                                    </td></tr>
+                                    </td>
+                                </tr>
                                 </tbody>
                             </table>
                         {% elif blk == 'footer' %}
                             <div class="d-flex flex-row justify-content-between align-items-baseline mt-3">
-                                <div class="d-flex flex-row align-items-baseline gap-2 small text-muted">
+                                <div class="d-flex flex-row align-items-baseline gap-2 small text-body-secondary">
                                     <span>Comparison to</span>
-                                    <select id="popular-compare-interval" class="form-select form-select-sm d-inline-block w-auto">
+                                    <select id="popular-compare-interval"
+                                            class="form-select form-select-sm d-inline-block w-auto">
                                         <option value="1h">1 hour</option>
                                         <option value="12h">12 hours</option>
                                         <option value="1d">1 day</option>
@@ -324,41 +327,51 @@
                                         <option value="1w">1 week</option>
                                     </select>
                                 </div>
-                                <div class="small text-muted" id="popular-last-updated">Last updated: &mdash;</div>
+                                <div class="small text-body-secondary" id="popular-last-updated">Last updated: &mdash;
+                                </div>
                             </div>
                         {% endif %}
                     {% endcall %}
                 </div>
             </div>
             <script>
-            (function () {
-                var _url = {{ url_for('convenor.popular_projects_ajax', config_id=config.id)|tojson }};
-                var _timer = null;
-                var _interval = '3d';
+                (function () {
+                    var _url = {{ url_for('convenor.popular_projects_ajax', config_id=config.id)|tojson }};
+                    var _timer = null;
+                    var _interval = '3d';
 
-                function refresh() {
-                    fetch(_url + '?interval=' + encodeURIComponent(_interval))
-                        .then(function (r) { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.json(); })
-                        .then(function (data) {
-                            document.getElementById('popular-projects-tbody').innerHTML = data.tbody;
-                            document.getElementById('popular-last-updated').textContent = 'Last updated: ' + data.updated_at;
-                        })
-                        .catch(function (err) { console.error('Popular projects refresh failed:', err); });
-                }
+                    function refresh() {
+                        fetch(_url + '?interval=' + encodeURIComponent(_interval))
+                            .then(function (r) {
+                                if (!r.ok) {
+                                    throw new Error('HTTP ' + r.status);
+                                }
+                                return r.json();
+                            })
+                            .then(function (data) {
+                                document.getElementById('popular-projects-tbody').innerHTML = data.tbody;
+                                document.getElementById('popular-last-updated').textContent = 'Last updated: ' + data.updated_at;
+                            })
+                            .catch(function (err) {
+                                console.error('Popular projects refresh failed:', err);
+                            });
+                    }
 
-                function startPolling() {
-                    refresh();
-                    if (_timer) { clearInterval(_timer); }
-                    _timer = setInterval(refresh, 15 * 60 * 1000);
-                }
+                    function startPolling() {
+                        refresh();
+                        if (_timer) {
+                            clearInterval(_timer);
+                        }
+                        _timer = setInterval(refresh, 15 * 60 * 1000);
+                    }
 
-                document.getElementById('popular-compare-interval').addEventListener('change', function () {
-                    _interval = this.value;
+                    document.getElementById('popular-compare-interval').addEventListener('change', function () {
+                        _interval = this.value;
+                        startPolling();
+                    });
+
                     startPolling();
-                });
-
-                startPolling();
-            })();
+                })();
             </script>
             <div class="mt-3">
                 <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST"

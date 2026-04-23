@@ -46,12 +46,12 @@
                                     {% endif %}
                                 </div>
                                 {% if w.completed and w.completed_timestamp %}
-                                    <div class="text-muted small mt-1">{{ w.completed_timestamp.strftime("%a %d %b %Y %H:%M") }}</div>
+                                    <div class="text-body-secondary small mt-1">{{ w.completed_timestamp.strftime("%a %d %b %Y %H:%M") }}</div>
                                 {% endif %}
                             </td>
                             <td>
                                 <div>{{ w.send_time.strftime("%a %d %b %Y") }}</div>
-                                <div class="text-muted small">{{ w.send_time.strftime("%H:%M") }}</div>
+                                <div class="text-body-secondary small">{{ w.send_time.strftime("%H:%M") }}</div>
                             </td>
                             <td>
                                 <div class="small">
@@ -82,7 +82,7 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="small text-muted">
+                                <div class="small text-body-secondary">
                                     {% if w.created_by %}
                                         <div><i class="fas fa-user fa-fw"></i> Created by
                                             <strong>{{ w.created_by.name }}</strong>

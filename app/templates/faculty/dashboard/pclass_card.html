@@ -27,16 +27,16 @@
                             <span class="small text-secondary">| Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
                     {% else %}
-                        <span class="small text-muted">Student selection closed</span>
+                        <span class="small text-body-secondary">Student selection closed</span>
                     {% endif %}
                 {% else %}
                     {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
                         <span class="small text-warning">On sabbatical</span>
                         {% if record.supervisor_reenroll is not none %}
                             {% if pclass.reenroll_supervisors_early %}
-                                <span class="small text-muted">| Re-enrol {{ record.supervisor_reenroll-1 }}</span>
+                                <span class="small text-body-secondary">| Re-enrol {{ record.supervisor_reenroll-1 }}</span>
                             {% else %}
-                                <span class="small text-muted">| Re-enrol {{ record.supervisor_reenroll }}</span>
+                                <span class="small text-body-secondary">| Re-enrol {{ record.supervisor_reenroll }}</span>
                             {% endif %}
                         {% endif %}
                     {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
@@ -48,7 +48,7 @@
         {% if config.canvas_enabled %}
             <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-top border-secondary pt-2 small">
                 <a class="text-decoration-none" href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
-                <i class="text-muted fas fa-external-link"></i>
+                <i class="text-body-secondary fas fa-external-link"></i>
             </div>
         {% endif %}
 

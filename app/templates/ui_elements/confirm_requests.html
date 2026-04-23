@@ -36,7 +36,7 @@
 {% endmacro %}
 
 {% macro format_comment(req) %}
-    <div class="small text-muted">
+    <div class="small text-body-secondary">
         <span class="ms-1" tabindex="0" data-bs-toggle="popover" title="Notes" data-bs-container="body"
               data-bs-trigger="focus" data-bs-content="{{ req.comment|truncate(600) }}">
             Notes

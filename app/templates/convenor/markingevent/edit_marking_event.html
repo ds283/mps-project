@@ -89,7 +89,7 @@
         <div class="mb-3">
             <label class="form-label fw-semibold">{{ form.targets.label.text }}</label>
             {% if form.targets.description %}
-                <div class="form-text text-muted mb-2">{{ form.targets.description }}</div>
+                <div class="form-text text-body-secondary mb-2">{{ form.targets.description }}</div>
             {% endif %}
             {{ form.targets(id='targets-editor', class='form-control', style='font-family: monospace; font-size: 0.875rem;') }}
             {% if form.targets.errors %}

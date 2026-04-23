@@ -51,13 +51,13 @@
 
                 {# Created timestamp #}
                 <div class="d-flex flex-column gap-1">
-                    <div class="small text-muted fw-semibold text-uppercase">Created</div>
+                    <div class="small text-body-secondary fw-semibold text-uppercase">Created</div>
                     {% if entry.created_timestamp %}
                         <div class="small">
                             <i class="fas fa-calendar fa-fw text-secondary me-1"></i>
                             {{ entry.created_timestamp.strftime("%a %d %b %Y") }}
                         </div>
-                        <div class="small text-muted">
+                        <div class="small text-body-secondary">
                             {{ entry.created_timestamp.strftime("%H:%M") }}
                         </div>
                     {% else %}
@@ -67,13 +67,13 @@
 
                 {# Last edited timestamp #}
                 <div class="d-flex flex-column gap-1">
-                    <div class="small text-muted fw-semibold text-uppercase">Last edited</div>
+                    <div class="small text-body-secondary fw-semibold text-uppercase">Last edited</div>
                     {% if entry.last_edit_timestamp %}
                         <div class="small">
                             <i class="fas fa-pencil-alt fa-fw text-secondary me-1"></i>
                             {{ entry.last_edit_timestamp.strftime("%a %d %b %Y") }}
                         </div>
-                        <div class="small text-muted">
+                        <div class="small text-body-secondary">
                             {{ entry.last_edit_timestamp.strftime("%H:%M") }}
                         </div>
                     {% else %}
@@ -83,7 +83,7 @@
 
                 {# Academic year #}
                 <div class="d-flex flex-column gap-1">
-                    <div class="small text-muted fw-semibold text-uppercase">Academic year</div>
+                    <div class="small text-body-secondary fw-semibold text-uppercase">Academic year</div>
                     {% if entry.main_config %}
                         {% set y = entry.main_config.year %}
                         <div class="small">
@@ -97,7 +97,7 @@
 
                 {# Created by #}
                 <div class="d-flex flex-column gap-1">
-                    <div class="small text-muted fw-semibold text-uppercase">Created by</div>
+                    <div class="small text-body-secondary fw-semibold text-uppercase">Created by</div>
                     {% if entry.owner is not none %}
                         <div class="small">
                             <i class="fas fa-user-circle fa-fw text-secondary me-1"></i>
@@ -115,7 +115,7 @@
                 {% set configs = entry.project_classes.all() %}
                 {% if configs | length > 0 %}
                     <div class="d-flex flex-column gap-1">
-                        <div class="small text-muted fw-semibold text-uppercase">Project classes</div>
+                        <div class="small text-body-secondary fw-semibold text-uppercase">Project classes</div>
                         <div class="d-flex flex-row flex-wrap gap-2">
                             {% for config in configs %}
                                 {% set swatch_colour = config.project_class.make_CSS_style() %}
@@ -123,7 +123,7 @@
                                     {{ small_swatch(swatch_colour) }}
                                     <span class="small">{{ config.project_class.name }}</span>
                                     {% set y = config.year %}
-                                    <span class="small text-muted">({{ y }}/{{ (y + 1)|string|truncate(2, True, '') }})</span>
+                                    <span class="small text-body-secondary">({{ y }}/{{ (y + 1)|string|truncate(2, True, '') }})</span>
                                 </div>
                             {% endfor %}
                         </div>

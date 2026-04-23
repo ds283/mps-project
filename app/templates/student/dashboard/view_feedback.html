@@ -16,7 +16,7 @@
                 <div class="card mt-3 mb-3">
                     <div class="card-header">Feedback</div>
                     <div class="card-body">
-                        <span class="text-muted">No marking events are available for this submission period.</span>
+                        <span class="text-body-secondary">No marking events are available for this submission period.</span>
                     </div>
                 </div>
             {% endif %}
@@ -37,7 +37,7 @@
                             {# Grade #}
                             {% if submitter_report.grade is not none %}
                                 <div class="mb-3">
-                                    <span class="small text-muted fw-semibold me-2">Grade</span>
+                                    <span class="small text-body-secondary fw-semibold me-2">Grade</span>
                                     <span class="fw-bold text-success">{{ submitter_report.grade | round(1) }}%</span>
                                 </div>
                             {% endif %}
@@ -46,7 +46,7 @@
                             {% set feedback_reports = submitter_report.feedback_reports.all() %}
                             {% if feedback_reports | length > 0 %}
                                 <div class="mb-3 d-flex flex-row flex-wrap gap-2 align-items-center">
-                                    <span class="small text-muted fw-semibold">Feedback report:</span>
+                                    <span class="small text-body-secondary fw-semibold">Feedback report:</span>
                                     {% for fr in feedback_reports %}
                                         {% if fr.asset is not none %}
                                             <div class="d-flex flex-row align-items-center gap-2">
@@ -105,7 +105,8 @@
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <div class="text-muted small">No individual feedback has been submitted for this
+                                <div class="text-body-secondary small">No individual feedback has been submitted for
+                                    this
                                     event.
                                 </div>
                             {% endif %}

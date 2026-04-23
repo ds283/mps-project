@@ -42,7 +42,7 @@
                         {% if rec.project.generic or rec.project.owner is none %}
                             <span class="small text-capitalize text-secondary">Generic</span>
                         {% elif rec.project.owner_id != current_user.id %}
-                            <div class="small text-muted">
+                            <div class="small text-body-secondary">
                                 Owner
                                 <a class="text-decoration-none"
                                    href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
@@ -135,7 +135,7 @@
                                         <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
                                              class="img-thumbnail" style="max-width:40px; max-height:40px;" alt="">
                                     {% else %}
-                                        <i class="fas fa-file text-muted fa-fw"></i>
+                                        <i class="fas fa-file text-body-secondary fa-fw"></i>
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
@@ -144,7 +144,7 @@
                                         {{ asset.target_name or asset.filename }}
                                     </a>
                                 </td>
-                                <td class="align-middle text-muted small">
+                                <td class="align-middle text-body-secondary small">
                                     {% if pa.description %}{{ pa.description }}{% endif %}
                                 </td>
                             </tr>

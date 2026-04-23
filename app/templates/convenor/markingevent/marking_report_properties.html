@@ -20,15 +20,15 @@
         </div>
         <div class="card-body">
             <dl class="row mb-0 small">
-                <dt class="col-sm-3 text-muted">Marker</dt>
+                <dt class="col-sm-3 text-body-secondary">Marker</dt>
                 <dd class="col-sm-9">{{ report.user.name }}</dd>
-                <dt class="col-sm-3 text-muted">Role</dt>
+                <dt class="col-sm-3 text-body-secondary">Role</dt>
                 <dd class="col-sm-9">{{ report.role.role_as_str }}</dd>
-                <dt class="col-sm-3 text-muted">Student</dt>
+                <dt class="col-sm-3 text-body-secondary">Student</dt>
                 <dd class="col-sm-9">{{ report.student.user.name }}</dd>
-                <dt class="col-sm-3 text-muted">Workflow</dt>
+                <dt class="col-sm-3 text-body-secondary">Workflow</dt>
                 <dd class="col-sm-9">{{ workflow.name }}</dd>
-                <dt class="col-sm-3 text-muted">Project class</dt>
+                <dt class="col-sm-3 text-body-secondary">Project class</dt>
                 <dd class="col-sm-9">{{ pclass.name }}</dd>
             </dl>
         </div>
@@ -46,7 +46,7 @@
                     {{ form.weight.label(class="form-label fw-semibold") }}
                     {{ form.weight(class="form-control" + (" is-invalid" if form.weight.errors else ""), style="max-width: 12rem") }}
                     {% if form.weight.description %}
-                        <div class="form-text text-muted">{{ form.weight.description }}</div>
+                        <div class="form-text text-body-secondary">{{ form.weight.description }}</div>
                     {% endif %}
                     {% for error in form.weight.errors %}
                         <div class="invalid-feedback">{{ error }}</div>

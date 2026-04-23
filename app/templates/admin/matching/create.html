@@ -93,7 +93,7 @@
                             {% endif %}
                             {{ wtf.render_field(form.pclasses_to_include) }}
                             {% if have_base %}
-                                <div class="form-text text-muted mt-3 mb-3">
+                                <div class="form-text text-body-secondary mt-3 mb-3">
                                     {% for pcl in base_match.config_members -%}
                                         {% if loop.index > 1 %}, {% endif %}<strong>{{ pcl.name }}</strong>
                                     {%- endfor %}

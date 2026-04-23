@@ -20,18 +20,18 @@
                 <div class="h3 mt-2 mb-3">{{ article.title }}</div>
                 <div class="d-flex justify-content-between">
                     {% if article.creation_timestamp %}
-                        <div class="text-muted">
+                        <div class="text-body-secondary">
                             <small>Created by <i class="fas fa-user-circle"></i> <a class="text-decoration-none" href="mailto:{{ article.created_by.email }}">{{ article.created_by.name }}</a> {{ article.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
                         </div>
                     {% endif %}
                     {% if article.last_edit_timestamp %}
-                        <div class="text-muted">
+                        <div class="text-body-secondary">
                             <small>Last edit by <i class="fas fa-user-circle"></i> <a class="text-decoration-none" href="mailto:{{ article.last_edited_by.email }}">{{ article.last_edited_by.name }}</a> {{ article.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
                         </div>
                     {% endif %}
                 </div>
                 {% if article.published and article.publication_timestamp %}
-                    <div class="text-muted">
+                    <div class="text-body-secondary">
                         <small>Published on <strong>{{ article.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</strong></small>
                     </div>
                 {% endif %}

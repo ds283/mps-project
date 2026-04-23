@@ -63,11 +63,11 @@
             <div class="row">
                 <div class="col-md-6">
                     <dl class="row mb-0 small">
-                        <dt class="col-sm-5 text-muted">Period</dt>
+                        <dt class="col-sm-5 text-body-secondary">Period</dt>
                         <dd class="col-sm-7">{{ event.period.display_name }}</dd>
-                        <dt class="col-sm-5 text-muted">Event name</dt>
+                        <dt class="col-sm-5 text-body-secondary">Event name</dt>
                         <dd class="col-sm-7">{{ event.name }}</dd>
-                        <dt class="col-sm-5 text-muted">Status</dt>
+                        <dt class="col-sm-5 text-body-secondary">Status</dt>
                         <dd class="col-sm-7">
                             {% if event.closed %}
                                 <span class="badge bg-secondary">Closed</span>
@@ -79,16 +79,16 @@
                 </div>
                 <div class="col-md-6">
                     <dl class="row mb-0 small">
-                        <dt class="col-sm-5 text-muted">Start date</dt>
+                        <dt class="col-sm-5 text-body-secondary">Start date</dt>
                         <dd class="col-sm-7">
                             {% if event.period.start_date %}{{ event.period.start_date.strftime("%d/%m/%Y") }}{% else %}
-                                <span class="text-muted fst-italic">None</span>{% endif %}</dd>
-                        <dt class="col-sm-5 text-muted">Hand-in date</dt>
+                                <span class="text-body-secondary fst-italic">None</span>{% endif %}</dd>
+                        <dt class="col-sm-5 text-body-secondary">Hand-in date</dt>
                         <dd class="col-sm-7">
                             {% if event.period.hand_in_date %}
                                 {{ event.period.hand_in_date.strftime("%d/%m/%Y") }}{% else %}
-                                <span class="text-muted fst-italic">None</span>{% endif %}</dd>
-                        <dt class="col-sm-5 text-muted">Workflows</dt>
+                                <span class="text-body-secondary fst-italic">None</span>{% endif %}</dd>
+                        <dt class="col-sm-5 text-body-secondary">Workflows</dt>
                         <dd class="col-sm-7">{{ event.workflows.count() }}</dd>
                     </dl>
                 </div>
@@ -126,7 +126,7 @@
                             to the convenor after conflation was last run. Re-calculate to refresh.
                         </div>
                     {% endif %}
-                    <p class="small text-muted mb-2">
+                    <p class="small text-body-secondary mb-2">
                         Conflation run for <strong>{{ conflation_reports|length }}</strong> submission record(s).
                         Generated {{ conflation_reports[0].generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
                         {% if conflation_reports[0].generated_by is not none %}
@@ -175,7 +175,7 @@
                         </div>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted fst-italic mb-0">
+                    <p class="text-body-secondary fst-italic mb-0">
                         No conflation results yet. Click <strong>Calculate conflation</strong> to generate them.
                     </p>
                 {% endif %}

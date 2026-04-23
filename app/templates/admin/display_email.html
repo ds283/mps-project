@@ -13,7 +13,8 @@
             try {
                 var doc = frame.contentDocument || frame.contentWindow.document;
                 frame.style.height = doc.documentElement.scrollHeight + 'px';
-            } catch(e) {}
+            } catch (e) {
+            }
         }
     </script>
 {% endblock %}
@@ -46,11 +47,13 @@
                         <div class="card-body py-3">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="small text-muted text-uppercase fw-semibold mb-1">Recipients</div>
+                                    <div class="small text-body-secondary text-uppercase fw-semibold mb-1">Recipients
+                                    </div>
                                     {% for user in email.recipients -%}
                                         <div class="d-flex align-items-baseline gap-1">
                                             <span class="fw-semibold">{{ user.name }}</span>
-                                            <a class="text-decoration-none small text-muted" href="mailto:{{ user.email }}">&lt;{{ user.email }}&gt;</a>
+                                            <a class="text-decoration-none small text-body-secondary"
+                                               href="mailto:{{ user.email }}">&lt;{{ user.email }}&gt;</a>
                                         </div>
                                     {%- else -%}
                                         <span class="badge bg-secondary">Nobody</span>
@@ -58,11 +61,13 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-2">
-                                        <div class="small text-muted text-uppercase fw-semibold mb-1">Sent</div>
+                                        <div class="small text-body-secondary text-uppercase fw-semibold mb-1">Sent
+                                        </div>
                                         <span class="fw-semibold">{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     </div>
                                     <div>
-                                        <div class="small text-muted text-uppercase fw-semibold mb-1">Subject</div>
+                                        <div class="small text-body-secondary text-uppercase fw-semibold mb-1">Subject
+                                        </div>
                                         <span class="fw-semibold">{{ email.subject }}</span>
                                     </div>
                                 </div>
@@ -77,7 +82,8 @@
                                 <i class="fas fa-eye fa-fw text-primary"></i>
                                 <span class="fw-semibold">Email preview</span>
                             </div>
-                            <div class="card-body p-0" style="background: #fff; border-radius: 0 0 .375rem .375rem; overflow: hidden;">
+                            <div class="card-body p-0"
+                                 style="background: #fff; border-radius: 0 0 .375rem .375rem; overflow: hidden;">
                                 <iframe id="email-html-frame"
                                         srcdoc="{{ email.html | e }}"
                                         style="width: 100%; border: none; min-height: 300px; display: block; font-family: sans-serif;"
@@ -95,13 +101,15 @@
                                     <button class="accordion-button collapsed bg-light fw-semibold py-2" type="button"
                                             data-bs-toggle="collapse" data-bs-target="#plainTextCollapse"
                                             aria-expanded="false" aria-controls="plainTextCollapse">
-                                        <i class="fas fa-align-left fa-fw me-2 text-muted"></i> Plain text content
+                                        <i class="fas fa-align-left fa-fw me-2 text-body-secondary"></i> Plain text
+                                        content
                                     </button>
                                 </h2>
                                 <div id="plainTextCollapse" class="accordion-collapse collapse"
                                      aria-labelledby="plainTextHeading" data-bs-parent="#plainTextAccordion">
                                     <div class="accordion-body pt-2">
-                                        <pre class="mb-0 small" style="white-space: pre-wrap; word-break: break-word;">{{ email.body }}</pre>
+                                        <pre class="mb-0 small"
+                                             style="white-space: pre-wrap; word-break: break-word;">{{ email.body }}</pre>
                                     </div>
                                 </div>
                             </div>
@@ -134,8 +142,11 @@
                                             <td>{{ att.description }}</td>
                                             <td>
                                                 <div class="small">
-                                                    <div>Size: {{ asset.human_file_size() if asset else 'Unknown' }}</div>
-                                                    <div>Bucket: <span class="badge bg-secondary">{{ asset.bucket if asset else 'Unknown' }}</span></div>
+                                                    <div>
+                                                        Size: {{ asset.human_file_size() if asset else 'Unknown' }}</div>
+                                                    <div>Bucket: <span
+                                                            class="badge bg-secondary">{{ asset.bucket if asset else 'Unknown' }}</span>
+                                                    </div>
                                                     {% if asset and asset.compressed %}
                                                         <span class="badge bg-primary">Compressed</span>
                                                     {% endif %}
@@ -205,7 +216,7 @@
                                             <span class="badge bg-warning text-dark">Body override</span>
                                         {% else %}
                                             <span class="fw-semibold">{{ workflow.template.type_name }}</span>
-                                            <span class="text-muted ms-1">v{{ workflow.template.version }}</span>
+                                            <span class="text-body-secondary ms-1">v{{ workflow.template.version }}</span>
                                         {% endif %}
                                         {% if wf_item.subject_override %}
                                             <span class="badge bg-warning text-dark ms-1">Subject override</span>
@@ -217,7 +228,7 @@
                                         {% for pc in workflow.pclasses %}
                                             <span class="badge bg-primary me-1">{{ pc.abbreviation }}</span>
                                         {% else %}
-                                            <span class="text-muted">None</span>
+                                            <span class="text-body-secondary">None</span>
                                         {% endfor %}
                                     </dd>
 
@@ -226,7 +237,7 @@
                                         {% if wf_item.sent_timestamp %}
                                             {{ wf_item.sent_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                                         {% else %}
-                                            <span class="text-muted">Not recorded</span>
+                                            <span class="text-body-secondary">Not recorded</span>
                                         {% endif %}
                                     </dd>
 
@@ -256,16 +267,17 @@
                                             <span class="badge bg-danger me-1">{{ err_count }} error{{ 's' if err_count != 1 }}</span>
                                             {% for entry in recent %}
                                                 <div class="mt-1 border-start border-danger ps-2">
-                                                    <div class="text-muted" style="font-size: 0.75em;">
+                                                    <div class="text-body-secondary" style="font-size: 0.75em;">
                                                         {{ entry.timestamp | replace("T", " ") }}
                                                     </div>
                                                     <div class="text-danger small">{{ entry.message }}</div>
                                                 </div>
                                             {% endfor %}
                                             {% if hidden > 0 %}
-                                                <div class="mt-1 text-muted small">
+                                                <div class="mt-1 text-body-secondary small">
                                                     (+{{ hidden }} older &mdash;
-                                                    <a href="{{ url_for('emailworkflow.item_error_log', id=wf_item.id) }}">see full log</a>)
+                                                    <a href="{{ url_for('emailworkflow.item_error_log', id=wf_item.id) }}">see
+                                                        full log</a>)
                                                 </div>
                                             {% endif %}
                                         </dd>
@@ -273,7 +285,7 @@
                                     {% if wf_item.next_retry_time and not wf_item.sent_timestamp %}
                                         <dt class="col-sm-3">Next retry</dt>
                                         <dd class="col-sm-9">
-                                            <i class="fas fa-clock fa-fw text-muted"></i>
+                                            <i class="fas fa-clock fa-fw text-body-secondary"></i>
                                             {{ wf_item.next_retry_time.strftime("%a %d %b %Y %H:%M") }}
                                         </dd>
                                     {% endif %}

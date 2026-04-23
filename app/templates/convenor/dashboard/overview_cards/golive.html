@@ -46,11 +46,11 @@
                     {{ wtf.render_field(golive_form.full_CATS) }}
                     {{ wtf.render_field(golive_form.notify_faculty) }}
                     {{ wtf.render_field(golive_form.notify_selectors) }}
-                    <p class="form-text text-muted fw-semibold mt-2 mb-1">Faculty notification email</p>
+                    <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Faculty notification email</p>
                     {{ wtf.render_field(golive_form.faculty_template) }}
-                    <p class="form-text text-muted fw-semibold mt-2 mb-1">Selector notification email</p>
+                    <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Selector notification email</p>
                     {{ wtf.render_field(golive_form.selector_template) }}
-                    <p class="form-text text-muted fw-semibold mt-2 mb-1">Convenor summary email</p>
+                    <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Convenor summary email</p>
                     {{ wtf.render_field(golive_form.convenor_template) }}
                     {{ blocking_task_list(config.get_blocking_tasks[0]) }}
                     <div class="d-flex flex-row justify-content-end align-items-start gap-2">

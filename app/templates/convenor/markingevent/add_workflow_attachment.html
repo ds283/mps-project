@@ -61,7 +61,7 @@
                                             {% else %}
                                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded flex-shrink-0"
                                                      style="width:60px; height:60px;">
-                                                    <i class="fas fa-file fa-2x text-muted"></i>
+                                                    <i class="fas fa-file fa-2x text-body-secondary"></i>
                                                 </div>
                                             {% endif %}
                                         {% endif %}
@@ -69,10 +69,10 @@
                                             {% if att.attachment %}
                                                 <span class="fw-semibold">{{ att.attachment.target_name or att.attachment.filename }}</span>
                                             {% else %}
-                                                <span class="text-muted fst-italic">Unknown attachment</span>
+                                                <span class="text-body-secondary fst-italic">Unknown attachment</span>
                                             {% endif %}
                                             {% if att.description %}
-                                                <div class="small text-muted mt-1">{{ att.description }}</div>
+                                                <div class="small text-body-secondary mt-1">{{ att.description }}</div>
                                             {% endif %}
                                             <div class="d-flex flex-row flex-wrap gap-1 mt-1">
                                                 {% set role_set = att.role_set %}

@@ -69,13 +69,13 @@
 {% else %}
     <div class="mb-3">
         <label class="form-label fw-semibold">Role</label>
-        <div class="form-control-plaintext text-muted">{{ workflow.role_as_str }}
+        <div class="form-control-plaintext text-body-secondary">{{ workflow.role_as_str }}
             <span class="small">(cannot be changed after creation)</span>
         </div>
     </div>
     <div class="mb-3">
         <label class="form-label fw-semibold">Requires report</label>
-        <div class="form-control-plaintext text-muted">
+        <div class="form-control-plaintext text-body-secondary">
             {% if workflow.requires_report %}Yes{% else %}No{% endif %}
             <span class="small">(cannot be changed after creation)</span>
         </div>
@@ -85,7 +85,7 @@
 <div class="mb-3">
     <label class="form-label fw-semibold" for="scheme">{{ form.scheme.label.text }}</label>
     {% if form.scheme.description %}
-        <div class="form-text text-muted mb-1">{{ form.scheme.description }}</div>
+        <div class="form-text text-body-secondary mb-1">{{ form.scheme.description }}</div>
     {% endif %}
     {% if scheme_locked %}
         <div class="alert alert-secondary small mb-2">
@@ -111,7 +111,7 @@
             {{ form.notify_on_moderation_required.label.text }}
         </label>
         {% if form.notify_on_moderation_required.description %}
-            <div class="form-text text-muted mb-1">{{ form.notify_on_moderation_required.description }}</div>
+            <div class="form-text text-body-secondary mb-1">{{ form.notify_on_moderation_required.description }}</div>
         {% endif %}
         {{ form.notify_on_moderation_required(id='notify_on_moderation_required', class='form-select') }}
     </div>
@@ -120,7 +120,7 @@
             {{ form.notify_on_validation_failure.label.text }}
         </label>
         {% if form.notify_on_validation_failure.description %}
-            <div class="form-text text-muted mb-1">{{ form.notify_on_validation_failure.description }}</div>
+            <div class="form-text text-body-secondary mb-1">{{ form.notify_on_validation_failure.description }}</div>
         {% endif %}
         {{ form.notify_on_validation_failure(id='notify_on_validation_failure', class='form-select') }}
     </div>
@@ -144,7 +144,7 @@
             <div class="card-body">
                 {% set attachments = workflow.attachments %}
                 {% if attachments|length == 0 %}
-                    <span class="text-muted small">No attachments associated with this workflow.</span>
+                    <span class="text-body-secondary small">No attachments associated with this workflow.</span>
                 {% else %}
                     <div class="list-group list-group-flush">
                         {% for att in attachments %}
@@ -161,7 +161,7 @@
                                         {% else %}
                                             <div class="d-flex align-items-center justify-content-center bg-light border rounded flex-shrink-0"
                                                  style="width:60px; height:60px;">
-                                                <i class="fas fa-file fa-2x text-muted"></i>
+                                                <i class="fas fa-file fa-2x text-body-secondary"></i>
                                             </div>
                                         {% endif %}
                                     {% endif %}
@@ -169,10 +169,10 @@
                                         {% if att.attachment %}
                                             <span class="fw-semibold">{{ att.attachment.target_name or att.attachment.filename }}</span>
                                         {% else %}
-                                            <span class="text-muted fst-italic">Unknown attachment</span>
+                                            <span class="text-body-secondary fst-italic">Unknown attachment</span>
                                         {% endif %}
                                         {% if att.description %}
-                                            <div class="small text-muted mt-1">{{ att.description }}</div>
+                                            <div class="small text-body-secondary mt-1">{{ att.description }}</div>
                                         {% endif %}
                                     </div>
                                 </div>

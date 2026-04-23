@@ -60,33 +60,33 @@
                     <div class="row">
                         <div class="col-md-6">
                             <dl class="row mb-0 small">
-                                <dt class="col-sm-5 text-muted">Student</dt>
+                                <dt class="col-sm-5 text-body-secondary">Student</dt>
                                 <dd class="col-sm-7">{{ record.student_identifier['label'] }}</dd>
-                                <dt class="col-sm-5 text-muted">Project</dt>
+                                <dt class="col-sm-5 text-body-secondary">Project</dt>
                                 <dd class="col-sm-7">{{ record.project.name }}</dd>
-                                <dt class="col-sm-5 text-muted">Supervisors</dt>
+                                <dt class="col-sm-5 text-body-secondary">Supervisors</dt>
                                 <dd class="col-sm-7">
                                     {% for role in record.supervisor_roles %}
                                         <div><a class="text-decoration-none"
                                                 href="mailto:{{ role.user.email }}">{{ role.user.name }}</a></div>
                                     {% else %}
-                                        <span class="text-muted">None recorded</span>
+                                        <span class="text-body-secondary">None recorded</span>
                                     {% endfor %}
                                 </dd>
                             </dl>
                         </div>
                         <div class="col-md-6">
                             <dl class="row mb-0 small">
-                                <dt class="col-sm-5 text-muted">Workflow</dt>
+                                <dt class="col-sm-5 text-body-secondary">Workflow</dt>
                                 <dd class="col-sm-7">{{ workflow.name }}</dd>
-                                <dt class="col-sm-5 text-muted">Role</dt>
+                                <dt class="col-sm-5 text-body-secondary">Role</dt>
                                 <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
-                                <dt class="col-sm-5 text-muted">Deadline</dt>
+                                <dt class="col-sm-5 text-body-secondary">Deadline</dt>
                                 <dd class="col-sm-7">
                                     {% if workflow.effective_deadline %}
                                         {{ workflow.effective_deadline.strftime("%a %d %b %Y") }}
                                     {% else %}
-                                        <span class="text-muted">Not set</span>
+                                        <span class="text-body-secondary">Not set</span>
                                     {% endif %}
                                 </dd>
                             </dl>
@@ -111,7 +111,7 @@
                             {% else %}
                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded"
                                      style="width:70px; height:90px;">
-                                    <i class="fas fa-file-pdf fa-2x text-muted"></i>
+                                    <i class="fas fa-file-pdf fa-2x text-body-secondary"></i>
                                 </div>
                             {% endif %}
                             <div>
@@ -155,7 +155,7 @@
                                         {% else %}
                                             <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-2"
                                                  style="width:80px; height:80px; margin: 0 auto;">
-                                                <i class="fas fa-file fa-2x text-muted"></i>
+                                                <i class="fas fa-file fa-2x text-body-secondary"></i>
                                             </div>
                                         {% endif %}
                                         <div class="small fw-semibold text-truncate"
@@ -163,7 +163,7 @@
                                             {{ asset.target_name or asset.filename }}
                                         </div>
                                         {% if pa.description %}
-                                            <div class="small text-muted mt-1">{{ pa.description }}</div>
+                                            <div class="small text-body-secondary mt-1">{{ pa.description }}</div>
                                         {% endif %}
                                         <a class="btn btn-xs btn-outline-secondary mt-2"
                                            href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
@@ -191,9 +191,9 @@
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
                                                 <div class="fw-semibold small">{{ entry.title or "(Untitled)" }}</div>
-                                                <div class="small text-muted">{{ entry.created_timestamp.strftime("%a %d %b %Y") }}</div>
+                                                <div class="small text-body-secondary">{{ entry.created_timestamp.strftime("%a %d %b %Y") }}</div>
                                                 {% if entry.entry %}
-                                                    <div class="small text-muted mt-1 fst-italic"
+                                                    <div class="small text-body-secondary mt-1 fst-italic"
                                                          style="max-width:600px;">
                                                         {{ entry.entry | striptags | truncate(200) }}
                                                     </div>
@@ -246,14 +246,14 @@
                                         {%- set ev_class = 'bg-secondary text-white' -%}
                                         {%- set ev_icon = 'redo' -%}
                                     {%- else -%}
-                                        {%- set ev_class = 'bg-light text-muted border' -%}
+                                        {%- set ev_class = 'bg-light text-body-secondary border' -%}
                                         {%- set ev_icon = 'question' -%}
                                     {%- endif -%}
                                 {%- elif not ev.monitor_attendance -%}
-                                    {%- set ev_class = 'bg-light text-muted border' -%}
+                                    {%- set ev_class = 'bg-light text-body-secondary border' -%}
                                     {%- set ev_icon = 'minus' -%}
                                 {%- else -%}
-                                    {%- set ev_class = 'bg-light text-muted border' -%}
+                                    {%- set ev_class = 'bg-light text-body-secondary border' -%}
                                     {%- set ev_icon = 'question-circle' -%}
                                 {%- endif -%}
                                 <div class="position-relative" style="min-width:90px; max-width:120px;">
@@ -278,7 +278,7 @@
                                         {% endif %}
                                     </div>
                                     {% if ev.attendance is not none %}
-                                        <div class="small text-center text-muted mt-1"
+                                        <div class="small text-center text-body-secondary mt-1"
                                              style="font-size:0.65rem;">{{ ev.attendance_str }}</div>
                                     {% endif %}
                                 </div>
@@ -294,7 +294,7 @@
                                         </div>
                                         <div class="offcanvas-body">
                                             {% if ev.get_start_time() %}
-                                                <p class="small text-muted">{{ ev.get_start_time().strftime("%A %d %b %Y %H:%M") }}</p>
+                                                <p class="small text-body-secondary">{{ ev.get_start_time().strftime("%A %d %b %Y %H:%M") }}</p>
                                             {% endif %}
                                             {% if ev.meeting_summary %}
                                                 <h6>Meeting summary</h6>
@@ -321,7 +321,7 @@
                 <div class="card-body">
                     <h5>{{ scheme.title | safe }}</h5>
                     {% if scheme.rubric %}
-                        <div class="mt-2 text-muted">{{ scheme.rubric | safe }}</div>
+                        <div class="mt-2 text-body-secondary">{{ scheme.rubric | safe }}</div>
                     {% endif %}
                 </div>
             </div>
@@ -342,7 +342,7 @@
                         </div>
                         <div class="card-body">
                             {% if block.description %}
-                                <div class="text-muted small mb-3">{{ block.description | safe }}</div>
+                                <div class="text-body-secondary small mb-3">{{ block.description | safe }}</div>
                             {% endif %}
                             {% for field_spec in block.get('fields', []) %}
                                 {%- set key = field_spec.key -%}
@@ -359,11 +359,11 @@
                                                     {{ wtf.render_field(form[key]) }}
                                                 </div>
                                                 {% if ftype == 'percent' %}
-                                                    <div class="col-md-4 small text-muted">
+                                                    <div class="col-md-4 small text-body-secondary">
                                                         Range: 0 &ndash; 100%
                                                     </div>
                                                 {% elif field_spec.field_type.get('min') is not none or field_spec.field_type.get('max') is not none %}
-                                                    <div class="col-md-4 small text-muted">
+                                                    <div class="col-md-4 small text-body-secondary">
                                                         Range:
                                                         {% if field_spec.field_type.get('min') is not none %}
                                                             {{ field_spec.field_type.min }}{% else %}&mdash;{% endif %}
@@ -396,10 +396,10 @@
                                          data-bs-toggle="collapse" data-bs-target="#llm-positive-suggestions"
                                          aria-expanded="true" aria-controls="llm-positive-suggestions"
                                          style="cursor:pointer;">
-                                        <span class="small fst-italic text-muted">
+                                        <span class="small fst-italic text-body-secondary">
                                             <i class="fas fa-robot fa-fw me-1"></i> AI suggestions &ndash; for guidance only, not recommendations
                                         </span>
-                                        <i class="fas fa-chevron-down fa-fw small text-muted"></i>
+                                        <i class="fas fa-chevron-down fa-fw small text-body-secondary"></i>
                                     </div>
                                     <div class="collapse show" id="llm-positive-suggestions">
                                         <div class="card-body py-2">
@@ -421,10 +421,10 @@
                                          data-bs-toggle="collapse" data-bs-target="#llm-improvement-suggestions"
                                          aria-expanded="true" aria-controls="llm-improvement-suggestions"
                                          style="cursor:pointer;">
-                                        <span class="small fst-italic text-muted">
+                                        <span class="small fst-italic text-body-secondary">
                                             <i class="fas fa-robot fa-fw me-1"></i> AI suggestions &ndash; for guidance only, not recommendations
                                         </span>
-                                        <i class="fas fa-chevron-down fa-fw small text-muted"></i>
+                                        <i class="fas fa-chevron-down fa-fw small text-body-secondary"></i>
                                     </div>
                                     <div class="collapse show" id="llm-improvement-suggestions">
                                         <div class="card-body py-2">

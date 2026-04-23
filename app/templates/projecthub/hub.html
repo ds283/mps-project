@@ -15,7 +15,7 @@
 {% macro current_supervision_event_header(unit) %}
     <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-4">
         <div class="fs-2 text-primary">{{ unit.name }}</div>
-        <span class="text-muted">
+        <span class="text-body-secondary">
             {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
             {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
             {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
@@ -25,7 +25,7 @@
 
 {% macro past_supervision_event_header(event) %}
     {% set unit = event.unit %}
-    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 text-muted">
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 text-body-secondary">
         <i class="fas fa-calendar"></i>
         <span>
             {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
@@ -95,7 +95,7 @@
                     </div>
                 {% endif %}
                 {% if event.location %}
-                    <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                    <div class="text-body-secondary"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
                 {% endif %}
             {% endif %}
         </div>
@@ -109,8 +109,8 @@
             </div>
         {% endif %}
         {% if event.meeting_summary and event.meeting_summary|length > 0 %}
-            <div class="mt-2 mb-1 text-uppercase fw-semibold text-muted">Summary</div>
-            <div class="text-muted small">{{ event.meeting_summary|truncate(400)|safe }}</div>
+            <div class="mt-2 mb-1 text-uppercase fw-semibold text-body-secondary">Summary</div>
+            <div class="text-body-secondary small">{{ event.meeting_summary|truncate(400)|safe }}</div>
         {% endif %}
     </div>
 {% endmacro %}
@@ -125,7 +125,7 @@
                 </div>
                 <div class="d-flex flex-row flex-wrap justify-content-between align-items-start">
                     {% if period.hand_in_date %}
-                        <small class="text-muted">
+                        <small class="text-body-secondary">
                             Hand-in date: <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
                             ({{ period.time_to_hand_in }} from now)
                         </small>
@@ -138,7 +138,7 @@
         </div>
         <div class="col-4">
             <div class="d-flex flex-column justify-content-start align-items-end gap-2">
-                <div class="small text-muted">
+                <div class="small text-body-secondary">
                     <i class="fas fa-user-circle"></i>
                     Convenor: <a class="text-decoration-none"
                                  href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
@@ -201,13 +201,13 @@
             <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
                 {% if attendance_recorded %}
                     <div>
-                        <div class="small text-muted">Recorded</div>
+                        <div class="small text-body-secondary">Recorded</div>
                         <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_recorded }}</div>
                     </div>
                 {% endif %}
                 {% if attendance_missing %}
                     <div>
-                        <div class="small text-muted">Missing</div>
+                        <div class="small text-body-secondary">Missing</div>
                         <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_missing }}</div>
                     </div>
                 {% endif %}
@@ -215,7 +215,7 @@
             <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-2">
                 {% if attendance_percent %}
                     <div>
-                        <div class="small text-muted">Total</div>
+                        <div class="small text-body-secondary">Total</div>
                         <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
                     </div>
                 {% endif %}
@@ -235,10 +235,10 @@
                 {% set regular_meeting_data = my_role.regular_meeting_as_string %}
                 <div class="fs-5 text-primary">{{ regular_meeting_data["day"] }} {{ regular_meeting_data["time"] }}</div>
                 {% if "location" in regular_meeting_data %}
-                    <div class="mt-2 text-muted">{{ regular_meeting_data["location"] }}</div>
+                    <div class="mt-2 text-body-secondary">{{ regular_meeting_data["location"] }}</div>
                 {% endif %}
             {% else %}
-                <span class="fs-5 text-muted">Not set</span>
+                <span class="fs-5 text-body-secondary">Not set</span>
             {% endif %}
         {% elif blk == 'footer' %}
             {% if has_regular_meeting %}
@@ -262,21 +262,23 @@
                 <div class="fs-5 text-success">Notifications on</div>
                 {% if my_role.prompt_after_event %}
                     {% if my_role.prompt_at_fixed_time %}
-                        <div class="mt-2 small text-muted"><i class="fas fa-check-circle"></i> Prompt
+                        <div class="mt-2 small text-body-secondary"><i class="fas fa-check-circle"></i> Prompt
                             at {{ my_role.prompt_at_time.strftime("%H:%M") }}</div>
                     {% else %}
-                        <div class="mt-2 small text-muted"><i class="fas fa-check-circle"></i> Prompt at
+                        <div class="mt-2 small text-body-secondary"><i class="fas fa-check-circle"></i> Prompt at
                             +{{ my_role.prompt_delay }} hours
                         </div>
                     {% endif %}
                 {% else %}
-                    <div class="mt-2 small text-muted"><i class="fas fa-times-circle"></i> No prompt for attendance
+                    <div class="mt-2 small text-body-secondary"><i class="fas fa-times-circle"></i> No prompt for
+                        attendance
                     </div>
                 {% endif %}
                 {% if my_role.prompt_in_reminder %}
-                    <div class="mt-1 small text-muted"><i class="fas fa-check-circle"></i> In reminder</div>
+                    <div class="mt-1 small text-body-secondary"><i class="fas fa-check-circle"></i> In reminder</div>
                 {% else %}
-                    <div class="mt-1 small text-muted"><i class="fas fa-times-circle"></i> Not in reminder</div>
+                    <div class="mt-1 small text-body-secondary"><i class="fas fa-times-circle"></i> Not in reminder
+                    </div>
                 {% endif %}
             {% endif %}
         {% elif blk == 'footer' %}
@@ -485,7 +487,7 @@
                                     {% else %}
                                         <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-1"
                                              style="width:80px; height:80px; margin: 0 auto;">
-                                            <i class="fas fa-file fa-2x text-muted"></i>
+                                            <i class="fas fa-file fa-2x text-body-secondary"></i>
                                         </div>
                                     {% endif %}
                                     <div class="small fw-semibold text-truncate"
@@ -502,7 +504,7 @@
                         {% endfor %}
                     </div>
                     {% if visible_attachments|length > 5 %}
-                        <div class="mt-2 small text-muted">
+                        <div class="mt-2 small text-body-secondary">
                             Showing 5 of {{ visible_attachments|length }} files.
                             <a class="text-decoration-none"
                                href="{{ url_for('projecthub.downloads', subid=record.id, url=return_url, text=return_text) }}">View

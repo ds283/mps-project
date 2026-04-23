@@ -52,14 +52,15 @@
                             {{ event.time.strftime("%A %d %b %Y %H:%M") }}
                         </div>
                         {% if event.location %}
-                            <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                            <div class="text-body-secondary"><i class="fas fa-map-marker-alt"></i> {{ event.location }}
+                            </div>
                         {% endif %}
                     </div>
                 {% endif %}
             </div>
 
             {% if unit %}
-                <div class="text-muted mb-3">
+                <div class="text-body-secondary mb-3">
                     {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
                     {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
                     {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
@@ -69,7 +70,7 @@
 
             {# ── Owner info ── #}
             {% if owner and owner.user %}
-                <div class="text-muted mb-3">
+                <div class="text-body-secondary mb-3">
                     Event owner: <i class="fas fa-user-circle"></i> <strong>{{ owner.user.name }}</strong>
                     ({{ owner.role_as_str }})
                 </div>

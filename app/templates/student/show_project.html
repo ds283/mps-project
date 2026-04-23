@@ -441,14 +441,14 @@
                                 <div class="card-body">
                                     {% if comment.deleted %}
                                         {% if comment.last_edit_timestamp %}
-                                            <span class="text-muted"><em>{{ owner_name|safe }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</em></span>
+                                            <span class="text-body-secondary"><em>{{ owner_name|safe }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</em></span>
                                         {% else %}
-                                            <span class="text-muted"><em>{{ owner_name|safe }} deleted their comment</em></span>
+                                            <span class="text-body-secondary"><em>{{ owner_name|safe }} deleted their comment</em></span>
                                         {% endif %}
                                     {% else %}
                                         <p>
                                             {% if approvals_team_only %}
-                                                <span class="text-muted">Visible only to approvals team</span>
+                                                <span class="text-body-secondary">Visible only to approvals team</span>
                                             {% endif %}
                                         </p>
                                         {{ comment.comment|latextomarkdown|markdown|bclean|blinkify|safe }}
@@ -539,9 +539,10 @@
             </form>
         {% endif %}
     </div>
-    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom" role="navigation">
+    <nav class="navbar navbar-expand {% if real_user %}bg-dark{% else %}bg-light{% endif %} fixed-bottom"
+         data-bs-theme="{% if real_user %}dark{% else %}light{% endif %}" role="navigation">
         <div class="d-flex justify-content-between w-100">
-            <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Copyright (c) {{ website_copyright_dates }} School of Mathematics & Physical Sciences, University of Sussex</span>
+            <span class="copyright navbar-text text-body-secondary small">Revision {{ website_revision }} | Copyright (c) {{ website_copyright_dates }} School of Mathematics & Physical Sciences, University of Sussex</span>
             {% if real_user %}
                 <span class="navbar-text small" style="float: right;">You
                     are viewing as <i class="fas fa-user-circle"></i>

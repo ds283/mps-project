@@ -18,8 +18,8 @@
                     <div>
                         {% if label %}
                             <div>
-                                <i class="fas fa-file-alt me-2 mt-1 text-muted"></i>
-                                <span class="text-muted">{{ label }}</span>
+                                <i class="fas fa-file-alt me-2 mt-1 text-body-secondary"></i>
+                                <span class="text-body-secondary">{{ label }}</span>
                             </div>
                         {% endif %}
                         {% if has_access and download_url is not none %}
@@ -44,7 +44,7 @@
                         </div>
                     {% endif %}
                     {% if attachment and attachment.description is defined and attachment.description|length > 0 %}
-                        <div class="small text-muted">
+                        <div class="small text-body-secondary">
                             <i class="fas fa-paperclip"></i> {{ attachment.description }}
                         </div>
                     {% endif %}
@@ -79,12 +79,12 @@
             <div>
                 <span class="text-primary">{{ asset.human_file_size }}</span>
                 {% if admin_rights %}
-                    <span class="text-muted">|</span>
-                    <i class="fas fa-cloud text-muted small"></i>
-                    <span class="text-muted small">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
+                    <span class="text-body-secondary">|</span>
+                    <i class="fas fa-cloud text-body-secondary small"></i>
+                    <span class="text-body-secondary small">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
                 {% endif %}
             </div>
-            <div class="text-muted small mt-1">
+            <div class="text-body-secondary small mt-1">
                 {% if asset.timestamp %}
                     <div>
                         {{ asset.verb_label }} on {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -259,7 +259,7 @@
                     {% if record.report_exemplar and record.exemplar_comment and record.exemplar_comment|length > 0 %}
                         <div class="mb-3">
                             {% call icon_block("comment") %}
-                                <div class="text-muted small">{{ record.exemplar_comment|safe }}</div>
+                                <div class="text-body-secondary small">{{ record.exemplar_comment|safe }}</div>
                             {% endcall %}
                         </div>
                     {% endif %}
@@ -296,12 +296,12 @@
                                 <td>
                                     {% if record.celery_started %}
                                         {% if not record.celery_finished %}
-                                            <span class="text-muted">Generation of processed report in progress...</span>
+                                            <span class="text-body-secondary">Generation of processed report in progress...</span>
                                         {% else %}
                                             <span class="text-danger">Processed report did not generate</span>
                                         {% endif %}
                                     {% else %}
-                                        <span class="text-muted">Waiting to generate processed report...</span>
+                                        <span class="text-body-secondary">Waiting to generate processed report...</span>
                                         {% if admin_rights %}
                                             <a class="btn btn-sm btn-outline-secondary"
                                                href="{{ url_for('documents.generate_processed_report', sid=record.id) }}">Generate</a>
@@ -457,7 +457,7 @@
                         {# In progress — spinner + auto-reload polling #}
                         <div class="d-flex align-items-center gap-2 mt-1 mb-2">
                             <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
-                            <span class="text-muted small">Analysis in progress&hellip;</span>
+                            <span class="text-body-secondary small">Analysis in progress&hellip;</span>
                         </div>
                         <script>
                         (function () {
@@ -478,7 +478,7 @@
                         {# Analysis failed #}
                         <div class="d-flex align-items-center gap-2 mt-1 mb-2">
                             <span class="badge bg-danger">Failed</span>
-                            <span class="small text-muted">{{ record.llm_failure_reason or 'Unknown error' }}</span>
+                            <span class="small text-body-secondary">{{ record.llm_failure_reason or 'Unknown error' }}</span>
                         </div>
                         <div class="d-flex flex-row gap-2 mt-2">
                             <a class="btn btn-sm btn-outline-secondary"
@@ -507,22 +507,22 @@
                         {# Document metrics row #}
                         <div class="d-flex flex-row flex-wrap gap-3 mb-2">
                             {% if metrics.get('page_count') is not none %}
-                                <span class="small text-muted">Pages: <strong>{{ metrics['page_count'] | int }}</strong></span>
+                                <span class="small text-body-secondary">Pages: <strong>{{ metrics['page_count'] | int }}</strong></span>
                             {% endif %}
                             {% if metrics.get('word_count') is not none %}
-                                <span class="small text-muted">Words: <strong>{{ metrics['word_count'] | int }}</strong></span>
+                                <span class="small text-body-secondary">Words: <strong>{{ metrics['word_count'] | int }}</strong></span>
                             {% endif %}
                             {% if metrics.get('appendix_word_count') is not none %}
-                                <span class="small text-muted">Appendix: <strong>{{ metrics['appendix_word_count'] | int }}</strong></span>
+                                <span class="small text-body-secondary">Appendix: <strong>{{ metrics['appendix_word_count'] | int }}</strong></span>
                             {% endif %}
                             {% if metrics.get('figure_count') is not none %}
-                                <span class="small text-muted">Figures: <strong>{{ metrics['figure_count'] | int }}</strong></span>
+                                <span class="small text-body-secondary">Figures: <strong>{{ metrics['figure_count'] | int }}</strong></span>
                             {% endif %}
                             {% if metrics.get('table_count') is not none %}
-                                <span class="small text-muted">Tables: <strong>{{ metrics['table_count'] | int }}</strong></span>
+                                <span class="small text-body-secondary">Tables: <strong>{{ metrics['table_count'] | int }}</strong></span>
                             {% endif %}
                             {% if metrics.get('reference_count') is not none %}
-                                <span class="small text-muted">References: <strong>{{ metrics['reference_count'] | int }}</strong></span>
+                                <span class="small text-body-secondary">References: <strong>{{ metrics['reference_count'] | int }}</strong></span>
                             {% endif %}
                         </div>
 
@@ -588,10 +588,10 @@
                                     <span class="badge bg-success">Low</span>
                                 {% endif %}
                                 {% if sigma is not none %}
-                                    <span class="text-muted ms-1">σ&nbsp;=&nbsp;<strong>{{ "%.2f"|format(sigma) }}</strong></span>
+                                    <span class="text-body-secondary ms-1">σ&nbsp;=&nbsp;<strong>{{ "%.2f"|format(sigma) }}</strong></span>
                                 {% endif %}
                                 {% if pval is not none %}
-                                    <span class="text-muted ms-1">p&nbsp;=&nbsp;<strong>
+                                    <span class="text-body-secondary ms-1">p&nbsp;=&nbsp;<strong>
                                         {% if pval >= 0.001 %}{{ "%.3f"|format(pval) }}
                                         {% elif pval >= 0.0001 %}{{ "%.2e"|format(pval) }}
                                         {% else %}&lt;0.0001{% endif %}
@@ -603,7 +603,7 @@
                         {# Grade band (if available) #}
                         {% if llm_result.get('classification') %}
                             <div class="mb-2">
-                                <span class="small text-muted me-1">LLM grade band:</span>
+                                <span class="small text-body-secondary me-1">LLM grade band:</span>
                                 <span class="badge bg-primary">{{ llm_result['classification'] }}</span>
                             </div>
                         {% endif %}

@@ -26,11 +26,11 @@
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0 small">
-                        <dt class="col-sm-3 text-muted">Workflow</dt>
+                        <dt class="col-sm-3 text-body-secondary">Workflow</dt>
                         <dd class="col-sm-9">{{ workflow.name }}</dd>
-                        <dt class="col-sm-3 text-muted">Project class</dt>
+                        <dt class="col-sm-3 text-body-secondary">Project class</dt>
                         <dd class="col-sm-9">{{ pclass.name }}</dd>
-                        <dt class="col-sm-3 text-muted">Moderator</dt>
+                        <dt class="col-sm-3 text-body-secondary">Moderator</dt>
                         <dd class="col-sm-9">{{ mod_report.user.name }}</dd>
                     </dl>
                 </div>
@@ -52,7 +52,7 @@
                             {% else %}
                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded"
                                      style="width:70px; height:90px;">
-                                    <i class="fas fa-file-pdf fa-2x text-muted"></i>
+                                    <i class="fas fa-file-pdf fa-2x text-body-secondary"></i>
                                 </div>
                             {% endif %}
                             <div>
@@ -91,7 +91,7 @@
                                                  class="img-thumbnail mb-2" style="max-width:80px; max-height:80px;"
                                                  alt="">
                                         {% else %}
-                                            <i class="fas fa-paperclip fa-2x text-muted mb-2"></i>
+                                            <i class="fas fa-paperclip fa-2x text-body-secondary mb-2"></i>
                                         {% endif %}
                                         <div class="small fw-semibold text-truncate mb-1" title="{{ asset.target_name or asset.filename }}">
                                             {{ asset.target_name or asset.filename or "Attachment" }}
@@ -133,7 +133,7 @@
                                             {% if mr.grade is not none %}
                                                 <strong class="text-danger fs-5">{{ "%.1f"|format(mr.grade) }}%</strong>
                                             {% else %}
-                                                <span class="text-muted">—</span>
+                                                <span class="text-body-secondary">—</span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -144,7 +144,7 @@
                                                 <div class="small mt-1"><strong class="text-secondary">Improvement:</strong> {{ mr.feedback_improvement|striptags|truncate(200) }}</div>
                                             {% endif %}
                                             {% if not mr.feedback_submitted %}
-                                                <span class="text-muted fst-italic small">Feedback not yet submitted</span>
+                                                <span class="text-body-secondary fst-italic small">Feedback not yet submitted</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -183,7 +183,7 @@
                             {{ form.report.label(class="form-label fw-semibold") }}
                             {{ form.report(class="form-control tinymce" + (" is-invalid" if form.report.errors else ""), rows=8) }}
                             {% if form.report.description %}
-                                <div class="form-text text-muted">{{ form.report.description }}</div>
+                                <div class="form-text text-body-secondary">{{ form.report.description }}</div>
                             {% endif %}
                             {% for error in form.report.errors %}
                                 <div class="invalid-feedback">{{ error }}</div>

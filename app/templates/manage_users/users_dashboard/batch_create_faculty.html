@@ -84,7 +84,7 @@
                                         <span class="badge bg-secondary">Not converted</span>
                                     {% endif %}
                                     {% if batch.report and batch.report|length > 0 %}
-                                        <div class="text-muted small mt-1">
+                                        <div class="text-body-secondary small mt-1">
                                             <span tabindex="1" data-bs-toggle="popover" title="Processing report"
                                                   data-bs-container="body" data-bs-trigger="focus"
                                                   data-bs-content="{{ batch.report }}">
@@ -92,7 +92,7 @@
                                             </span>
                                         </div>
                                     {% else %}
-                                        <div class="text-muted small mt-1">
+                                        <div class="text-body-secondary small mt-1">
                                             An import report was not generated
                                         </div>
                                     {% endif %}
@@ -102,7 +102,7 @@
                         <div class="col-4">
                             <div>
                                 {% if batch.timestamp %}
-                                    <div class="text-muted small">
+                                    <div class="text-body-secondary small">
                                         Imported
                                         {% if batch.owner %}
                                             by <i class="fas fa-user-circle"></i>
@@ -113,7 +113,7 @@
                                     </div>
                                 {% endif %}
                                 {% if batch.success %}
-                                    <div class="text-muted small mt-1">
+                                    <div class="text-body-secondary small mt-1">
                                         Total lines: {{ batch.total_lines }} |
                                         {% if batch.interpreted_lines < batch.total_lines %}
                                             Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}
@@ -122,7 +122,7 @@
                                         {% endif %}
                                     </div>
                                 {% endif %}
-                                <div class="mt-1 text-muted small">
+                                <div class="mt-1 text-body-secondary small">
                                     <ul>
                                         {% if batch.celery_finished %}
                                             <li><strong>{{ batch.number_items }} items processed
@@ -132,7 +132,7 @@
                                     </ul>
                                 </div>
                                 {% if batch.tenants %}
-                                    <div class="mt-1 text-muted small">
+                                    <div class="mt-1 text-body-secondary small">
                                         <span class="fw-semibold">Tenants:</span>
                                         {% for tenant in batch.tenants %}
                                             <span class="badge bg-secondary">{{ tenant.name }}</span>

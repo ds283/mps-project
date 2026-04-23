@@ -34,7 +34,8 @@
                         <strong>Comment:</strong> {{ report.turnitin_resolved_comment }}
                     </div>
                 {% endif %}
-                <div class="mt-2 small text-muted">You may submit a new comment below to update the resolution record.
+                <div class="mt-2 small text-body-secondary">You may submit a new comment below to update the resolution
+                    record.
                 </div>
             {% endcall %}
         </div>
@@ -51,23 +52,23 @@
                 <div class="row">
                     <div class="col-md-6">
                         <dl class="row mb-0 small">
-                            <dt class="col-sm-5 text-muted">Student</dt>
+                            <dt class="col-sm-5 text-body-secondary">Student</dt>
                             <dd class="col-sm-7">{{ report.student.user.name }}</dd>
-                            <dt class="col-sm-5 text-muted">Project</dt>
+                            <dt class="col-sm-5 text-body-secondary">Project</dt>
                             <dd class="col-sm-7">
                                 {% if rec.project is not none %}
                                     {{ rec.project.name }}
                                 {% else %}
-                                    <span class="text-muted fst-italic">No project</span>
+                                    <span class="text-body-secondary fst-italic">No project</span>
                                 {% endif %}
                             </dd>
-                            <dt class="col-sm-5 text-muted">Workflow</dt>
+                            <dt class="col-sm-5 text-body-secondary">Workflow</dt>
                             <dd class="col-sm-7">{{ workflow.name }}</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
                         <dl class="row mb-0 small">
-                            <dt class="col-sm-5 text-muted">Similarity score</dt>
+                            <dt class="col-sm-5 text-body-secondary">Similarity score</dt>
                             <dd class="col-sm-7">
                                 {# 5-tier colour scale per current Turnitin documentation #}
                                 {% if rec.turnitin_score == 0 %}
@@ -88,22 +89,22 @@
                                 {% endif %}
                             </dd>
                             {% if rec.turnitin_web_overlap is not none %}
-                                <dt class="col-sm-5 text-muted">Web overlap</dt>
+                                <dt class="col-sm-5 text-body-secondary">Web overlap</dt>
                                 <dd class="col-sm-7">{{ rec.turnitin_web_overlap }}%</dd>
                             {% endif %}
                             {% if rec.turnitin_publication_overlap is not none %}
-                                <dt class="col-sm-5 text-muted">Publication overlap</dt>
+                                <dt class="col-sm-5 text-body-secondary">Publication overlap</dt>
                                 <dd class="col-sm-7">{{ rec.turnitin_publication_overlap }}%</dd>
                             {% endif %}
                             {% if rec.turnitin_student_overlap is not none %}
-                                <dt class="col-sm-5 text-muted">Student paper overlap</dt>
+                                <dt class="col-sm-5 text-body-secondary">Student paper overlap</dt>
                                 <dd class="col-sm-7">{{ rec.turnitin_student_overlap }}%</dd>
                             {% endif %}
                         </dl>
                     </div>
                 </div>
             {% else %}
-                <div class="text-muted fst-italic">No Turnitin data available for this submission.</div>
+                <div class="text-body-secondary fst-italic">No Turnitin data available for this submission.</div>
             {% endif %}
         </div>
     </div>
@@ -130,7 +131,7 @@
                     {{ form.comment.label(class="form-label fw-semibold") }}
                     {{ form.comment(class="form-control" + (" is-invalid" if form.comment.errors else "")) }}
                     {% if form.comment.description %}
-                        <div class="form-text text-muted">{{ form.comment.description }}</div>
+                        <div class="form-text text-body-secondary">{{ form.comment.description }}</div>
                     {% endif %}
                     {% for error in form.comment.errors %}
                         <div class="invalid-feedback">{{ error }}</div>

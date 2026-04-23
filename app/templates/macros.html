@@ -38,7 +38,7 @@
             <div class="card-body">
                 <ul>
                     {% if item.created_by %}
-                        <li class="text-muted small">
+                        <li class="text-body-secondary small">
                             Created by <i class="fas fa-user-circle"></i> {{ item.created_by.name_and_username }}
                             {% if item.creation_timestamp %}
                                 on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -46,7 +46,7 @@
                         </li>
                     {% endif %}
                     {% if item.last_edited_by %}
-                        <li class="text-muted small">
+                        <li class="text-body-secondary small">
                             Last edited by <i
                                 class="fas fa-user-circle"></i> {{ item.last_edited_by.name_and_username }}
                             {% if item.last_edit_timestamp %}
@@ -118,7 +118,7 @@
                 <span class="invalid-feedback">{{ error }}</span>
             {% endfor %}
         {% elif field.description %}
-            <small class="form-text text-muted">{{ field.description|safe }}</small>
+            <small class="form-text text-body-secondary">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}
@@ -146,7 +146,7 @@
                 <span class="invalid-feedback">{{ error }}</span>
             {% endfor %}
         {% elif field.description %}
-            <small class="form-text text-muted">{{ field.description|safe }}</small>
+            <small class="form-text text-body-secondary">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}
@@ -173,7 +173,7 @@
                 <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
         {% elif field.description %}
-            <small class="form-text text-muted">{{ field.description|safe }}</small>
+            <small class="form-text text-body-secondary">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}
@@ -200,7 +200,7 @@
                 <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
         {% elif field.description %}
-            <small class="form-text text-muted">{{ field.description|safe }}</small>
+            <small class="form-text text-body-secondary">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}
@@ -227,7 +227,7 @@
                 <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
         {% elif field.description %}
-            <small class="form-text text-muted">{{ field.description|safe }}</small>
+            <small class="form-text text-body-secondary">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}

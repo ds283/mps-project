@@ -98,16 +98,16 @@
                         {% set attendance_percent = attendance_data["attendance"] %}
                         <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
                             <div>
-                                <div class="small text-muted">Recorded</div>
+                                <div class="small text-body-secondary">Recorded</div>
                                 <div class="fw-bold fs-4 {% if missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_data['recorded'] }}</div>
                             </div>
                             <div>
-                                <div class="small text-muted">Missing</div>
+                                <div class="small text-body-secondary">Missing</div>
                                 <div class="fw-bold fs-4 {% if missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_data['missing'] }}</div>
                             </div>
                             {% if attendance_percent >= 0.0 %}
                                 <div>
-                                    <div class="small text-muted">Attendance</div>
+                                    <div class="small text-body-secondary">Attendance</div>
                                     <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
                                 </div>
                             {% endif %}
@@ -120,11 +120,13 @@
                         {% for g in grade_data %}
                             {% if g.label != "Presentation" or pclass.uses_presentations %}
                                 <div>
-                                    <div class="small text-muted">{{ g.label }}</div>
+                                    <div class="small text-body-secondary">{{ g.label }}</div>
                                     {% if g.grade is not none %}
                                         <div class="fw-bold fs-4 text-success">{{ "%.1f" | format(g.grade) }}%</div>
                                         {% if g.event_name %}
-                                            <div class="small text-muted fst-italic">{{ g.event_name }}{% if g.event_timestamp %} &middot; {{ g.event_timestamp.strftime("%d %b %Y") }}{% endif %}</div>
+                                            <div class="small text-body-secondary fst-italic">
+                                                {{ g.event_name }}{% if g.event_timestamp %} &middot;
+                                                    {{ g.event_timestamp.strftime("%d %b %Y") }}{% endif %}</div>
                                         {% endif %}
                                     {% else %}
                                         <div class="fw-bold fs-4 text-secondary">&ndash;</div>
@@ -139,7 +141,7 @@
                         <div class="small text-primary text-capitalize">Generic</div>
                     {% else %}
                         <div class="small">
-                            <span class="text-muted">Owner</span>
+                            <span class="text-body-secondary">Owner</span>
                             <a class="fw-semibold text-decoration-none"
                                href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
                         </div>
@@ -170,7 +172,8 @@
             </div>
             <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-2">
                 {% if show_period %}
-                    <div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
+                    <div class="small text-body-secondary"><em><strong>{{ period.display_name }}</strong></em>
+                    </div>{% endif %}
                 {% if sub.published %}
                     {% if r.report is not none %}
                         <div class="text-success small"><i class="fas fa-check-circle"></i> Report uploaded</div>
@@ -225,7 +228,7 @@
                     {# LLM grade classification #}
                     {% set la_llm = r.language_analysis_data.get('llm_result', {}) if r.language_analysis_data else {} %}
                     {% if la_llm.get('classification') %}
-                        <span class="small text-muted">LLM: <strong>{{ la_llm['classification'] }}</strong></span>
+                        <span class="small text-body-secondary">LLM: <strong>{{ la_llm['classification'] }}</strong></span>
                     {% elif r.llm_analysis_failed %}
                         <span class="small text-danger">LLM failed</span>
                     {% endif %}
@@ -246,7 +249,8 @@
                         <a class="btn btn-xs btn-danger"
                            href="{{ url_for('convenor.resolve_risk_factors', record_id=r.id, url=url_for('convenor.submitters', id=pclass.id), text='convenor submitters view') }}">
                             <i class="fas fa-shield-alt fa-fw"></i>
-                            Resolve {{ rf.unresolved_count }} risk factor{{ "s" if rf.unresolved_count != 1 else "" }}&hellip;
+                            Resolve {{ rf.unresolved_count }} risk
+                            factor{{ "s" if rf.unresolved_count != 1 else "" }}&hellip;
                         </a>
                     </div>
                 {% endif %}
@@ -254,7 +258,7 @@
                 {# Analysis in progress — spinner with data-sid for JS polling #}
                 <div class="d-flex flex-row align-items-center gap-2 mt-1 llm-in-progress" data-sid="{{ r.id }}">
                     <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
-                    <span class="small text-muted">Analysis in progress&hellip;</span>
+                    <span class="small text-body-secondary">Analysis in progress&hellip;</span>
                     <a class="btn btn-xs btn-outline-secondary ms-1"
                        href="{{ url_for('documents.submitter_documents', sid=r.id, url=url_for('convenor.submitters', id=pclass.id), text='Submitters') }}">
                         <small><i class="fas fa-folder-open fa-fw"></i> Documents</small>
@@ -302,7 +306,7 @@
             </div>
         {% else %}
             <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-                <div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>
+                <div class="small text-body-secondary"><em><strong>{{ period.display_name }}</strong></em></div>
                 <div>
                     <a class="badge text-decoration-none text-nohover-light bg-danger"
                        href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No

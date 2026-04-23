@@ -29,31 +29,31 @@
                         <div class="col-md-4 text-center mb-3 mb-md-0">
                             {% if report.grade is not none %}
                                 <div class="display-4 fw-bold text-success">{{ "%.1f"|format(report.grade) }}%</div>
-                                <div class="small text-muted">Grade</div>
+                                <div class="small text-body-secondary">Grade</div>
                             {% else %}
-                                <div class="display-6 text-muted"><i class="fas fa-hourglass-half"></i></div>
-                                <div class="small text-muted">No grade yet</div>
+                                <div class="display-6 text-body-secondary"><i class="fas fa-hourglass-half"></i></div>
+                                <div class="small text-body-secondary">No grade yet</div>
                             {% endif %}
                         </div>
                         <div class="col-md-8">
                             <dl class="row mb-0 small">
-                                <dt class="col-sm-5 text-muted">Workflow</dt>
+                                <dt class="col-sm-5 text-body-secondary">Workflow</dt>
                                 <dd class="col-sm-7">{{ workflow.name }}</dd>
-                                <dt class="col-sm-5 text-muted">Role</dt>
+                                <dt class="col-sm-5 text-body-secondary">Role</dt>
                                 <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
-                                <dt class="col-sm-5 text-muted">Submitted</dt>
+                                <dt class="col-sm-5 text-body-secondary">Submitted</dt>
                                 <dd class="col-sm-7">
                                     {% if report.grade_submitted_timestamp %}
                                         {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y at %H:%M") }}
                                         {% if report.grade_generated_by %}
-                                            <span class="text-muted">by {{ report.grade_generated_by.name }}</span>
+                                            <span class="text-body-secondary">by {{ report.grade_generated_by.name }}</span>
                                         {% endif %}
                                     {% else %}
-                                        <span class="text-muted">Not submitted</span>
+                                        <span class="text-body-secondary">Not submitted</span>
                                     {% endif %}
                                 </dd>
                                 {% if report.feedback_submitted %}
-                                    <dt class="col-sm-5 text-muted">Feedback</dt>
+                                    <dt class="col-sm-5 text-body-secondary">Feedback</dt>
                                     <dd class="col-sm-7"><span class="badge bg-success"><i class="fas fa-check"></i> Submitted</span>
                                     </dd>
                                 {% endif %}
@@ -87,13 +87,13 @@
                         {% for block in schema.get('scheme', []) %}
                             <h6 class="fw-semibold mt-3 mb-2">{{ block.title | safe }}</h6>
                             {% if block.description %}
-                                <p class="small text-muted">{{ block.description | safe }}</p>
+                                <p class="small text-body-secondary">{{ block.description | safe }}</p>
                             {% endif %}
                             {% for field_spec in block.get('fields', []) %}
                                 {%- set key = field_spec.key -%}
                                 {%- set ftype = field_spec.field_type.type -%}
                                 <div class="row mb-2 small">
-                                    <div class="col-md-6 text-muted">{{ field_spec.text }}</div>
+                                    <div class="col-md-6 text-body-secondary">{{ field_spec.text }}</div>
                                     <div class="col-md-6 fw-semibold">
                                         {% if key in field_values %}
                                             {% if ftype == 'boolean' %}
@@ -110,7 +110,7 @@
                                                 {{ field_values[key] }}
                                             {% endif %}
                                         {% else %}
-                                            <span class="text-muted fst-italic">Not answered</span>
+                                            <span class="text-body-secondary fst-italic">Not answered</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -144,7 +144,7 @@
                             </div>
                         {% endif %}
                         {% if report.feedback_timestamp %}
-                            <div class="small text-muted mt-2">
+                            <div class="small text-body-secondary mt-2">
                                 <i class="fas fa-clock fa-fw"></i>
                                 Feedback last updated {{ report.feedback_timestamp.strftime("%a %d %b %Y at %H:%M") }}
                             </div>
@@ -161,7 +161,7 @@
                         </a>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted fst-italic small mb-0">No feedback entered yet.</p>
+                        <p class="text-body-secondary fst-italic small mb-0">No feedback entered yet.</p>
                     </div>
                 </div>
             {% endif %}

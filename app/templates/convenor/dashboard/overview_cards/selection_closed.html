@@ -86,7 +86,7 @@
                     {% call(blk) dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-danger{% endif %}">{{ submitted }}</span>
-                            <span class="fs-4 text-muted">/{{ total }}</span>
+                            <span class="fs-4 text-body-secondary">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0 d-flex flex-column gap-1 justify-content-start align-content-start">
                                 <a class="text-decoration-none link-primary"
@@ -105,7 +105,7 @@
                     {% call(blk) dashboard_tile("Missing", title_icon="circle", icon_state=missing_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-danger{% endif %}">{{ missing }}</span>
-                            <span class="fs-4 text-muted">/{{ total }}</span>
+                            <span class="fs-4 text-body-secondary">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
                                 <a class="text-decoration-none link-primary"
@@ -119,7 +119,7 @@
                     {% call(blk) dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
                         {% if blk == 'body' %}
                             <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-danger{% endif %}">{{ outstanding_custom }}</span>
-                            <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
+                            <span class="text-body-secondary"><span class="fs-4">/{{ custom_total }}</span> <span
                                     class="text-uppercase">outstanding</span></span>
                             <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                 {% if custom_accepted > 0 %}

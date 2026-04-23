@@ -2,7 +2,10 @@
     <div class="d-flex flex-row justify-content-start align-items-center gap-3">
         {% set messages = p.messages %}
         {% if messages|length > 0 %}
-            <div class="text-primary small" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>">Status <i class="fas fa-info-circle"></i></div>
+            <div class="text-primary small" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}"
+                 data-bs-container="body" data-bs-trigger="focus"
+                 data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>">Status
+                <i class="fas fa-info-circle"></i></div>
         {% endif %}
         {% if p.start_date %}
             <div class="text-primary small"><i class="fas fa-calendar"></i> Start date
@@ -16,7 +19,8 @@
     <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-2">
         {% set num_units = p.number_units %}
         {% if num_units == 0 %}
-            <span class="text-muted small"><i class="fas fa-calendar-week"></i> No supervision units defined</span>
+            <span class="text-body-secondary small"><i
+                    class="fas fa-calendar-week"></i> No supervision units defined</span>
         {% elif num_units == 1 %}
             <span class="text-secondary small"><i class="fas fa-calendar-week"></i> <strong>1</strong> supervision unit</span>
         {% else %}

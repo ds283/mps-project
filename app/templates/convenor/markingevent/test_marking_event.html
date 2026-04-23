@@ -38,7 +38,7 @@
         <div class="mb-3">
             <label class="form-label fw-semibold" for="test_target">{{ form.test_target.label.text }}</label>
             {% if form.test_target.description %}
-                <div class="form-text text-muted mb-1">{{ form.test_target.description }}</div>
+                <div class="form-text text-body-secondary mb-1">{{ form.test_target.description }}</div>
             {% endif %}
             {{ form.test_target(id='test_target', class='form-select') }}
             {% if form.test_target.errors %}

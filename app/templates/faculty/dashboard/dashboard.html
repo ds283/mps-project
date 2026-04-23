@@ -151,7 +151,7 @@
                                         <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
-                                                <div class="small text-muted">
+                                                <div class="small text-body-secondary">
                                                     {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
                                                     {% if deadline %}
                                                         &mdash; deadline
@@ -194,7 +194,7 @@
                         <strong>Marking reports awaiting your sign-off</strong>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted mt-2 mb-3 small">
+                        <p class="text-body-secondary mt-2 mb-3 small">
                             The following marking reports have been submitted by supervisors and require
                             your sign-off as responsible supervisor before the grade can be processed.
                         </p>
@@ -207,7 +207,7 @@
                                         <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
-                                                <div class="small text-muted">
+                                                <div class="small text-body-secondary">
                                                     {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
                                                     &mdash; submitted by <strong>{{ report.user.name }}</strong>
                                                     {% if report.grade_submitted_timestamp %}
@@ -236,7 +236,7 @@
                         <strong>Pending moderation reports</strong>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted mt-2 mb-3 small">
+                        <p class="text-body-secondary mt-2 mb-3 small">
                             You have been assigned as moderator for the following submissions.
                             Please review the marking reports and submit your recommended grade.
                         </p>
@@ -250,7 +250,7 @@
                                         <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
-                                                <div class="small text-muted">
+                                                <div class="small text-body-secondary">
                                                     {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
                                                 </div>
                                             </div>
@@ -271,7 +271,7 @@
                                 </div>
                                 {% for item in moderator_workflow_attachments %}
                                     {% if moderator_workflow_attachments|length > 1 %}
-                                        <div class="small text-muted mb-1">{{ item.workflow.name }}</div>
+                                        <div class="small text-body-secondary mb-1">{{ item.workflow.name }}</div>
                                     {% endif %}
                                     <table class="table table-sm table-borderless mb-0">
                                         <tbody>
@@ -284,7 +284,7 @@
                                                              class="img-thumbnail"
                                                              style="max-width:40px; max-height:40px;" alt="">
                                                     {% else %}
-                                                        <i class="fas fa-file text-muted fa-fw"></i>
+                                                        <i class="fas fa-file text-body-secondary fa-fw"></i>
                                                     {% endif %}
                                                 </td>
                                                 <td class="align-middle">
@@ -293,7 +293,7 @@
                                                         {{ asset.target_name or asset.filename }}
                                                     </a>
                                                 </td>
-                                                <td class="align-middle text-muted small">
+                                                <td class="align-middle text-body-secondary small">
                                                     {% if pa.description %}{{ pa.description }}{% endif %}
                                                 </td>
                                             </tr>
@@ -331,9 +331,9 @@
                             {%- set missing_att = config.number_supervisor_missing_attendance(current_user.faculty_data.id) -%}
                             <div class="col">
                                 <div class="card h-100 {% if no_projects %}border-warning{% elif waiting_confirmation %}border-success{% elif marking_underway %}border-primary{% elif selections_open %}border-success{% endif %}">
-                                    <div class="card-header d-flex justify-content-between align-items-center {% if no_projects %}bg-warning text-dark{% elif waiting_confirmation %}bg-success text-white{% elif marking_underway %}bg-primary text-white{% elif selections_open %}bg-success text-white{% endif %}">
+                                    <div class="card-header d-flex justify-content-between align-items-center {% if no_projects %}bg-warning-subtle text-warning-emphasis{% elif waiting_confirmation %}bg-success-subtle text-success-emphasis{% elif marking_underway %}bg-primary-subtle text-primary-emphasis{% elif selections_open %}bg-success-subtle text-success-emphasis{% endif %}">
                                         <strong>{{ config.name }}</strong>
-                                        <span class="small {% if no_projects or waiting_confirmation or marking_underway or selections_open %}opacity-75{% else %}text-muted{% endif %}">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
+                                        <span class="small {% if no_projects or waiting_confirmation or marking_underway or selections_open %}opacity-75{% else %}text-body-secondary{% endif %}">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
                                     </div>
                                     <div class="card-body">
                                         {% if no_projects %}
@@ -361,7 +361,7 @@
                                                 <i class="fas fa-check-circle fa-fw"></i> No pending actions
                                             </div>
                                         {% endif %}
-                                        <div class="d-flex flex-wrap gap-3 small text-muted mb-2">
+                                        <div class="d-flex flex-wrap gap-3 small text-body-secondary mb-2">
                                             {% if num_students %}
                                                 <span><i
                                                         class="fas fa-users fa-fw"></i> {{ num_students }} student{{ '' if num_students == 1 else 's' }}</span>
@@ -375,13 +375,13 @@
                                                         class="fas fa-calendar-check fa-fw"></i> {{ missing_att }} attendance{{ '' if missing_att == 1 else 's' }} required</span>
                                             {% endif %}
                                         </div>
-                                        <div class="small text-muted">
+                                        <div class="small text-body-secondary">
                                             Convenor: <a class="text-decoration-none"
                                                          href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
                                         </div>
                                     </div>
                                     <div class="card-footer d-flex justify-content-end">
-                                        <a class="btn btn-sm {% if no_projects %}btn-warning text-dark{% elif waiting_confirmation %}btn-success{% elif marking_underway %}btn-primary{% elif selections_open %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                                        <a class="btn btn-sm {% if no_projects %}btn-outline-warning{% elif waiting_confirmation %}btn-outline-success{% elif marking_underway %}btn-outline-primary{% elif selections_open %}btn-outline-success{% else %}btn-outline-secondary{% endif %}"
                                            href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                                             View details <i class="fas fa-arrow-right fa-fw"></i>
                                         </a>
@@ -414,7 +414,7 @@
                     {% set config = item['config'] %}
                     {% if pane == config.id|string %}
                         <div class="mb-2">
-                            <a class="text-decoration-none small text-muted"
+                            <a class="text-decoration-none small text-body-secondary"
                                href="{{ url_for('faculty.dashboard', pane='enrolments') }}">
                                 <i class="fas fa-arrow-left fa-fw"></i> All enrolments
                             </a>

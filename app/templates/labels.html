@@ -22,7 +22,7 @@
             </span>
         {% else %}
             <span class="badge bg-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}"
-                {%- if style is not none %} style="{{ style }}"{% endif %}
+                    {%- if style is not none %} style="{{ style }}"{% endif %}
                     {%- if popover_str is not none %}{% if popover_as_tooltip %} data-bs-toggle="tooltip"
                   data-bs-html="true" title="{{ popover_str }}"{% else %} tabindex="0" data-bs-toggle="popover"
                   data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ popover_str }}"
@@ -73,7 +73,8 @@
                     {{ suffix|safe }}{%- endif -%}
                 </{{ tag }}>
                 {%- if popover_str is not none and not popover_as_tooltip -%}
-                    <span class="ms-1 small text-muted" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
+                    <span class="ms-1 small text-body-secondary" tabindex="0" data-bs-toggle="popover"
+                          data-bs-container="body"
                           data-bs-trigger="focus" data-bs-content="{{ popover_str }}">(Show <i
                             class="fas fa-chevron-right">)</i></span>
                 {%- endif -%}
@@ -85,16 +86,19 @@
                     {{ suffix|safe }}{%- endif -%}
                 </{{ tag }}>
                 {%- if popover_str is not none and not popover_as_tooltip -%}
-                    <span class="ms-1 small text-muted" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
+                    <span class="ms-1 small text-body-secondary" tabindex="0" data-bs-toggle="popover"
+                          data-bs-container="body"
                           data-bs-trigger="focus" data-bs-content="{{ popover_str }}">(Show <i
                             class="fas fa-chevron-right">)</i></span>
                 {%- endif -%}
             {% endif %}
         {% endif %}
     {% elif label_data is none %}
-        <{{ tag }} class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</{{ tag }}>
+        <{{ tag }} class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</
+        {{ tag }}>
     {% else %}
-        <{{ tag }} class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</{{ tag }}>
+        <{{ tag }} class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</
+        {{ tag }}>
     {% endif %}
 {% endmacro %}
 

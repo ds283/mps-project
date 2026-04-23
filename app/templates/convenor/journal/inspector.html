@@ -67,9 +67,9 @@
             <div class="row">
                 <div class="col-md-4">
                     <dl class="row mb-0 small">
-                        <dt class="col-sm-5 text-muted">Name</dt>
+                        <dt class="col-sm-5 text-body-secondary">Name</dt>
                         <dd class="col-sm-7">{{ student.user.name }}</dd>
-                        <dt class="col-sm-5 text-muted">Email</dt>
+                        <dt class="col-sm-5 text-body-secondary">Email</dt>
                         <dd class="col-sm-7">
                             <a class="text-decoration-none"
                                href="mailto:{{ student.user.email }}">{{ student.user.email }}</a>
@@ -79,11 +79,11 @@
                 <div class="col-md-4">
                     <dl class="row mb-0 small">
                         {% if student.programme %}
-                            <dt class="col-sm-5 text-muted">Programme</dt>
+                            <dt class="col-sm-5 text-body-secondary">Programme</dt>
                             <dd class="col-sm-7">{{ student.programme.full_name }}</dd>
                         {% endif %}
                         {% if student.cohort %}
-                            <dt class="col-sm-5 text-muted">Cohort</dt>
+                            <dt class="col-sm-5 text-body-secondary">Cohort</dt>
                             <dd class="col-sm-7">{{ student.cohort }}</dd>
                         {% endif %}
                     </dl>
@@ -91,7 +91,7 @@
                 <div class="col-md-4">
                     <dl class="row mb-0 small">
                         {% if student.academic_year %}
-                            <dt class="col-sm-5 text-muted">Academic year</dt>
+                            <dt class="col-sm-5 text-body-secondary">Academic year</dt>
                             <dd class="col-sm-7">Year {{ student.academic_year }}</dd>
                         {% endif %}
                     </dl>

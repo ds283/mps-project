@@ -12,7 +12,7 @@
             <div class="d-flex align-items-baseline gap-3 mt-3 mb-3">
                 <h3 class="dashboard-subtitle mb-0">Convenor overview</h3>
                 {% if is_admin or is_root %}
-                    <a class="text-decoration-none small text-muted"
+                    <a class="text-decoration-none small text-body-secondary"
                        href="{{ url_for('convenor.show_unofferable', id=0) }}">
                         <i class="fas fa-list fa-fw"></i> Show unofferable projects
                     </a>
@@ -48,9 +48,9 @@
 
                         <div class="col">
                             <div class="card h-100 {% if has_alert %}border-danger{% elif has_warning %}border-warning{% elif lifecycle_action %}border-primary{% endif %}">
-                                <div class="card-header d-flex justify-content-between align-items-center {% if has_alert %}bg-danger text-white{% elif has_warning %}bg-warning text-dark{% elif lifecycle_action %}bg-primary text-white{% endif %}">
+                                <div class="card-header d-flex justify-content-between align-items-center {% if has_alert %}bg-danger-subtle text-danger-emphasis{% elif has_warning %}bg-warning-subtle text-warning-emphasis{% elif lifecycle_action %}bg-primary-subtle text-primary-emphasis{% endif %}">
                                     <strong>{{ pclass.name }}</strong>
-                                    <span class="small {% if has_alert or has_warning or lifecycle_action %}opacity-75{% else %}text-muted{% endif %}">
+                                    <span class="small {% if has_alert or has_warning or lifecycle_action %}opacity-75{% else %}text-body-secondary{% endif %}">
                                         {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
                                     </span>
                                 </div>
@@ -70,7 +70,7 @@
                                     {% endif %}
 
                                     {# Lifecycle state label #}
-                                    <div class="small {% if lifecycle_action and not has_alert and not has_warning %}text-primary fw-semibold{% else %}text-muted{% endif %} mb-2">
+                                    <div class="small {% if lifecycle_action and not has_alert and not has_warning %}text-primary fw-semibold{% else %}text-body-secondary{% endif %} mb-2">
                                         {% if lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
                                             <i class="fas fa-clock fa-fw"></i> Confirmations not yet issued
                                         {% elif lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
@@ -89,7 +89,7 @@
                                     </div>
 
                                     {# Metrics row #}
-                                    <div class="d-flex flex-wrap gap-3 small text-muted">
+                                    <div class="d-flex flex-wrap gap-3 small text-body-secondary">
                                         {%- set n_sel = data['selectors'] -%}
                                         {%- set n_sub = data['submitters'] -%}
                                         {%- set n_proj = data['attached_projects'] -%}
@@ -114,7 +114,7 @@
                                     </div>
                                 </div>
                                 <div class="card-footer d-flex justify-content-end">
-                                    <a class="btn btn-sm {% if has_alert %}btn-danger{% elif has_warning %}btn-warning text-dark{% elif lifecycle_action %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    <a class="btn btn-sm {% if has_alert %}btn-outline-danger{% elif has_warning %}btn-outline-warning{% elif lifecycle_action %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}"
                                        href="{{ url_for('convenor.status', id=pclass.id) }}">
                                         Open dashboard <i class="fas fa-arrow-right fa-fw"></i>
                                     </a>
@@ -133,7 +133,7 @@
             {# Unpublished project classes — de-emphasised #}
             {% if unpublished|length > 0 %}
                 <div class="mt-2 mb-2">
-                    <span class="small text-muted">
+                    <span class="small text-body-secondary">
                         <i class="fas fa-eye-slash fa-fw"></i> Not published
                     </span>
                 </div>
@@ -145,14 +145,14 @@
                         <div class="col">
                             <div class="card h-100 border-0 bg-light opacity-75">
                                 <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center">
-                                    <span class="text-muted fw-semibold">{{ pclass.name }}</span>
-                                    <span class="small text-muted">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
+                                    <span class="text-body-secondary fw-semibold">{{ pclass.name }}</span>
+                                    <span class="small text-body-secondary">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
                                 </div>
                                 <div class="card-body">
-                                    <div class="small text-muted mb-2">
+                                    <div class="small text-body-secondary mb-2">
                                         <i class="fas fa-eye-slash fa-fw"></i> Not published
                                     </div>
-                                    <div class="d-flex flex-wrap gap-3 small text-muted">
+                                    <div class="d-flex flex-wrap gap-3 small text-body-secondary">
                                         {%- set n_proj = data['attached_projects'] -%}
                                         {%- set n_fac = data['faculty'] -%}
                                         {%- set n_fac_total = data['total_faculty'] -%}

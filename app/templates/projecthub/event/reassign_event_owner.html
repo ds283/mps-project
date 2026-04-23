@@ -32,7 +32,8 @@
                             {{ event.time.strftime("%A %d %b %Y %H:%M") }}
                         </div>
                         {% if event.location %}
-                            <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                            <div class="text-body-secondary"><i class="fas fa-map-marker-alt"></i> {{ event.location }}
+                            </div>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -40,7 +41,7 @@
 
             {% set unit = event.unit %}
             {% if unit %}
-                <div class="text-muted mb-3">
+                <div class="text-body-secondary mb-3">
                     {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
                     {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
                     {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
@@ -49,7 +50,7 @@
             {% endif %}
 
             {# ── Student info ── #}
-            <div class="text-muted mb-3">
+            <div class="text-body-secondary mb-3">
                 Student: <strong>{{ sub.student.user.name }}</strong>
             </div>
 

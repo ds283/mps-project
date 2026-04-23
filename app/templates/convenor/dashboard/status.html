@@ -349,7 +349,7 @@
                                                     <li>
                                                         <div class="d-flex flex-column justify-content-start align-items-start gap-1">
                                                             <div><strong>Max CATS:</strong> {{ config.full_CATS }}</div>
-                                                            <div class="small text-muted">
+                                                            <div class="small text-body-secondary">
                                                                 This is used to define when a supervisor is regarded as
                                                                 <strong>full</strong>
                                                                 when accommodating another matching.
@@ -482,7 +482,7 @@
                                                     <li><i class="fas fa-check-circle text-success"></i> <strong>Requests
                                                         issued</strong></li>
                                                     {% if config.requests_issued_by %}
-                                                        <li class="ms-3 text-muted">
+                                                        <li class="ms-3 text-body-secondary">
                                                             <i class="fas fa-user me-1"></i>{{ config.requests_issued_by.name }}
                                                             {% if config.requests_timestamp %}at
                                                                 {{ config.requests_timestamp.strftime("%d/%m/%Y %H:%M") }}
@@ -493,7 +493,7 @@
                                                     <li><i class="fas fa-forward text-warning"></i> <strong>Requests
                                                         skipped</strong></li>
                                                     {% if config.requests_skipped_by %}
-                                                        <li class="ms-3 text-muted">
+                                                        <li class="ms-3 text-body-secondary">
                                                             <i class="fas fa-user me-1"></i> {{ config.requests_skipped_by.name }}
                                                             {% if config.requests_skipped_timestamp %}as
                                                                 {{ config.requests_skipped_timestamp.strftime("%d/%m/%Y %H:%M") }}
@@ -530,7 +530,7 @@
                                                     <li><i class="fas fa-check-circle text-success"></i>
                                                         <strong>Live</strong></li>
                                                     {% if config.golive_by %}
-                                                        <li class="ms-3 text-muted">
+                                                        <li class="ms-3 text-body-secondary">
                                                             <i class="fas fa-user me-1"></i> {{ config.golive_by.name }}
                                                             {% if config.golive_timestamp %}at
                                                                 {{ config.golive_timestamp.strftime("%d/%m/%Y %H:%M") }}
@@ -558,7 +558,7 @@
                                                     <li><i class="fas fa-check-circle text-success"></i> <strong>Selections
                                                         closed</strong></li>
                                                     {% if config.closed_by %}
-                                                        <li class="ms-3 text-muted">
+                                                        <li class="ms-3 text-body-secondary">
                                                             <i class="fas fa-user me-1"></i> {{ config.closed_by.name }}
                                                             {% if config.closed_timestamp %}at
                                                                 {{ config.closed_timestamp.strftime("%d/%m/%Y %H:%M") }}
@@ -588,7 +588,7 @@
                                                     <li><i class="fas fa-check-circle text-success"></i> Accommodating
                                                         existing matching
                                                     </li>
-                                                    <li class="ms-3 text-muted">
+                                                    <li class="ms-3 text-body-secondary">
                                                         Match: {{ config.accommodate_matching.name }}</li>
                                                 {% endif %}
                                                 {% if not config.skip_matching and not config.accommodate_matching %}
@@ -637,11 +637,11 @@
                                         {% if is_current %}<strong>{{ p.display_name|safe }}</strong>
                                         {% else %}{{ p.display_name|safe }}{% endif %}
                                     </td>
-                                    <td class="small align-middle text-muted">
+                                    <td class="small align-middle text-body-secondary">
                                         {% if p.start_date %}{{ p.start_date.strftime("%d %b %Y") }}{% else %}
                                             &ndash;{% endif %}
                                     </td>
-                                    <td class="small align-middle text-muted">
+                                    <td class="small align-middle text-body-secondary">
                                         {% if p.hand_in_date %}{{ p.hand_in_date.strftime("%d %b %Y") }}{% else %}
                                             &ndash;{% endif %}
                                     </td>
@@ -820,7 +820,7 @@
                                             {{ tk.description|truncate(40) }}
                                         {% endif %}
                                         {% if tk.notes and tk.notes|length > 0 %}
-                                            <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover"
+                                            <span class="ms-1 text-body-secondary" tabindex="0" data-bs-toggle="popover"
                                                   title="Task notes" data-bs-container="body" data-bs-trigger="focus"
                                                   data-bs-content="{{ tk.notes|truncate(600) }}">Notes <i
                                                     class="ms-1 fas fa-chevron-right"></i></span>

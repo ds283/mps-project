@@ -1,0 +1,74 @@
+\documentclass[11pt,twoside]{report} %please use 11pt for your report
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+
+%% Use hyperref to produce internal hyperlinks
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\usepackage{graphicx}
+
+%% Bold versions of anything in math mode
+\usepackage{bm}
+
+%% Better handling of itemized or enumerated lists
+\usepackage{enumitem}
+
+%% Make Computer Modern Roman Semibold font available
+%% (it is present in the font set, but LaTeX does not expose any
+%% commands to actually select it)
+\newcommand{\semibold}[1]{{\fontseries{b}\selectfont{#1}}}
+
+%% Make Computer Modern Sans Serif Bold Condensed font available
+%% (as for Roman Semibold, LaTeX does not include commands to
+%% select it)
+\newcommand{\sansbold}[1]{{\sffamily\fontseries{sbc}\selectfont{#1}}}
+
+%% More attractive paragraph headings
+\newcommand{\para}[1]{\par\vspace{2mm}\noindent\semibold{{#1}}} 
+
+% set up simple command for exponentials
+\newcommand{\e}[1]{\mathrm{e}^{{#1}}}
+
+\begin{document}
+\begin{titlepage}
+\begin{center}
+
+\vspace*{2cm} % adjust as you wish
+        
+{\Large
+  \textbf{Replace with your title}
+}
+\vspace{1cm} % adjust as you wish
+
+Candidate Number: \textbf{Replace with your number}
+
+Supervisor: Optionally replace with your supervisor%
+\vspace{2mm}
+
+\vspace{7mm}
+{\small
+  Word Count: Replace with your word count%
+}
+
+\vfill
+
+%% OLD LOGO
+\includegraphics[width=100px]{sussexLogo}\\
+{\Large\textbf{University of Sussex}}
+
+\end{center}
+\end{titlepage}
+
+\thispagestyle{empty}
+
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Introduction}
+
+\end{document}

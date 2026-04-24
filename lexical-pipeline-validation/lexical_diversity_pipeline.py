@@ -161,6 +161,19 @@ def parse_args():
         dest="exclude_sheets",
         help="Comma-separated arXiv sheet names to exclude",
     )
+    p.add_argument(
+        "--scatter",
+        action="append",
+        dest="scatter_specs",
+        default=None,
+        metavar="SPEC",
+        help=(
+            "Comma-separated list of datasets to include in an additional scatter plot. "
+            "Use 'students' for pre+post cohorts; use a sheet name for a control group. "
+            "Repeat to generate multiple plots, e.g. "
+            "--scatter students,claude-ai --scatter students,djs61"
+        ),
+    )
     return p.parse_args()
 
 
@@ -933,6 +946,124 @@ def plot_scatters(
 
 
 # =============================================================================
+# PLOT 4d+: CUSTOM SCATTER (user-specified dataset combinations)
+# =============================================================================
+
+
+def plot_custom_scatter(
+    spec_str,
+    pre,
+    post,
+    controls,
+    colors,
+    markers,
+    mean_3,
+    std_3,
+    corr_3,
+    inv_corr,
+    thresh_05,
+    thresh_01,
+    output_dir,
+    plot_letter,
+):
+    """Generate a scatter plot for an arbitrary combination of datasets.
+
+    spec_str: comma-separated tokens — 'students' for both cohorts,
+              or a control sheet name for that dataset.
+    plot_letter: single character appended after '04' in the filename (e.g. 'd').
+    """
+    tokens = [t.strip() for t in spec_str.split(",") if t.strip()]
+    include_students = "students" in tokens
+    control_tokens = [t for t in tokens if t != "students"]
+
+    included_controls = {}
+    for name in control_tokens:
+        if name in controls:
+            included_controls[name] = controls[name]
+        else:
+            print(f"  WARNING: --scatter token '{name}' not found in loaded sheets; skipping")
+
+    if not include_students and not included_controls:
+        print(f"  WARNING: --scatter '{spec_str}' resolved to no valid datasets; skipping")
+        return
+
+    e05, e01 = build_ellipses(corr_3, thresh_05, thresh_01)
+
+    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(2)
+    x_norm_hi = ((0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]) / np.sqrt(2)
+    z_cv_lo = (0.55 - mean_3[2]) / std_3[2]
+    z_cv_hi = (0.85 - mean_3[2]) / std_3[2]
+
+    base_kw = dict(
+        mean_3=mean_3, std_3=std_3, inv_corr=inv_corr,
+        thresh_05=thresh_05, thresh_01=thresh_01,
+    )
+    ell_kw = dict(
+        e05=e05, e01=e01,
+        x_norm_lo=x_norm_lo, x_norm_hi=x_norm_hi,
+        z_cv_lo=z_cv_lo, z_cv_hi=z_cv_hi,
+        thresh_05=thresh_05, thresh_01=thresh_01,
+    )
+
+    # Gather all x/y values to determine axis limits
+    all_x, all_y = [], []
+    pad = 0.6
+    if include_students:
+        all_students = pd.concat([pre, post])
+        xs, ys, _ = display_coords(all_students, mean_3, std_3, inv_corr)
+        all_x.append(xs); all_y.append(ys)
+    for df in included_controls.values():
+        xc, yc, _ = display_coords(df, mean_3, std_3, inv_corr)
+        all_x.append(xc); all_y.append(yc)
+    all_x = np.concatenate(all_x)
+    all_y = np.concatenate(all_y)
+    xlim = (all_x.min() - pad, all_x.max() + pad)
+    ylim = (all_y.min() - pad, all_y.max() + pad)
+
+    fig, ax = plt.subplots(figsize=(10, 9))
+    fig.patch.set_facecolor("#fafafa")
+    _draw_scatter_base(ax, xlim, ylim, **ell_kw)
+
+    if include_students:
+        n_pre = len(pre.dropna(subset=["MATTR", "MTLD", "CV"]))
+        n_post = len(post.dropna(subset=["MATTR", "MTLD", "CV"]))
+        _plot_scatter_points(ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw)
+        _plot_scatter_points(ax, post, POST_COL, "o", 0.75, 36, f"Post-LLM students (n={n_post})", **base_kw)
+
+    for name, df in included_controls.items():
+        _plot_scatter_points(ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw)
+
+    ax.text(
+        x_norm_lo + 0.1, ylim[1] - 0.25,
+        "human-normal\nMATTR+MTLD", fontsize=7.5, color=HN_COL,
+        style="italic", va="top", zorder=10,
+    )
+    ax.text(
+        xlim[0] + 0.15, z_cv_lo + 0.12,
+        "human-normal CV", fontsize=7.5, color=HN_COL, style="italic", zorder=10,
+    )
+
+    ax.set_title(f"Custom scatter: {', '.join(tokens)}", fontsize=10, fontweight="bold")
+
+    leg = _scatter_legend(included_controls, colors, markers)
+    n_fixed_top = 6
+    if not include_students:
+        leg = leg[:4] + leg[n_fixed_top:]
+
+    fig.legend(
+        handles=leg, loc="lower center", ncol=4, fontsize=8.5,
+        bbox_to_anchor=(0.5, -0.08), framealpha=0.95, edgecolor="#cccccc",
+    )
+    plt.tight_layout(rect=[0, 0.09, 1, 1])
+
+    slug = spec_str.replace(" ", "_").replace(",", "+")
+    path = os.path.join(output_dir, f"04{plot_letter}_scatter_{slug}.png")
+    plt.savefig(path, dpi=150, bbox_inches="tight", facecolor="#fafafa")
+    plt.close()
+    print(f"  Saved: {path}")
+
+
+# =============================================================================
 # PLOT 5: METRIC KDE
 # =============================================================================
 
@@ -1229,6 +1360,26 @@ def main():
         output_dir,
     )
     plot_metric_kde(pre, post, controls, colors, output_dir)
+
+    if args.scatter_specs:
+        for plot_idx, spec in enumerate(args.scatter_specs):
+            letter = chr(ord("d") + plot_idx)
+            plot_custom_scatter(
+                spec_str=spec,
+                pre=pre,
+                post=post,
+                controls=controls,
+                colors=colors,
+                markers=markers,
+                mean_3=mean_3,
+                std_3=std_3,
+                corr_3=corr_3,
+                inv_corr=inv_corr,
+                thresh_05=thresh_05,
+                thresh_01=thresh_01,
+                output_dir=output_dir,
+                plot_letter=letter,
+            )
 
     print("\nRunning statistical tests...")
     run_stats(

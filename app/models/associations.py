@@ -969,36 +969,16 @@ backup_record_to_labels = db.Table(
 
 ## FEEDBACK ASSETS
 
-feedback_asset_to_pclasses = db.Table(
-    "feedback_asset_to_pclasses",
+feedback_template_to_tags = db.Table(
+    "feedback_template_to_tags",
     db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True
-    ),
-    db.Column(
-        "pclass_id", db.Integer(), db.ForeignKey("project_classes.id"), primary_key=True
-    ),
-)
-
-feedback_asset_to_tags = db.Table(
-    "feedback_asset_to_tags",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True
-    ),
-    db.Column(
-        "tag_id", db.Integer(), db.ForeignKey("template_tags.id"), primary_key=True
-    ),
-)
-
-feedback_recipe_to_pclasses = db.Table(
-    "feedback_recipe_to_pclasses",
-    db.Column(
-        "recipe_id",
+        "template_id",
         db.Integer(),
-        db.ForeignKey("feedback_recipes.id"),
+        db.ForeignKey("template_assets.id"),
         primary_key=True,
     ),
     db.Column(
-        "pclass_id", db.Integer(), db.ForeignKey("project_classes.id"), primary_key=True
+        "tag_id", db.Integer(), db.ForeignKey("template_tags.id"), primary_key=True
     ),
 )
 

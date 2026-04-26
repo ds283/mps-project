@@ -9,14 +9,12 @@
 #
 
 from ..database import db
+from .associations import (
+    feedback_recipe_to_assets,
+    feedback_template_to_tags,
+)
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin
-from .associations import (
-    feedback_asset_to_pclasses,
-    feedback_asset_to_tags,
-    feedback_recipe_to_pclasses,
-    feedback_recipe_to_assets,
-)
 
 
 class FeedbackAsset(db.Model, EditingMetadataMixin):
@@ -26,15 +24,20 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
 
     __tablename__ = "feedback_assets"
 
+    __table_args__ = (db.UniqueConstraint("pclass_id", "label"),)
+
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # for which project classes is this asset available?
-    project_classes = db.relationship(
+    # for which project class is this asset available?
+    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"))
+    pclass = db.relationship(
         "ProjectClass",
-        secondary=feedback_asset_to_pclasses,
-        lazy="dynamic",
-        backref=db.backref("feedback_assets", lazy="dynamic"),
+        foreign_keys=[pclass_id],
+        uselist=False,
+        backref=db.backref(
+            "feedback_assets", lazy="dynamic", cascade="all, delete, delete-orphan"
+        ),
     )
 
     # link to SubmittedAsset representing this asset
@@ -53,6 +56,42 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
 
     # unique label
     label = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+        index=True,
+    )
+
+    # description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+
+class FeedbackTemplate(db.Model, EditingMetadataMixin):
+    """
+    Represents an editable template used for producing feedback documents
+    """
+
+    __tablename__ = "feedback_templates"
+
+    __table_args__ = (db.UniqueConstraint("pclass_id", "label"),)
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # for which project class is this asset available?
+    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"))
+    pclass = db.relationship(
+        "ProjectClass",
+        foreign_keys=[pclass_id],
+        uselist=False,
+        backref=db.backref(
+            "feedback_templates", lazy="dynamic", cascade="all, delete, delete-orphan"
+        ),
+    )
+
+    # template body, usually a Jinja2 HTML template
+    template_body = db.Column(db.Text())
+
+    # unique label
+    label = db.Column(
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
     )
 
@@ -61,19 +100,19 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
 
     # applied tags
     tags = db.relationship(
-        "TemplateTag",
-        secondary=feedback_asset_to_tags,
+        "FeedbackTemplateTag",
+        secondary=feedback_template_to_tags,
         lazy="dynamic",
         backref=db.backref("assets", lazy="dynamic"),
     )
 
 
-class TemplateTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+class FeedbackTemplateTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Represents a tag/label applied to a template asset
     """
 
-    __tablename__ = "template_tags"
+    __tablename__ = "feedback_template_tags"
 
     # unique identifier used as primary key
     id = db.Column(db.Integer(), primary_key=True)
@@ -98,12 +137,15 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # for which project classes is this recipe available?
-    project_classes = db.relationship(
+    # for which project class is this asset available?
+    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"))
+    pclass = db.relationship(
         "ProjectClass",
-        secondary=feedback_recipe_to_pclasses,
-        lazy="dynamic",
-        backref=db.backref("feedback_recipes", lazy="dynamic"),
+        foreign_keys=[pclass_id],
+        uselist=False,
+        backref=db.backref(
+            "feedback_recipes", lazy="dynamic", cascade="all, delete, delete-orphan"
+        ),
     )
 
     # unique label
@@ -117,7 +159,7 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
         "FeedbackAsset",
         foreign_keys=[template_id],
         uselist=False,
-        backref=db.backref("template_recipes", lazy="dynamic"),
+        backref=db.backref("feedback_recipes", lazy="dynamic"),
     )
 
     # other assets
@@ -125,7 +167,7 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
         "FeedbackAsset",
         secondary=feedback_recipe_to_assets,
         lazy="dynamic",
-        backref=db.backref("asset_recipes", lazy="dynamic"),
+        backref=db.backref("feedback_recipes", lazy="dynamic"),
     )
 
 

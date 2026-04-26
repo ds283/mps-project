@@ -46,6 +46,7 @@ from ..models import (
     EmailTemplateLabel,
     FeedbackAsset,
     FeedbackRecipe,
+    FeedbackTemplateTag,
     GeneratedAsset,
     GeneratedAssetDownloadRecord,
     MatchingAttempt,
@@ -59,12 +60,11 @@ from ..models import (
     SubmissionAttachment,
     SubmittedAsset,
     SubmittedAssetDownloadRecord,
-    TemplateTag,
     TemporaryAsset,
     User,
 )
-from ..models.submissions import SubmissionRoleTypesMixin
 from ..models.assets import ThumbnailAsset
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
     create_new_backup_labels,
@@ -1041,7 +1041,7 @@ def create_new_template_tags(form):
     if len(unmatched) > 0:
         now = datetime.now()
         for tag in unmatched:
-            new_tag = TemplateTag(
+            new_tag = FeedbackTemplateTag(
                 name=tag,
                 colour=None,
                 creator_id=current_user.id,

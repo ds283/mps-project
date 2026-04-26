@@ -31,6 +31,7 @@ from ..models import (
     EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
+    FeedbackTemplateTag,
     GeneratedAsset,
     LiveProject,
     MatchingEnumeration,
@@ -48,7 +49,6 @@ from ..models import (
     SubmittedAsset,
     SubmitterAttendanceData,
     SubmittingStudent,
-    TemplateTag,
     TemporaryAsset,
     ThumbnailAsset,
     User,
@@ -578,9 +578,7 @@ def register_maintenance_tasks(celery):
     def _collect_expirable_assets(self, AssetType):
         try:
             # only filter out records that have a finite lifetime set
-            records: List[AssetType] = (
-                db.session.query(AssetType).filter(AssetType.expiry != None).all()
-            )
+            records = db.session.query(AssetType).filter(AssetType.expiry != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -590,7 +588,7 @@ def register_maintenance_tasks(celery):
     def _collect_all_assets(self, AssetType):
         try:
             # only filter out records that have a finite lifetime set
-            records: List[AssetType] = db.session.query(AssetType).all()
+            records = db.session.query(AssetType).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -782,6 +780,13 @@ def register_maintenance_tasks(celery):
         # check if asset exists in the object store
         if storage.exists():
             return
+
+        try:
+            record.lost = True
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         print(f'** Detected lost {asset_type} object "{asset_name}" (id={record.id})')
         return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
@@ -1209,11 +1214,11 @@ def register_maintenance_tasks(celery):
 
     @celery.task(bind=True)
     def prune_feedback_template_tags(self):
-        labels: List[TemplateTag] = db.session.query(TemplateTag).all()
+        labels: List[FeedbackTemplateTag] = db.session.query(FeedbackTemplateTag).all()
 
         try:
             for label in labels:
-                label: TemplateTag
+                label: FeedbackTemplateTag
 
                 # if label is not used, prune it
                 if get_count(label.assets) == 0:

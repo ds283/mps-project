@@ -24,6 +24,7 @@ from ...models import (
     EnrollmentRecord,
     FacultyData,
     FeedbackAsset,
+    FeedbackTemplateTag,
     FHEQ_Level,
     MatchingAttempt,
     PresentationAssessment,
@@ -42,7 +43,6 @@ from ...models import (
     SkillGroup,
     SubmissionPeriodRecord,
     Supervisor,
-    TemplateTag,
     Tenant,
     User,
     assessment_to_periods,
@@ -669,10 +669,10 @@ def BuildBackupLabelName(label: BackupLabel):
 
 
 def GetActiveTemplateTags():
-    return db.session.query(TemplateTag)
+    return db.session.query(FeedbackTemplateTag)
 
 
-def BuildTemplateTagName(tag: TemplateTag):
+def BuildTemplateTagName(tag: FeedbackTemplateTag):
     return tag.name
 
 

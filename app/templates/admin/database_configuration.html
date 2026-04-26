@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% from "ui_elements/resource_cards.html" import resource_card, resource_grid %}
 
 {% block title %}Database configuration{% endblock %}
 
@@ -12,156 +13,36 @@
                 Manage the core reference data that underpins project classes, user roles,
                 degree structures, and system assets.
             </p>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-chalkboard-teacher fa-fw text-primary"></i>
-                                Project classes
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                Define project class types, timing, submission periods, and
-                                degree programme associations.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('admin.edit_project_classes') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-users fa-fw text-primary"></i>
-                                Affiliations
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                Manage research group affiliations associated with faculty members
-                                and used to filter project browsing.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('admin.edit_groups') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-graduation-cap fa-fw text-primary"></i>
-                                Degree programmes
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                Configure degree programmes, types, and levels, controlling
-                                which project classes students are eligible to join.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('admin.edit_degree_programmes') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-map-marker-alt fa-fw text-primary"></i>
-                                Presentation venues
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                Define the rooms and buildings available for scheduling
-                                presentation assessment sessions.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('admin.edit_rooms') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-file-contract fa-fw text-primary"></i>
-                                Asset licenses
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                Manage content license types applied to uploaded assets
-                                such as project reports and feedback documents.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('admin.edit_licenses') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-user-shield fa-fw text-primary"></i>
-                                Role editor
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                View and edit the security roles that control what actions
-                                each user account is permitted to perform.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('manage_users.edit_roles') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-secondary">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-envelope-open-text fa-fw text-primary"></i>
-                                Global email templates
-                            </h5>
-                            <p class="card-text small text-body-secondary">
-                                Edit system-wide email templates used for automated notifications
-                                sent to students, supervisors, and administrators.
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="{{ url_for('admin.global_email_templates') }}"
-                               class="btn btn-sm btn-outline-primary">
-                                Manage &rarr;
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            {% call resource_grid() %}
+                {{ resource_card("fas fa-chalkboard-teacher fa-fw text-primary",
+                                 "Project classes",
+                                 "Define project class types, timing, submission periods, and degree programme associations.",
+                                 url_for('admin.edit_project_classes')) }}
+                {{ resource_card("fas fa-users fa-fw text-primary",
+                                 "Affiliations",
+                                 "Manage research group affiliations associated with faculty members and used to filter project browsing.",
+                                 url_for('admin.edit_groups')) }}
+                {{ resource_card("fas fa-graduation-cap fa-fw text-primary",
+                                 "Degree programmes",
+                                 "Configure degree programmes, types, and levels, controlling which project classes students are eligible to join.",
+                                 url_for('admin.edit_degree_programmes')) }}
+                {{ resource_card("fas fa-map-marker-alt fa-fw text-primary",
+                                 "Presentation venues",
+                                 "Define the rooms and buildings available for scheduling presentation assessment sessions.",
+                                 url_for('admin.edit_rooms')) }}
+                {{ resource_card("fas fa-file-contract fa-fw text-primary",
+                                 "Asset licenses",
+                                 "Manage content license types applied to uploaded assets such as project reports and feedback documents.",
+                                 url_for('admin.edit_licenses')) }}
+                {{ resource_card("fas fa-user-shield fa-fw text-primary",
+                                 "Role editor",
+                                 "View and edit the security roles that control what actions each user account is permitted to perform.",
+                                 url_for('manage_users.edit_roles')) }}
+                {{ resource_card("fas fa-envelope-open-text fa-fw text-primary",
+                                 "Global email templates",
+                                 "Edit system-wide email templates used for automated notifications sent to students, supervisors, and administrators.",
+                                 url_for('admin.global_email_templates')) }}
+            {% endcall %}
         </div>
     </div>
 {% endblock %}

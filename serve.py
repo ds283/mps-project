@@ -70,22 +70,6 @@ with app.app_context():
         db.session.commit()
         populate_CATS_limits(app, initdb_module)
 
-    # LEGACY
-    # if specified, import supervisor and examiner data (expected to be from Qualtrics)
-    # if getattr(initdb_module, "INITDB_SUPERVISOR_IMPORT", None) is not None:
-    #     db.session.commit()
-    #     import_supervisor_data(app, initdb_module)
-
-    # if getattr(initdb_module, "INITDB_EXAMINER_IMPORT", None) is not None:
-    #     db.session.commit()
-    #     import_examiner_data(app, initdb_module)
-
-    # LEGACY
-    # if specified, import attendance data (expected to be from Office forms)
-    # if getattr(initdb_module, "INITDB_ATTENDANCE_IMPORT", None) is not None:
-    #     db.session.commit()
-    #     import_attendance_data(app, initdb_module)
-
     reconcile_background_tasks(app)
 
 

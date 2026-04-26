@@ -114,8 +114,18 @@ class FeedbackTemplateTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
     __tablename__ = "feedback_template_tags"
 
+    __table_args__ = (db.UniqueConstraint("tenant_id", "name"),)
+
     # unique identifier used as primary key
     id = db.Column(db.Integer(), primary_key=True)
+
+    # tenant this tag belongs to
+    tenant_id = db.Column(db.Integer(), db.ForeignKey("tenants.id"), index=True)
+    tenant = db.relationship(
+        "Tenant",
+        foreign_keys=[tenant_id],
+        backref=db.backref("feedback_template_tags", lazy="dynamic"),
+    )
 
     # name of label
     name = db.Column(
@@ -133,6 +143,8 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
     """
 
     __tablename__ = "feedback_recipes"
+
+    __table_args__ = (db.UniqueConstraint("pclass_id", "label"),)
 
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
@@ -154,9 +166,9 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
     )
 
     # primary template
-    template_id = db.Column(db.Integer(), db.ForeignKey("feedback_assets.id"))
+    template_id = db.Column(db.Integer(), db.ForeignKey("feedback_templates.id"))
     template = db.relationship(
-        "FeedbackAsset",
+        "FeedbackTemplate",
         foreign_keys=[template_id],
         uselist=False,
         backref=db.backref("feedback_recipes", lazy="dynamic"),

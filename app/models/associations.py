@@ -974,11 +974,11 @@ feedback_template_to_tags = db.Table(
     db.Column(
         "template_id",
         db.Integer(),
-        db.ForeignKey("template_assets.id"),
+        db.ForeignKey("feedback_templates.id"),
         primary_key=True,
     ),
     db.Column(
-        "tag_id", db.Integer(), db.ForeignKey("template_tags.id"), primary_key=True
+        "tag_id", db.Integer(), db.ForeignKey("feedback_template_tags.id"), primary_key=True
     ),
 )
 

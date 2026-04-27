@@ -55,6 +55,14 @@
         {% endcall %}
     </div>
 
+    {% if url is not none and text is not none %}
+        <div class="d-flex align-items-center">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
+            </a>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Marking schemes</div>
         <div class="card-body">

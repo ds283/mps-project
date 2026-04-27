@@ -90,11 +90,11 @@
             <span>Workflow events log</span>
             <div class="d-flex gap-2">
                 <a href="{{ url_for('admin.workflow_log_export', pclass_filter=pclass_filter, tenant_filter=tenant_filter, url=url, text=text) }}"
-                   class="btn btn-sm btn-outline-light">
+                   class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-file-excel fa-fw"></i> Export to Excel&hellip;
                 </a>
                 <a href="{{ url_for('admin.workflow_log_export_csv', pclass_filter=pclass_filter, tenant_filter=tenant_filter, url=url, text=text) }}"
-                   class="btn btn-sm btn-outline-light">
+                   class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-file-csv fa-fw"></i> Export to CSV&hellip;
                 </a>
             </div>

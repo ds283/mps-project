@@ -42,7 +42,11 @@ from ..models import (
     SubmittingStudent,
     User,
 )
-from ..models.markingevent import ConflationReport, ConvenorAction, SubmitterReportWorkflowStates
+from ..models.markingevent import (
+    ConflationReport,
+    ConvenorAction,
+    SubmitterReportWorkflowStates,
+)
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
@@ -806,6 +810,9 @@ def inspect_marking_schemes(pclass_id):
         )
         return redirect(redirect_url())
 
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
@@ -813,6 +820,8 @@ def inspect_marking_schemes(pclass_id):
         pclass=pclass,
         config=config,
         convenor_data=data,
+        url=url,
+        text=text,
     )
 
 

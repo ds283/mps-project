@@ -92,12 +92,20 @@
 {% block title %}Feedback resources &mdash; {{ pclass.name }}{% endblock %}
 
 {% block bodyblock %}
+    {% if url is not none and text is not none %}
+        <div class="d-flex align-items-center">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
+            </a>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
             <span><i class="fas fa-file-alt fa-fw"></i> {{ pclass.name }} &mdash; Feedback resources</span>
             {% if url is not none and text is not none %}
-                <a class="btn btn-sm btn-outline-light" href="{{ url }}">
-                    <i class="fas fa-arrow-left me-1"></i> {{ text }}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
                 </a>
             {% endif %}
         </div>
@@ -140,7 +148,7 @@
                     <a href="{{ url_for('convenor.add_feedback_recipe', pclass_id=pclass.id,
                                        url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
                                        text='Feedback resources') }}"
-                       class="btn btn-sm btn-outline-light">
+                       class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-plus fa-fw"></i> Add recipe&hellip;
                     </a>
                 </div>
@@ -165,7 +173,7 @@
                     <a href="{{ url_for('convenor.add_feedback_template', pclass_id=pclass.id,
                                        url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
                                        text='Feedback resources') }}"
-                       class="btn btn-sm btn-outline-light">
+                       class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-plus fa-fw"></i> Add template&hellip;
                     </a>
                 </div>
@@ -190,7 +198,7 @@
                     <a href="{{ url_for('convenor.add_feedback_asset', pclass_id=pclass.id,
                                        url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
                                        text='Feedback resources') }}"
-                       class="btn btn-sm btn-outline-light">
+                       class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-plus fa-fw"></i> Add asset&hellip;
                     </a>
                 </div>

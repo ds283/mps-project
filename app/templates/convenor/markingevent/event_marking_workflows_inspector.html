@@ -81,7 +81,7 @@
                                 </a>
                             {% endif %}
                             <a href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=request.url, text='Marking workflows') }}"
-                               class="btn btn-sm btn-outline-light">
+                               class="btn btn-sm btn-outline-secondary">
                                 <i class="fas fa-pencil-alt fa-fw"></i> Edit event
                             </a>
                         </div>
@@ -144,7 +144,7 @@
                     <span>Marking workflows</span>
                     {% if can_edit %}
                         <a href="{{ url_for('convenor.add_marking_workflow', event_id=event.id, url=request.url, text='Marking workflows') }}"
-                           class="btn btn-sm btn-outline-light">
+                           class="btn btn-sm btn-outline-secondary">
                             <i class="fas fa-plus fa-fw"></i> Add workflow&hellip;
                         </a>
                     {% endif %}

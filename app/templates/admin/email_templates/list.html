@@ -70,10 +70,10 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% if url and text %}
-        <div class="top-return-link">
-            <a class="text-decoration-none" href="{{ url }}">
-                <i class="fas fa-backward"></i> Return to {{ text|lower }}
+    {% if url is not none and text is not none %}
+        <div class="d-flex align-items-center">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
             </a>
         </div>
     {% endif %}

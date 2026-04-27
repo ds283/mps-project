@@ -4,14 +4,17 @@
 {% block title %}{{ pclass.name }} — Resources{% endblock %}
 
 {% block bodyblock %}
+    {% if url is not none and text is not none %}
+        <div class="d-flex align-items-center">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
+            </a>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
+        <div class="card-header bg-primary text-white d-flex flex-row justify-content-left align-items-center">
             <span><i class="fas fa-box-open fa-fw"></i> {{ pclass.name }} &mdash; Resources</span>
-            {% if url is not none and text is not none %}
-                <a class="btn btn-sm btn-outline-light" href="{{ url }}">
-                    <i class="fas fa-arrow-left me-1"></i> {{ text }}
-                </a>
-            {% endif %}
         </div>
         <div class="card-body">
             <p class="text-body-secondary mb-4">
@@ -22,7 +25,9 @@
                     "fas fa-ruler-combined fa-fw text-primary",
                     "Marking schemes",
                     "Inspect and manage marking schemes.",
-                    url_for('convenor.inspect_marking_schemes', pclass_id=pclass.id)
+                    url_for('convenor.inspect_marking_schemes', pclass_id=pclass.id,
+                            url=url_for('convenor.resources', pclass_id=pclass.id),
+                            text='Resources manager')
                 ) }}
                 {{ resource_card(
                     "fas fa-envelope-open-text fa-fw text-primary",
@@ -30,7 +35,7 @@
                     "Configure the email templates used for automated notifications.",
                     url_for('convenor.email_templates', pclass_id=pclass.id,
                             url=url_for('convenor.resources', pclass_id=pclass.id),
-                            text='resources')
+                            text='Resources manager')
                 ) }}
                 {{ resource_card(
                     "fas fa-file-alt fa-fw text-primary",
@@ -38,7 +43,7 @@
                     "Manage feedback asset files, templates, and recipes.",
                     url_for('convenor.feedback_resources', pclass_id=pclass.id,
                             url=url_for('convenor.resources', pclass_id=pclass.id),
-                            text='resources')
+                            text='Resources manager')
                 ) }}
             {% endcall %}
         </div>

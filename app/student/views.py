@@ -456,11 +456,12 @@ def add_group_filter(id, gid):
     if group not in sel.group_filters:
         try:
             sel.group_filters.append(group)
-            log_db_commit(
-                f"Student {current_user.name} added research group filter '{group.name}' for {sel.config.project_class.name}",
-                user=current_user,
-                project_classes=sel.config.project_class,
-            )
+            db.session.commit()
+            # log_db_commit(
+            #     f"Student {current_user.name} added research group filter '{group.name}' for {sel.config.project_class.name}",
+            #     user=current_user,
+            #     project_classes=sel.config.project_class,
+            # )
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -478,11 +479,12 @@ def remove_group_filter(id, gid):
     if group in sel.group_filters:
         try:
             sel.group_filters.remove(group)
-            log_db_commit(
-                f"Student {current_user.name} removed research group filter '{group.name}' for {sel.config.project_class.name}",
-                user=current_user,
-                project_classes=sel.config.project_class,
-            )
+            db.session.commit()
+            # log_db_commit(
+            #     f"Student {current_user.name} removed research group filter '{group.name}' for {sel.config.project_class.name}",
+            #     user=current_user,
+            #     project_classes=sel.config.project_class,
+            # )
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -498,11 +500,12 @@ def clear_group_filters(id):
 
     try:
         sel.group_filters = []
-        log_db_commit(
-            f"Student {current_user.name} cleared all research group filters for {sel.config.project_class.name}",
-            user=current_user,
-            project_classes=sel.config.project_class,
-        )
+        db.session.commit()
+        # log_db_commit(
+        #     f"Student {current_user.name} cleared all research group filters for {sel.config.project_class.name}",
+        #     user=current_user,
+        #     project_classes=sel.config.project_class,
+        # )
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
@@ -520,11 +523,12 @@ def add_skill_filter(id, skill_id):
     if skill not in sel.skill_filters:
         try:
             sel.skill_filters.append(skill)
-            log_db_commit(
-                f"Student {current_user.name} added skill filter '{skill.name}' for {sel.config.project_class.name}",
-                user=current_user,
-                project_classes=sel.config.project_class,
-            )
+            db.session.commit()
+            # log_db_commit(
+            #     f"Student {current_user.name} added skill filter '{skill.name}' for {sel.config.project_class.name}",
+            #     user=current_user,
+            #     project_classes=sel.config.project_class,
+            # )
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -542,11 +546,12 @@ def remove_skill_filter(id, skill_id):
     if skill in sel.skill_filters:
         try:
             sel.skill_filters.remove(skill)
-            log_db_commit(
-                f"Student {current_user.name} removed skill filter '{skill.name}' for {sel.config.project_class.name}",
-                user=current_user,
-                project_classes=sel.config.project_class,
-            )
+            db.session.commit()
+            # log_db_commit(
+            #     f"Student {current_user.name} removed skill filter '{skill.name}' for {sel.config.project_class.name}",
+            #     user=current_user,
+            #     project_classes=sel.config.project_class,
+            # )
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -562,11 +567,12 @@ def clear_skill_filters(id):
 
     try:
         sel.skill_filters = []
-        log_db_commit(
-            f"Student {current_user.name} cleared all skill filters for {sel.config.project_class.name}",
-            user=current_user,
-            project_classes=sel.config.project_class,
-        )
+        db.session.commit()
+        # log_db_commit(
+        #     f"Student {current_user.name} cleared all skill filters for {sel.config.project_class.name}",
+        #     user=current_user,
+        #     project_classes=sel.config.project_class,
+        # )
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
@@ -1058,13 +1064,17 @@ def submit(sid):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"pcl": sel.config.project_class.name}),
-            body_payload=encode_email_payload({
-                "user": sel.student.user,
-                "pclass": sel.config.project_class,
-                "config": sel.config,
-                "sel": sel,
-            }),
+            subject_payload=encode_email_payload(
+                {"pcl": sel.config.project_class.name}
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "user": sel.student.user,
+                    "pclass": sel.config.project_class,
+                    "config": sel.config,
+                    "sel": sel,
+                }
+            ),
             recipient_list=[sel.student.user.email],
         )
         item.workflow = workflow
@@ -1295,11 +1305,15 @@ def view_feedback(id):
     period = record.period
 
     # Build list of (event, submitter_report) for closed MarkingEvents associated with this period
-    closed_events = MarkingEvent.query.filter_by(period_id=record.period_id, closed=True).all()
+    closed_events = MarkingEvent.query.filter_by(
+        period_id=record.period_id, closed=True
+    ).all()
     event_data = []
     for event in closed_events:
         sr = (
-            record.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
+            record.submitter_reports.join(
+                MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
+            )
             .filter(MarkingWorkflow.event_id == event.id)
             .first()
         )
@@ -1498,7 +1512,9 @@ def settings():
     user = User.query.get_or_404(current_user.id)
 
     main_config = get_main_config()
-    StudentSettingsForm = StudentSettingsFormFactory(enable_canvas=main_config.enable_canvas_sync)
+    StudentSettingsForm = StudentSettingsFormFactory(
+        enable_canvas=main_config.enable_canvas_sync
+    )
     form = StudentSettingsForm(obj=user)
     form.user = user
 

@@ -338,10 +338,6 @@ def submitter_reports_inspector(workflow_id):
             "Awaiting supervisor sign-off",
         ),
         (SubmitterReportWorkflowStates.AWAITING_FEEDBACK, "Awaiting feedback"),
-        # (
-        #     SubmitterReportWorkflowStates.REPORTS_OUT_OF_TOLERANCE,
-        #     "Reports out of tolerance",
-        # ),
         (
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
             "Needs moderator assigned",
@@ -354,20 +350,9 @@ def submitter_reports_inspector(workflow_id):
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
             "Requires convenor intervention",
         ),
-        # (
-        #     SubmitterReportWorkflowStates.READY_TO_GENERATE_GRADE,
-        #     "Ready to generate grade",
-        # ),
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
-        # (
-        #     SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
-        #     "Ready to generate feedback",
-        # ),
-        # (
-        #     SubmitterReportWorkflowStates.READY_TO_PUSH_FEEDBACK,
-        #     "Ready to push feedback",
-        # ),
         (SubmitterReportWorkflowStates.COMPLETED, "Completed"),
+        (SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE, "Feedback available"),
     ]
 
     total = workflow.submitter_reports.count()

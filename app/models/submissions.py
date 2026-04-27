@@ -1838,7 +1838,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             if (
                 sr is not None
                 and sr.workflow_state
-                >= SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK
+                >= SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE
             ):
                 return True
 

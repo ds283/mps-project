@@ -27,7 +27,7 @@
                         <strong>{{ event.name }}</strong>
                     </div>
                     <div class="card-body">
-                        {% if submitter_report.workflow_state < READY_TO_GENERATE_FEEDBACK %}
+                        {% if submitter_report.workflow_state < FEEDBACK_AVAILABLE %}
                             <div class="alert alert-secondary mb-0">
                                 <i class="fas fa-hourglass-half me-2"></i>
                                 Quality assurance for this event is still in progress. Feedback will be available once

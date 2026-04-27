@@ -1325,7 +1325,7 @@ def view_feedback(id):
         record=record,
         period=period,
         event_data=event_data,
-        READY_TO_GENERATE_FEEDBACK=SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+        FEEDBACK_AVAILABLE=SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
         ROLE_SUPERVISOR=MarkingReport.ROLE_SUPERVISOR,
         ROLE_RESPONSIBLE_SUPERVISOR=MarkingReport.ROLE_RESPONSIBLE_SUPERVISOR,
         ROLE_PRESENTATION_ASSESSOR=MarkingReport.ROLE_PRESENTATION_ASSESSOR,

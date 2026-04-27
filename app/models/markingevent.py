@@ -593,7 +593,7 @@ class SubmitterReportWorkflowStates:
         READY_TO_SIGN_OFF (9)
             A weighted average grade has been computed and stored in SubmitterReport.grade.
             The SubmitterReport is awaiting final sign-off by a convenor or senior staff.
-            Continues to READY_TO_GENERATE_FEEDBACK after sign-off.
+            Continues to COMPLETED after sign-off.
 
     If the MarkingScheme DOES use tolerance (uses_tolerance=True):
         SubmitterReport.out_of_tolerance is set to True. Moderation emails are sent to users in
@@ -624,16 +624,6 @@ class SubmitterReportWorkflowStates:
              different grades. The convenor must accept one via the Accept button in the inspector.
              Accepting transitions to READY_TO_SIGN_OFF.
 
-    --- Post-grading lifecycle ---
-
-    READY_TO_GENERATE_FEEDBACK (10)
-        Grade has been signed off. Feedback documents can now be generated.
-        (Not yet fully implemented.)
-
-    READY_TO_PUSH_FEEDBACK (11)
-        Feedback documents generated and ready to be released to the student.
-        (Not yet fully implemented.)
-
     COMPLETED (12)
         The SubmitterReport has been explicitly completed by a convenor via the inspector UI.
         `completed_by_id` and `completed_timestamp` record who completed it and when.
@@ -656,6 +646,11 @@ class SubmitterReportWorkflowStates:
         `completed` flag is set True.  These flags enable efficient querying and surface the
         conflation call-to-action in the UI.
 
+    FEEDBACK_AVAILABLE (13)
+        Feedback has been pushed to the student by MarkingEvent. The student can now see
+        the grade and feedback documents on their dashboard. This state is set by
+        MarkingEvent when feedback is released; no transition logic exists yet.
+
     RISK FACTOR OVERRIDE
     ====================
     At any point, if a SubmissionRecord has one or more unresolved risk factors
@@ -672,7 +667,6 @@ class SubmitterReportWorkflowStates:
     AWAITING_GRADING_REPORTS = 1
     AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF = 2
     AWAITING_FEEDBACK = 3
-    # REPORTS_OUT_OF_TOLERANCE = 4
     NEEDS_MODERATOR_ASSIGNED = 5
     AWAITING_MODERATOR_REPORT = 6
     # REQUIRES_CONVENOR_INTERVENTION: blocking state.
@@ -693,11 +687,9 @@ class SubmitterReportWorkflowStates:
     # The risk factor invariant is enforced in advance_submitter_report() and
     # _check_tolerance_and_grade() in app/tasks/markingevent.py.
     REQUIRES_CONVENOR_INTERVENTION = 7
-    # READY_TO_GENERATE_GRADE = 8
     READY_TO_SIGN_OFF = 9
-    # READY_TO_GENERATE_FEEDBACK = 10
-    # READY_TO_PUSH_FEEDBACK = 11
     COMPLETED = 12
+    FEEDBACK_AVAILABLE = 13
 
 
 class SubmitterReport(db.Model, EditingMetadataMixin):

@@ -23,7 +23,6 @@ from ...models import (
     EmailTemplateLabel,
     EnrollmentRecord,
     FacultyData,
-    FeedbackAsset,
     FeedbackTemplateTag,
     FHEQ_Level,
     MatchingAttempt,
@@ -674,14 +673,6 @@ def GetActiveTemplateTags():
 
 def BuildTemplateTagName(tag: FeedbackTemplateTag):
     return tag.name
-
-
-def GetAllFeedbackTemplates():
-    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template.is_(True))
-
-
-def GetAllNonTemplateFeedbackAssets():
-    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template.is_(False))
 
 
 def GetAllTenants():

@@ -712,38 +712,6 @@ def unique_or_original_faculty_batch_item_email(batch_id, form, field):
     return globally_unique_faculty_batch_item_email(batch_id, form, field)
 
 
-def globally_unique_feedback_asset_label(form, field):
-    if FeedbackAsset.query.filter_by(label=field.data).first():
-        raise ValidationError(
-            'A feedback asset with the label "{label}" already exists'.format(
-                label=field.data
-            )
-        )
-
-
-def unique_or_original_feedback_asset_label(form, field):
-    if field.data == form.asset.label:
-        return
-
-    return globally_unique_feedback_asset_label(form, field)
-
-
-def globally_unique_feedback_recipe_label(form, field):
-    if FeedbackRecipe.query.filter_by(label=field.data).first():
-        raise ValidationError(
-            'A feedback recipe with the label "{label}" already exists'.format(
-                label=field.data
-            )
-        )
-
-
-def unique_or_original_feedback_recipe_label(form, field):
-    if field.data == form.recipe.label:
-        return
-
-    return globally_unique_feedback_recipe_label(form, field)
-
-
 def globally_unique_submission_unit(period_id, form, field):
     if (
         db.session.query(SubmissionPeriodUnit)

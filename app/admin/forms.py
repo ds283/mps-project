@@ -32,11 +32,9 @@ from wtforms.validators import (
     Length,
     NumberRange,
     Optional,
-    Regexp,
 )
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..documents.forms import LicenseMixin
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
@@ -45,7 +43,6 @@ from ..models import (
     BackupConfiguration,
     DegreeProgramme,
     DegreeType,
-    EmailTemplate,
     PresentationAssessment,
     ProjectClass,
     ProjectClassConfig,
@@ -76,7 +73,6 @@ from ..shared.forms.queries import (
     BuildScheduleSessionLabel,
     BuildSubmissionPeriodName,
     BuildSysadminUserName,
-    BuildTemplateTagName,
     BuildTenantName,
     GetActiveBackupLabels,
     GetActiveDegreeProgrammes,
@@ -85,10 +81,7 @@ from ..shared.forms.queries import (
     GetActiveFaculty,
     GetActiveProjectTagGroups,
     GetActiveSkillGroups,
-    GetActiveTemplateTags,
     GetAllBuildings,
-    GetAllFeedbackTemplates,
-    GetAllNonTemplateFeedbackAssets,
     GetAllProjectClasses,
     GetAllRooms,
     GetAllTenants,
@@ -112,8 +105,6 @@ from ..shared.forms.wtf_validators import (
     globally_unique_degree_abbreviation,
     globally_unique_degree_programme,
     globally_unique_degree_type,
-    globally_unique_feedback_asset_label,
-    globally_unique_feedback_recipe_label,
     globally_unique_FHEQ_level_name,
     globally_unique_FHEQ_numeric_level,
     globally_unique_FHEQ_short_name,
@@ -143,8 +134,6 @@ from ..shared.forms.wtf_validators import (
     unique_or_original_degree_abbreviation,
     unique_or_original_degree_programme,
     unique_or_original_degree_type,
-    unique_or_original_feedback_asset_label,
-    unique_or_original_feedback_recipe_label,
     unique_or_original_FHEQ_level_name,
     unique_or_original_FHEQ_numeric_level,
     unique_or_original_FHEQ_short_name,
@@ -2567,153 +2556,6 @@ class ManualBackupForm(Form, BackupMixinFactory(lock_default=True)):
     )
 
     submit = SubmitField("Backup now")
-
-
-class FeedbackAssetMixin(LicenseMixin):
-    project_classes = QuerySelectMultipleField(
-        "Available for use with project classes",
-        query_factory=GetAllProjectClasses,
-        get_label="name",
-    )
-
-    tags = BasicTagSelectField(
-        "Add tags to identify this asset",
-        query_factory=GetActiveTemplateTags,
-        get_label=BuildTemplateTagName,
-        description="Use tags to identify assets with specific properties, or to organize them into groups.",
-        blank_text="Add tags...",
-    )
-
-    is_template = BooleanField(
-        "This is a template that can be used to generate a feedback report",
-        default=False,
-    )
-
-    description = StringField(
-        "Description",
-        description="Optionally provide a short description of this asset",
-        validators=[
-            Optional(),
-            Length(max=DEFAULT_STRING_LENGTH),
-        ],
-    )
-
-
-class UploadFeedbackAssetForm(Form, FeedbackAssetMixin):
-    label = StringField(
-        "Label",
-        description="Provide a label for this asset",
-        validators=[
-            InputRequired(message="Please provide a label"),
-            Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(
-                r"^[\w.]+$",
-                message="The label should contain only letters, numbers and the underscore.",
-            ),
-            globally_unique_feedback_asset_label,
-        ],
-    )
-
-    submit = SubmitField("Upload")
-
-
-class EditFeedbackAssetForm(Form, FeedbackAssetMixin, SaveChangesMixin):
-    label = StringField(
-        "Label",
-        description="Provide a label for this asset",
-        validators=[
-            InputRequired(message="Please provide a label"),
-            Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(
-                r"^[\w.]+$",
-                message="The label should contain only letters, numbers and the underscore.",
-            ),
-            unique_or_original_feedback_asset_label,
-        ],
-    )
-
-
-class FeedbackRecipeMixin:
-    project_classes = QuerySelectMultipleField(
-        "Available for use with project classes",
-        query_factory=GetAllProjectClasses,
-        get_label="name",
-    )
-
-    template = QuerySelectField(
-        "Select a primary template to be used to generate the feedback report",
-        query_factory=GetAllFeedbackTemplates,
-        get_label="label",
-        validators=[DataRequired(message="Please select a template")],
-    )
-
-    asset_list = QuerySelectMultipleField(
-        "Optionally, make the following assets available",
-        query_factory=GetAllNonTemplateFeedbackAssets,
-        get_label="label",
-        validators=[Optional()],
-    )
-
-    @staticmethod
-    def validate_template(form, field):
-        pclass_list = {pc.id: pc.abbreviation for pc in form.project_classes.data}
-
-        for pc in form.template.data.project_classes:
-            if pc.id in pclass_list:
-                pclass_list.pop(pc.id)
-
-        if len(pclass_list) > 0:
-            raise ValidationError(
-                f'Template "{form.template.data.label}" is not available for project classes {", ".join(pclass_list.values())}'
-            )
-
-    @staticmethod
-    def validate_asset_list(form, field):
-        for asset in form.asset_list.data:
-            pclass_list = {pc.id: pc.abbreviation for pc in form.project_classes.data}
-
-            for pc in asset.project_classes:
-                if pc.id in pclass_list:
-                    pclass_list.pop(pc.id)
-
-            if len(pclass_list) > 0:
-                raise ValidationError(
-                    f'Asset "{asset.label}" is not available for project classes {", ".join(pclass_list.values())}'
-                )
-
-
-class AddFeedbackRecipeForm(Form, FeedbackRecipeMixin):
-    label = StringField(
-        "Label",
-        description="Provide a label for this recipe",
-        validators=[
-            InputRequired(message="Please provide a label"),
-            Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(
-                r"^[\w.]+$",
-                message="The label should contain only letters, numbers and the underscore.",
-            ),
-            globally_unique_feedback_recipe_label,
-        ],
-    )
-
-    submit = SubmitField("Create recipe")
-
-
-class EditFeedbackRecipeForm(Form, FeedbackRecipeMixin, SaveChangesMixin):
-    label = StringField(
-        "Label",
-        description="Provide a label for this recipe",
-        validators=[
-            InputRequired(message="Please provide a label"),
-            Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(
-                r"^[\w.]+$",
-                message="The label should contain only letters, numbers and the underscore.",
-            ),
-            unique_or_original_feedback_recipe_label,
-        ],
-    )
 
 
 class EmailTemplateMixin:

@@ -44,8 +44,6 @@ from ..models import (
     DownloadCentreItem,
     EmailTemplate,
     EmailTemplateLabel,
-    FeedbackAsset,
-    FeedbackRecipe,
     FeedbackTemplateTag,
     GeneratedAsset,
     GeneratedAssetDownloadRecord,
@@ -81,23 +79,18 @@ from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tasks.thumbnails import (
     dispatch_force_regenerate_thumbnail_task,
-    dispatch_thumbnail_task,
 )
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery
 from . import admin
 from .forms import (
     AddBuildingForm,
-    AddFeedbackRecipeForm,
     AddRoomForm,
     EditBackupForm,
     EditBuildingForm,
     EditEmailTemplateForm,
-    EditFeedbackAssetForm,
-    EditFeedbackRecipeForm,
     EditRoomForm,
     PublicScheduleFormFactory,
-    UploadFeedbackAssetForm,
     UploadMatchForm,
     UploadScheduleForm,
 )
@@ -1310,212 +1303,6 @@ def generate_all_thumbnails():
         "success",
     )
     return redirect(redirect_url())
-
-
-@admin.route("/upload_feedback_asset", methods=["GET", "POST"])
-@roles_accepted("admin", "root")
-def upload_feedback_asset():
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    form = UploadFeedbackAssetForm(request.form)
-
-    if form.validate_on_submit():
-        if "asset" in request.files:
-            asset_file = request.files["asset"]
-
-            # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(
-                timestamp=datetime.now(),
-                uploaded_id=current_user.id,
-                expiry=None,
-                target_name=form.label.data,
-                license=form.license.data,
-            )
-            db.session.add(asset)
-
-            object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
-            with AssetUploadManager(
-                asset,
-                data=asset_file.stream.read(),
-                storage=object_store,
-                audit_data=f"upload_feedback_asset",
-                length=asset_file.content_length,
-                mimetype=asset_file.content_type,
-            ) as upload_mgr:
-                pass
-
-            try:
-                db.session.flush()
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                flash(
-                    "Could not upload feedback asset due to a database issue. Please contact an administrator.",
-                    "error",
-                )
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url)
-
-            dispatch_thumbnail_task(asset)
-
-            tag_list = create_new_template_tags(form)
-
-            feedback_asset = FeedbackAsset(
-                project_classes=form.project_classes.data,
-                asset_id=asset.id,
-                label=form.label.data,
-                description=form.description.data,
-                is_template=form.is_template.data,
-                tags=tag_list,
-                creator_id=current_user.id,
-                creation_timestamp=datetime.now(),
-            )
-
-            try:
-                db.session.add(feedback_asset)
-                log_db_commit(
-                    f"Uploaded feedback asset '{feedback_asset.label}'",
-                    user=current_user,
-                )
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                flash(
-                    "Feedback asset was uploaded, but there was a database issue. Please contact an administrator.",
-                    "error",
-                )
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-            return redirect(url)
-
-        else:
-            flash("No upload was supplied", "error")
-
-    return render_template_context(
-        "admin/feedback/upload_feedback_asset.html", form=form, url=url
-    )
-
-
-@admin.route("/edit_feedback_asset/<int:asset_id>", methods=["GET", "POST"])
-@roles_accepted("admin", "root")
-def edit_feedback_asset(asset_id):
-    # asset id identifies a FeedbackAsset
-    asset: FeedbackAsset = FeedbackAsset.query.get_or_404(asset_id)
-    asset_record: SubmittedAsset = asset.asset
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    form = EditFeedbackAssetForm(obj=asset)
-    form.asset = asset
-
-    if form.validate_on_submit():
-        tag_list = create_new_template_tags(form)
-
-        asset.label = form.label.data
-        asset.description = form.description.data
-        asset.project_classes = form.project_classes.data
-        asset.is_template = form.is_template.data
-        asset.tags = tag_list
-
-        asset_record.license = form.license.data
-
-        asset.last_edit_id = current_user.id
-        asset.last_edit_timestamp = datetime.now()
-
-        try:
-            log_db_commit(f"Edited feedback asset '{asset.label}'", user=current_user)
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(
-                "Could not save changes to this asset due to a database error. Please contact a system administrator.",
-                "error",
-            )
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        return redirect(url)
-    elif request.method == "GET":
-        form.license.data = asset_record.license
-
-    return render_template_context(
-        "admin/feedback/edit_feedback_asset.html", form=form, url=url, asset=asset
-    )
-
-
-@admin.route("/add_feedback_recipe", methods=["GET", "POST"])
-@roles_accepted("admin", "root")
-def add_feedback_recipe():
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    form = AddFeedbackRecipeForm(request.form)
-
-    if form.validate_on_submit():
-        recipe = FeedbackRecipe(
-            label=form.label.data,
-            project_classes=form.project_classes.data,
-            template=form.template.data,
-            asset_list=form.asset_list.data,
-            creator_id=current_user.id,
-            creation_timestamp=datetime.now(),
-        )
-
-        try:
-            db.session.add(recipe)
-            log_db_commit(f"Added feedback recipe '{recipe.label}'", user=current_user)
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(
-                "Could not add feedback recipe due to a database issue. Please contact an administrator.",
-                "error",
-            )
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        return redirect(url)
-
-    return render_template_context(
-        "admin/feedback/add_feedback_recipe.html", form=form, url=url
-    )
-
-
-@admin.route("/edit_feedback_recipe/<int:recipe_id>", methods=["GET", "POST"])
-@roles_accepted("admin", "root")
-def edit_feedback_recipe(recipe_id):
-    recipe: FeedbackRecipe = FeedbackRecipe.query.get_or_404(recipe_id)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    form = EditFeedbackRecipeForm(obj=recipe)
-    form.recipe = recipe
-
-    if form.validate_on_submit():
-        recipe.label = form.label.data
-        recipe.project_classes = form.project_classes.data
-        recipe.template = form.template.data
-        recipe.asset_list = form.asset_list.data
-
-        recipe.last_edit_id = current_user.id
-        recipe.last_edit_timestamp = datetime.now()
-
-        try:
-            log_db_commit(f"Edited feedback recipe '{recipe.label}'", user=current_user)
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(
-                "Could not save changes to this recipe due to a database issue. Please contact an administrator.",
-                "error",
-            )
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        return redirect(url)
-
-    return render_template_context(
-        "admin/feedback/edit_feedback_recipe.html", form=form, url=url, recipe=recipe
-    )
 
 
 # ======================================================================================================================

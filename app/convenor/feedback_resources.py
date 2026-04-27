@@ -154,6 +154,7 @@ def add_feedback_asset(pclass_id):
                 uploaded_id=current_user.id,
                 expiry=None,
                 bucket=buckets.PROJECT_BUCKET,
+                license=form.license.data,
             )
             db.session.add(submitted_asset)
 
@@ -239,6 +240,7 @@ def edit_feedback_asset(asset_id):
         try:
             feedback_asset.label = form.label.data
             feedback_asset.description = form.description.data
+            feedback_asset.asset.license = form.license.data
             feedback_asset.last_edit_id = current_user.id
             feedback_asset.last_edit_timestamp = datetime.now()
 
@@ -254,6 +256,8 @@ def edit_feedback_asset(asset_id):
             return redirect(url)
 
         return redirect(url)
+    elif request.method == "GET":
+        form.license.data = feedback_asset.asset.license
 
     return render_template_context(
         "convenor/feedback/edit_feedback_asset.html",

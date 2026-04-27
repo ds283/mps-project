@@ -12,6 +12,7 @@
         {{ form.hidden_tag() }}
         {{ wtf.render_field(form.label) }}
         {{ wtf.render_field(form.description) }}
+        {{ wtf.render_field(form.license) }}
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

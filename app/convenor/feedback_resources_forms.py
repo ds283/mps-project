@@ -15,12 +15,13 @@ from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, FeedbackTemplate
 from ..database import db
+from ..documents.forms import LicenseMixin
 from ..shared.forms.mixins import SaveChangesMixin
 from ..shared.forms.queries import BuildTemplateTagName, GetActiveTemplateTags
 from ..shared.forms.widgets import BasicTagSelectField
 
 
-class FeedbackAssetMixin:
+class FeedbackAssetMixin(LicenseMixin):
     label = StringField(
         "Label",
         validators=[

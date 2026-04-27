@@ -19,6 +19,21 @@ Models to support this are already present in the database, in @app/models/feedb
   subsidiary `FeedbackAsset` instances, which might be images or similar.
 - `FeedbackReport`: represents a `GeneratedAsset` produced by applying a `FeedbackRecipe` to a particular student.
 
+General implementation patterns:
+
+- Views that provide lists (of `FeedbackAsset`, `FeedbackTemplate`, `FeedbackRecipe`, etc.) should use a Datatables
+  based front end backed by an AJAX endpoint. Implement an AJAX row formatted in @app/ajax/convenor.
+- Use the `ServerSideSQLHandler` pattern where possible to provide sorting, searching, and pagination in the AJAX
+  endpoint. Use `ServerSideInMemoryHandler` where it is not possible to build a single SQL query that will satisfy
+  all requirements.
+- Do not use separate "display" and "sortstring" fields in Datatables rows when `ServerSideSQLHandler` is used.
+  These do not format correctly and are not needed. `ServerSideSQLHandler` will handle and sorting required.
+- Use the `select2()` library to render `QuerySelectField` and `QueryMultipleSelectField` fields. Use the
+  `select2-small` value for the `selectionCssClasss` and `dropdownCssClass` properties.
+
+This is a large refactoring. Please generate an on-disk progress file and update it as you work, so that state
+can easily be recovered if the implementation runs over more than one rate-limit window.
+
 ### TASK 1. CRUD-like functionality for `FeedbackAsset`, `FeedbackTemplate`, `FeedbackRecipe`
 
 Please read @app/templates/convenor/dashboard/resources.html. Feedback assets, templates, and recipes are
@@ -62,12 +77,13 @@ The second column should show creation metadata (author and timestamp) and last 
 The third column should include the description. The fourth column should be a drop-down "Actions" menu. The actions
 menu should allow the asset to be edited or deleted. See below for details of the edit page. This card should include a
 button allowing creation of a new feedback asset. This page will need to allow files to be uploaded and associated
-with the asset by creation of a new `SubmittedAsset` record. Ensure that you call `dispatch_thumbnail_task()` to queue
+with the asset by creation of a new `SubmittedAsset` record. Read `convenor.upload_period_attachment()` and inspect
+its associated templates for examples of how this should be done. Use the bucket map `OBJECT_STORAGE_BUCKETS` to find
+the appropriate `ObjectStore` and use the `buckets.PROJECT_BUCKET` bucket as the target `ObjectStore`.
+Ensure that you call `dispatch_thumbnail_task()` to queue
 generation of the thumbnails after upload.
 
 Your user interface design should be clean, modern, and consistent with user interfaces used elsewhere in the system.
-
-### TASK 2. Edit pages
 
 The add/edit page for `FeedbackRecipe` should allow the label to be set (with validation to ensure it is unique;
 the current label can always be re-used, but if the label changes, it must be unique), and a template to be selected
@@ -75,11 +91,20 @@ from the list of templates available for the project class. It should also be po
 associated with the recipe, and to adjust these. Base your user interface on the `convenor.edit_marking_workflow()` and
 `convenor.add_workflow_attachment()` routes and their associated templates. In the asset list, surface thumbnails for
 each asset to give visual guidance about what the asset is, and include the label, description, and last edit metadata.
-Style any select boxes using the `select2` library in accordance with the project conventions.
+Style any select boxes using the `select2` library in accordance with the project conventions. Update the last edit
+metadata after editing.
 
 The add/edit page for `FeedbackTemplate` should allow the label to be set (with validation to ensure it is unique;
 the current label can always be re-used, but if the label changes, it must be unique), and a description to be set.
 Include a large text area, by default 15 lines, that contains the template body. The template body should be
 editable by the user. You should also include a selectable list of labels defined by `FeedbackTemplateTag` instances
 (but the user can freely create new ones). Base your implementation of the labels used for email templates;
-see `admin.edit_global_email_template()` and its associated templates.
+see `admin.edit_global_email_template()` and its associated templates. Style any select boxes using the `select2`
+library in accordance with the project conventions. Update the last edit metadata after editing.
+
+The add/edit page for `FeedbackAsset` should allow the label to be set (with validation to ensure it is unique;
+the current label can always be re-used, but if the label changes, it must be unique), and likewise the description.
+Update the last edit metadata after editing.
+
+When deleting a `FeedbackAsset`, you must ensure that the corresponding `SubmittedAsset` record is also deleted,
+and the physical asset is removed from the object store.

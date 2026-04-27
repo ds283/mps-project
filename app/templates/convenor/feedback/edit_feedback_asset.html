@@ -1,0 +1,28 @@
+{% extends "base_form.html" %}
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block formtitle %}{{ title }}: <strong>{{ feedback_asset.label }}</strong>{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_feedback_asset', asset_id=feedback_asset.id, url=url, text=text) }}"
+          method="POST" name="edit_feedback_asset_form">
+
+        {{ form.hidden_tag() }}
+        {{ wtf.render_field(form.label) }}
+        {{ wtf.render_field(form.description) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {% if url is not none and text is not none %}
+        <div class="mt-2 mb-3 text-center">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}

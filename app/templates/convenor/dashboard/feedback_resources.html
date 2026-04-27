@@ -1,0 +1,213 @@
+{% extends "base_app.html" %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "icon_block.html" import icon_block %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#feedback-recipes-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + '/convenor/feedback_recipes_ajax/{{ pclass.id }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'label', orderable: true, searchable: true},
+                    {data: 'metadata', orderable: false, searchable: false},
+                    {data: 'assets', orderable: false, searchable: false},
+                    {data: 'menu', orderable: false, searchable: false}
+                ],
+                order: [[0, 'asc']]
+            });
+
+            $('#feedback-templates-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + '/convenor/feedback_templates_ajax/{{ pclass.id }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'label', orderable: true, searchable: true},
+                    {data: 'metadata', orderable: false, searchable: false},
+                    {data: 'description_tags', orderable: false, searchable: true},
+                    {data: 'menu', orderable: false, searchable: false}
+                ],
+                order: [[0, 'asc']]
+            });
+
+            $('#feedback-assets-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + '/convenor/feedback_assets_ajax/{{ pclass.id }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'label', orderable: true, searchable: true},
+                    {data: 'metadata', orderable: false, searchable: false},
+                    {data: 'description', orderable: false, searchable: true},
+                    {data: 'menu', orderable: false, searchable: false}
+                ],
+                order: [[0, 'asc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}Feedback resources &mdash; {{ pclass.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
+            <span><i class="fas fa-file-alt fa-fw"></i> {{ pclass.name }} &mdash; Feedback resources</span>
+            {% if url is not none and text is not none %}
+                <a class="btn btn-sm btn-outline-light" href="{{ url }}">
+                    <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {# Metric tiles #}
+            <div class="row gy-3 mb-4">
+                <div class="col">
+                    {% call(blk) dashboard_tile("Recipes", title_icon="book", icon_state=none) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 text-primary">{{ num_recipes }}</span>
+                        {% elif blk == 'footer' %}
+                            <div class="small text-muted">Feedback recipes defined</div>
+                        {% endif %}
+                    {% endcall %}
+                </div>
+                <div class="col">
+                    {% call(blk) dashboard_tile("Templates", title_icon="file-code", icon_state=none) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 text-primary">{{ num_templates }}</span>
+                        {% elif blk == 'footer' %}
+                            <div class="small text-muted">Jinja2 HTML templates defined</div>
+                        {% endif %}
+                    {% endcall %}
+                </div>
+                <div class="col">
+                    {% call(blk) dashboard_tile("Assets", title_icon="images", icon_state=none) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 text-primary">{{ num_assets }}</span>
+                        {% elif blk == 'footer' %}
+                            <div class="small text-muted">Uploaded asset files</div>
+                        {% endif %}
+                    {% endcall %}
+                </div>
+            </div>
+
+            {# Recipes table #}
+            <div class="card border-secondary mt-3 mb-3">
+                <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+                    <span><i class="fas fa-book fa-fw me-1"></i> Feedback recipes</span>
+                    <a href="{{ url_for('convenor.add_feedback_recipe', pclass_id=pclass.id,
+                                       url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
+                                       text='Feedback resources') }}"
+                       class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-plus fa-fw"></i> Add recipe&hellip;
+                    </a>
+                </div>
+                <div class="card-body">
+                    <table id="feedback-recipes-table" class="table table-striped table-bordered">
+                        <thead>
+                        <tr>
+                            <th width="25%">Label</th>
+                            <th width="25%">Details</th>
+                            <th width="35%">Assets</th>
+                            <th width="15%">Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            {# Templates table #}
+            <div class="card border-secondary mt-3 mb-3">
+                <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+                    <span><i class="fas fa-file-code fa-fw me-1"></i> Feedback templates</span>
+                    <a href="{{ url_for('convenor.add_feedback_template', pclass_id=pclass.id,
+                                       url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
+                                       text='Feedback resources') }}"
+                       class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-plus fa-fw"></i> Add template&hellip;
+                    </a>
+                </div>
+                <div class="card-body">
+                    <table id="feedback-templates-table" class="table table-striped table-bordered">
+                        <thead>
+                        <tr>
+                            <th width="25%">Label</th>
+                            <th width="25%">Details</th>
+                            <th width="35%">Description &amp; tags</th>
+                            <th width="15%">Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            {# Assets table #}
+            <div class="card border-secondary mt-3 mb-3">
+                <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+                    <span><i class="fas fa-images fa-fw me-1"></i> Feedback assets</span>
+                    <a href="{{ url_for('convenor.add_feedback_asset', pclass_id=pclass.id,
+                                       url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
+                                       text='Feedback resources') }}"
+                       class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-plus fa-fw"></i> Add asset&hellip;
+                    </a>
+                </div>
+                <div class="card-body">
+                    <table id="feedback-assets-table" class="table table-striped table-bordered">
+                        <thead>
+                        <tr>
+                            <th width="25%">Label</th>
+                            <th width="25%">Details</th>
+                            <th width="35%">Description</th>
+                            <th width="15%">Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+{% endblock %}

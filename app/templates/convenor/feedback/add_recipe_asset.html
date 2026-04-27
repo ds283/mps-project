@@ -1,0 +1,69 @@
+{% extends "base_app.html" %}
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}Add asset to recipe &mdash; {{ recipe.label }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
+            <span><i class="fas fa-images fa-fw me-1"></i> Add asset to recipe: <strong>{{ recipe.label }}</strong></span>
+            {% if url is not none and text is not none %}
+                <a class="btn btn-sm btn-outline-light" href="{{ url }}">
+                    <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if available|length == 0 %}
+                {% call icon_block("info-circle") %}
+                    <div>All available assets for this project class are already attached to this recipe.</div>
+                {% endcall %}
+            {% else %}
+                <p class="text-body-secondary mb-3">
+                    Select an asset to attach to this recipe. Only assets that are not already attached are shown.
+                </p>
+                <div class="list-group list-group-flush">
+                    {% for asset in available %}
+                        <div class="list-group-item px-0 py-3">
+                            <div class="d-flex flex-row justify-content-between align-items-center gap-3">
+                                <div class="d-flex flex-row align-items-center gap-3">
+                                    {% set submitted = asset.asset %}
+                                    {% if submitted is not none %}
+                                        {% if submitted.small_thumbnail and not submitted.small_thumbnail.lost %}
+                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type='SubmittedAsset', asset_id=submitted.id, size='small') }}"
+                                                 class="img-thumbnail flex-shrink-0" style="max-width:80px; max-height:80px;" alt="Preview">
+                                        {% else %}
+                                            <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light rounded"
+                                                 style="width:80px; height:80px;">
+                                                <i class="fas fa-image text-muted fa-2x"></i>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-semibold">{{ asset.label }}</div>
+                                        {% if asset.description %}
+                                            <div class="small text-muted mt-1">{{ asset.description }}</div>
+                                        {% endif %}
+                                        {% if asset.last_edited_by is not none %}
+                                            <div class="small text-muted mt-1">
+                                                <i class="fas fa-edit fa-fw me-1"></i>Last edited by {{ asset.last_edited_by.name }}
+                                                {% if asset.last_edit_timestamp is not none %}
+                                                    &mdash; {{ asset.last_edit_timestamp.strftime('%d %b %Y %H:%M') }}
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('convenor.attach_recipe_asset', recipe_id=recipe.id, asset_id=asset.id,
+                                                   url=url, text=text) }}"
+                                   class="btn btn-sm btn-outline-secondary flex-shrink-0">
+                                    <i class="fas fa-plus fa-fw"></i> Attach
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

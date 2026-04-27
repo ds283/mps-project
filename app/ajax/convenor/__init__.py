@@ -49,4 +49,5 @@ from .submission_period_units import submission_period_units_data
 from .supervision_event_templates import supervision_event_templates_data
 from .supervision_events import supervision_events_data
 from .canvas_missing import canvas_missing_data
+from .feedback_resources import feedback_assets_data, feedback_templates_data, feedback_recipes_data
 from .workload import faculty_workload_data

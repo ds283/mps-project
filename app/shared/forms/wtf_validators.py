@@ -30,6 +30,7 @@ from ...models import (
     FacultyBatchItem,
     FeedbackAsset,
     FeedbackRecipe,
+    FeedbackTemplate,
     FHEQ_Level,
     MarkingEvent,
     MarkingScheme,
@@ -1230,3 +1231,48 @@ class NotOptionalIf(Optional):
 
         if not bool(other_field.data):
             super(NotOptionalIf, self).__call__(form, field)
+
+
+def make_unique_feedback_asset_label_in_pclass(pclass_id, label=None):
+    def validator(form, field):
+        if label is not None and field.data == label:
+            return
+        existing = (
+            db.session.query(FeedbackAsset)
+            .filter(FeedbackAsset.pclass_id == pclass_id, FeedbackAsset.label == field.data)
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(f'"{field.data}" is already used as a feedback asset label in this project class')
+
+    return validator
+
+
+def make_unique_feedback_template_label_in_pclass(pclass_id, label=None):
+    def validator(form, field):
+        if label is not None and field.data == label:
+            return
+        existing = (
+            db.session.query(FeedbackTemplate)
+            .filter(FeedbackTemplate.pclass_id == pclass_id, FeedbackTemplate.label == field.data)
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(f'"{field.data}" is already used as a feedback template label in this project class')
+
+    return validator
+
+
+def make_unique_feedback_recipe_label_in_pclass(pclass_id, label=None):
+    def validator(form, field):
+        if label is not None and field.data == label:
+            return
+        existing = (
+            db.session.query(FeedbackRecipe)
+            .filter(FeedbackRecipe.pclass_id == pclass_id, FeedbackRecipe.label == field.data)
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(f'"{field.data}" is already used as a feedback recipe label in this project class')
+
+    return validator

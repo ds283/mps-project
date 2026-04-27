@@ -1,0 +1,60 @@
+{% extends "base_form.html" %}
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#template').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: '— No template selected —'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block formtitle %}{{ title }}{% endblock %}
+
+{% block header %}
+    {% if url is not none and text is not none %}
+        <div class="mb-3 d-flex align-items-center">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.add_feedback_recipe', pclass_id=pclass.id, url=url, text=text) }}"
+          method="POST" name="add_feedback_recipe_form">
+
+        {{ form.hidden_tag() }}
+        {{ wtf.render_field(form.label) }}
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold" for="template">{{ form.template.label.text }}</label>
+            {% if form.template.description %}
+                <div class="form-text text-body-secondary mb-1">{{ form.template.description }}</div>
+            {% endif %}
+            {{ form.template(id='template', class='form-select') }}
+            {% if form.template.errors %}
+                {% for error in form.template.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

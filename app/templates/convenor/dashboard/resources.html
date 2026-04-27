@@ -32,6 +32,14 @@
                             url=url_for('convenor.resources', pclass_id=pclass.id),
                             text='resources')
                 ) }}
+                {{ resource_card(
+                    "fas fa-file-alt fa-fw text-primary",
+                    "Feedback documents",
+                    "Manage feedback asset files, templates, and recipes.",
+                    url_for('convenor.feedback_resources', pclass_id=pclass.id,
+                            url=url_for('convenor.resources', pclass_id=pclass.id),
+                            text='resources')
+                ) }}
             {% endcall %}
         </div>
     </div>

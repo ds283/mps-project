@@ -17,6 +17,7 @@ from . import (
     dashboard,
     documents,
     email_templates,
+    feedback_resources,
     journal,
     lifecycle,
     markingevent,

@@ -31,6 +31,10 @@ General implementation patterns:
 - Use the `select2()` library to render `QuerySelectField` and `QueryMultipleSelectField` fields. Use the
   `select2-small` value for the `selectionCssClasss` and `dropdownCssClass` properties.
 
+Place new Jinja2 templates in app/templates/convenor/dashboard.
+
+Place new AJAX formatters in app/ajax/convenor.
+
 This is a large refactoring. Please generate an on-disk progress file and update it as you work, so that state
 can easily be recovered if the implementation runs over more than one rate-limit window.
 

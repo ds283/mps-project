@@ -382,8 +382,9 @@ def add_feedback_template(pclass_id):
         return redirect(url)
 
     return render_template_context(
-        "convenor/feedback/add_feedback_template.html",
+        "convenor/feedback/feedback_template.html",
         form=form,
+        template=None,
         pclass=pclass,
         title="Add feedback template",
         url=url,
@@ -437,7 +438,7 @@ def edit_feedback_template(template_id):
         return redirect(url)
 
     return render_template_context(
-        "convenor/feedback/edit_feedback_template.html",
+        "convenor/feedback/feedback_template.html",
         form=form,
         template=template,
         pclass=pclass,
@@ -530,8 +531,9 @@ def add_feedback_recipe(pclass_id):
         return redirect(url)
 
     return render_template_context(
-        "convenor/feedback/add_feedback_recipe.html",
+        "convenor/feedback/feedback_recipe.html",
         form=form,
+        recipe=None,
         pclass=pclass,
         title="Add feedback recipe",
         url=url,
@@ -580,7 +582,7 @@ def edit_feedback_recipe(recipe_id):
     asset_list = list(recipe.asset_list.all())
 
     return render_template_context(
-        "convenor/feedback/edit_feedback_recipe.html",
+        "convenor/feedback/feedback_recipe.html",
         form=form,
         recipe=recipe,
         pclass=pclass,

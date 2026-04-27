@@ -19,5 +19,67 @@ Models to support this are already present in the database, in @app/models/feedb
   subsidiary `FeedbackAsset` instances, which might be images or similar.
 - `FeedbackReport`: represents a `GeneratedAsset` produced by applying a `FeedbackRecipe` to a particular student.
 
-### TASK 1. CRUD-like functionality for `FeedbackAsset`, `FeedbackTemplate`.
+### TASK 1. CRUD-like functionality for `FeedbackAsset`, `FeedbackTemplate`, `FeedbackRecipe`
 
+Please read @app/templates/convenor/dashboard/resources.html. Feedback assets, templates, and recipes are
+resources that we need to manage in the same way.
+
+You will need to generate a new resource card linking to a page managing the feedback assets. This page will need
+distinct sections for managing assets, templates, and recipes. We do not expect a large number of any individual
+element, so a dashboard-style display is likely to be the correct route. The dashboard should extend base_app.html,
+like the marking scheme inspector. Add a "back button" link to return to the resources grid page.
+
+To lay out the dashboard, use the `dashboard_tile()` macro in @app/templates/dashboard_widgets.html to generate a row
+of metric cards showing the number of each type of asset. Use
+@app/templates/covenor/dashboard/overview_cards/selection_open.html for an example of how these metric cards are used.
+
+Below the metric cards, add a card containing a table listing `FeedbackRecipe` instances available for the
+project class, inferred from the `ProjectClass` or `ProjectClassConfig` that anchors the convenor dashboard.
+The table should list the recipes identified by label name (first column), the creation metadata (author and timestamp)
+and last edit metadata (author and timestamp) in a second column, and a summary of the assets in a third column.
+The fourth column should be a drop-down "Actions" menu. The actions menu should allow the recipe to be edited or
+deleted. See below for details of the edit page. This card should include a button allowing creation of a new
+feedback recipe. Feedback recipes must have names that are unique within their project class. This is enforced at the
+database level, but you must include a validation check on the creation form so that the issue can be surfaced to
+the user without creating a database exception. Use mixins to share as much configuration as possible between
+the Add and Edit forms. For example, see `AddMarkingEventForm` and `EditMarkingEventForm` for an example of the
+pattern.
+
+Below this card, add another card containing a table listing `FeedbackTemplate` instances available for the project
+class. This table should list the recipes by label (first column), the creation metadata (author and timestamp)
+and last edit metadata (author and timestamp) in a second column, and the description followed by any applied
+tags in a third column. The fourth column should be a drop-down "Actions" menu. The actions menu should allow the
+tempalte to be edited or deleted. See below for details of the edit page. This card should include a button allowomg
+creation of a new feedback template. Templates must have names that are unique within their project class. This is
+enforced at the database level, but you must include a validation check on the creation form so that the issue can be
+surfaced to the user without creating a database exception. Use mixins to share as much configuration as possible
+between the Add and Edit forms.
+
+Below this card, add another card containing a table listing `FeedbackAsset` instances available for the project
+class. This table should list the assets by label (first column) with an embedded small thumbnail preview image
+below. This preview thumbnail can be obtained from the `SubmittedAsset` record associated with the `FeedbackAsset`.
+The second column should show creation metadata (author and timestamp) and last edit metadata (author and timestamp).
+The third column should include the description. The fourth column should be a drop-down "Actions" menu. The actions
+menu should allow the asset to be edited or deleted. See below for details of the edit page. This card should include a
+button allowing creation of a new feedback asset. This page will need to allow files to be uploaded and associated
+with the asset by creation of a new `SubmittedAsset` record. Ensure that you call `dispatch_thumbnail_task()` to queue
+generation of the thumbnails after upload.
+
+Your user interface design should be clean, modern, and consistent with user interfaces used elsewhere in the system.
+
+### TASK 2. Edit pages
+
+The add/edit page for `FeedbackRecipe` should allow the label to be set (with validation to ensure it is unique;
+the current label can always be re-used, but if the label changes, it must be unique), and a template to be selected
+from the list of templates available for the project class. It should also be possible to view the list of assets
+associated with the recipe, and to adjust these. Base your user interface on the `convenor.edit_marking_workflow()` and
+`convenor.add_workflow_attachment()` routes and their associated templates. In the asset list, surface thumbnails for
+each asset to give visual guidance about what the asset is, and include the label, description, and last edit metadata.
+Style any select boxes using the `select2` library in accordance with the project conventions.
+
+The add/edit page for `FeedbackTemplate` should allow the label to be set (with validation to ensure it is unique;
+the current label can always be re-used, but if the label changes, it must be unique), and a description to be set.
+Include a large text area, by default 15 lines, that contains the template body. The template body should be
+editable by the user. You should also include a selectable list of labels defined by `FeedbackTemplateTag` instances
+(but the user can freely create new ones). Base your implementation of the labels used for email templates;
+see `admin.edit_global_email_template()` and its associated templates.

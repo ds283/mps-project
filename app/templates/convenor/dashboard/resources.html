@@ -1,0 +1,38 @@
+{% extends "base_app.html" %}
+{% from "ui_elements/resource_cards.html" import resource_card, resource_grid %}
+
+{% block title %}{{ pclass.name }} — Resources{% endblock %}
+
+{% block bodyblock %}
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
+            <span><i class="fas fa-box-open fa-fw"></i> {{ pclass.name }} &mdash; Resources</span>
+            {% if url is not none and text is not none %}
+                <a class="btn btn-sm btn-outline-light" href="{{ url }}">
+                    <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <p class="text-body-secondary mb-4">
+                Access and manage the shared resources associated with this project class.
+            </p>
+            {% call resource_grid() %}
+                {{ resource_card(
+                    "fas fa-ruler-combined fa-fw text-primary",
+                    "Marking schemes",
+                    "Inspect and manage marking schemes.",
+                    url_for('convenor.inspect_marking_schemes', pclass_id=pclass.id)
+                ) }}
+                {{ resource_card(
+                    "fas fa-envelope-open-text fa-fw text-primary",
+                    "Email templates",
+                    "Configure the email templates used for automated notifications.",
+                    url_for('convenor.email_templates', pclass_id=pclass.id,
+                            url=url_for('convenor.resources', pclass_id=pclass.id),
+                            text='resources')
+                ) }}
+            {% endcall %}
+        </div>
+    </div>
+{% endblock %}

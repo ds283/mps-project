@@ -253,11 +253,7 @@
                     </div>
                     <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
                         <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ url_for('convenor.inspect_marking_schemes', pclass_id=config.pclass_id) }}">Marking
-                            schemes&hellip;</a>
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ url_for('convenor.email_templates', pclass_id=config.pclass_id, url=return_url, text=return_text) }}">Email
-                            templates&hellip;</a>
+                           href="{{ url_for('convenor.resources', pclass_id=config.pclass_id, url=return_url, text=return_text) }}">Resources&hellip;</a>
                         <a class="btn btn-sm btn-outline-secondary"
                            href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure&hellip;</a>
                         <a class="btn btn-sm btn-outline-secondary"

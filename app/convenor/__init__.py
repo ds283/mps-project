@@ -22,6 +22,7 @@ from . import (
     markingevent,
     marking_feedback,
     projects,
+    resources,
     selector_details,
     selectors,
     student_tasks,

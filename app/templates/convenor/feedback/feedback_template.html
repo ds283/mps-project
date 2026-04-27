@@ -35,7 +35,7 @@
     {% if not template and url is not none and text is not none %}
         <div class="mb-3 d-flex align-items-center">
             <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+                <i class="fas fa-arrow-left me-1"></i> {{ text }}
             </a>
         </div>
     {% endif %}
@@ -50,34 +50,34 @@
               method="POST" name="feedback_template_form">
     {% endif %}
 
-        {{ form.hidden_tag() }}
-        {{ wtf.render_field(form.label) }}
-        {{ wtf.render_field(form.description) }}
+{{ form.hidden_tag() }}
+{{ wtf.render_field(form.label) }}
+{{ wtf.render_field(form.description) }}
 
-        <div class="mb-3">
-            <label class="form-label fw-semibold" for="tags">{{ form.tags.label.text }}</label>
-            {% if form.tags.description %}
-                <div class="form-text text-body-secondary mb-1">{{ form.tags.description }}</div>
-            {% endif %}
-            {{ form.tags(id='tags', class='form-select') }}
-            {% if form.tags.errors %}
-                {% for error in form.tags.errors %}
-                    <div class="invalid-feedback d-block">{{ error }}</div>
-                {% endfor %}
-            {% endif %}
-        </div>
+<div class="mb-3">
+    <label class="form-label fw-semibold" for="tags">{{ form.tags.label.text }}</label>
+    {% if form.tags.description %}
+        <div class="form-text text-body-secondary mb-1">{{ form.tags.description }}</div>
+    {% endif %}
+    {{ form.tags(id='tags', class='form-select') }}
+    {% if form.tags.errors %}
+        {% for error in form.tags.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+    {% endif %}
+</div>
 
-        {{ wtf.render_field(form.template_body) }}
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+{{ wtf.render_field(form.template_body) }}
+{{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
-    </form>
+</form>
 {% endblock %}
 
 {% block footer %}
     {% if template and url is not none and text is not none %}
         <div class="mt-2 mb-3 text-center">
             <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+                <i class="fas fa-arrow-left me-1"></i> {{ text }}
             </a>
         </div>
     {% endif %}

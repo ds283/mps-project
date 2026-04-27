@@ -6,10 +6,11 @@
 {% block bodyblock %}
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
-            <span><i class="fas fa-images fa-fw me-1"></i> Add asset to recipe: <strong>{{ recipe.label }}</strong></span>
+            <span><i
+                    class="fas fa-images fa-fw me-1"></i> Add asset to recipe: <strong>{{ recipe.label }}</strong></span>
             {% if url is not none and text is not none %}
                 <a class="btn btn-sm btn-outline-light" href="{{ url }}">
-                    <i class="fas fa-arrow-left me-1"></i> Back to {{ text }}
+                    <i class="fas fa-arrow-left me-1"></i> {{ text }}
                 </a>
             {% endif %}
         </div>
@@ -31,7 +32,8 @@
                                     {% if submitted is not none %}
                                         {% if submitted.small_thumbnail and not submitted.small_thumbnail.lost %}
                                             <img src="{{ url_for('documents.serve_thumbnail', asset_type='SubmittedAsset', asset_id=submitted.id, size='small') }}"
-                                                 class="img-thumbnail flex-shrink-0" style="max-width:80px; max-height:80px;" alt="Preview">
+                                                 class="img-thumbnail flex-shrink-0"
+                                                 style="max-width:80px; max-height:80px;" alt="Preview">
                                         {% else %}
                                             <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light rounded"
                                                  style="width:80px; height:80px;">
@@ -46,7 +48,8 @@
                                         {% endif %}
                                         {% if asset.last_edited_by is not none %}
                                             <div class="small text-muted mt-1">
-                                                <i class="fas fa-edit fa-fw me-1"></i>Last edited by {{ asset.last_edited_by.name }}
+                                                <i class="fas fa-edit fa-fw me-1"></i>Last edited
+                                                by {{ asset.last_edited_by.name }}
                                                 {% if asset.last_edit_timestamp is not none %}
                                                     &mdash; {{ asset.last_edit_timestamp.strftime('%d %b %Y %H:%M') }}
                                                 {% endif %}

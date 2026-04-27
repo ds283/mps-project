@@ -51,9 +51,6 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
         backref=db.backref("feedback_asset", uselist=False),
     )
 
-    # is this asset a base template?
-    is_template = db.Column(db.Boolean(), default=False)
-
     # unique label
     label = db.Column(
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),

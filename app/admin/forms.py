@@ -1238,10 +1238,6 @@ class ScheduledTaskMixin:
             "Synchronize Canvas submission availability for active submission periods",
         ),
         (
-            "app.tasks.marking.conflate_marks_for_period",
-            "Conflate marks for a specified submission period",
-        ),
-        (
             "app.tasks.marking.generate_feedback_reports",
             "Generate feedback reports for a specified submission period and recipe",
         ),

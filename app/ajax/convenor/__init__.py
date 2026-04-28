@@ -28,6 +28,7 @@ from .liveproject_alternatives import (
 from .liveprojects import liveprojects_data
 from .manual_assign import manual_assign_data
 from .markingevent import (
+    conflation_report_data,
     event_marking_workflow_data,
     marking_event_data,
     marking_report_data,

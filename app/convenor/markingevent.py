@@ -24,6 +24,7 @@ import app.ajax as ajax
 from ..database import db
 from ..models import (
     EmailTemplate,
+    EmailWorkflow,
     FeedbackOrchestrationJob,
     LiveMarkingScheme,
     MarkingEvent,
@@ -76,6 +77,7 @@ from .forms import (
     GenerateFeedbackFormFactory,
     MarkingReportPropertiesForm,
     MarkingWorkflowFormFactory,
+    PushFeedbackForm,
     ResolveTurnitinForm,
     TestMarkingEventFormFactory,
     build_resolve_risk_factors_form,
@@ -536,15 +538,561 @@ def generate_marking_event_feedback(event_id):
 @convenor.route("/marking_event_conflation_reports/<int:event_id>")
 @roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_event_conflation_reports(event_id):
-    """Placeholder — ConflationReport inspector (Task 2). Redirects to workflow inspector."""
-    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+    """
+    ConflationReport inspector for a MarkingEvent.
+    Shows all ConflationReport instances with their grade summaries and feedback status.
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+    )
+    text = request.args.get("text", "Marking workflows")
+
+    feedback_jobs = (
+        db.session.query(FeedbackOrchestrationJob)
+        .filter(
+            FeedbackOrchestrationJob.event_id == event.id,
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+        )
+        .order_by(FeedbackOrchestrationJob.created_at.desc())
+        .all()
+    )
+
+    all_crs = event.conflation_reports.all()
+    total_count = len(all_crs)
+    with_feedback_count = sum(1 for cr in all_crs if cr.feedback_reports.count() > 0)
+    sent_count = sum(1 for cr in all_crs if cr.feedback_sent)
+    failed_count = sum(1 for cr in all_crs if cr.feedback_generation_failed)
+    in_progress_count = sum(1 for cr in all_crs if cr.feedback_celery_id is not None)
+    stale_count = sum(1 for cr in all_crs if cr.is_stale)
+
+    return render_template_context(
+        "convenor/markingevent/conflation_reports_inspector.html",
+        event=event,
+        pclass=pclass,
+        url=url,
+        text=text,
+        feedback_jobs=feedback_jobs,
+        total_count=total_count,
+        with_feedback_count=with_feedback_count,
+        sent_count=sent_count,
+        failed_count=failed_count,
+        in_progress_count=in_progress_count,
+        stale_count=stale_count,
+        MarkingEventWorkflowStates=MarkingEventWorkflowStates,
+    )
+
+
+@convenor.route("/conflation_reports_ajax/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
+def conflation_reports_ajax(event_id):
+    """AJAX endpoint for ConflationReport inspector DataTable"""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(
+        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
+    ):
+        return jsonify({"error": "Access denied"}), 403
+
+    base_query = (
+        db.session.query(ConflationReport)
+        .join(SubmissionRecord, SubmissionRecord.id == ConflationReport.submission_record_id)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+        .join(User, User.id == StudentData.id)
+        .filter(ConflationReport.marking_event_id == event_id)
+    )
+
+    student_col = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "search_collation": "utf8_general_ci",
+        "order": [User.last_name, User.first_name],
+    }
+
+    columns = {
+        "student": student_col,
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(
+            partial(ajax.convenor.conflation_report_data, event_id)
+        )
+
+
+# ---------------------------------------------------------------------------
+# ConflationReport individual action routes
+# ---------------------------------------------------------------------------
+
+
+def _conflation_report_editable(cr: ConflationReport) -> bool:
+    """Return True if the ConflationReport can be edited (feedback not yet sent)."""
+    return not cr.feedback_sent
+
+
+@convenor.route("/reconflate_conflation_report/<int:cr_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def reconflate_conflation_report(cr_id):
+    """
+    Re-run conflation for a single ConflationReport whose is_stale flag is set.
+    Clears is_stale on success.
+    """
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    if not _conflation_report_editable(cr):
+        flash("Cannot reconflate: feedback has already been sent for this student.", "warning")
+        return redirect(url)
+
+    if not cr.is_stale:
+        flash("This conflation report is not stale; reconflation is not needed.", "info")
+        return redirect(url)
+
+    targets = event.targets_as_dict
+    if not targets:
+        flash("This event has no conflation targets defined.", "error")
+        return redirect(url)
+
+    workflows = event.workflows.all()
+    record = cr.submission_record
+
+    grades = {}
+    for wf in workflows:
+        sr = (
+            db.session.query(SubmitterReport)
+            .filter_by(record_id=record.id, workflow_id=wf.id)
+            .first()
+        )
+        if sr is None or sr.grade is None:
+            flash(
+                f"Reconflation failed: missing grade in workflow '{wf.name}' "
+                f"for student '{record.owner.student.user.name}'.",
+                "error",
+            )
+            return redirect(url)
+        grades[wf.key] = float(sr.grade)
+
+    result = {}
+    for target_name, expr in targets.items():
+        try:
+            value = eval(expr, {"__builtins__": {}}, grades)  # noqa: S307
+            result[target_name] = float(value)
+        except Exception as exc:
+            flash(
+                f"Reconflation failed: error evaluating target '{target_name}' "
+                f"(expression: {expr!r}): {exc}.",
+                "error",
+            )
+            return redirect(url)
+
+    try:
+        cr.conflation_report = json.dumps(result)
+        cr.generated_by_id = current_user.id
+        cr.generated_timestamp = datetime.now()
+        cr.is_stale = False
+        log_db_commit(
+            f"Reconflated ConflationReport for student "
+            f"'{record.owner.student.user.name}' in event '{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Reconflation complete for '{record.owner.student.user.name}'.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in reconflate_conflation_report", exc_info=e)
+        flash("Could not reconflate due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/delete_conflation_report_feedback/<int:cr_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def delete_conflation_report_feedback(cr_id):
+    """
+    Delete all FeedbackReport instances attached to a ConflationReport.
+    If this leaves no ConflationReport in the event with any feedback, regress the event
+    to READY_TO_GENERATE_FEEDBACK state.
+    """
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    if not _conflation_report_editable(cr):
+        flash("Cannot delete feedback: feedback has already been sent for this student.", "warning")
+        return redirect(url)
+
+    reports = cr.feedback_reports.all()
+    if not reports:
+        flash("No feedback reports to delete.", "info")
+        return redirect(url)
+
+    try:
+        from ..models.feedback import FeedbackReport
+
+        for report in reports:
+            cr.feedback_reports.remove(report)
+            db.session.delete(report)
+        cr.recipe = None
+        cr.feedback_celery_id = None
+        cr.feedback_generation_failed = False
+
+        # If no ConflationReport in this event now has any feedback, regress the event state
+        all_crs = event.conflation_reports.all()
+        any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
+        if not any_with_feedback and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
+            event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
+
+        log_db_commit(
+            f"Deleted feedback report(s) for student "
+            f"'{cr.submission_record.owner.student.user.name}' in event '{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash("Feedback reports deleted.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in delete_conflation_report_feedback", exc_info=e)
+        flash("Could not delete feedback due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/regenerate_conflation_report_feedback/<int:cr_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def regenerate_conflation_report_feedback(cr_id):
+    """
+    Regenerate feedback for a single ConflationReport.
+    Presents the same recipe-selection form as generate_marking_event_feedback.
+    """
+    from ..models.feedback import FeedbackRecipe
+    from ..tasks.feedback_orchestration import launch_feedback_job
+
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+    text = request.args.get("text", "Conflation reports")
+
+    if not _conflation_report_editable(cr):
+        flash("Cannot regenerate feedback: feedback has already been sent for this student.", "warning")
+        return redirect(url)
+
+    student_name = cr.submission_record.owner.student.user.name
+    form = GenerateFeedbackFormFactory(pclass.id)()
+
+    if form.validate_on_submit():
+        recipe: FeedbackRecipe = form.recipe.data
+
+        try:
+            launch_feedback_job(
+                event=event,
+                recipe=recipe,
+                cr_ids=[cr.id],
+                owner=current_user,
+                convenor_id=current_user.id,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("A database error occurred while queuing the regeneration job.", "error")
+            return redirect(url)
+
+        flash(
+            f'Queued feedback regeneration for "{student_name}" using recipe "{recipe.label}".',
+            "success",
+        )
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/feedback/generate_feedback_form.html",
+        event=event,
+        form=form,
+        url=url,
+        text=text,
+        title=f"Regenerate feedback for {student_name}",
+        cr_count=1,
+        fill_missing=False,
+        pending_count=1,
+    )
+
+
+@convenor.route("/view_conflation_report_emails/<int:cr_id>")
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
+def view_conflation_report_emails(cr_id):
+    """
+    List the EmailLog entries attached to a ConflationReport (feedback-push emails).
+    """
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+    text = request.args.get("text", "Conflation reports")
+
+    emails = cr.feedback_emails.all()
+    student_name = cr.submission_record.owner.student.user.name
+
+    return render_template_context(
+        "convenor/markingevent/conflation_report_emails.html",
+        cr=cr,
+        event=event,
+        pclass=pclass,
+        emails=emails,
+        student_name=student_name,
+        url=url,
+        text=text,
+    )
+
+
+@convenor.route("/push_single_cr_feedback/<int:cr_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def push_single_cr_feedback(cr_id):
+    """
+    Dispatch feedback email for a single ConflationReport.
+
+    GET: show PushFeedbackForm
+    POST: validate and synchronously build + queue the EmailWorkflow items
+    """
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+    text = request.args.get("text", "Conflation reports")
+
+    if not _conflation_report_editable(cr):
+        flash("Feedback has already been sent for this student.", "warning")
+        return redirect(url)
+
+    if cr.feedback_reports.count() == 0:
+        flash("No feedback reports exist for this student. Generate feedback first.", "warning")
+        return redirect(url)
+
+    student_name = cr.submission_record.owner.student.user.name
+
+    form = PushFeedbackForm(request.form)
+
+    if form.validate_on_submit():
+        from datetime import timedelta as _td
+        from ..tasks.push_feedback import (
+            _build_target_roles,
+            _build_student_email_item,
+            _build_faculty_email_items_for_cr,
+            MAX_ATTACHMENT_SIZE,
+        )
+
+        delay_hours = form.delay_hours.data or 0
+        test_email = form.test_email.data.strip() if form.test_email.data else None
+        notify_supervisors = form.notify_supervisors.data
+        notify_markers = form.notify_markers.data
+        notify_moderators = form.notify_moderators.data
+        defer = _td(hours=delay_hours)
+        target_roles = _build_target_roles(notify_supervisors, notify_markers, notify_moderators)
+
+        try:
+            # ---- Student feedback email ----
+            student_template = EmailTemplate.find_template_(
+                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
+            )
+            if student_template is not None:
+                student_workflow = EmailWorkflow.build_(
+                    name=f"Push student feedback: {pclass.name} — {student_name}",
+                    template=student_template,
+                    defer=defer,
+                    pclasses=[pclass],
+                    max_attachment_size=MAX_ATTACHMENT_SIZE,
+                    creator=current_user,
+                )
+                db.session.add(student_workflow)
+                db.session.flush()
+
+                student_item = _build_student_email_item(cr, current_user.id, defer, test_email)
+                if student_item is not None:
+                    student_item.workflow = student_workflow
+                    db.session.add(student_item)
+
+            # ---- Faculty feedback emails ----
+            if target_roles:
+                faculty_template = (
+                    EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass)
+                    or EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass)
+                )
+                if faculty_template is not None:
+                    faculty_workflow = EmailWorkflow.build_(
+                        name=f"Push faculty feedback: {pclass.name} — {student_name}",
+                        template=faculty_template,
+                        defer=defer,
+                        pclasses=[pclass],
+                        max_attachment_size=MAX_ATTACHMENT_SIZE,
+                        creator=current_user,
+                    )
+                    db.session.add(faculty_workflow)
+                    db.session.flush()
+
+                    fac_items = _build_faculty_email_items_for_cr(cr, defer, test_email, target_roles)
+                    for item in fac_items:
+                        item.workflow = faculty_workflow
+                        db.session.add(item)
+
+            log_db_commit(
+                f"Queued feedback push for '{student_name}' in event '{event.name}' ({pclass.name})",
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("A database error occurred while queuing the feedback email.", "error")
+            return redirect(url)
+
+        delay_desc = f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}" if delay_hours > 0 else "immediately"
+        test_note = f" (test mode: {test_email})" if test_email else ""
+        flash(
+            f'Queued feedback email for "{student_name}", to be dispatched {delay_desc}{test_note}.',
+            "success",
+        )
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/feedback/push_feedback_form.html",
+        event=event,
+        pclass=pclass,
+        form=form,
+        url=url,
+        text=text,
+        unsent_count=1,
+        total_count=1,
+        single_student=student_name,
+    )
 
 
 @convenor.route("/push_marking_event_feedback/<int:event_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root", "convenor")
 def push_marking_event_feedback(event_id):
-    """Placeholder — push feedback for entire MarkingEvent (Task 3). Redirects to workflow inspector."""
-    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+    """
+    Dispatch feedback emails for all unsent ConflationReports in a MarkingEvent.
+
+    GET: show PushFeedbackForm
+    POST: validate and dispatch push_marking_event_feedback_task via Celery
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state != MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
+        flash(
+            "Feedback can only be pushed when the event is in the 'Ready to push feedback' state.",
+            "warning",
+        )
+        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event_id),
+    )
+    text = request.args.get("text", "Conflation reports")
+
+    all_crs = event.conflation_reports.all()
+    unsent_count = sum(1 for cr in all_crs if not cr.feedback_sent)
+
+    form = PushFeedbackForm(request.form)
+
+    if form.validate_on_submit():
+        delay_hours = form.delay_hours.data or 0
+        test_email = form.test_email.data.strip() if form.test_email.data else None
+        notify_supervisors = form.notify_supervisors.data
+        notify_markers = form.notify_markers.data
+        notify_moderators = form.notify_moderators.data
+
+        if unsent_count == 0:
+            flash("All students have already had feedback sent. Nothing to do.", "info")
+            return redirect(url_for("convenor.marking_event_conflation_reports", event_id=event_id))
+
+        celery = current_app.extensions["celery"]
+        push_task = celery.tasks.get("app.tasks.push_feedback.push_marking_event_feedback_task")
+        if push_task is None:
+            flash("Feedback push task is not registered. Please contact a system administrator.", "error")
+            return redirect(url)
+
+        push_task.apply_async(
+            args=[event_id, current_user.id, delay_hours, test_email,
+                  notify_supervisors, notify_markers, notify_moderators]
+        )
+
+        delay_desc = f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}" if delay_hours > 0 else "immediately"
+        test_note = f" (test mode: {test_email})" if test_email else ""
+        plural = "s" if unsent_count != 1 else ""
+        flash(
+            f'Queued feedback email{plural} for {unsent_count} student{plural}, '
+            f'to be dispatched {delay_desc}{test_note}.',
+            "success",
+        )
+        return redirect(url_for("convenor.marking_event_conflation_reports", event_id=event_id))
+
+    return render_template_context(
+        "convenor/feedback/push_feedback_form.html",
+        event=event,
+        pclass=pclass,
+        form=form,
+        url=url,
+        text=text,
+        unsent_count=unsent_count,
+        total_count=len(all_crs),
+    )
 
 
 @convenor.route("/submitter_reports_inspector/<int:workflow_id>")

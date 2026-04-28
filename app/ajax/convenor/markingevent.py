@@ -1231,3 +1231,195 @@ def marking_scheme_data(url, text, schemes):
         }
         for scheme in schemes
     ]
+
+
+# ---------------------------------------------------------------------------
+# ConflationReport inspector row formatter
+# ---------------------------------------------------------------------------
+
+# language=jinja2
+_conflation_report_student = """
+{% set owner = cr.submission_record.owner %}
+{% set student = owner.student %}
+<div class="fw-semibold">{{ student.user.name }}</div>
+{% if student.exam_number %}
+    <div class="small text-muted mt-1">Candidate #{{ student.exam_number }}</div>
+{% endif %}
+"""
+
+# language=jinja2
+_conflation_report_project = """
+{% if cr.submission_record.project is not none %}
+    <div>{{ cr.submission_record.project.name }}</div>
+    {% if not cr.submission_record.project.generic and cr.submission_record.project.owner is not none %}
+        <div class="small text-muted mt-1">{{ cr.submission_record.project.owner.user.name }}</div>
+    {% endif %}
+{% else %}
+    <span class="badge bg-secondary">No project</span>
+{% endif %}
+"""
+
+# language=jinja2
+_conflation_report_grades = """
+{% set grades = cr.conflation_report_as_dict %}
+{% if grades %}
+    <div class="d-flex flex-column gap-1">
+        {% for target_name, value in grades.items() %}
+            <div class="d-flex flex-row align-items-center gap-2">
+                <span class="badge bg-secondary" style="min-width:5rem;">{{ target_name }}</span>
+                <span class="fw-semibold text-primary">{{ "%.1f"|format(value) }}%</span>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="small text-muted mt-2">
+        {% if cr.generated_by is not none %}
+            <i class="fas fa-user fa-fw"></i> {{ cr.generated_by.name }}<br>
+        {% endif %}
+        {% if cr.generated_timestamp is not none %}
+            <i class="fas fa-clock fa-fw"></i> {{ cr.generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
+        {% endif %}
+        {% if cr.is_stale %}
+            <div class="mt-1"><span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle fa-fw"></i> Stale</span></div>
+        {% endif %}
+    </div>
+{% else %}
+    <span class="badge bg-secondary">No grades</span>
+{% endif %}
+"""
+
+# language=jinja2
+_conflation_report_feedback = """
+{% set reports = cr.feedback_reports.all() %}
+{% if cr.feedback_celery_id %}
+    <div class="d-flex flex-row align-items-center gap-2">
+        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+        <span class="small text-muted">Generating&hellip;</span>
+    </div>
+{% elif cr.feedback_generation_failed %}
+    <span class="badge bg-danger"><i class="fas fa-exclamation-triangle fa-fw"></i> Generation failed</span>
+{% elif reports %}
+    <div class="d-flex flex-column gap-2">
+        {% for report in reports %}
+            <div class="d-flex flex-row align-items-start gap-2">
+                {% if report.asset is not none and report.asset.small_thumbnail is not none and not report.asset.small_thumbnail.lost %}
+                    <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=report.asset.id, size='small') }}"
+                         class="img-thumbnail" style="max-width:60px; max-height:60px;" alt="Preview">
+                {% endif %}
+                <div>
+                    {% if report.asset is not none %}
+                        <a href="{{ url_for('admin.download_generated_asset', asset_id=report.asset.id) }}"
+                           class="btn btn-xs btn-outline-secondary">
+                            <i class="fas fa-file-pdf fa-fw"></i> Download
+                        </a>
+                    {% endif %}
+                    {% if report.timestamp is not none %}
+                        <div class="small text-muted mt-1">{{ report.timestamp.strftime("%d/%m/%Y %H:%M") }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+        {% if cr.recipe %}
+            <div class="small text-muted mt-1">
+                <i class="fas fa-clipboard-list fa-fw"></i> Recipe: {{ cr.recipe }}
+            </div>
+        {% endif %}
+        {% if cr.feedback_sent %}
+            <div class="small text-success mt-1">
+                <i class="fas fa-check-circle fa-fw"></i> Sent
+                {% if cr.feedback_push_timestamp is not none %}
+                    {{ cr.feedback_push_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                {% endif %}
+                {% if cr.feedback_push_by is not none %}
+                    by {{ cr.feedback_push_by.name }}
+                {% endif %}
+            </div>
+        {% else %}
+            <span class="badge bg-primary small mt-1">
+                <i class="fas fa-hourglass-half fa-fw"></i> Not yet sent
+            </span>
+        {% endif %}
+    </div>
+{% else %}
+    <span class="badge bg-secondary">No feedback</span>
+{% endif %}
+"""
+
+# language=jinja2
+_conflation_report_menu = """
+{% set reports = cr.feedback_reports.all() %}
+{% set has_feedback = reports|length > 0 %}
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {% if cr.is_stale and not cr.feedback_sent %}
+            <form method="POST"
+                  action="{{ url_for('convenor.reconflate_conflation_report', cr_id=cr.id, url=url, text=text) }}"
+                  style="display:contents">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="dropdown-item d-flex gap-2" type="submit">
+                    <i class="fas fa-calculator fa-fw"></i> Reconflate&hellip;
+                </button>
+            </form>
+            <div class="dropdown-divider"></div>
+        {% endif %}
+        {% if has_feedback and not cr.feedback_sent %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.regenerate_conflation_report_feedback', cr_id=cr.id, url=url, text=text) }}">
+                <i class="fas fa-redo fa-fw"></i> Regenerate feedback&hellip;
+            </a>
+            <form method="POST"
+                  action="{{ url_for('convenor.delete_conflation_report_feedback', cr_id=cr.id, url=url, text=text) }}"
+                  style="display:contents"
+                  onsubmit="return confirm('Delete the generated feedback for this student? This cannot be undone.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="dropdown-item d-flex gap-2 text-danger" type="submit">
+                    <i class="fas fa-trash fa-fw"></i> Delete feedback&hellip;
+                </button>
+            </form>
+            <div class="dropdown-divider"></div>
+        {% endif %}
+        {% if cr.feedback_emails.count() > 0 %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.view_conflation_report_emails', cr_id=cr.id, url=url, text=text) }}">
+                <i class="fas fa-envelope fa-fw"></i> View emails&hellip;
+            </a>
+        {% endif %}
+    </div>
+</div>
+"""
+
+
+def conflation_report_data(event_id, crs):
+    """Format a ConflationReport row for DataTables"""
+
+    env = current_app.jinja_env
+
+    student_tmpl = env.from_string(_conflation_report_student)
+    project_tmpl = env.from_string(_conflation_report_project)
+    grades_tmpl = env.from_string(_conflation_report_grades)
+    feedback_tmpl = env.from_string(_conflation_report_feedback)
+    menu_tmpl = env.from_string(_conflation_report_menu)
+
+    from flask import url_for as _url_for
+
+    inspector_url = _url_for("convenor.marking_event_conflation_reports", event_id=event_id)
+    inspector_text = "Conflation reports"
+
+    return [
+        {
+            "student": render_template(student_tmpl, cr=cr),
+            "project": render_template(project_tmpl, cr=cr),
+            "grades": render_template(grades_tmpl, cr=cr),
+            "feedback": render_template(feedback_tmpl, cr=cr),
+            "menu": render_template(
+                menu_tmpl,
+                cr=cr,
+                url=inspector_url,
+                text=inspector_text,
+                csrf_token=generate_csrf,
+            ),
+        }
+        for cr in crs
+    ]

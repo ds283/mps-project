@@ -1,0 +1,97 @@
+{% extends "base_app.html" %}
+
+{% block title %}Feedback emails – {{ student_name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-envelope fa-fw me-1"></i>
+            Feedback emails for: <strong>{{ student_name }}</strong>
+        </h4>
+    </div>
+
+    {# Student / event summary #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Summary
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-body-secondary">Student</dt>
+                <dd class="col-sm-9">{{ student_name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Event</dt>
+                <dd class="col-sm-9">{{ event.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Period</dt>
+                <dd class="col-sm-9">{{ event.period.display_name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Feedback sent</dt>
+                <dd class="col-sm-9">
+                    {% if cr.feedback_sent %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> Yes</span>
+                        {% if cr.feedback_push_timestamp is not none %}
+                            <span class="small text-muted ms-2">{{ cr.feedback_push_timestamp.strftime("%d/%m/%Y %H:%M") }}</span>
+                        {% endif %}
+                        {% if cr.feedback_push_by is not none %}
+                            <span class="small text-muted ms-1">by {{ cr.feedback_push_by.name }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-secondary">Not yet sent</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    {% if emails %}
+        <div class="card border-primary mb-3">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-envelope fa-fw me-1"></i>
+                Email log ({{ emails|length }} email{{ 's' if emails|length != 1 else '' }})
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Subject</th>
+                            <th>Recipients</th>
+                            <th>Sent</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for email in emails %}
+                            <tr>
+                                <td class="small">{{ email.subject }}</td>
+                                <td class="small">
+                                    {% set recips = email.recipients.all() %}
+                                    {% if recips %}
+                                        {% for r in recips %}
+                                            <span class="badge bg-secondary">{{ r.name }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">No recipients recorded</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-muted">
+                                    {% if email.send_date is not none %}
+                                        {{ email.send_date.strftime("%d/%m/%Y %H:%M") }}
+                                    {% else %}
+                                        <span class="fst-italic">Not recorded</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-secondary">
+            <i class="fas fa-inbox fa-fw me-1"></i>
+            No feedback emails have been recorded for this student.
+        </div>
+    {% endif %}
+{% endblock %}

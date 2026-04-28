@@ -1118,6 +1118,55 @@ def GenerateFeedbackFormFactory(pclass_id: int):
     return GenerateFeedbackForm
 
 
+class PushFeedbackForm(Form):
+    """
+    Form for initiating a feedback push (single ConflationReport or entire MarkingEvent).
+
+    Captures:
+    - delay_hours: how many hours to defer the email send (default 1)
+    - test_email: if non-empty, send all emails to this address instead of real recipients
+    - notify_supervisors: include supervisor/responsible-supervisor roles
+    - notify_markers: include marker roles
+    - notify_moderators: include moderator roles
+    """
+
+    delay_hours = IntegerField(
+        "Send delay (hours)",
+        default=1,
+        validators=[
+            InputRequired("Please enter a delay in hours."),
+            NumberRange(min=0, max=168, message="Delay must be between 0 and 168 hours (one week)."),
+        ],
+        description="Emails will be dispatched this many hours after submission. Use 0 for immediate dispatch.",
+    )
+
+    test_email = StringField(
+        "Test email address",
+        validators=[Optional(), Length(max=256)],
+        description="If set, all emails will be sent to this address instead of the real recipients.",
+    )
+
+    notify_supervisors = BooleanField(
+        "Notify supervisors",
+        default=True,
+        description="Send feedback notification emails to supervisors and responsible supervisors.",
+    )
+
+    notify_markers = BooleanField(
+        "Notify markers",
+        default=True,
+        description="Send feedback notification emails to markers.",
+    )
+
+    notify_moderators = BooleanField(
+        "Notify moderators",
+        default=False,
+        description="Send feedback notification emails to moderators.",
+    )
+
+    submit = SubmitField("Send feedback")
+
+
 # ---- MarkingWorkflow forms ----
 
 # Role choices for MarkingWorkflow: ROLE_SUPERVISOR covers both supervisor types

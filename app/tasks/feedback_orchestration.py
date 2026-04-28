@@ -49,7 +49,8 @@ from sqlalchemy.exc import SQLAlchemyError
 import redis as redis_lib
 
 from ..database import db
-from ..models import ConflationReport, FeedbackOrchestrationJob, User
+from ..models import ConflationReport, FeedbackOrchestrationJob, MarkingEvent, User
+from ..models.markingevent import MarkingEventWorkflowStates
 from .shared.utils import report_info
 
 # ---------------------------------------------------------------------------
@@ -313,6 +314,13 @@ def register_feedback_orchestration_tasks(celery):
                     event_name = job.event.name if job.event else "unknown event"
                     recipe_label = job.recipe.label if job.recipe else "unknown recipe"
                     _notify_completion(event_name, recipe_label, total, failed, convenor)
+                    # Advance MarkingEvent to READY_TO_PUSH_FEEDBACK if all ConflationReports
+                    # now have at least one feedback PDF generated.
+                    event: Optional[MarkingEvent] = job.event
+                    if event is not None and event.workflow_state == MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK:
+                        crs = event.conflation_reports.all()
+                        if crs and all(cr.feedback_reports.count() > 0 for cr in crs):
+                            event.workflow_state = MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
                 db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
@@ -367,6 +375,21 @@ def register_feedback_orchestration_tasks(celery):
             current_app.logger.exception(
                 f"feedback_orchestration.feedback_record_error: SQLAlchemyError "
                 f"for job {job_uuid} / ConflationReport #{cr_id}",
+                exc_info=exc,
+            )
+
+        # mark this ConflationReport as failed so the inspector can surface it
+        try:
+            cr: ConflationReport = db.session.query(ConflationReport).filter_by(id=cr_id).first()
+            if cr is not None:
+                cr.feedback_generation_failed = True
+                cr.feedback_celery_id = None
+                db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception(
+                f"feedback_orchestration.feedback_record_error: failed to update "
+                f"ConflationReport #{cr_id} failure flags",
                 exc_info=exc,
             )
 

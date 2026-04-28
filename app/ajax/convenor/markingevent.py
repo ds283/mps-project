@@ -1069,6 +1069,23 @@ _period_marking_event_menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url, text=text) }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
+        {% if event.workflow_state >= READY_TO_GENERATE_FEEDBACK %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_event_conflation_reports', event_id=event.id, url=url, text=text) }}">
+                <i class="fas fa-file-contract fa-fw"></i> Conflation reports&hellip;
+            </a>
+        {% endif %}
+        {% if event.workflow_state == READY_TO_GENERATE_FEEDBACK %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}">
+                <i class="fas fa-file-pdf fa-fw"></i> Generate feedback&hellip;
+            </a>
+        {% elif event.workflow_state == READY_TO_PUSH_FEEDBACK %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}">
+                <i class="fas fa-file-pdf fa-fw"></i> Fill missing feedback&hellip;
+            </a>
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.push_marking_event_feedback', event_id=event.id) }}">
+                <i class="fas fa-paper-plane fa-fw"></i> Send feedback&hellip;
+            </a>
+        {% endif %}
         {% if event.workflow_state == WAITING %}
             {% if event.workflows.count() > 0 %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}">

@@ -1088,6 +1088,36 @@ class EditMarkingEventForm(Form, MarkingEventMixin, SaveChangesMixin):
     )
 
 
+# ---- Feedback generation forms ----
+
+
+def GenerateFeedbackFormFactory(pclass_id: int):
+    """
+    Build a form for selecting a FeedbackRecipe to use when generating feedback PDFs
+    for a MarkingEvent.  Parameterised by pclass_id so the recipe list is filtered
+    to recipes that belong to the given project class.
+    """
+    from ..models.feedback import FeedbackRecipe
+
+    def get_recipes():
+        return FeedbackRecipe.query.filter_by(pclass_id=pclass_id).order_by(FeedbackRecipe.label).all()
+
+    class GenerateFeedbackForm(Form):
+        recipe = QuerySelectField(
+            "Feedback recipe",
+            query_factory=get_recipes,
+            get_pk=lambda r: r.id,
+            get_label=lambda r: r.label,
+            allow_blank=False,
+            widget_kwargs={"selectionCssClass": "select2-small", "dropdownCssClass": "select2-small"},
+            description="Select the feedback recipe to use when generating PDF feedback documents.",
+        )
+
+        submit = SubmitField("Generate feedback")
+
+    return GenerateFeedbackForm
+
+
 # ---- MarkingWorkflow forms ----
 
 # Role choices for MarkingWorkflow: ROLE_SUPERVISOR covers both supervisor types

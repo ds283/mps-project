@@ -73,6 +73,7 @@ from .forms import (
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     EnterTurnitinScoreForm,
+    GenerateFeedbackFormFactory,
     MarkingReportPropertiesForm,
     MarkingWorkflowFormFactory,
     ResolveTurnitinForm,
@@ -442,6 +443,108 @@ def feedback_job_cancel(uuid):
         t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
         t.apply_async(queue="default")
     return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
+
+
+@convenor.route("/generate_marking_event_feedback/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def generate_marking_event_feedback(event_id):
+    """
+    Let a convenor select a FeedbackRecipe and kick off PDF generation for a MarkingEvent.
+
+    In READY_TO_GENERATE_FEEDBACK state, queues all ConflationReports.
+    In READY_TO_PUSH_FEEDBACK state, queues only those without existing feedback ("fill missing").
+    """
+    from ..models.feedback import FeedbackRecipe
+    from ..tasks.feedback_orchestration import launch_feedback_job
+
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    allowed_states = (
+        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
+    )
+    if event.workflow_state not in allowed_states:
+        flash("Feedback generation is not available for this event in its current state.", "warning")
+        return redirect(
+            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+        )
+
+    fill_missing = event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+    all_crs = event.conflation_reports.all()
+    cr_count = len(all_crs)
+
+    if fill_missing:
+        pending_crs = [cr for cr in all_crs if cr.feedback_reports.count() == 0]
+    else:
+        pending_crs = all_crs
+    pending_count = len(pending_crs)
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+    )
+    text = request.args.get("text", "Marking workflows")
+    title = "Fill missing feedback" if fill_missing else "Generate feedback"
+
+    form = GenerateFeedbackFormFactory(pclass.id)()
+
+    if form.validate_on_submit():
+        recipe: FeedbackRecipe = form.recipe.data
+        cr_ids = [cr.id for cr in pending_crs]
+
+        if not cr_ids:
+            flash("All students already have feedback documents. Nothing to generate.", "info")
+            return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+
+        try:
+            launch_feedback_job(
+                event=event,
+                recipe=recipe,
+                cr_ids=cr_ids,
+                owner=current_user,
+                convenor_id=current_user.id,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("A database error occurred while creating the feedback job. Please try again.", "error")
+            return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+
+        plural = "s" if len(cr_ids) != 1 else ""
+        flash(
+            f'Queued {len(cr_ids)} feedback PDF{plural} for generation using recipe "{recipe.label}".',
+            "success",
+        )
+        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+
+    return render_template_context(
+        "convenor/feedback/generate_feedback_form.html",
+        event=event,
+        form=form,
+        url=url,
+        text=text,
+        title=title,
+        cr_count=cr_count,
+        fill_missing=fill_missing,
+        pending_count=pending_count,
+    )
+
+
+@convenor.route("/marking_event_conflation_reports/<int:event_id>")
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
+def marking_event_conflation_reports(event_id):
+    """Placeholder — ConflationReport inspector (Task 2). Redirects to workflow inspector."""
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+
+
+@convenor.route("/push_marking_event_feedback/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def push_marking_event_feedback(event_id):
+    """Placeholder — push feedback for entire MarkingEvent (Task 3). Redirects to workflow inspector."""
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
 
 
 @convenor.route("/submitter_reports_inspector/<int:workflow_id>")
@@ -1521,8 +1624,16 @@ def event_marking_workflows_inspector(event_id):
         if event.workflow_state == MarkingEventWorkflowStates.WAITING
         else None
     )
+    generate_feedback_url = (
+        url_for("convenor.generate_marking_event_feedback", event_id=event_id)
+        if event.workflow_state in (
+            MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+            MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
+        )
+        else None
+    )
     actions = event.get_convenor_actions(
-        event_url=event_url, open_event_url=open_event_url
+        event_url=event_url, open_event_url=open_event_url, generate_feedback_url=generate_feedback_url
     )
 
     # Add per-workflow Turnitin CTAs for unresolved high-similarity scores and missing data.

@@ -269,13 +269,28 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         return self.period.config.project_class
 
     def get_convenor_actions(
-        self, event_url: Optional[str] = None, open_event_url: Optional[str] = None
+        self,
+        event_url: Optional[str] = None,
+        open_event_url: Optional[str] = None,
+        generate_feedback_url: Optional[str] = None,
     ) -> list:
         """
         Return a list of ConvenorAction items representing outstanding actions for this event.
         Extend this method as the SubmitterReport workflow grows to surface new CTA items.
         """
         actions = []
+
+        # CTA for READY_TO_GENERATE_FEEDBACK state
+        if self.workflow_state == MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK:
+            actions.append(
+                ConvenorAction(
+                    severity="success",
+                    title="Ready to generate feedback",
+                    description="Conflation is complete. Generate feedback PDFs for all students.",
+                    action_url=generate_feedback_url,
+                    action_label="Generate feedback…",
+                )
+            )
 
         # Check for SubmitterReports in READY_TO_DISTRIBUTE state with undistributed MarkingReports
         ready_count = 0
@@ -1175,6 +1190,15 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     feedback_emails = db.relationship(
         "EmailLog", secondary=conflation_report_to_email_log, lazy="dynamic"
     )
+
+    # label of the FeedbackRecipe used to generate the PDFs (archived string, not FK)
+    recipe = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+
+    # Celery task ID for an in-progress PDF generation; non-null means generation underway
+    feedback_celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+
+    # set True when the last PDF generation attempt failed
+    feedback_generation_failed = db.Column(db.Boolean(), default=False, nullable=False)
 
     @property
     def conflation_report_as_dict(self) -> dict:

@@ -59,8 +59,7 @@ from ..shared.asset_tools import (
 )
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.workflow_logging import log_db_commit
-from .feedback_orchestration import launch_feedback_job
-from .shared.utils import report_error, report_info
+from .shared.utils import report_info
 from .thumbnails import dispatch_thumbnail_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
@@ -739,90 +738,6 @@ def register_marking_tasks(celery):
 
         return {"sent": 1}
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def generate_feedback_reports(
-        self, recipe_id: int, event_id: int, convenor_id: Optional[int]
-    ):
-        """
-        Create a FeedbackOrchestrationJob for the given MarkingEvent and recipe,
-        populate the Redis queue with all ConflationReport IDs, and dispatch the
-        global coordinator.  Returns immediately; actual PDF generation is handled
-        asynchronously by the orchestration machinery.
-        """
-        try:
-            recipe: FeedbackRecipe = (
-                db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if recipe is None:
-            msg = "Could not load recipe record from database"
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        try:
-            event: MarkingEvent = (
-                db.session.query(MarkingEvent).filter_by(id=event_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if event is None:
-            msg = "Could not load marking event record from database"
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        convenor: Optional[User] = None
-        if convenor_id is not None:
-            try:
-                convenor = db.session.query(User).filter_by(id=convenor_id).first()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        pclass: ProjectClass = event.pclass
-
-        if recipe.pclass_id != pclass.id:
-            msg = (
-                f'Can not apply feedback recipe "{recipe.label}" to event "{event.name}" '
-                f'because it is not available for use on projects of class "{pclass.name}"'
-            )
-            report_error(msg, "generate_feedback_reports", convenor)
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        cr_ids = [cr.id for cr in event.conflation_reports]
-        if not cr_ids:
-            report_info(
-                f'{event.name}: No conflation reports found; nothing to generate.',
-                "generate_feedback_reports",
-                convenor,
-            )
-            return
-
-        try:
-            launch_feedback_job(
-                event=event,
-                recipe=recipe,
-                cr_ids=cr_ids,
-                owner=convenor,
-                convenor_id=convenor_id,
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        plural = "s" if len(cr_ids) != 1 else ""
-        report_info(
-            f'{event.name}: Queued {len(cr_ids)} feedback PDF{plural} for generation '
-            f'using recipe "{recipe.label}".',
-            "generate_feedback_reports",
-            convenor,
-        )
-
     def markdown_filter(input):
         return markdown.markdown(input)
 
@@ -846,6 +761,16 @@ def register_marking_tasks(celery):
         # idempotency: if feedback reports already exist, skip
         if cr.feedback_reports.count() > 0:
             return {"ignored": 1}
+
+        # record that generation is underway so the inspector can show a progress indicator
+        cr.feedback_celery_id = self.request.id
+        cr.feedback_generation_failed = False
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         try:
             recipe: FeedbackRecipe = (
@@ -1031,6 +956,10 @@ def register_marking_tasks(celery):
                 cr.feedback_sent = False
                 cr.feedback_push_id = None
                 cr.feedback_push_timestamp = None
+                # record which recipe was used and clear the in-progress marker
+                cr.recipe = recipe.label
+                cr.feedback_celery_id = None
+                cr.feedback_generation_failed = False
 
                 new_asset.grant_user(student)
                 for role in record.supervisor_roles:

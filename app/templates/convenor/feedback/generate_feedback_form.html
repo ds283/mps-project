@@ -1,0 +1,92 @@
+{% extends "base_app.html" %}
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#recipe').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: '— Select a recipe —'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-file-pdf fa-fw me-1"></i> {{ title }}
+        </h4>
+    </div>
+
+    {# Event summary card #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Event summary
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-body-secondary">Event</dt>
+                <dd class="col-sm-9">{{ event.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Period</dt>
+                <dd class="col-sm-9">{{ event.period.display_name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Students</dt>
+                <dd class="col-sm-9">{{ cr_count }}</dd>
+                {% if fill_missing %}
+                    <dt class="col-sm-3 text-body-secondary">Mode</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-primary">Fill missing only</span>
+                        &mdash; {{ pending_count }} student{{ 's' if pending_count != 1 else '' }} without feedback
+                    </dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-cogs fa-fw me-1"></i> Generation options
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+                  method="POST" name="generate_feedback_form">
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="recipe">{{ form.recipe.label.text }}</label>
+                    {% if form.recipe.description %}
+                        <div class="form-text text-body-secondary mb-1">{{ form.recipe.description }}</div>
+                    {% endif %}
+                    {{ form.recipe(id='recipe', class='form-select') }}
+                    {% if form.recipe.errors %}
+                        {% for error in form.recipe.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                {% if pending_count == 0 and fill_missing %}
+                    <div class="alert alert-success py-2">
+                        <i class="fas fa-check-circle fa-fw me-1"></i>
+                        All students already have feedback documents. There is nothing to generate.
+                    </div>
+                {% else %}
+                    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                {% endif %}
+            </form>
+        </div>
+    </div>
+{% endblock %}

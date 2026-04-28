@@ -271,7 +271,6 @@ def marking_workflow_inspector(event_id):
         propagate_form=ActionForm(),
         complete_all_form=ActionForm(),
         return_all_form=ActionForm(),
-        MarkingEventWorkflowStates=MarkingEventWorkflowStates,
         feedback_jobs=feedback_jobs,
     )
 
@@ -926,11 +925,12 @@ def push_single_cr_feedback(cr_id):
 
     if form.validate_on_submit():
         from datetime import timedelta as _td
+
         from ..tasks.push_feedback import (
-            _build_target_roles,
-            _build_student_email_item,
-            _build_faculty_email_items_for_cr,
             MAX_ATTACHMENT_SIZE,
+            _build_faculty_email_items_for_cr,
+            _build_student_email_item,
+            _build_target_roles,
         )
 
         delay_hours = form.delay_hours.data or 0

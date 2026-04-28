@@ -12,8 +12,19 @@ from flask import current_app, get_template_attribute, render_template
 from flask_wtf.csrf import generate_csrf
 from markupsafe import escape
 
-from ...models.markingevent import SubmitterReportWorkflowStates
+from ...models.markingevent import MarkingEventWorkflowStates, SubmitterReportWorkflowStates
 from ...shared.forms.wtf_validators import SchemaValidationError, parse_schema
+
+# Convenience dict injected into every render_template call so Jinja2 templates can
+# reference MarkingEventWorkflowStates constants by short name.
+_EVENT_STATES = {
+    "WAITING": MarkingEventWorkflowStates.WAITING,
+    "OPEN": MarkingEventWorkflowStates.OPEN,
+    "READY_TO_CONFLATE": MarkingEventWorkflowStates.READY_TO_CONFLATE,
+    "READY_TO_GENERATE_FEEDBACK": MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+    "READY_TO_PUSH_FEEDBACK": MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
+    "CLOSED": MarkingEventWorkflowStates.CLOSED,
+}
 
 # language=jinja2
 _marking_event_period = """
@@ -175,7 +186,7 @@ _marking_workflow_distribution = """
         <div class="text-success"><i class="fas fa-check-circle"></i> {{ distributed }} distributed</div>
     {% endif %}
     {% if not_distributed > 0 %}
-        {% if workflow.event.open and not workflow.event.closed %}
+        {% if workflow.event.workflow_state >= OPEN and workflow.event.workflow_state != CLOSED %}
             <div class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ not_distributed }} not distributed</div>
             <div class="mt-1">
                 <a href="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
@@ -415,15 +426,10 @@ _submitter_report_signoff = """
 """
 
 # language=jinja2
+# Feedback is now tracked on ConflationReport, not SubmitterReport.
+# This column is a placeholder until feedback generation is implemented in the next ticket.
 _submitter_report_feedback = """
-{% if report.feedback_sent %}
-    <div class="text-success"><i class="fas fa-check-circle"></i> Sent</div>
-    {% if report.feedback_push_timestamp is not none %}
-        <div class="small text-muted mt-1">{{ report.feedback_push_timestamp.strftime("%d/%m/%Y") }}</div>
-    {% endif %}
-{% else %}
-    <span class="badge bg-secondary">Not sent</span>
-{% endif %}
+<span class="badge bg-secondary text-muted">Via conflation</span>
 """
 
 # language=jinja2
@@ -761,7 +767,7 @@ _marking_report_actions = """
                 </button>
             </form>
         {% endif %}
-        {% if event.open and not event.closed %}
+        {% if event.workflow_state >= OPEN and event.workflow_state != CLOSED %}
             <div class="dropdown-divider"></div>
             {% if not report.distributed %}
                 <form method="POST"
@@ -840,7 +846,7 @@ def marking_workflow_data(url, text, workflows):
             "scheme": render_template(scheme_tmpl, workflow=workflow),
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow),
+            "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
             "feedback": render_template(feedback_tmpl, workflow=workflow),
             "menu": render_template(menu_tmpl, workflow=workflow, url=url, text=text),
         }
@@ -915,7 +921,7 @@ def marking_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
-            "actions": render_template(actions_tmpl, report=report),
+            "actions": render_template(actions_tmpl, report=report, **_EVENT_STATES),
         }
         for report in reports
     ]
@@ -1024,14 +1030,20 @@ _marking_scheme_menu = """
 
 # language=jinja2
 _period_marking_event_status = """
-{% if event.closed %}
-    <span class="text-secondary"><i class="fas fa-check-circle"></i> Finished</span>
-{% elif event.open %}
-    <span class="text-primary"><i class="fas fa-check-circle"></i> Marking and feedback in progress</span>
+{% if event.workflow_state == CLOSED %}
+    <span class="text-secondary"><i class="fas fa-check-circle"></i> Closed</span>
+{% elif event.workflow_state == READY_TO_PUSH_FEEDBACK %}
+    <span class="text-success"><i class="fas fa-paper-plane"></i> Ready to push feedback</span>
+{% elif event.workflow_state == READY_TO_GENERATE_FEEDBACK %}
+    <span class="text-success"><i class="fas fa-file-alt"></i> Ready to generate feedback</span>
+{% elif event.workflow_state == READY_TO_CONFLATE %}
+    <span class="text-success"><i class="fas fa-calculator"></i> Ready to conflate</span>
+{% elif event.workflow_state == OPEN %}
+    <span class="text-primary"><i class="fas fa-check-circle"></i> Open &mdash; marking in progress</span>
 {% else %}
     {% set has_workflows = event.workflows.count() > 0 %}
     {% if has_workflows %}
-        <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Pending</span>
+        <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Waiting</span>
         <div class="mt-2">
             <a href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}"
                class="btn btn-xs btn-outline-primary">
@@ -1039,7 +1051,7 @@ _period_marking_event_status = """
             </a>
         </div>
     {% else %}
-        <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Pending</span>
+        <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Waiting</span>
         <div class="mt-2">
             <span class="badge bg-secondary">No workflows configured</span>
         </div>
@@ -1057,7 +1069,7 @@ _period_marking_event_menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url, text=text) }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
-        {% if not event.open and not event.closed %}
+        {% if event.workflow_state == WAITING %}
             {% if event.workflows.count() > 0 %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}">
                     <i class="fas fa-play fa-fw"></i> Open event&hellip;
@@ -1072,7 +1084,7 @@ _period_marking_event_menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=url, text=text) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit&hellip;
         </a>
-        {% if not event.closed %}
+        {% if event.workflow_state != CLOSED %}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item d-flex gap-2 text-warning" href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}">
                 <i class="fas fa-lock fa-fw"></i> Close event&hellip;
@@ -1133,7 +1145,7 @@ def period_marking_event_data(url, text, can_delete, events):
             "period": render_template(period_tmpl, event=event),
             "name": render_template(name_tmpl, event=event, small_swatch=small_swatch),
             "workflows": render_template(workflows_tmpl, event=event),
-            "status": render_template(status_tmpl, event=event),
+            "status": render_template(status_tmpl, event=event, **_EVENT_STATES),
             "menu": render_template(
                 menu_tmpl,
                 event=event,
@@ -1141,6 +1153,7 @@ def period_marking_event_data(url, text, can_delete, events):
                 url=url,
                 text=text,
                 can_delete=can_delete,
+                **_EVENT_STATES,
             ),
         }
         for event in events
@@ -1166,7 +1179,7 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "scheme": render_template(scheme_tmpl, workflow=workflow),
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow),
+            "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
             "feedback": render_template(feedback_tmpl, workflow=workflow),
             "menu": render_template(
                 menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit

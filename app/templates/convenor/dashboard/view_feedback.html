@@ -38,7 +38,7 @@
                         <div class="d-flex flex-row justify-content-between align-items-center w-100">
                             <div><strong>{{ event.name }}</strong></div>
                             <div>
-                                {% if event.closed %}
+                                {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
                                     <span class="badge bg-secondary">Closed</span>
                                 {% else %}
                                     <span class="badge bg-success">Open</span>
@@ -72,7 +72,7 @@
                                                 {% if not mr.feedback_submitted %}
                                                     <a href="{{ url_for('convenor.submit_feedback', id=mr.id) }}"
                                                        class="btn btn-sm btn-outline-success">Submit</a>
-                                                {% elif not event.closed %}
+                                                {% elif event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
                                                     <a href="{{ url_for('convenor.unsubmit_feedback', id=mr.id) }}"
                                                        class="btn btn-sm btn-outline-secondary">Unsubmit</a>
                                                 {% endif %}

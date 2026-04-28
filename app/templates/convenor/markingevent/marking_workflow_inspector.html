@@ -69,10 +69,18 @@
                         <dd class="col-sm-7">{{ event.name }}</dd>
                         <dt class="col-sm-5 text-body-secondary">Status</dt>
                         <dd class="col-sm-7">
-                            {% if event.closed %}
+                            {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
                                 <span class="badge bg-secondary">Closed</span>
-                            {% else %}
+                            {% elif event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK %}
+                                <span class="badge bg-success">Ready to push feedback</span>
+                            {% elif event.workflow_state == MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK %}
+                                <span class="badge bg-success">Ready to generate feedback</span>
+                            {% elif event.workflow_state == MarkingEventWorkflowStates.READY_TO_CONFLATE %}
+                                <span class="badge bg-primary">Ready to conflate</span>
+                            {% elif event.workflow_state == MarkingEventWorkflowStates.OPEN %}
                                 <span class="badge bg-success">Open</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Waiting</span>
                             {% endif %}
                         </dd>
                     </dl>
@@ -96,8 +104,8 @@
         </div>
     </div>
 
-    {# Conflation and back-propagation section (shown when event is completed) #}
-    {% if event.completed %}
+    {# Conflation and back-propagation section (shown when all workflows are complete) #}
+    {% if event.workflow_state >= MarkingEventWorkflowStates.READY_TO_CONFLATE %}
         {% set targets = event.targets_as_dict %}
         {% set conflation_reports = event.conflation_reports.all() %}
         {% set any_stale = conflation_reports | selectattr('is_stale') | list | length > 0 %}
@@ -105,7 +113,7 @@
             <div class="card-header bg-success text-white d-flex flex-row align-items-center gap-2">
                 <i class="fas fa-calculator fa-fw"></i>
                 <span class="flex-grow-1">Conflation</span>
-                {% if event.completed %}
+                {% if event.workflow_state >= MarkingEventWorkflowStates.READY_TO_CONFLATE %}
                     <form method="POST"
                           action="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}"
                           class="flex-shrink-0">

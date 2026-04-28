@@ -27,9 +27,9 @@
                         <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-center gap-2">
                             <div>
                                 <span class="fw-semibold">{{ event.name }}</span>
-                                {% if event.closed %}
+                                {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
                                     <span class="badge bg-secondary ms-1">Closed</span>
-                                {% elif event.open %}
+                                {% elif event.workflow_state >= MarkingEventWorkflowStates.OPEN %}
                                     <span class="badge bg-success ms-1">Active</span>
                                 {% else %}
                                     <span class="badge bg-primary ms-1">Pending</span>

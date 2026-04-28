@@ -21,6 +21,7 @@ from ..utils import home_dashboard_url
 from ... import site_revision, site_copyright_dates
 from ...database import db
 from ...models import User, ProjectClass, ProjectClassConfig
+from ...models.markingevent import MarkingEvent, MarkingEventWorkflowStates
 
 
 def get_global_context_data():
@@ -53,6 +54,8 @@ def build_static_context_data(app):
     _static_ctx = {
         "website_revision": site_revision,
         "website_copyright_dates": site_copyright_dates,
+        "MarkingEvent": MarkingEvent,
+        "MarkingEventWorkflowStates": MarkingEventWorkflowStates,
         "branding_label": app.config.get("BRANDING_LABEL", "Not configured"),
         "branding_login_landing_string": app.config.get(
             "BRANDING_LOGIN_LANDING_STRING", "Not configured"

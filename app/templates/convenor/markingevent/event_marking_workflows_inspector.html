@@ -68,13 +68,13 @@
                     <span><i class="fas fa-info-circle fa-fw me-1"></i> Event summary</span>
                     {% if can_edit %}
                         <div class="d-flex flex-row gap-2">
-                            {% if not event.open and not event.closed %}
+                            {% if event.workflow_state == MarkingEventWorkflowStates.WAITING %}
                                 <a href="{{ url_for('convenor.open_marking_event', event_id=event.id, url=url) }}"
                                    class="btn btn-sm btn-light">
                                     <i class="fas fa-play fa-fw"></i> Open event&hellip;
                                 </a>
                             {% endif %}
-                            {% if event.open and not event.closed %}
+                            {% if event.workflow_state >= MarkingEventWorkflowStates.OPEN and event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
                                 <a href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}"
                                    class="btn btn-sm btn-warning">
                                     <i class="fas fa-lock fa-fw"></i> Close event&hellip;
@@ -97,12 +97,12 @@
                                 <dd class="col-sm-7">{{ event.name }}</dd>
                                 <dt class="col-sm-5 text-body-secondary">Status</dt>
                                 <dd class="col-sm-7">
-                                    {% if event.closed %}
+                                    {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
                                         <span class="badge bg-secondary">Closed</span>
-                                    {% elif event.open %}
+                                    {% elif event.workflow_state >= MarkingEventWorkflowStates.OPEN %}
                                         <span class="badge bg-success">Active</span>
                                     {% else %}
-                                        <span class="badge bg-primary">Pending</span>
+                                        <span class="badge bg-primary">Waiting</span>
                                     {% endif %}
                                 </dd>
                             </dl>

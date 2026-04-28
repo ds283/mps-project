@@ -34,6 +34,7 @@ from ..models import (
     DegreeType,
     FeedbackReport,
     GeneratedAsset,
+    MarkingEvent,
     MarkingReport,
     ProjectClass,
     ProjectClassConfig,
@@ -45,6 +46,7 @@ from ..models import (
     SubmittingStudent,
     User,
 )
+from ..models.markingevent import MarkingEventWorkflowStates
 from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
@@ -1201,7 +1203,9 @@ def add_role(record_id):
             _supervisor_roles = frozenset(
                 {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
             )
-            for event in period.marking_events.filter_by(closed=False).all():
+            for event in period.marking_events.filter(
+                MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED
+            ).all():
                 for workflow in event.workflows.all():
                     wf_role = workflow.role
                     if wf_role in _supervisor_roles:

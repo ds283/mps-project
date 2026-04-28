@@ -150,6 +150,64 @@ class LiveMarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     parent = db.relationship("MarkingScheme", foreign_keys=[parent_id], uselist=False)
 
 
+class MarkingEventWorkflowStates:
+    """
+    Lifecycle states for MarkingEvent instances.
+
+    STATE MACHINE
+    =============
+
+    WAITING (0)
+        Initial state.  The MarkingEvent has been created but distribution has not yet been
+        triggered.  No marking emails have been sent.  Equivalent to the old open=False flag.
+        Transitions to OPEN when the convenor opens the event.
+
+    OPEN (10)
+        The event has been formally opened: marking-notification emails have been (or are being)
+        dispatched for all constituent MarkingWorkflow instances.  Constituent MarkingWorkflow
+        instances proceed through their own trajectories independently.  Equivalent to the old
+        open=True flag.  Transitions to READY_TO_CONFLATE when all MarkingWorkflows are
+        completed (via refresh_completed()).
+
+    READY_TO_CONFLATE (20)
+        Every constituent MarkingWorkflow has workflow.completed == True (meaning every
+        SubmitterReport in every workflow is in the COMPLETED state).  The convenor can now
+        run conflation to compute ConflationReport instances.  Equivalent to the old
+        completed=True flag.  Gates access to convenor.calculate_conflation().
+
+        If a SubmitterReport is returned from COMPLETED, refresh_completed() will regress the
+        event back to OPEN and mark any existing ConflationReport instances as stale.
+
+    READY_TO_GENERATE_FEEDBACK (30)
+        Set automatically when convenor.calculate_conflation() completes successfully.
+        A full set of ConflationReport instances now exists (one per SubmissionRecord in the
+        period).  The convenor can now trigger feedback PDF generation for students.
+        Gates access to the feedback generation workflow (to be implemented).
+
+        If a SubmitterReport is returned from COMPLETED while in this state, refresh_completed()
+        regresses the event to OPEN and the stale ConflationReports must be regenerated before
+        feedback can be produced.
+
+    READY_TO_PUSH_FEEDBACK (40)
+        Set automatically (auto-advance, to be implemented) when all ConflationReport instances
+        have an attached feedback document.  Feedback push is also available from
+        READY_TO_GENERATE_FEEDBACK onwards whenever any ConflationReport has an attached feedback
+        document but feedback_sent is False — push is not gated strictly on this state.
+
+    CLOSED (100)
+        Terminal state.  Set when all ConflationReport instances have feedback_sent == True
+        (automatic), or manually by a convenor via close_marking_event().  Equivalent to the
+        old closed=True flag.  No further edits are permitted once an event is CLOSED.
+    """
+
+    WAITING = 0
+    OPEN = 10
+    READY_TO_CONFLATE = 20
+    READY_TO_GENERATE_FEEDBACK = 30
+    READY_TO_PUSH_FEEDBACK = 40
+    CLOSED = 100
+
+
 class MarkingEvent(db.Model, EditingMetadataMixin):
     """
     Represents a single marking event, such as grading of a PresentationAssessment, or grading of a students final report.
@@ -179,11 +237,11 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # name of this event; unique within the parent SubmissionPeriodRecord
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
-    # has this event been formally opened (marking distribution triggered)?
-    open = db.Column(db.Boolean(), default=False, nullable=False)
-
-    # has this event been closed?
-    closed = db.Column(db.Boolean(), default=False, nullable=False)
+    # current workflow state — see MarkingEventWorkflowStates for the full state machine description.
+    # Do not set directly; use the transition methods and refresh_completed().
+    workflow_state = db.Column(
+        db.Integer(), nullable=False, default=MarkingEventWorkflowStates.WAITING
+    )
 
     # global marking deadline for this event; individual workflows may have earlier sub-deadlines
     deadline = db.Column(db.DateTime(), nullable=True)
@@ -192,11 +250,6 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # Each expression may reference the key fields of constituent MarkingWorkflows and should evaluate to a float.
     # Form: { "target_name": "conflation_expression", ... }
     targets = db.Column(db.Text(), nullable=True)
-
-    # True when every MarkingWorkflow belonging to this event is in the completed state
-    # (i.e. all their SubmitterReports are COMPLETED).
-    # Updated atomically by routes that change MarkingWorkflow.completed; do not set directly.
-    completed = db.Column(db.Boolean(), default=False, nullable=False)
 
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
 
@@ -239,7 +292,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                         ready_count += undistributed
 
         if ready_count > 0:
-            if self.open:
+            if self.workflow_state >= MarkingEventWorkflowStates.OPEN:
                 actions.append(
                     ConvenorAction(
                         severity="warning",
@@ -287,14 +340,27 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
 
     def refresh_completed(self) -> None:
         """
-        Recompute and persist self.completed.
+        Re-evaluate workflow_state based on constituent MarkingWorkflow completion.
 
-        self.completed is True iff every MarkingWorkflow belonging to this event has
-        workflow.completed == True and there is at least one workflow.  Call this method
-        after calling workflow.refresh_completed() for any constituent workflow.
+        Advances OPEN → READY_TO_CONFLATE when all workflows are complete.
+        Regresses READY_TO_CONFLATE / READY_TO_GENERATE_FEEDBACK / READY_TO_PUSH_FEEDBACK → OPEN
+        when any workflow is no longer complete (e.g. a SubmitterReport was returned).
+
+        Call this method after calling workflow.refresh_completed() for any constituent workflow.
+        WAITING and CLOSED states are never modified by this method.
         """
         wfs = self.workflows.all()
-        self.completed = bool(wfs) and all(wf.completed for wf in wfs)
+        all_complete = bool(wfs) and all(wf.completed for wf in wfs)
+        if all_complete:
+            if self.workflow_state == MarkingEventWorkflowStates.OPEN:
+                self.workflow_state = MarkingEventWorkflowStates.READY_TO_CONFLATE
+        else:
+            if self.workflow_state in (
+                MarkingEventWorkflowStates.READY_TO_CONFLATE,
+                MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+                MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
+            ):
+                self.workflow_state = MarkingEventWorkflowStates.OPEN
 
 
 # association table of PeriodAttachment instances that should be included with each workflow
@@ -517,27 +583,13 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         )
 
 
-# association table of SubmitterReport to EmailLog, to track feedback emails
-submitter_feedback_to_email_log = db.Table(
-    "submitter_feedback_to_email_log",
+# link FeedbackReports to ConflationReports (one feedback PDF per student per MarkingEvent)
+conflation_report_to_feedback_report = db.Table(
+    "conflation_report_to_feedback_report",
     db.Column(
-        "submitter_report_id",
+        "conflation_report_id",
         db.Integer(),
-        db.ForeignKey("submitter_reports.id"),
-        primary_key=True,
-    ),
-    db.Column(
-        "email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
-)
-
-# link FeedbackReports to SubmitterReports
-submitter_report_to_feedback_report = db.Table(
-    "submitter_report_to_feedback_report",
-    db.Column(
-        "submitter_report_id",
-        db.Integer(),
-        db.ForeignKey("submitter_reports.id"),
+        db.ForeignKey("conflation_reports.id"),
         primary_key=True,
     ),
     db.Column(
@@ -545,6 +597,20 @@ submitter_report_to_feedback_report = db.Table(
         db.Integer(),
         db.ForeignKey("feedback_reports.id"),
         primary_key=True,
+    ),
+)
+
+# track feedback-push emails per ConflationReport
+conflation_report_to_email_log = db.Table(
+    "conflation_report_to_email_log",
+    db.Column(
+        "conflation_report_id",
+        db.Integer(),
+        db.ForeignKey("conflation_reports.id"),
+        primary_key=True,
+    ),
+    db.Column(
+        "email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
     ),
 )
 
@@ -749,28 +815,6 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
 
     # signed off timestamp
     signed_off_timestamp = db.Column(db.DateTime(), nullable=True)
-
-    # feedback reports
-    feedback_reports = db.relationship(
-        "FeedbackReport", secondary=submitter_report_to_feedback_report, lazy="dynamic"
-    )
-
-    # has feedback been pushed out to the student for this period?
-    feedback_sent = db.Column(db.Boolean(), default=False)
-
-    # who pushed the feedback?
-    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    feedback_push_by = db.relationship(
-        "User", foreign_keys=[feedback_push_id], uselist=False
-    )
-
-    # timestamp when feedback was sent
-    feedback_push_timestamp = db.Column(db.DateTime())
-
-    # feedback emails
-    feedback_emails = db.relationship(
-        "EmailLog", secondary=submitter_feedback_to_email_log, lazy="dynamic"
-    )
 
     # flag set when the MarkingReport grades are out of tolerance and moderation is required.
     # Set by _check_tolerance_and_grade(); cleared if a convenor resets the workflow state.
@@ -1111,6 +1155,26 @@ class ConflationReport(db.Model, EditingMetadataMixin):
 
     # True when a contributing SubmitterReport has moved out of COMPLETED since this run
     is_stale = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # generated feedback PDFs for this student (one per ConflationReport)
+    feedback_reports = db.relationship(
+        "FeedbackReport", secondary=conflation_report_to_feedback_report, lazy="dynamic"
+    )
+
+    # has feedback been pushed out to this student?
+    feedback_sent = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # who pushed the feedback?
+    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    feedback_push_by = db.relationship("User", foreign_keys=[feedback_push_id], uselist=False)
+
+    # timestamp when feedback was pushed
+    feedback_push_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    # email log entries tracking feedback-push emails
+    feedback_emails = db.relationship(
+        "EmailLog", secondary=conflation_report_to_email_log, lazy="dynamic"
+    )
 
     @property
     def conflation_report_as_dict(self) -> dict:

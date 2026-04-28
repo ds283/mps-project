@@ -14,6 +14,7 @@ import holidays
 from celery import group, states
 from flask import current_app, url_for
 from numpy import is_busday
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -22,6 +23,7 @@ from ..models import (
     EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
+    MarkingEvent,
     ProjectClass,
     ProjectClassConfig,
     StudentData,
@@ -33,6 +35,7 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
+from ..models.markingevent import MarkingEventWorkflowStates
 from ..shared.utils import get_current_year
 from ..shared.workflow_logging import log_db_commit
 
@@ -140,7 +143,12 @@ def register_attendance_tasks(celery):
                     SupervisionEvent.attendance.is_(None),
                     SupervisionEvent.mute.is_(False),
                     SupervisionEvent.prompt_sent_timestamp.is_(None),
-                    ~SubmissionPeriodRecord.marking_events.any(open=True, closed=False),
+                    ~SubmissionPeriodRecord.marking_events.any(
+                        and_(
+                            MarkingEvent.workflow_state >= MarkingEventWorkflowStates.OPEN,
+                            MarkingEvent.workflow_state < MarkingEventWorkflowStates.CLOSED,
+                        )
+                    ),
                     SubmissionPeriodRecord.closed.is_(False),
                     SubmissionRole.mute.is_(False),
                     SubmissionRole.prompt_after_event.is_(True),

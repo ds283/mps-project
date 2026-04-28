@@ -50,17 +50,14 @@ from .models import (
     EmailWorkflowItem,
     MessageOfTheDay,
     Notification,
-    User,
 )
 from .models.emails import encode_email_payload
 from .shared.context.global_context import (
     build_static_context_data,
-    get_global_context_data,
     render_template_context,
 )
-from .shared.utils import home_dashboard_url
 from .shared.workflow_logging import log_db_commit
-from .task_queue import background_task, make_celery
+from .task_queue import make_celery
 from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_markdown import Markdown
@@ -136,7 +133,7 @@ def read_configuration(app: Flask, config_name: str):
 
 
 def configure_logging(app: Flask):
-    from logging import DEBUG, INFO, Formatter, basicConfig
+    from logging import INFO, Formatter, basicConfig
     from logging.handlers import RotatingFileHandler
 
     basicConfig(level=INFO)

@@ -2217,7 +2217,15 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def is_feedback_open(self):
-        return self.marking_events.filter_by(open=True, closed=False).count() > 0
+        from .markingevent import MarkingEvent as ME, MarkingEventWorkflowStates as MEWS
+
+        return (
+            self.marking_events.filter(
+                ME.workflow_state >= MEWS.OPEN,
+                ME.workflow_state < MEWS.CLOSED,
+            ).count()
+            > 0
+        )
 
     @property
     def time_to_hand_in(self):

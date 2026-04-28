@@ -2,7 +2,7 @@
 {% from "convenor/dashboard/overview_cards/period_closed.html" import period_closed %}
 {% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity_banner %}
 {% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking_banner %}
-{% from "convenor/dashboard/overview_cards/marking_event_card.html" import marking_event_summary %}
+{% from "convenor/dashboard/overview_cards/marking_event_card.html" import marking_event_summary with context %}
 {% from "icon_block.html" import icon_block %}
 
 {% macro submitter_card(config, n, today) %}

@@ -660,7 +660,7 @@
                                         {% endif %}
                                         {% set me_total = p.marking_events.count() %}
                                         {% if me_total > 0 %}
-                                            {% set me_open = p.marking_events.filter_by(closed=False).count() %}
+                                            {% set me_open = p.marking_events.filter(MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED).count() %}
                                             <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=p.id) }}"
                                                class="text-decoration-none ms-1" title="Marking events">
                                                 {% if me_open > 0 %}

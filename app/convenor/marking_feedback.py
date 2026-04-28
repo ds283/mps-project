@@ -59,6 +59,7 @@ from ..models import (
     SupervisionEventTemplate,
     User,
 )
+from ..models.markingevent import MarkingEventWorkflowStates
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
@@ -1823,7 +1824,7 @@ def unsubmit_feedback(id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash(
             "This operation is not permitted. It is not possible to unsubmit feedback after the marking event has been closed.",
             "error",

@@ -1817,6 +1817,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         # sufficiently advanced workflow state
         from .markingevent import (
             MarkingEvent,
+            MarkingEventWorkflowStates,
             MarkingWorkflow,
             SubmitterReport,
             SubmitterReportWorkflowStates,
@@ -1824,7 +1825,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         closed_events = (
             db.session.query(MarkingEvent)
-            .filter_by(period_id=self.period_id, closed=True)
+            .filter(
+                MarkingEvent.period_id == self.period_id,
+                MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED,
+            )
             .all()
         )
         for event in closed_events:

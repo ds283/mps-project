@@ -55,6 +55,7 @@ from ..models import (
     add_notification,
 )
 from ..models.emails import encode_email_payload
+from ..models.markingevent import MarkingEventWorkflowStates
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import (
     get_count,
@@ -1305,8 +1306,9 @@ def view_feedback(id):
     period = record.period
 
     # Build list of (event, submitter_report) for closed MarkingEvents associated with this period
-    closed_events = MarkingEvent.query.filter_by(
-        period_id=record.period_id, closed=True
+    closed_events = MarkingEvent.query.filter(
+        MarkingEvent.period_id == record.period_id,
+        MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED,
     ).all()
     event_data = []
     for event in closed_events:

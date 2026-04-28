@@ -45,6 +45,7 @@ from ..models import (
 from ..models.markingevent import (
     ConflationReport,
     ConvenorAction,
+    MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
 from ..shared.asset_tools import AssetUploadManager
@@ -256,6 +257,7 @@ def marking_workflow_inspector(event_id):
         propagate_form=ActionForm(),
         complete_all_form=ActionForm(),
         return_all_form=ActionForm(),
+        MarkingEventWorkflowStates=MarkingEventWorkflowStates,
     )
 
 
@@ -1071,7 +1073,6 @@ def add_marking_event(period_id):
         event = MarkingEvent(
             period_id=period_id,
             name=form.name.data,
-            closed=False,
             deadline=form.deadline.data,
             targets="{}",
             creator_id=current_user.id,
@@ -1266,7 +1267,7 @@ def close_marking_event_confirm(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("This marking event is already closed.", "info")
         return redirect(redirect_url())
 
@@ -1310,12 +1311,12 @@ def close_marking_event(event_id):
         "url", url_for("convenor.period_marking_events_inspector", period_id=period_id)
     )
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("This marking event is already closed.", "info")
         return redirect(url)
 
     try:
-        event.closed = True
+        event.workflow_state = MarkingEventWorkflowStates.CLOSED
         event.last_edit_id = current_user.id
         event.last_edit_timestamp = datetime.now()
 
@@ -1364,12 +1365,12 @@ def event_marking_workflows_inspector(event_id):
     )
     text = request.args.get("text", "Marking events")
 
-    can_edit = not event.closed
+    can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
 
     event_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
     open_event_url = (
         url_for("convenor.open_marking_event", event_id=event_id)
-        if not event.open
+        if event.workflow_state == MarkingEventWorkflowStates.WAITING
         else None
     )
     actions = event.get_convenor_actions(
@@ -1380,7 +1381,7 @@ def event_marking_workflows_inspector(event_id):
     # Computed here (not in the model) so that url_for() can be called without
     # introducing routing knowledge into the model layer.
     # Only surface these CTAs while the event is still open.
-    if not event.closed:
+    if event.workflow_state != MarkingEventWorkflowStates.CLOSED:
         for workflow in event.workflows:
             workflow_url = url_for(
                 "convenor.submitter_reports_inspector",
@@ -1473,7 +1474,7 @@ def event_marking_workflows_ajax(event_id):
     ):
         return jsonify({"error": "Access denied"}), 403
 
-    can_edit = not event.closed
+    can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
 
     # Use the current inspector page as the return URL for row-level action links
     url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
@@ -1503,7 +1504,7 @@ def add_marking_workflow(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot add workflows to a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -1618,7 +1619,7 @@ def edit_marking_workflow(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot edit workflows in a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -1752,7 +1753,7 @@ def delete_marking_workflow(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot delete workflows from a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -1791,7 +1792,7 @@ def confirm_delete_marking_workflow(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot delete workflows from a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -1837,7 +1838,7 @@ def add_workflow_attachment(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify attachments in a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -1878,7 +1879,7 @@ def confirm_add_workflow_attachment(workflow_id, attachment_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify attachments in a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -1929,7 +1930,7 @@ def remove_workflow_attachment(workflow_id, attachment_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify attachments in a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -2035,7 +2036,12 @@ def dispatch_marking_report(report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if not event.open or event.closed:
+    if event.workflow_state not in (
+        MarkingEventWorkflowStates.OPEN,
+        MarkingEventWorkflowStates.READY_TO_CONFLATE,
+        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
+    ):
         flash(
             "Marking notifications can only be dispatched while the event is open.",
             "error",
@@ -2090,7 +2096,7 @@ def send_marking_emails_for_workflow(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot send notifications for a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -2132,7 +2138,7 @@ def send_marking_emails_for_event(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot send notifications for a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -2174,11 +2180,11 @@ def open_marking_event(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot open a marking event that has already been closed.", "error")
         return redirect(redirect_url())
 
-    if event.open:
+    if event.workflow_state != MarkingEventWorkflowStates.WAITING:
         flash("This marking event is already open.", "info")
         return redirect(redirect_url())
 
@@ -2216,18 +2222,18 @@ def open_marking_event(event_id):
 @convenor.route("/do_open_marking_event/<int:event_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def do_open_marking_event(event_id):
-    """Set event.open = True and dispatch marking emails for all workflows."""
+    """Set event.workflow_state = OPEN and dispatch marking emails for all workflows."""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot open a marking event that has already been closed.", "error")
         return redirect(redirect_url())
 
-    if event.open:
+    if event.workflow_state != MarkingEventWorkflowStates.WAITING:
         flash("This marking event is already open.", "info")
         return redirect(redirect_url())
 
@@ -2235,7 +2241,7 @@ def do_open_marking_event(event_id):
     if url is None:
         url = redirect_url()
 
-    event.open = True
+    event.workflow_state = MarkingEventWorkflowStates.OPEN
     event.last_edit_id = current_user.id
     event.last_edit_timestamp = datetime.now()
 
@@ -2292,7 +2298,7 @@ def test_marking_event(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if event.closed:
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot send test notifications for a closed marking event.", "error")
         return redirect(redirect_url())
 
@@ -2779,7 +2785,7 @@ def calculate_conflation(event_id):
         flash("Invalid request.", "error")
         return redirect(url)
 
-    if not event.completed:
+    if event.workflow_state < MarkingEventWorkflowStates.READY_TO_CONFLATE:
         flash(
             "Cannot calculate conflation: not all marking workflows are complete.", "error"
         )
@@ -2858,6 +2864,7 @@ def calculate_conflation(event_id):
             db.session.add(cr)
             generated_count += 1
 
+        event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
         log_db_commit(
             f"Calculated conflation for {generated_count} SubmissionRecord(s) in event "
             f"'{event.name}' ({pclass.name})",

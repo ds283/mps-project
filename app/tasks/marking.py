@@ -25,6 +25,7 @@ from weasyprint.text.fonts import FontConfiguration
 from ..database import db
 from ..models import (
     AssetLicense,
+    ConflationReport,
     EmailLog,
     EmailWorkflow,
     EmailWorkflowItem,
@@ -739,7 +740,7 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def generate_feedback_reports(
-        self, recipe_id: int, period_id: int, convenor_id: Optional[int]
+        self, recipe_id: int, event_id: int, convenor_id: Optional[int]
     ):
         try:
             recipe: FeedbackRecipe = (
@@ -755,15 +756,15 @@ def register_marking_tasks(celery):
             raise Exception(msg)
 
         try:
-            period: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            event: MarkingEvent = (
+                db.session.query(MarkingEvent).filter_by(id=event_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if period is None:
-            msg = "Could not load period record from database"
+        if event is None:
+            msg = "Could not load marking event record from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
@@ -775,19 +776,18 @@ def register_marking_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        config: ProjectClassConfig = period.config
-        pclass: ProjectClass = config.project_class
+        pclass: ProjectClass = event.pclass
 
-        if pclass not in recipe.project_classes:
-            msg = f'Can not apply feedback recipe "{recipe.label}" to {period.display_name} because it is not available for use on projects of class "{pclass.name}"'
+        if recipe.pclass_id != pclass.id:
+            msg = f'Can not apply feedback recipe "{recipe.label}" to event "{event.name}" because it is not available for use on projects of class "{pclass.name}"'
             report_error(msg, "generate_feedback_reports", convenor)
             current_app.logger.error(msg)
             raise Exception(msg)
 
         tasks = group(
-            generate_feedback_report.s(record.id, recipe_id, convenor_id)
-            for record in period.submissions
-        ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id)
+            generate_feedback_report.s(cr.id, recipe_id, convenor_id)
+            for cr in event.conflation_reports
+        ) | finalize_feedback_reports.s(recipe_id, event_id, convenor_id)
 
         return self.replace(tasks)
 
@@ -796,35 +796,24 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def generate_feedback_report(
-        self, record_id: int, recipe_id: int, convenor_id: Optional[int]
+        self, conflation_report_id: int, recipe_id: int, convenor_id: Optional[int]
     ):
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            cr: ConflationReport = (
+                db.session.query(ConflationReport).filter_by(id=conflation_report_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None:
-            msg = "Could not load recipe record from database"
+        if cr is None:
+            msg = f"Could not load ConflationReport id={conflation_report_id} from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        # if a feedback report has already been generated, do nothing
-        if record.feedback_generated:
+        # idempotency: if feedback reports already exist, skip
+        if cr.feedback_reports.count() > 0:
             return {"ignored": 1}
-
-        # if this SubmissionRecord does not have feedback ready to go, do nothing
-        if not record.has_feedback:
-            return {"ignored": 1}
-
-        sub: SubmittingStudent = record.owner
-        sd: StudentData = sub.student
-        student: User = sd.user
-        period: SubmissionPeriodRecord = record.period
-        config: ProjectClassConfig = period.config
-        pclass: ProjectClass = config.project_class
 
         try:
             recipe: FeedbackRecipe = (
@@ -847,91 +836,81 @@ def register_marking_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        # Download all assets needed by the recipe.
-        #
-        # note, we have to do this each time we generate a report, rather than pre-downloading them, because we don't know
-        # which container this task will run on (it might not be the container that downloaded them).
-        # If we have to pay a cost for using API calls, as in a commercial cloud, then we might prefer a different solution
-        # in which we download once, and then generate all the reports on the same container
+        record: SubmissionRecord = cr.submission_record
+        submitter: SubmittingStudent = record.owner
+        sd: StudentData = submitter.student
+        student: User = sd.user
+        period: SubmissionPeriodRecord = record.period
+        config: ProjectClassConfig = period.config
+        pclass: ProjectClass = config.project_class
+        event: MarkingEvent = cr.marking_event
+
+        # Download supporting assets needed by the recipe.
+        # We re-download each time because we don't know which worker will handle this task.
         object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
         mgr = ScratchGroupManager(folder=current_app.config.get("SCRATCH_FOLDER"))
-
-        template_asset: FeedbackAsset = recipe.template
-        template_storage: AssetCloudAdapter = AssetCloudAdapter(
-            template_asset.asset,
-            object_store,
-            audit_data="generate_feedback_reports.download_template",
-        )
-        with template_storage.download_to_scratch() as template_scratch:
-            mgr.copy("template", template_scratch.path)
 
         for asset in recipe.asset_list:
             asset: FeedbackAsset
             asset_storage: AssetCloudAdapter = AssetCloudAdapter(
                 asset.asset,
                 object_store,
-                audit_data="generate_feedback_reports.download_asset",
+                audit_data="generate_feedback_report.download_asset",
             )
             with asset_storage.download_to_scratch() as asset_scratch:
                 mgr.copy(asset.label, asset_scratch.path)
 
-        # expect to use fully qualified path names
-        template_loader = jinja2.FileSystemLoader(searchpath="/")
-        template_env = jinja2.Environment(loader=template_loader)
+        # Template body is stored in the database — no file download needed
+        template_body: str = recipe.template.template_body
+        template_env = jinja2.Environment(
+            loader=jinja2.DictLoader({"template": template_body})
+        )
 
         # add markdown filter to template environment
         template_env.filters["markdown"] = markdown_filter
 
-        # add path names for each of the assets
+        # add path names for each downloaded supporting asset
         for label, path in mgr.items():
             template_env.globals[label] = path
 
-        # add variables for marking outcomes
-        template_env.globals["supervisor_grade"] = record.supervision_grade
-        template_env.globals["report_grade"] = record.report_grade
+        # build conflation_report context variable
+        conflation_data = cr.conflation_report_as_dict
 
-        supervisor_feedback = {}
-        for role in record.supervisor_roles:
-            role: SubmissionRole
-            person: User = role.user
-            if role.submitted_feedback:
-                feedback = {}
-                if role.positive_feedback and len(role.positive_feedback) > 0:
-                    feedback["positive"] = role.positive_feedback
-                if role.improvements_feedback and len(role.improvements_feedback) > 0:
-                    feedback["improvements"] = role.improvements_feedback
-                supervisor_feedback[person.name] = feedback
+        # build workflow_data context variable, keyed by MarkingWorkflow.key
+        workflow_data = {}
+        for workflow in event.workflows:
+            if workflow.key is None:
+                continue
+            sr: SubmitterReport = workflow.submitter_reports.filter_by(record_id=record.id).first()
+            if sr is None:
+                continue
+            reports = []
+            for mr in sr.marking_reports:
+                reports.append(
+                    {
+                        "name": mr.role.user.name if mr.role and mr.role.user else None,
+                        "grade": float(mr.grade) if mr.grade is not None else None,
+                        "report": mr.report,
+                        "feedback_positive": mr.feedback_positive,
+                        "feedback_improvement": mr.feedback_improvement,
+                        "feedback_timestamp": mr.feedback_timestamp.strftime("%Y/%m/%d %H:%M")
+                        if mr.feedback_timestamp
+                        else None,
+                    }
+                )
+            workflow_data[workflow.key] = {
+                "grade": float(sr.grade) if sr.grade is not None else None,
+                "grade_generated_by": sr.grade_generated_by.name if sr.grade_generated_by else None,
+                "grade_generated_timestamp": sr.grade_generated_timestamp.strftime("%Y/%m/%d %H:%M")
+                if sr.grade_generated_timestamp
+                else None,
+                "reports": reports,
+            }
 
-        marker_feedback = {}
-        count = 1
-        for role in record.marker_roles:
-            role: SubmissionRole
-            person: User = role.user
-            if role.submitted_feedback:
-                feedback = {}
-                if role.positive_feedback and len(role.positive_feedback) > 0:
-                    feedback["positive"] = role.positive_feedback
-                if role.improvements_feedback and len(role.improvements_feedback) > 0:
-                    feedback["improvements"] = role.improvements_feedback
-                marker_feedback[count] = feedback
-                count += 1
+        template_env.globals["conflation_report"] = conflation_data
+        template_env.globals["workflow_data"] = workflow_data
 
-        template_env.globals["exam_number"] = sd.exam_number
-        template_env.globals["student_last"] = student.last_name
-        template_env.globals["student_first"] = student.first_name
-        template_env.globals["student_fullname"] = student.name
-        template_env.globals["student_email"] = student.email
-        template_env.globals["period"] = period.display_name
-        template_env.globals["pclass_name"] = pclass.name
-        template_env.globals["pclass_abbreviation"] = pclass.abbreviation
-        template_env.globals["year"] = config.year
-
-        template_env.globals["supervisor_feedback"] = supervisor_feedback
-        template_env.globals["marker_feedback"] = marker_feedback
-
-        # read in template
-        template = template_env.get_template(str(mgr.get("template")))
-
+        template = template_env.get_template("template")
         output = template.render()
 
         with ScratchFileManager(suffix=".html") as html_mgr:
@@ -949,7 +928,7 @@ def register_marking_tasks(celery):
                             """,
                     font_config=font_config,
                 )
-                pdf = HTML(filename=html_mgr.path, base_url=".").write_pdf(
+                HTML(filename=html_mgr.path, base_url=".").write_pdf(
                     pdf_mgr.path,
                     stylesheets=[
                         "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap",
@@ -976,12 +955,12 @@ def register_marking_tasks(celery):
                 )
                 db.session.add(new_asset)
 
-                object_store = current_app.config.get("OBJECT_STORAGE_FEEDBACK")
+                feedback_store = current_app.config.get("OBJECT_STORAGE_FEEDBACK")
                 with open(pdf_mgr.path, "rb") as f:
                     with AssetUploadManager(
                         new_asset,
                         data=BytesIO(f.read()),
-                        storage=object_store,
+                        storage=feedback_store,
                         audit_data=f"generate_feedback_report ({config.abbreviation}, {student.name})",
                         length=pdf_mgr.path.stat().st_size,
                         mimetype="application/pdf",
@@ -1004,9 +983,9 @@ def register_marking_tasks(celery):
                     generated_id=convenor_id,
                     timestamp=datetime.now(),
                 )
+                db.session.add(new_report)
 
                 try:
-                    db.session.add(new_asset)
                     db.session.flush()
                 except SQLAlchemyError as e:
                     db.session.rollback()
@@ -1015,12 +994,11 @@ def register_marking_tasks(celery):
                     )
                     raise self.retry()
 
-                # add to the list of feedback reports for this record (there may be more than one)
-                record.feedback_reports.append(new_report)
-
-                record.feedback_generated = True
-                record.feedback_generated_by = convenor
-                record.feedback_generated_timestamp = datetime.now()
+                # attach to the ConflationReport and reset push-state
+                cr.feedback_reports.append(new_report)
+                cr.feedback_sent = False
+                cr.feedback_push_id = None
+                cr.feedback_push_timestamp = None
 
                 new_asset.grant_user(student)
                 for role in record.supervisor_roles:
@@ -1059,7 +1037,7 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=5)
     def finalize_feedback_reports(
-        self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int]
+        self, result_data, recipe_id: int, event_id: int, convenor_id: Optional[int]
     ):
         try:
             recipe: FeedbackRecipe = (
@@ -1075,15 +1053,15 @@ def register_marking_tasks(celery):
             raise Exception(msg)
 
         try:
-            period: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            event: MarkingEvent = (
+                db.session.query(MarkingEvent).filter_by(id=event_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if period is None:
-            msg = "Could not load period record from database"
+        if event is None:
+            msg = "Could not load marking event record from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
@@ -1095,7 +1073,6 @@ def register_marking_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        # result data should be a list of lists
         reports_generated = 0
         reports_ignored = 0
 
@@ -1121,15 +1098,11 @@ def register_marking_tasks(celery):
             generated_plural = ""
         if reports_ignored == 1:
             ignored_plural = ""
-        if reports_ignored == 1:
             ignored_were = "was"
 
-        msg = f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
+        msg = f"{event.name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
         if reports_ignored > 0:
-            msg += (
-                " "
-                + f"{reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
-            )
+            msg += f" {reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
         report_info(
             msg,
             "finalize_feedback_reports",

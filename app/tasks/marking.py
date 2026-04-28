@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 
 import jinja2
 import markdown
-from celery import chain, group
+from celery import group
 from dateutil import parser
 from flask import current_app
 from pathvalidate import sanitize_filename
@@ -59,6 +59,7 @@ from ..shared.asset_tools import (
 )
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.workflow_logging import log_db_commit
+from .feedback_orchestration import launch_feedback_job
 from .shared.utils import report_error, report_info
 from .thumbnails import dispatch_thumbnail_task
 
@@ -742,6 +743,12 @@ def register_marking_tasks(celery):
     def generate_feedback_reports(
         self, recipe_id: int, event_id: int, convenor_id: Optional[int]
     ):
+        """
+        Create a FeedbackOrchestrationJob for the given MarkingEvent and recipe,
+        populate the Redis queue with all ConflationReport IDs, and dispatch the
+        global coordinator.  Returns immediately; actual PDF generation is handled
+        asynchronously by the orchestration machinery.
+        """
         try:
             recipe: FeedbackRecipe = (
                 db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
@@ -779,17 +786,42 @@ def register_marking_tasks(celery):
         pclass: ProjectClass = event.pclass
 
         if recipe.pclass_id != pclass.id:
-            msg = f'Can not apply feedback recipe "{recipe.label}" to event "{event.name}" because it is not available for use on projects of class "{pclass.name}"'
+            msg = (
+                f'Can not apply feedback recipe "{recipe.label}" to event "{event.name}" '
+                f'because it is not available for use on projects of class "{pclass.name}"'
+            )
             report_error(msg, "generate_feedback_reports", convenor)
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        tasks = group(
-            generate_feedback_report.s(cr.id, recipe_id, convenor_id)
-            for cr in event.conflation_reports
-        ) | finalize_feedback_reports.s(recipe_id, event_id, convenor_id)
+        cr_ids = [cr.id for cr in event.conflation_reports]
+        if not cr_ids:
+            report_info(
+                f'{event.name}: No conflation reports found; nothing to generate.',
+                "generate_feedback_reports",
+                convenor,
+            )
+            return
 
-        return self.replace(tasks)
+        try:
+            launch_feedback_job(
+                event=event,
+                recipe=recipe,
+                cr_ids=cr_ids,
+                owner=convenor,
+                convenor_id=convenor_id,
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        plural = "s" if len(cr_ids) != 1 else ""
+        report_info(
+            f'{event.name}: Queued {len(cr_ids)} feedback PDF{plural} for generation '
+            f'using recipe "{recipe.label}".',
+            "generate_feedback_reports",
+            convenor,
+        )
 
     def markdown_filter(input):
         return markdown.markdown(input)
@@ -1034,79 +1066,3 @@ def register_marking_tasks(celery):
         mgr.cleanup()
 
         return {"generated": 1}
-
-    @celery.task(bind=True, serializer="pickle", default_retry_delay=5)
-    def finalize_feedback_reports(
-        self, result_data, recipe_id: int, event_id: int, convenor_id: Optional[int]
-    ):
-        try:
-            recipe: FeedbackRecipe = (
-                db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if recipe is None:
-            msg = "Could not load recipe record from database"
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        try:
-            event: MarkingEvent = (
-                db.session.query(MarkingEvent).filter_by(id=event_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if event is None:
-            msg = "Could not load marking event record from database"
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        convenor: Optional[User] = None
-        if convenor_id is not None:
-            try:
-                convenor = db.session.query(User).filter_by(id=convenor_id).first()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        reports_generated = 0
-        reports_ignored = 0
-
-        if result_data is not None:
-            if isinstance(result_data, list):
-                for result in result_data:
-                    if isinstance(result, dict):
-                        if "generated" in result:
-                            reports_generated += result["generated"]
-                        if "ignored" in result:
-                            reports_ignored += result["ignored"]
-                    else:
-                        raise RuntimeError(
-                            "Expected individual results to be dictionaries"
-                        )
-            else:
-                raise RuntimeError("Expected result data to be a list")
-
-        generated_plural = "s"
-        ignored_plural = "s"
-        ignored_were = "were"
-        if reports_generated == 1:
-            generated_plural = ""
-        if reports_ignored == 1:
-            ignored_plural = ""
-            ignored_were = "was"
-
-        msg = f"{event.name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
-        if reports_ignored > 0:
-            msg += f" {reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
-        report_info(
-            msg,
-            "finalize_feedback_reports",
-            convenor,
-        )
-
-        return {"total_generated": reports_generated, "total_ignored": reports_ignored}

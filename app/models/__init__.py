@@ -59,6 +59,7 @@ from .users import *
 from .utilities import *
 from .journal import *
 from .llm_orchestration import *
+from .feedback_orchestration import *
 from .workflow_log import *
 
 ProjectLike = Union[Project, LiveProject]

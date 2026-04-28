@@ -1270,6 +1270,10 @@ class ScheduledTaskMixin:
             "app.tasks.llm_orchestration.llm_watchdog",
             "LLM orchestration watchdog — recover stalled analysis jobs",
         ),
+        (
+            "app.tasks.feedback_orchestration.feedback_watchdog",
+            "Feedback PDF orchestration watchdog — recover stalled PDF generation jobs",
+        ),
     ]
 
     task = SelectField("Task", choices=tasks_available)

@@ -48,3 +48,4 @@ from .workflow_log import register_workflow_log_tasks
 from .ai_dashboard_export import register_ai_dashboard_export_tasks
 from .language_analysis import register_language_analysis_tasks
 from .llm_orchestration import register_llm_orchestration_tasks
+from .feedback_orchestration import register_feedback_orchestration_tasks

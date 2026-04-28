@@ -330,6 +330,7 @@ def create_app():
     tasks.register_thumbnail_tasks(celery)
     tasks.register_language_analysis_tasks(celery)
     tasks.register_llm_orchestration_tasks(celery)
+    tasks.register_feedback_orchestration_tasks(celery)
     tasks.register_ai_dashboard_export_tasks(celery)
 
     use_pyinstrument = app.config.get("PROFILE_PYINSTRUMENT")

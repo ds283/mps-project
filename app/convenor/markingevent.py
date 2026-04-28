@@ -24,6 +24,7 @@ import app.ajax as ajax
 from ..database import db
 from ..models import (
     EmailTemplate,
+    FeedbackOrchestrationJob,
     LiveMarkingScheme,
     MarkingEvent,
     MarkingReport,
@@ -246,6 +247,16 @@ def marking_workflow_inspector(event_id):
             }
         )
 
+    feedback_jobs = (
+        db.session.query(FeedbackOrchestrationJob)
+        .filter(
+            FeedbackOrchestrationJob.event_id == event.id,
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+        )
+        .order_by(FeedbackOrchestrationJob.created_at.desc())
+        .all()
+    )
+
     return render_template_context(
         "convenor/markingevent/marking_workflow_inspector.html",
         event=event,
@@ -258,6 +269,7 @@ def marking_workflow_inspector(event_id):
         complete_all_form=ActionForm(),
         return_all_form=ActionForm(),
         MarkingEventWorkflowStates=MarkingEventWorkflowStates,
+        feedback_jobs=feedback_jobs,
     )
 
 
@@ -294,6 +306,142 @@ def marking_workflow_ajax(event_id):
         return handler.build_payload(
             partial(ajax.convenor.marking_workflow_data, url, text)
         )
+
+
+@convenor.route("/marking_event_feedback_jobs_status/<int:event_id>")
+@roles_accepted(
+    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
+)
+def marking_event_feedback_jobs_status(event_id):
+    """
+    AJAX polling endpoint for live progress updates on FeedbackOrchestrationJob
+    instances belonging to a MarkingEvent.  Used by the JS polling loop on the
+    marking workflow inspector page.
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.period.config.project_class
+    if not validate_is_convenor(
+        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
+    ):
+        return jsonify({"error": "Access denied"}), 403
+
+    watched_ids_param = request.args.get("ids", "")
+    watched_uuids = set(u.strip() for u in watched_ids_param.split(",") if u.strip())
+
+    active_jobs = (
+        db.session.query(FeedbackOrchestrationJob)
+        .filter(
+            FeedbackOrchestrationJob.event_id == event_id,
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+        )
+        .all()
+    )
+
+    active_uuids = {j.uuid for j in active_jobs}
+    just_finished = bool(watched_uuids and not watched_uuids.issubset(active_uuids))
+
+    jobs_data = {}
+    for job in active_jobs:
+        jobs_data[job.uuid] = {
+            "completed": job.completed_count or 0,
+            "failed": job.failed_count or 0,
+            "total": job.total_count or 0,
+            "elapsed_seconds": job.elapsed_seconds,
+        }
+
+    return jsonify(
+        {
+            "just_finished": just_finished,
+            "active_count": len(active_jobs),
+            "jobs": jobs_data,
+        }
+    )
+
+
+@convenor.route("/feedback_job_pause/<string:uuid>")
+@roles_accepted("faculty", "admin", "root", "convenor")
+def feedback_job_pause(uuid):
+    job: FeedbackOrchestrationJob = (
+        db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    event: MarkingEvent = job.event
+    if event is None:
+        flash("Could not determine the MarkingEvent for this job.", "error")
+        return redirect(redirect_url())
+    pclass = event.period.config.project_class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+    if job.is_active:
+        job.pause()
+        try:
+            log_db_commit(
+                f"Paused FeedbackOrchestrationJob {uuid}",
+                endpoint="feedback_job_pause",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
+
+
+@convenor.route("/feedback_job_resume/<string:uuid>")
+@roles_accepted("faculty", "admin", "root", "convenor")
+def feedback_job_resume(uuid):
+    job: FeedbackOrchestrationJob = (
+        db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    event: MarkingEvent = job.event
+    if event is None:
+        flash("Could not determine the MarkingEvent for this job.", "error")
+        return redirect(redirect_url())
+    pclass = event.period.config.project_class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+    if job.is_active:
+        job.resume()
+        try:
+            log_db_commit(
+                f"Resumed FeedbackOrchestrationJob {uuid}",
+                endpoint="feedback_job_resume",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        # Kick the coordinator so it picks up the resumed job immediately.
+        celery = current_app.extensions["celery"]
+        t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
+        t.apply_async(queue="default")
+    return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
+
+
+@convenor.route("/feedback_job_cancel/<string:uuid>")
+@roles_accepted("faculty", "admin", "root", "convenor")
+def feedback_job_cancel(uuid):
+    job: FeedbackOrchestrationJob = (
+        db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    event: MarkingEvent = job.event
+    if event is None:
+        flash("Could not determine the MarkingEvent for this job.", "error")
+        return redirect(redirect_url())
+    pclass = event.period.config.project_class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+    if job.is_active:
+        job.mark_failed()
+        try:
+            log_db_commit(
+                f"Cancelled FeedbackOrchestrationJob {uuid}",
+                endpoint="feedback_job_cancel",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        # Dispatch coordinator so it cleans up the Redis keys.
+        celery = current_app.extensions["celery"]
+        t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
+        t.apply_async(queue="default")
+    return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
 
 
 @convenor.route("/submitter_reports_inspector/<int:workflow_id>")

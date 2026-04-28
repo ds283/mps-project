@@ -5,8 +5,8 @@
 ### 1a: New fields on ConflationReport + Alembic migration ✅
 - Added `recipe` (String), `feedback_celery_id` (String), `feedback_generation_failed` (Boolean) columns
   to `ConflationReport` in `app/models/markingevent.py`
-- Migration: `migrations/versions/a1b2c3d4e5f6_conflation_report_feedback_fields.py`
-  (down_revision: `f5b6c7d8e9a0`)
+- Migration: `migrations/versions/f0a1b2c3d4e5_conflation_report_feedback_fields.py`
+  (revision: `f0a1b2c3d4e5`, down_revision: `c7d8e9f0a1b2`)
 
 ### 1b: Track celery_id/failed in generate_feedback_report ✅
 - `app/tasks/marking.py` — `generate_feedback_report`:

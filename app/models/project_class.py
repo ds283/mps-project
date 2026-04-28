@@ -884,7 +884,9 @@ class ProjectClassConfig(
 
     # track whether background CustomOfferHint generation has completed after Go Live
     offer_hints_generated = db.Column(db.Boolean(), default=False)
-    offer_hints_generated_timestamp = db.Column(db.DateTime(), default=None, nullable=True)
+    offer_hints_generated_timestamp = db.Column(
+        db.DateTime(), default=None, nullable=True
+    )
 
     # golive record of email notifications
     golive_notified = db.relationship("User", secondary=golive_emails, lazy="dynamic")
@@ -1826,15 +1828,18 @@ class ProjectClassConfig(
         Return all CustomOfferHints where the selector belongs to this config,
         ordered by selector student last name then first name.
         """
-        from .submissions import CustomOfferHint
         from .live_projects import SelectingStudent
         from .students import StudentData
+        from .submissions import CustomOfferHint
         from .users import User
 
         return (
             db.session.query(CustomOfferHint)
             .join(SelectingStudent, SelectingStudent.id == CustomOfferHint.selector_id)
-            .filter(SelectingStudent.config_id == self.id, SelectingStudent.retired.is_(False))
+            .filter(
+                SelectingStudent.config_id == self.id,
+                SelectingStudent.retired.is_(False),
+            )
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name, User.first_name)
@@ -2217,7 +2222,8 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def is_feedback_open(self):
-        from .markingevent import MarkingEvent as ME, MarkingEventWorkflowStates as MEWS
+        from .markingevent import MarkingEvent as ME
+        from .markingevent import MarkingEventWorkflowStates as MEWS
 
         return (
             self.marking_events.filter(
@@ -2438,89 +2444,63 @@ class SubmissionPeriodRecord(db.Model):
         return num_deployed > 0
 
     @property
-    def number_submitters_feedback_pushed(self):
-        return get_count(self.submissions.filter_by(feedback_sent=True))
+    def number_marking_events(self) -> int:
+        return self.marking_events.count()
 
     @property
-    def number_submitters_feedback_not_pushed(self):
-        from .submissions import SubmissionRole
+    def number_marking_events_closed(self) -> int:
+        from .markingevent import MarkingEvent, MarkingEventWorkflowStates
 
-        count = 0
-        for record in self.submissions:
-            record: SubmissionRecord
+        return self.marking_events.filter(
+            MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED
+        ).count()
 
-            if record.has_feedback_to_push:
-                if not record.feedback_sent:
-                    count += 1
-                    continue
+    def _number_workflows_for_role(self, role: int) -> int:
+        from .markingevent import MarkingEvent, MarkingWorkflow
 
-                role_available = 0
-                for role in record.roles:
-                    role: SubmissionRole
-
-                    if role.role in [
-                        SubmissionRole.ROLE_SUPERVISOR,
-                        SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                        SubmissionRole.ROLE_MARKER,
-                    ]:
-                        if role.submitted_feedback and not role.feedback_sent:
-                            role_available = 1
-                            break
-
-                if role_available > 0:
-                    count += 1
-                    continue
-
-        return count
-
-    @property
-    def number_submitters_feedback_not_generated(self):
-        count = 0
-        for record in self.submissions:
-            record: SubmissionRecord
-
-            if record.has_feedback and not record.feedback_generated:
-                count += 1
-                continue
-
-        return count
-
-    def _number_submitters_with_role_feedback(self, allowed_roles):
-        count = 0
-        for record in self.submissions:
-            record: SubmissionRecord
-
-            for role in record.roles:
-                role: SubmissionRole
-
-                if role.role in allowed_roles and role.submitted_feedback:
-                    count += 1
-                    break
-
-        return count
-
-    @property
-    def number_submitters_supervisor_feedback(self):
-        from .submissions import SubmissionRole
-
-        return self._number_submitters_with_role_feedback(
-            [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]
+        return (
+            db.session.query(MarkingWorkflow)
+            .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
+            .filter(MarkingEvent.period_id == self.id, MarkingWorkflow.role == role)
+            .count()
         )
 
     @property
-    def number_submitters_marker_feedback(self):
-        from .submissions import SubmissionRole
-
-        return self._number_submitters_with_role_feedback([SubmissionRole.ROLE_MARKER])
+    def number_supervisor_workflows(self) -> int:
+        return self._number_workflows_for_role(SubmissionRoleTypesMixin.ROLE_SUPERVISOR)
 
     @property
-    def number_submitters_presentation_feedback(self):
-        from .submissions import SubmissionRecord
+    def number_marker_workflows(self) -> int:
+        return self._number_workflows_for_role(SubmissionRoleTypesMixin.ROLE_MARKER)
 
-        return get_count(
-            self.submissions.filter(
-                SubmissionRecord.presentation_feedback.any(submitted=True)
+    @property
+    def number_presentation_assessor_workflows(self) -> int:
+        return self._number_workflows_for_role(
+            SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR
+        )
+
+    @property
+    def number_submitted_moderator_reports(self) -> int:
+        from .markingevent import (
+            MarkingEvent,
+            MarkingWorkflow,
+            ModeratorReport,
+            SubmitterReport,
+        )
+
+        return (
+            db.session.query(ModeratorReport)
+            .join(
+                SubmitterReport,
+                SubmitterReport.id == ModeratorReport.submitter_report_id,
             )
+            .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+            .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
+            .filter(
+                MarkingEvent.period_id == self.id,
+                ModeratorReport.report_submitted.is_(True),
+            )
+            .count()
         )
 
     @property

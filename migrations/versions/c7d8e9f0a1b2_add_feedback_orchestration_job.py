@@ -10,7 +10,7 @@
 
 """Add feedback_orchestration_job table
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: c7d8e9f0a1b2
 Revises: f5b6c7d8e9a0
 Create Date: 2026-04-28
 
@@ -20,7 +20,7 @@ to track bulk feedback PDF generation jobs orchestrated via Redis.
 from alembic import op
 import sqlalchemy as sa
 
-revision = "a1b2c3d4e5f6"
+revision = "c7d8e9f0a1b2"
 down_revision = "f5b6c7d8e9a0"
 branch_labels = None
 depends_on = None

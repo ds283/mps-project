@@ -439,7 +439,7 @@ def download_submitted_asset(asset_id):
     # attachment may be 'None' if this is an asset that does not have a specific attachment record, e.g., the
     # unprocessed report is usually of this type
 
-    # if an attachment record is available, check its 'publish_to_students' flag
+    # if an attachment record is available, check role-based access
     if attachment is not None:
         if current_user.has_role("student") and not attachment.has_role_access(SubmissionRoleTypesMixin.ROLE_STUDENT):
             # give no indication that this asset actually exists

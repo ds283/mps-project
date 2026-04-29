@@ -2828,11 +2828,6 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     # textual description of attachment
     description = db.Column(db.Text())
 
-    # LEGACY boolean flags — retained for data migration; replaced by role_records below
-    publish_to_students = db.Column(db.Boolean(), default=False)
-    include_marker_emails = db.Column(db.Boolean(), default=False)
-    include_supervisor_emails = db.Column(db.Boolean(), default=False)
-
     # role-based access control
     role_records = db.relationship(
         "SubmissionAttachmentRole",
@@ -2922,15 +2917,6 @@ class PeriodAttachment(db.Model):
         uselist=False,
         backref=db.backref("period_attachment", uselist=False),
     )
-
-    # publish to students (LEGACY — retained for data migration; use role_records instead)
-    publish_to_students = db.Column(db.Boolean(), default=False)
-
-    # include in marking notification emails sent to examiners? (LEGACY — retained for data migration)
-    include_marker_emails = db.Column(db.Boolean(), default=False)
-
-    # include in marking notification emails sent to project supervisors? (LEGACY — retained for data migration)
-    include_supervisor_emails = db.Column(db.Boolean(), default=False)
 
     # textual description of attachment
     description = db.Column(db.Text())

@@ -1397,9 +1397,6 @@ def enter_turnitin_score(record_id):
                     attachment_id=asset.id,
                     description="Turnitin similarity report",
                     type=SubmissionAttachment.ATTACHMENT_SIMILARITY_REPORT,
-                    publish_to_students=False,
-                    include_marker_emails=False,
-                    include_supervisor_emails=False,
                 )
                 db.session.add(attachment)
 

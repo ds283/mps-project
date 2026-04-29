@@ -220,10 +220,12 @@
                     </div>
                     <div class="card-body">
                         {% if attendance_total %}
-                            <div class="text-primary fw-semibold mb-2">
-                                Attendance: {{ attendance_recorded }}/{{ attendance_total }}
+                            <div class="text-secondary fs-2 mb-2">
+                                Attendance:
                                 {% if attendance_percent is not none %}
-                                    <span class="fs-4">{{ attendance_percent | round(0) | int }}%)</span>{% endif %}
+                                    <span class="fw-semibold text-primary">{{ attendance_percent | round(0) | int }}%</span>
+                                {% endif %}
+                                {{ attendance_recorded }}/{{ attendance_total }}
                             </div>
                         {% endif %}
                         <div class="d-flex flex-row flex-wrap gap-2">

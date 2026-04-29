@@ -4064,7 +4064,15 @@ def register_matching_tasks(celery):
 
             # ignore periods that are retired, closed, or have open feedback; the markers for these
             # cannot be changed
-            if period.retired or period.closed or period.is_feedback_open:
+            from ..models.markingevent import MarkingEvent as _ME, MarkingEventWorkflowStates as _MEWS
+
+            _feedback_open = (
+                period.marking_events.filter(
+                    _ME.workflow_state >= _MEWS.OPEN, _ME.workflow_state < _MEWS.CLOSED
+                ).count()
+                > 0
+            )
+            if period.retired or period.closed or _feedback_open:
                 period_data.update({"action": "ignore"})
                 payload.update(period_data)
                 continue
@@ -4818,10 +4826,6 @@ def register_matching_tasks(celery):
                     turnitin_web_overlap=None,
                     turnitin_publication_overlap=None,
                     turnitin_student_overlap=None,
-                    feedback_generated=False,
-                    feedback_sent=False,
-                    feedback_push_id=None,
-                    feedback_push_timestamp=None,
                 )
 
                 db.session.add(new_sr)

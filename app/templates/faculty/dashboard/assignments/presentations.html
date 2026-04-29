@@ -32,7 +32,6 @@
                         <tbody>
                         {% for role in slot_roles %}
                             {% set talk = role.submission %}
-                            {% set uses_feedback = role.uses_presentation_feedback %}
                             <tr>
                                 <td>
                                     <a class="text-decoration-none"
@@ -47,16 +46,6 @@
                                        href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                         {{ talk.project.name }} (No. {{ talk.project.number }})
                                     </a>
-                                    {% if uses_feedback %}
-                                        <div>
-                                            {% if role.submitted_feedback %}
-                                                <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
-                                            {% elif not slot.owner.owner.is_feedback_open %}
-                                                <span class="badge bg-warning text-dark"><i
-                                                        class="fas fa-times"></i> Feedback missing</span>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
                                 </td>
                                 <td>
                                     <div style="text-align: right;" class="float-end">

@@ -25,7 +25,7 @@
         {% if n+1 == config.submission_period %}
             {% if period.closed %}
                 {# no markup required; formerly panel-default #}
-            {% elif period.is_feedback_open %}
+            {% elif period.has_active_marking_event %}
                 {% set ns.bgclass = 'bg-primary' %}
                 {% set ns.borderclass = 'border-primary' %}
                 {% set ns.textclass = 'text-white' %}
@@ -62,12 +62,11 @@
                         {% endcall %}
                     </div>
                 {% else %}
-                    {% if period.is_feedback_open %}
+                    {% if period.has_active_marking_event %}
                         {% if not is_sabbatical or not is_exempt %}
                             <div class="alert alert-warning mt-1 mb-2">
                                 {% call icon_block("info-circle") %}
-                                    <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
-                                    <div class="mt-1">Please enter feedback for each project you supervise or assess.</div>
+                                    <div><strong>Marking for this submission period is now underway.</strong></div>
                                 {% endcall %}
                             </div>
                         {% endif %}

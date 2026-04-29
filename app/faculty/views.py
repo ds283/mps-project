@@ -48,7 +48,6 @@ from ..models import (
     ProjectDescription,
     ProjectDescriptionWorkflowHistory,
     ResearchGroup,
-    ScheduleSlot,
     SelectingStudent,
     SkillGroup,
     StudentData,
@@ -90,10 +89,7 @@ from ..shared.validators import (
     validate_edit_project,
     validate_is_convenor,
     validate_is_project_owner,
-    validate_presentation_assessor,
     validate_project_open,
-    validate_submission_role,
-    validate_submission_supervisor,
     validate_submission_viewable,
     validate_using_assessment,
     validate_view_project,
@@ -112,8 +108,6 @@ from .forms import (
     FacultySettingsFormFactory,
     MoveDescriptionFormFactory,
     SkillSelectorForm,
-    SubmissionRoleFeedbackForm,
-    SubmissionRoleResponseForm,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -2011,8 +2005,6 @@ def dashboard():
                     moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
 
     # Find pending marking reports for this user (distributed but not yet closed)
-    from sqlalchemy import and_
-
     pending_marking_reports = (
         db.session.query(MarkingReport)
         .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
@@ -2403,371 +2395,6 @@ def past_projects_ajax():
 
     return ajax.faculty.pastproject_data(past_projects)
 
-
-@faculty.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
-@roles_required("faculty")
-def edit_feedback(id):
-    # id is a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to edit feedback for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_submission_role(
-        role, allow_roles=["supervisor", "marker", "moderator"]
-    ):
-        return redirect(redirect_url())
-
-    period: SubmissionPeriodRecord = record.period
-
-    if not period.is_feedback_open:
-        flash(
-            "It is not yet possible to edit feedback for this submission because the convenor has not "
-            "opened this submission period for feedback and marking.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and role.submitted_feedback:
-        flash(
-            "It is not possible to edit feedback after the convenor has closed this submission period.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    form = SubmissionRoleFeedbackForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        role.positive_feedback = form.positive_feedback.data
-        role.improvements_feedback = form.improvement_feedback.data
-
-        if role.submitted_feedback:
-            role.feedback_timestamp = datetime.now()
-
-        try:
-            log_db_commit(
-                f"Saved feedback for submission by {record.student_identifier['label']} "
-                f"(role: {role.role_label})",
-                user=current_user,
-                project_classes=period.config.project_class,
-            )
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash(
-                "Could not save feedback due to a database error. Please contact a system administrator.",
-                "error",
-            )
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.positive_feedback.data = role.positive_feedback
-            form.improvement_feedback.data = role.improvements_feedback
-
-    return render_template_context(
-        "faculty/dashboard/edit_feedback.html",
-        form=form,
-        title="Edit feedback",
-        unique_id="role-{id}".format(id=role.id),
-        formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
-        "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
-        submit_url=url_for("faculty.edit_feedback", id=id, url=url),
-        period=period,
-        record=role,
-    )
-
-
-@faculty.route("/submit_feedback/<int:id>")
-@roles_required("faculty")
-def submit_feedback(id):
-    # id is a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to submit feedback for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_submission_role(
-        role, allow_roles=["supervisor", "marker", "moderator"]
-    ):
-        return redirect(redirect_url())
-
-    record: SubmissionRecord = role.submission
-    period: SubmissionPeriodRecord = record.period
-
-    if not period.is_feedback_open:
-        flash(
-            "It is not yet possible to submit feedback for this submission because the convenor has not "
-            "opened this submission period for feedback and marking.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and role.submitted_feedback:
-        flash(
-            "It is not possible to submit feedback after the convenor has closed this submission period.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    if not role.feedback_valid:
-        flash(
-            "It is not yet possible to submit your feedback because it is incomplete. Please ensure that you "
-            "have provided responses for each category.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    if role.submitted_feedback:
-        return redirect(redirect_url())
-
-    try:
-        role.submitted_feedback = True
-        role.feedback_timestamp = datetime.now()
-
-        log_db_commit(
-            f"Submitted feedback for submission by {record.student_identifier['label']} "
-            f"(role: {role.role_label})",
-            user=current_user,
-            project_classes=period.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(
-            "Could not submit feedback due to a database error. Please contact a system administrator.",
-            "error",
-        )
-
-    return redirect(redirect_url())
-
-
-@faculty.route("/unsubmit_feedback/<int:id>")
-@roles_required("faculty")
-def unsubmit_feedback(id):
-    # id is a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to unsubmit feedback for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_submission_role(
-        role, allow_roles=["supervisor", "marker", "moderator"]
-    ):
-        return redirect(redirect_url())
-
-    record: SubmissionRecord = role.submission
-    period: SubmissionPeriodRecord = record.period
-
-    if not role.submitted_feedback:
-        flash(
-            "Your feedback has not yet been submitted, and cannot be unsubmitted.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and role.submitted_feedback:
-        flash(
-            "It is not possible to unsubmit after the feedback period has closed.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    try:
-        role.submitted_feedback = False
-        role.feedback_timestamp = None
-
-        log_db_commit(
-            f"Unsubmitted feedback for submission by {record.student_identifier['label']} "
-            f"(role: {role.role_label})",
-            user=current_user,
-            project_classes=period.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(
-            "Could not unsubmit feedback due to a database error. Please contact a system administrator.",
-            "error",
-        )
-
-    return redirect(redirect_url())
-
-
-@faculty.route("/view_feedback/<int:id>")
-@roles_required("faculty")
-def view_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
-
-    if not validate_submission_viewable(record):
-        return redirect(redirect_url())
-
-    url = request.args.get("url", None)
-    text = request.args.get("text", None)
-    if url is None:
-        url = redirect_url()
-
-    preview = request.args.get("preview", None)
-
-    return render_template_context(
-        "faculty/dashboard/view_feedback.html",
-        record=record,
-        text=text,
-        url=url,
-        preview=preview,
-    )
-
-
-@faculty.route("/edit_response/<int:id>", methods=["GET", "POST"])
-@roles_accepted("faculty")
-def edit_response(id):
-    # id identifies a SubmissionRole instance
-    role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to edit a response to the submitted for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_submission_role(role, allow_roles=["supervisor"]):
-        return redirect(redirect_url())
-
-    period: SubmissionPeriodRecord = record.period
-
-    if not period.closed:
-        flash(
-            "It is only possible to respond to feedback from the submitter when "
-            "their own marks and feedback are available. "
-            "Try again when this submission period is closed.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and role.submitted_response:
-        flash(
-            "It is not possible to edit your response once it has been submitted",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    form = SubmissionRoleResponseForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        role.response = form.feedback.data
-
-        try:
-            log_db_commit(
-                f"Saved response to student feedback for submission by {record.student_identifier['label']}",
-                user=current_user,
-                project_classes=period.config.project_class,
-            )
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash(
-                "Could not save response due to a database error. Please contact a system administrator.",
-                "error",
-            )
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.feedback.data = role.response
-
-    return render_template_context(
-        "faculty/dashboard/edit_response.html",
-        form=form,
-        record=role,
-        submit_url=url_for("faculty.edit_response", id=id, url=url),
-        url=url,
-    )
-
-
-@faculty.route("/submit_response/<int:id>")
-@roles_accepted("faculty")
-def submit_response(id):
-    # id identifies a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to submit a response to the submitter for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_submission_role(role, allow_roles=["supervisor"]):
-        return redirect(redirect_url())
-
-    period: SubmissionPeriodRecord = record.period
-
-    if role.submitted_response:
-        return redirect(redirect_url())
-
-    if not period.closed:
-        flash(
-            "It is only possible to respond to feedback from the submitter when "
-            "their own marks and feedback are available. "
-            "Try again when this submission period is closed.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if not role.response_valid:
-        flash(
-            "Your response cannot be submitted because it is incomplete. Please ensure that you have provided responses for each category.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    try:
-        role.submitted_response = True
-        role.response_timestamp = datetime.now()
-
-        log_db_commit(
-            f"Submitted response to student feedback for submission by {record.student_identifier['label']}",
-            user=current_user,
-            project_classes=period.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(
-            "Could not submit response due to a database error. Please contact a system administrator.",
-            "error",
-        )
-
-    return redirect(redirect_url())
 
 
 @faculty.route("/set_availability/<int:id>", methods=["GET", "POST"])
@@ -3238,6 +2865,82 @@ def settings():
         data=fd,
         enable_canvas=main_config.enable_canvas_sync and fd.is_convenor,
         enable_box=bool(current_app.config.get("BOX_CLIENT_ID")),
+    )
+
+
+@faculty.route("/view_feedback/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def view_feedback(id):
+    """
+    Allow a faculty member to view feedback for a SubmissionRecord, provided they hold a
+    SubmissionRole on that record (i.e. they are a supervisor, marker, or moderator).
+    """
+    from ..models.markingevent import (
+        MarkingEventWorkflowStates,
+        MarkingWorkflow,
+        SubmitterReport,
+        SubmitterReportWorkflowStates,
+    )
+
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+    if url is None:
+        url = redirect_url()
+
+    # Check that the logged-in user holds a SubmissionRole on this record
+    role = SubmissionRole.query.filter_by(
+        submission_id=record.id, user_id=current_user.id
+    ).first()
+    if role is None:
+        flash(
+            "You do not have permission to view feedback for this submission. "
+            "Feedback is only available to members of staff with a supervising or "
+            "assessing role on this project.",
+            "error",
+        )
+        return redirect(url)
+
+    if not record.has_feedback:
+        flash(
+            "Feedback is not yet available for this submission.",
+            "info",
+        )
+        return redirect(url)
+
+    period = record.period
+
+    # Build list of (event, submitter_report) for closed MarkingEvents associated with this period
+    closed_events = MarkingEvent.query.filter(
+        MarkingEvent.period_id == record.period_id,
+        MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED,
+    ).all()
+    event_data = []
+    for event in closed_events:
+        sr = (
+            record.submitter_reports.join(
+                MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
+            )
+            .filter(MarkingWorkflow.event_id == event.id)
+            .first()
+        )
+        if sr is not None:
+            event_data.append((event, sr))
+
+    return render_template_context(
+        "student/dashboard/view_feedback.html",
+        record=record,
+        period=period,
+        event_data=event_data,
+        FEEDBACK_AVAILABLE=SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+        ROLE_SUPERVISOR=MarkingReport.ROLE_SUPERVISOR,
+        ROLE_RESPONSIBLE_SUPERVISOR=MarkingReport.ROLE_RESPONSIBLE_SUPERVISOR,
+        ROLE_PRESENTATION_ASSESSOR=MarkingReport.ROLE_PRESENTATION_ASSESSOR,
+        ROLE_MARKER=MarkingReport.ROLE_MARKER,
+        ROLE_MODERATOR=MarkingReport.ROLE_MODERATOR,
+        text=text,
+        url=url,
     )
 
 

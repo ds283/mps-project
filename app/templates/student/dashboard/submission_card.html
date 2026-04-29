@@ -8,7 +8,7 @@
             {% if period.closed %}
                 {% set ns.bgclass = 'bg-light' %}
                 {% set ns.borderclass = 'border-secondary' %}
-            {% elif period.is_feedback_open %}
+            {% elif period.has_active_marking_event %}
                 {% set ns.bgclass = 'bg-info' %}
                 {% set ns.borderclass = 'border-info' %}
                 {% set ns.textclass = 'text-white' %}
@@ -45,7 +45,7 @@
                         {% endcall %}
                     </div>
                 {% else %}
-                    {% if period.is_feedback_open %}
+                    {% if period.has_active_marking_event %}
                         <div class="alert alert-info mt-1 mb-2">
                             {% call icon_block("info-circle") %}
                                 <div><strong>Marking and feedback for this submission period is now underway.</strong></div>

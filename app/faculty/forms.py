@@ -29,7 +29,6 @@ from ..shared.forms.mixins import (
     EditUserNameMixin,
     EmailSettingsMixin,
     FacultyDataMixinFactory,
-    FeedbackMixin,
     FirstLastNameMixin,
     OnlineServicesMixinFactory,
     SaveChangesMixin,
@@ -473,30 +472,6 @@ def FacultyPreviewFormFactory(project_id, show_selector):
         pass
 
     return DescriptionSelectorForm
-
-
-class SubmissionRoleFeedbackForm(Form, FeedbackMixin):
-    pass
-
-
-class MarkerFeedbackForm(Form, FeedbackMixin):
-    pass
-
-
-class SubmissionRoleResponseMixin:
-    feedback = TextAreaField(
-        "Enter your response",
-        render_kw={"rows": 5},
-        description="Your feedback can be structured using Markdown, or use LaTeX formatting "
-        "and mathematical markup. Preview by looking at the feedback page for this "
-        "project.",
-    )
-
-    submit = SubmitField("Save changes")
-
-
-class SubmissionRoleResponseForm(Form, SubmissionRoleResponseMixin):
-    pass
 
 
 def FacultySettingsFormFactory(user=None, current_user=None, enable_canvas=False):

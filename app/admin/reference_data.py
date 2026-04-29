@@ -2707,10 +2707,6 @@ def regenerate_period_records(id):
                 turnitin_web_overlap=None,
                 turnitin_publication_overlap=None,
                 turnitin_student_overlap=None,
-                feedback_generated=False,
-                feedback_sent=False,
-                feedback_push_id=None,
-                feedback_push_timestamp=None,
             )
             db.session.add(sub_record)
 

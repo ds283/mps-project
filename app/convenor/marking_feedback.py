@@ -32,9 +32,6 @@ import app.ajax as ajax
 from app.convenor import convenor
 
 from ..database import db
-from ..faculty.forms import (
-    SubmissionRoleFeedbackForm,
-)
 from ..models import (
     EnrollmentRecord,
     FacultyData,
@@ -86,6 +83,16 @@ from .forms import (
     EditSupervisionEventTemplateFormFactory,
     ManualAssignFormFactory,
 )
+
+
+def _period_has_open_marking_event(period) -> bool:
+    return (
+        period.marking_events.filter(
+            MarkingEvent.workflow_state >= MarkingEventWorkflowStates.OPEN,
+            MarkingEvent.workflow_state < MarkingEventWorkflowStates.CLOSED,
+        ).count()
+        > 0
+    )
 
 
 @convenor.route("/audit_matches/<int:pclass_id>")
@@ -1316,7 +1323,7 @@ def manual_assign():
         text=text,
         form=form,
         submitter=submitter,
-        allow_reassign_project=rec.project_id is None or not period.is_feedback_open,
+        allow_reassign_project=rec.project_id is None or not _period_has_open_marking_event(period),
     )
 
 
@@ -1382,7 +1389,7 @@ def assign_revert(id):
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
-    if rec.period.is_feedback_open:
+    if _period_has_open_marking_event(rec.period):
         flash(
             "Can not revert assignment for {name} because feedback is already open".format(
                 name=rec.period.display_name
@@ -1472,7 +1479,7 @@ def assign_from_selection(id, sel_id):
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
-    if rec.period.is_feedback_open:
+    if _period_has_open_marking_event(rec.period):
         flash(
             "Can not reassign for {name} because feedback is already open".format(
                 name=rec.period.display_name
@@ -1553,7 +1560,7 @@ def assign_liveproject(id, pid):
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
-    if rec.period.is_feedback_open:
+    if _period_has_open_marking_event(rec.period):
         flash(
             "Can not reassign for {name} because feedback is already open".format(
                 name=rec.period.display_name
@@ -1640,7 +1647,7 @@ def deassign_project(id):
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
-    if rec.period.is_feedback_open:
+    if _period_has_open_marking_event(rec.period):
         flash(
             "Can not de-assign project for {name} because feedback is already open".format(
                 name=rec.period.display_name
@@ -1683,72 +1690,16 @@ def deassign_project(id):
     return redirect(redirect_url())
 
 
-@convenor.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
+@convenor.route("/edit_feedback/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def edit_feedback(id):
-    # id is a MarkingReport instance
-    report: MarkingReport = MarkingReport.query.get_or_404(id)
-    sr: SubmitterReport = report.submitter_report
-    record: SubmissionRecord = sr.record
-    pclass = sr.workflow.event.pclass
-
-    if record.retired:
-        flash(
-            "It is not possible to edit feedback for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_is_convenor(pclass):
-        return redirect(redirect_url())
-
-    period: SubmissionPeriodRecord = record.period
-    form = SubmissionRoleFeedbackForm(request.form)
-
+    # Delegate to faculty.edit_marking_feedback, which handles both role-owners and
+    # elevated convenor/admin/root access.
     url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        report.feedback_positive = form.positive_feedback.data
-        report.feedback_improvement = form.improvement_feedback.data
-
-        if report.feedback_submitted:
-            report.feedback_timestamp = datetime.now()
-
-        try:
-            log_db_commit(
-                f'Saved feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
-                user=current_user,
-                project_classes=pclass,
-            )
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash(
-                "Could not save feedback due to a database error. Please contact a system administrator.",
-                "error",
-            )
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.positive_feedback.data = report.feedback_positive
-            form.improvement_feedback.data = report.feedback_improvement
-
-    return render_template_context(
-        "faculty/dashboard/edit_feedback.html",
-        form=form,
-        title="Edit feedback",
-        unique_id=f"report-{id}",
-        formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
-        "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
-        submit_url=url_for("convenor.edit_feedback", id=id, url=url),
-        period=period,
-        record=report,
-        dont_show_warnings=True,
-    )
+    kwargs = {"report_id": id}
+    if url is not None:
+        kwargs["url"] = url
+    return redirect(url_for("faculty.edit_marking_feedback", **kwargs))
 
 
 @convenor.route("/submit_feedback/<int:id>")

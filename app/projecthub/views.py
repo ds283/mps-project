@@ -44,7 +44,7 @@ from ..models.model_mixins import SubmissionRoleTypesMixin
 from ..shared.context.global_context import render_template_context
 from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import redirect_url
-from ..shared.validators import validate_is_convenor, validate_submission_role
+from ..shared.validators import validate_is_convenor
 from ..tools import ServerSideSQLHandler
 from . import projecthub
 from .forms import (

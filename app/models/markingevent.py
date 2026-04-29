@@ -886,6 +886,23 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     def student(self) -> StudentData:
         return self.record.owner.student
 
+    @property
+    def feedback_reports(self):
+        """
+        Return the feedback report PDFs for this student via the corresponding ConflationReport
+        for the same (event, record) pair.  Returns a lazy dynamic query supporting .all() and
+        .first(); returns an empty query when no ConflationReport exists.
+        """
+        from .feedback import FeedbackReport
+
+        cr = ConflationReport.query.filter_by(
+            marking_event_id=self.workflow.event_id,
+            submission_record_id=self.record_id,
+        ).first()
+        if cr is not None:
+            return cr.feedback_reports
+        return db.session.query(FeedbackReport).filter(False)
+
 
 # association table linking MarkingReport instances (for ROLE_SUPERVISOR) to the
 # ROLE_RESPONSIBLE_SUPERVISOR SubmissionRole instances that must sign them off

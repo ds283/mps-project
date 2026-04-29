@@ -1,4 +1,3 @@
-{% from "convenor/workload/_macros.html" import feedback_state_tag %}
 {% macro project_tag(rec, show_period) %}
     {% set r = rec.submission %}
     {% set sub = r.owner %}
@@ -17,7 +16,7 @@
                    {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
                     <i class="fas fa-comments fa-fw"></i> Show feedback
                 </a>
-                {% set no_reassign = r.period.is_feedback_open %}
+                {% set no_reassign = r.period.has_active_marking_event %}
                 <div role="separator" class="dropdown-divider"></div>
                 {% if no_reassign %}
                     <a class="dropdown-item d-flex gap-2 disabled">
@@ -39,8 +38,6 @@
                 </a>
             </div>
         </div>
-        {{ feedback_state_tag(rec, rec.feedback_state, 'Feedback') }}
-        {{ feedback_state_tag(rec, rec.response_state, 'Response') }}
     </div>
 {% endmacro %}
 {% if recs|length >= 1 %}

@@ -759,10 +759,10 @@ def delete_conflation_report_feedback(cr_id):
         return redirect(url)
 
     try:
-        from ..models.feedback import FeedbackReport
-
+        sr: SubmissionRecord = cr.submission_record
         for report in reports:
             cr.feedback_reports.remove(report)
+            sr.feedback_reports.remove(report)
             db.session.delete(report)
         cr.recipe = None
         cr.feedback_celery_id = None

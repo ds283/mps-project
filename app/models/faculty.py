@@ -731,44 +731,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return supv, mark, moderate, pres
 
-    def has_late_feedback(self, config_proxy, faculty_id):
-        from .project_class import ProjectClass, ProjectClassConfig
-        from .submissions import SubmissionRole
-
-        if isinstance(config_proxy, ProjectClassConfig):
-            config_id = config_proxy.id
-        elif isinstance(config_proxy, ProjectClass):
-            config_id = config_proxy.most_recent_config.id
-        elif isinstance(config_proxy, int):
-            config_id = config_proxy
-
-        supervisor_late = [
-            x.feedback_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.supervisor_assignments(config=config_id)
-        ]
-
-        response_late = [
-            x.response_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.supervisor_assignments(config=config_id)
-        ]
-
-        marker_late = [
-            x.feedback_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.marker_assignments(config=config_id)
-        ]
-
-        presentation_late = [
-            x.feedback_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.presentation_assignments(config=config_id)
-        ]
-
-        return (
-            any(supervisor_late)
-            or any(marker_late)
-            or any(response_late)
-            or any(presentation_late)
-        )
-
     @property
     def outstanding_availability_requests(self):
         from .assessment import AssessorAttendanceData, PresentationAssessment

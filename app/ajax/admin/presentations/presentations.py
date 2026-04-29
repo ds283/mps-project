@@ -26,9 +26,6 @@ _name = """
     {% if a.is_deployed %}
         <span class="small text-success"><i class="fas fa-check"></i> Deployed</span>
     {% endif %}
-    {% if not a.is_feedback_open %}
-        <span class="small text-success">Feedback closed</span>
-    {% endif %}
     {% if state == a.AVAILABILITY_NOT_REQUESTED %}
         <span class="small text-secondary">Availability not requested</span>
     {% elif state == a.AVAILABILITY_REQUESTED %}

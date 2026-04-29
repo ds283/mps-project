@@ -32,7 +32,7 @@
                             </span>
                             {% if period %}
                                 {{ submission_period_configure_button(period, config, small=true, margin=false,
-                                   disable=(period.is_feedback_open or period.closed)) }}
+                                   disable=(period.has_active_marking_event or period.closed)) }}
                             {% endif %}
                         </div>
                         <div class="card-body">

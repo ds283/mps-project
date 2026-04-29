@@ -31,7 +31,7 @@
             <i class="fas fa-search"></i> Inspect units&hellip;
         </a>
     </div>
-    {% if p.is_feedback_open %}
+    {% if p.has_active_marking_event %}
         <div class="text-secondary small mt-2">
             {% if p.closed %}
                 <div><i class="fas fa-lock"></i> Feedback closed</div>

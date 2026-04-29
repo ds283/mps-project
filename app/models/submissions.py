@@ -249,48 +249,6 @@ class SubmissionRole(
     # marking sign off (interpreted as approval if responsible supervisor is not writing the supervision report)
     signed_off = db.Column(db.DateTime(), default=False)
 
-    # FEEDBACK TO STUDENT
-
-    # positive feedback
-    positive_feedback = db.Column(db.Text())
-
-    # improvements feedback
-    improvements_feedback = db.Column(db.Text())
-
-    # has the feedback been submitted?
-    submitted_feedback = db.Column(db.Boolean())
-
-    # feedback submission datestamp
-    feedback_timestamp = db.Column(db.DateTime())
-
-    # RESPONSE TO FEEDBACK FROM STUDENT (if used)
-
-    # acknowledge seen student feedback
-    acknowledge_student = db.Column(db.Boolean())
-
-    # faculty response
-    response = db.Column(db.Text())
-
-    # faculty response submitted
-    submitted_response = db.Column(db.Boolean())
-
-    # faculty response timestamp
-    response_timestamp = db.Column(db.DateTime())
-
-    # LIFECYCLE
-
-    # has feedback been pushed out to the student for this period?
-    feedback_sent = db.Column(db.Boolean(), default=False)
-
-    # who pushed the feedback?
-    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    feedback_push_by = db.relationship(
-        "User", foreign_keys=[feedback_push_id], uselist=False
-    )
-
-    # timestamp when feedback was sent
-    feedback_push_timestamp = db.Column(db.DateTime())
-
     # FACTORY FUNCTION
     @classmethod
     def build_(cls, **kwargs):
@@ -312,17 +270,6 @@ class SubmissionRole(
             "weight": 1.0,
             "justification": None,
             "signed_off": None,
-            "positive_feedback": None,
-            "improvements_feedback": None,
-            "submitted_feedback": False,
-            "feedback_timestamp": None,
-            "acknowledge_student": False,
-            "response": None,
-            "submitted_response": False,
-            "response_timestamp": None,
-            "feedback_sent": False,
-            "feedback_push_id": None,
-            "feedback_push_cls": None,
             "last_edit_id": None,
             "last_edit_timestamp": None,
         }
@@ -373,145 +320,6 @@ class SubmissionRole(
             "time": self.regular_meeting_time.strftime("%H:%M"),
             "location": self.regular_meeting_location,
         }
-
-    @property
-    def feedback_state(self):
-        if self.role in [
-            SubmissionRole.ROLE_SUPERVISOR,
-            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-        ]:
-            return self._supervisor_feedback_state
-        elif self.role in [SubmissionRole.ROLE_MARKER]:
-            return self._marker_feedback_state
-        elif self.role in [SubmissionRole.ROLE_MODERATOR]:
-            return self._moderator_feedback_state
-        elif self.role in [SubmissionRole.ROLE_PRESENTATION_ASSESSOR]:
-            return self._presentation_assessor_feedback_state
-
-        return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-    @property
-    def _supervisor_feedback_state(self):
-        if not self.uses_supervisor_feedback:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        period: SubmissionPeriodRecord = self.submission.period
-
-        if not period.config.project_class.publish:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        return self._internal_feedback_state
-
-    @property
-    def _marker_feedback_state(self):
-        if not self.uses_marker_feedback:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        period: SubmissionPeriodRecord = self.submission.period
-
-        if not period.config.project_class.publish:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        return self._internal_feedback_state
-
-    @property
-    def _moderator_feedback_state(self):
-        return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-    @property
-    def _presentation_assessor_feedback_state(self):
-        if not self.uses_presentation_feedback:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        period: SubmissionPeriodRecord = self.submission.period
-        if not period.config.project_class.publish:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        slot = self.schedule_slot
-        if slot is None:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        today = date.today()
-        if today <= slot.session.date:
-            return SubmissionRole.FEEDBACK_NOT_YET
-
-        if self.submitted_feedback:
-            return SubmissionRole.FEEDBACK_SUBMITTED
-
-        if self.feedback_valid:
-            return SubmissionRole.FEEDBACK_ENTERED
-
-        closed = slot.owner.owner.is_closed
-        return (
-            SubmissionRole.FEEDBACK_LATE if closed else SubmissionRole.FEEDBACK_WAITING
-        )
-
-    @property
-    def feedback_valid(self):
-        if self.positive_feedback is None or len(self.positive_feedback) == 0:
-            return False
-
-        if self.improvements_feedback is None or len(self.improvements_feedback) == 0:
-            return False
-
-        return True
-
-    @property
-    def _internal_feedback_state(self):
-        period: SubmissionPeriodRecord = self.submission.period
-
-        if not period.is_feedback_open:
-            return SubmissionRole.FEEDBACK_NOT_YET
-
-        if self.submitted_feedback:
-            return SubmissionRole.FEEDBACK_SUBMITTED
-
-        if self.feedback_valid:
-            return SubmissionRole.FEEDBACK_ENTERED
-
-        if not period.closed:
-            return SubmissionRole.FEEDBACK_WAITING
-
-        return SubmissionRole.FEEDBACK_LATE
-
-    @property
-    def response_state(self):
-        if self.role in [
-            SubmissionRole.ROLE_SUPERVISOR,
-            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-        ]:
-            return self._supervisor_response_state
-
-        return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-    @property
-    def _supervisor_response_state(self):
-        sub: SubmissionRecord = self.submission
-        period: SubmissionPeriodRecord = sub.period
-
-        if not period.config.project_class.publish:
-            return SubmissionRole.FEEDBACK_NOT_REQUIRED
-
-        if not period.is_feedback_open:
-            return SubmissionRole.FEEDBACK_NOT_YET
-
-        if self.submitted_response:
-            return SubmissionRole.FEEDBACK_SUBMITTED
-
-        if self.response_valid:
-            return SubmissionRole.FEEDBACK_ENTERED
-
-        if not period.closed:
-            return SubmissionRole.FEEDBACK_WAITING
-
-        return SubmissionRole.FEEDBACK_LATE
-
-    @property
-    def response_valid(self):
-        if self.response is None or len(self.response) == 0:
-            return False
-
-        return True
 
     @property
     def number_events_owned(self) -> int:
@@ -1277,32 +1085,13 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # student overlap score reportd by Turnitin
     turnitin_student_overlap = db.Column(db.Integer(), default=None, nullable=True)
 
-    # LIFECYCLE DATA
-
-    # TODO: THE FIELDS BELOW ARE NOW OBSOLETE AND SHOULD EVENTUALLY BE REMOVED
-
-    # has a feedback report geen generated?
-    feedback_generated = db.Column(db.Boolean(), default=False)
-
-    # feedback reports
+    # generated feedback report PDFs for this submission record (populated when feedback is pushed)
     feedback_reports = db.relationship(
         "FeedbackReport",
         secondary=submission_record_to_feedback_report,
         lazy="dynamic",
         backref=db.backref("owner", uselist=False),
     )
-
-    # has feedback been pushed out to the student for this period?
-    feedback_sent = db.Column(db.Boolean(), default=False)
-
-    # who pushed the feedback?
-    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    feedback_push_by = db.relationship(
-        "User", foreign_keys=[feedback_push_id], uselist=False
-    )
-
-    # timestamp when feedback was sent
-    feedback_push_timestamp = db.Column(db.DateTime())
 
     # ROLES
 
@@ -1544,119 +1333,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         return self.get_role_user("supervisor", user)
 
-    def _role_feedback_valid(self, roles: List[SubmissionRole]):
-        for role in roles:
-            role: SubmissionRole
-
-            if role.positive_feedback is None or len(role.positive_feedback) == 0:
-                return False
-
-            if (
-                role.improvements_feedback is None
-                or len(role.improvements_feedback) == 0
-            ):
-                return False
-
-        return True
-
-    def _role_feedback_submitted(self, roles: List[SubmissionRole]):
-        for role in roles:
-            role: SubmissionRole
-
-            if not role.submitted_feedback:
-                return False
-
-        return True
-
-    @property
-    def is_supervisor_feedback_valid(self):
-        return self._role_feedback_valid(self.supervisor_roles)
-
-    @property
-    def is_marker_feedback_valid(self):
-        return self._role_feedback_valid(self.marker_roles)
-
-    @property
-    def is_supervisor_feedback_submitted(self):
-        return self._role_feedback_submitted(self.supervisor_roles)
-
-    @property
-    def is_marker_feedback_submitted(self):
-        return self._role_feedback_submitted(self.marker_roles)
-
-    def is_presentation_assessor_valid(self, fac):
-        # find ScheduleSlot to check that current user is actually required to submit feedback
-        if isinstance(fac, int):
-            fac_id = fac
-        elif isinstance(fac, FacultyData) or isinstance(fac, User):
-            fac_id = fac.id
-        else:
-            raise RuntimeError(
-                "Unknown faculty id type passed to get_supervisor_records()"
-            )
-
-        slot = self.schedule_slot
-        if get_count(slot.assessors.filter_by(id=fac_id)) == 0:
-            return None
-
-        feedback = self.presentation_feedback.filter_by(assessor_id=fac_id).first()
-
-        if feedback is None:
-            return False
-
-        if feedback.positive is None or len(feedback.positive) == 0:
-            return False
-
-        if feedback.negative is None or len(feedback.negative) == 0:
-            return False
-
-        return True
-
-    def presentation_assessor_submitted(self, fac):
-        if isinstance(fac, int):
-            fac_id = fac
-        elif isinstance(fac, FacultyData) or isinstance(fac, User):
-            fac_id = fac.id
-        else:
-            raise RuntimeError(
-                "Unknown faculty id type passed to get_supervisor_records()"
-            )
-
-        # find ScheduleSlot to check that current user is actually required to submit feedback
-        slot = self.schedule_slot
-        if get_count(slot.assessors.filter_by(id=fac_id)) == 0:
-            return None
-
-        feedback = self.presentation_feedback.filter_by(assessor_id=fac_id).first()
-        if feedback is None:
-            return False
-
-        return feedback.submitted
-
-    @property
-    def is_feedback_valid(self):
-        return self.is_supervisor_feedback_valid or self.is_marker_feedback_valid
-
-    def _feedback_state(self, valid, submitted):
-        period = self.period
-
-        if not period.config.project_class.publish:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        if not period.is_feedback_open:
-            return SubmissionRecord.FEEDBACK_NOT_YET
-
-        if submitted:
-            return SubmissionRecord.FEEDBACK_SUBMITTED
-
-        if valid:
-            return SubmissionRecord.FEEDBACK_ENTERED
-
-        if not period.closed:
-            return SubmissionRecord.FEEDBACK_WAITING
-
-        return SubmissionRecord.FEEDBACK_LATE
-
     @property
     def uses_supervisor_feedback(self):
         return self.period.uses_supervisor_feedback
@@ -1670,151 +1346,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return self.period.uses_presentation_feedback
 
     @property
-    def supervisor_feedback_state(self):
-        if not self.uses_supervisor_feedback:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        return self._feedback_state(
-            self.is_supervisor_feedback_valid, self.is_supervisor_feedback_submitted
-        )
-
-    @property
-    def marker_feedback_state(self):
-        if not self.uses_marker_feedback:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        return self._feedback_state(
-            self.is_marker_feedback_valid, self.is_marker_feedback_submitted
-        )
-
-    @property
-    def presentation_feedback_late(self):
-        if not self.uses_presentation_feedback:
-            return False
-
-        if not self.period.config.project_class.publish:
-            return False
-
-        slot = self.schedule_slot
-        if slot is None:
-            return False
-
-        states = [
-            self.presentation_feedback_state(a.id) == SubmissionRecord.FEEDBACK_LATE
-            for a in slot.assessors
-        ]
-        return any(states)
-
-    def presentation_feedback_state(self, faculty_id):
-        if not self.period.has_presentation:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        if not self.period.config.project_class.publish:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        slot = self.schedule_slot
-        count = get_count(slot.assessors.filter_by(id=faculty_id))
-        if count == 0:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        closed = slot.owner.owner.is_closed
-
-        today = date.today()
-        if today <= slot.session.date:
-            return SubmissionRecord.FEEDBACK_NOT_YET
-
-        if not self.is_presentation_assessor_valid(faculty_id):
-            return (
-                SubmissionRecord.FEEDBACK_LATE
-                if closed
-                else SubmissionRecord.FEEDBACK_WAITING
-            )
-
-        if not self.presentation_assessor_submitted(faculty_id):
-            return (
-                SubmissionRecord.FEEDBACK_LATE
-                if closed
-                else SubmissionRecord.FEEDBACK_ENTERED
-            )
-
-        return SubmissionRecord.FEEDBACK_SUBMITTED
-
-    @property
-    def supervisor_response_state(self):
-        supervisor_roles = [
-            role
-            for role in self.roles
-            if role.role
-            in [
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-            ]
-        ]
-        if not supervisor_roles:
-            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
-
-        states = [role._supervisor_response_state for role in supervisor_roles]
-        if any(s == SubmissionRecord.FEEDBACK_LATE for s in states):
-            return SubmissionRecord.FEEDBACK_LATE
-        return max(states)
-
-    @property
-    def feedback_submitted(self):
-        """
-        Determines whether any feedback is available, irrespective of whether it is visible to the student
-        :return:
-        """
-        if self.period.has_presentation:
-            for feedback in self.presentation_feedback:
-                if feedback.submitted:
-                    return True
-
-        allowed_roles = [
-            SubmissionRole.ROLE_SUPERVISOR,
-            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-            SubmissionRole.ROLE_MARKER,
-        ]
-        return any(
-            role.submitted_feedback for role in self.roles if role.role in allowed_roles
-        )
-
-    @property
     def has_feedback(self):
         """
         Determines whether feedback should be offered to the student
         :return:
         """
-
-        # is there any presentation feedback available? (legacy infrastructure)
-        flag: bool = False
-        if self.period.has_presentation:
-            allowed_roles = [
-                SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
-            ]
-            flag = flag | any(
-                role.submitted_feedback
-                for role in self.roles
-                if role.role in allowed_roles
-            )
-
-        # otherwise, is there any feedback available from other supervision/marker roles? (legacy infrastructure)
-        if self.period.closed:
-            allowed_roles = [
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                SubmissionRole.ROLE_MARKER,
-            ]
-            flag = flag | any(
-                role.submitted_feedback
-                for role in self.roles
-                if role.role in allowed_roles
-            )
-
-        if flag:
-            return True
-
-        # new infrastructure: check for closed MarkingEvents with a SubmitterReport at a
-        # sufficiently advanced workflow state
         from .markingevent import (
             MarkingEvent,
             MarkingEventWorkflowStates,
@@ -1847,41 +1383,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 return True
 
         return False
-
-    @property
-    def has_feedback_to_push(self):
-        if not self.feedback_generated:
-            return False
-
-        return self.has_feedback
-
-    @property
-    def number_presentation_feedback(self):
-        return get_count(self.presentation_feedback)
-
-    @property
-    def number_submitted_presentation_feedback(self):
-        return get_count(self.presentation_feedback.filter_by(submitted=True))
-
-    @property
-    def can_assign_feedback(self):
-        if not self.period.has_presentation:
-            return False
-
-        slot = self.schedule_slot
-        if slot is None:
-            return True
-
-        space = False
-        for assessor in slot.assessors:
-            if (
-                get_count(self.presentation_feedback.filter_by(assessor_id=assessor.id))
-                == 0
-            ):
-                space = True
-                break
-
-        return space
 
     @property
     def current_config(self):

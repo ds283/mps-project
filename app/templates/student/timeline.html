@@ -129,7 +129,7 @@
                                                                         {% if role == 'student' %}
                                                                             <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text=student_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                         {% elif role == 'faculty' %}
-                                                                            <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                            <a href="{{ url_for('faculty.view_feedback', id=record.id, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                         {% elif role == 'convenor' %}
                                                                             <a href="{{ url_for('convenor.view_feedback', id=record.id, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                         {% else %}

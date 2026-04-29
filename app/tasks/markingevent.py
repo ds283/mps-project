@@ -441,9 +441,6 @@ def register_markingevent_tasks(celery):
                     grade_generated_timestamp=None,
                     signed_off_id=None,
                     signed_off_timestamp=None,
-                    feedback_sent=False,
-                    feedback_push_id=None,
-                    feedback_push_timestamp=None,
                     creator_id=None,
                     creation_timestamp=datetime.now(),
                 )

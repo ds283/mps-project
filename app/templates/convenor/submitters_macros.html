@@ -4,42 +4,6 @@
 #}
 {% from "error_block.html" import error_block_popover %}
 
-{% macro feedback_state_tag(obj, state=none) %}
-    {% if state is none %}{% set state = obj.feedback_state %}{% endif %}
-    {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge bg-secondary">Feedback not yet required</span> #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <div class="small text-secondary">Feedback waiting</div>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        {# <div class="small text-success">Feedback submitted</div> #}
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="small text-primary">Feedback in progress</div>
-    {% elif state == obj.FEEDBACK_LATE %}
-        <div class="small text-danger">Feedback late</div>
-    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
-    {% else %}
-        <div class="badge bg-danger">Feedback error &ndash; unknown state</div>
-    {% endif %}
-{% endmacro %}
-
-{% macro response_state_tag(obj, label) %}
-    {% set state = obj.response_state %}
-    {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge bg-secondary">Response not yet required</span> #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <div class="small text-secondary">Response waiting</div>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <div class="small text-success">Response submitted</div>
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="small text-primary">Response in progress</div>
-    {% elif state == obj.FEEDBACK_LATE %}
-        <div class="small time-danger">Response late</div>
-    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
-    {% else %}
-        <div class="badge bg-danger">Response error &ndash; unknown state</div>
-    {% endif %}
-{% endmacro %}
-
 {% macro roles_list(roles, label) %}
     {% set num_roles = roles|length %}
     {% if num_roles > 0 %}
@@ -52,8 +16,6 @@
                     {% if role.grade %}
                         <div class="fs-5 {% if role.signed_off %}text-primary{% else %}text-secondary{% endif %}">{{ role.grade|round(precision=1) }}%</div>
                     {% endif %}
-                    {{ feedback_state_tag(role) }}
-                    {{ response_state_tag(role) }}
                 </div>
             {% endfor %}
         </div>
@@ -150,7 +112,7 @@
                         <a class="text-primary small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown"
                            role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                            {% set disabled = period.is_feedback_open %}
+                            {% set disabled = period.has_active_marking_event %}
                             {% if disabled %}
                                 <a class="dropdown-item d-flex gap-2 disabled"><i
                                         class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
@@ -184,18 +146,7 @@
                             attachments
                         </div>
                     {% endif %}
-                    {% if r.feedback_generated %}
-                        <div class="d-flex flex-row justify-content-start align-items-start gap-2">
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback report
-                                generated
-                            </div>
-                            <a class="text-danger text-decoration-none small"
-                               href="{{ url_for('convenor.remove_feedback_report', rec_id=r.id) }}">Remove</a>
-                        </div>
-                        {% if r.feedback_sent %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback sent</div>
-                        {% endif %}
-                    {% elif r.has_feedback %}
+                    {% if r.has_feedback %}
                         <div class="text-secondary small"><i class="fas fa-check-circle"></i> Feedback ready</div>
                     {% endif %}
                     {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}

@@ -1983,44 +1983,6 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         ).order_by(SubmissionPeriodRecord.submission_period.asc())
 
     @property
-    def supervisor_feedback_late(self):
-
-        supervisor_states = [
-            r.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
-            for r in self.records
-        ]
-        response_states = [
-            r.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
-            for r in self.records
-        ]
-
-        return any(supervisor_states) or any(response_states)
-
-    @property
-    def marker_feedback_late(self):
-
-        states = [
-            r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
-            for r in self.records
-        ]
-
-        return any(states)
-
-    @property
-    def presentation_feedback_late(self):
-        states = [r.presentation_feedback_late for r in self.records]
-
-        return any(states)
-
-    @property
-    def has_late_feedback(self):
-        return (
-            self.supervisor_feedback_late
-            or self.marker_feedback_late
-            or self.presentation_feedback_late
-        )
-
-    @property
     def has_report(self):
         """
         Returns true if a report has been uploaded and processed for the current submission period

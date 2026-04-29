@@ -136,20 +136,14 @@ def register_deploy_schedule_tasks(celery):
             raise self.retry()
 
         removed = 0
-        unlinked = 0
 
         for role in roles:
-            if role.submitted_feedback or role.feedback_valid:
-                # feedback already entered: unlink from the schedule slot but keep the record
-                role.schedule_slot_id = None
-                unlinked += 1
-            else:
-                db.session.delete(role)
-                removed += 1
+            db.session.delete(role)
+            removed += 1
 
         try:
             log_db_commit(
-                f"Remove {removed} and unlink {unlinked} SubmissionRole record(s) for schedule #{schedule_id}",
+                f"Remove {removed} SubmissionRole record(s) for schedule #{schedule_id}",
                 user=user_id,
                 endpoint=self.name,
             )

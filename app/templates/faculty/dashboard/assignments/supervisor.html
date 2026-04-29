@@ -25,7 +25,6 @@
                 {# role is a SubmissionRole #}
                 {% set rec = my_role.submission %}
                 {# rec is a SubmissionRecord #}
-                {% set uses_feedback = rec.uses_supervisor_feedback %}
                 {# sub is a SubmittingStudent #}
                 {% set sub = rec.owner %}
                 <tr>
@@ -130,16 +129,6 @@
                             {% if rec.report %}
                                 <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
                             {% endif %}
-                            {% if uses_feedback %}
-                                {% if my_role.submitted_feedback %}
-                                    <span class="badge bg-success"><i
-                                            class="fas fa-check"></i> Feedback submitted</span>
-                                {% elif period.closed %}
-                                    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
-                                {% elif period.is_feedback_open %}
-                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Feedback needed</span>
-                                {% endif %}
-                            {% endif %}
                         </div>
                         {% set supv_roles = rec.supervisor_roles %}
                         {% if supv_roles|length > 1 %}
@@ -186,27 +175,6 @@
                                            href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
                                                 class="fas fa-file fa-fw"></i> Manage documents
                                             ({{ rec.number_attachments }})...</a>
-                                        {% set state = my_role.feedback_state %}
-                                        {% set valid = my_role.feedback_valid %}
-                                        {% if state > my_role.FEEDBACK_NOT_YET %}
-                                            {% if uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
-                                                {% if valid %}
-                                                    <a class="dropdown-item d-flex gap-2"
-                                                       href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
-                                                            class="fas fa-search fa-fw"></i> Preview feedback...</a>
-                                                {% else %}
-                                                    <a class="dropdown-item d-flex gap-2"
-                                                       href="{{ url_for('faculty.edit_feedback', id=my_role.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
-                                                            class="fas fa-pencil-alt fa-fw"></i> Edit
-                                                        feedback...</a>
-                                                {% endif %}
-                                            {% endif %}
-                                            {% if period.closed %}
-                                                <a class="dropdown-item d-flex gap-2"
-                                                   href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
-                                                        class="fas fa-search fa-fw"></i> View feedback...</a>
-                                            {% endif %}
-                                        {% endif %}
                                     </div>
                                 </div>
                             </div>

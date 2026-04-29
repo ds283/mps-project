@@ -72,7 +72,7 @@ _menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% set a = s.owner %}
-        {% set disabled = not s.owner.is_feedback_open %}
+        {% set disabled = a.is_deployed %}
         <div class="dropdown-header">Edit session</div>
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
@@ -84,7 +84,7 @@ _menu = """
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
             <i class="fas fa-cogs fa-fw"></i> Assessors...
         </a>
-        {% set disabled = not a.is_feedback_open %}
+        {% set disabled = a.is_deployed %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>

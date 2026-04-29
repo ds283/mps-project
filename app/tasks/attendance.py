@@ -179,7 +179,10 @@ def register_attendance_tasks(celery):
                 continue
             if sub.retired:
                 continue
-            if period.is_feedback_open:
+            if period.marking_events.filter(
+                MarkingEvent.workflow_state >= MarkingEventWorkflowStates.OPEN,
+                MarkingEvent.workflow_state < MarkingEventWorkflowStates.CLOSED,
+            ).count() > 0:
                 continue
             if period.closed:
                 continue

@@ -710,10 +710,6 @@ def build_submitters_data(
     elif state_filter == "unpublished":
         submitters = submitters.filter(SubmittingStudent.published.is_(False))
         data = submitters.all()
-    elif state_filter == "late-feedback":
-        data = [x for x in submitters.all() if x.has_late_feedback]
-    elif state_filter == "no-late-feedback":
-        data = [x for x in submitters.all() if not x.has_late_feedback]
     elif state_filter == "report":
         data = [x for x in submitters.all() if x.has_report]
     elif state_filter == "no-report":

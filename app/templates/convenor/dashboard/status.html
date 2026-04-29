@@ -644,7 +644,7 @@
                                     <td class="align-middle">
                                         {% if p.closed %}
                                             <span class="badge bg-secondary">Closed</span>
-                                        {% elif p.is_feedback_open %}
+                                        {% elif p.has_active_marking_event %}
                                             <span class="badge bg-primary text-white">Feedback open</span>
                                         {% elif is_current %}
                                             <span class="badge bg-success">Active</span>
@@ -672,7 +672,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="small align-middle text-end">
-                                        {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}
+                                        {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.has_active_marking_event or p.closed)) }}
                                     </td>
                                 </tr>
                             {% endfor %}

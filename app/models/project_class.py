@@ -1577,10 +1577,21 @@ class ProjectClassConfig(
             db.session.add(period)
             db.session.commit()
 
-        if not period.is_feedback_open:
+        from .markingevent import MarkingEvent as _ME
+        from .markingevent import MarkingEventWorkflowStates as _MEWS
+
+        feedback_open = (
+            period.marking_events.filter(
+                _ME.workflow_state >= _MEWS.OPEN,
+                _ME.workflow_state < _MEWS.CLOSED,
+            ).count()
+            > 0
+        )
+
+        if not feedback_open:
             return self.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
-        if period.is_feedback_open and not period.closed:
+        if not period.closed:
             return self.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
 
         # can assume period.closed at this point
@@ -2221,7 +2232,7 @@ class SubmissionPeriodRecord(db.Model):
         return get_count(self.attachments)
 
     @property
-    def is_feedback_open(self):
+    def has_active_marking_event(self):
         from .markingevent import MarkingEvent as ME
         from .markingevent import MarkingEventWorkflowStates as MEWS
 

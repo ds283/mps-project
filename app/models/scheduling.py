@@ -991,54 +991,6 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
 
         return talk.assessor_CATS
 
-    def feedback_state(self, faculty_id):
-        # determine whether feedback is enabled for the SubmissionPeriodRecord shared
-        # by our talks
-        period = self.submission_period
-        if period is None:
-            return ScheduleSlot.FEEDBACK_NOT_REQUIRED
-
-        if not period.config.project_class.publish:
-            return ScheduleSlot.FEEDBACK_NOT_REQUIRED
-
-        count = get_count(self.assessors.filter_by(id=faculty_id))
-        if count == 0:
-            return ScheduleSlot.FEEDBACK_NOT_REQUIRED
-
-        state = []
-        for talk in self.talks:
-            # feedback types for SubmissionRecord are the same as for ScheduleSlot, since both are controlled
-            # from SubmissionFeedbackStatesMixin
-            state.append(talk.presentation_feedback_state(faculty_id))
-
-        # state is defined to be the earliest lifecycle state, taken over all the talks, except that
-        # we use ENTERED rather than WAITING if possible
-        s = min(state)
-        if s == ScheduleSlot.FEEDBACK_WAITING and any(
-            [
-                s == ScheduleSlot.FEEDBACK_ENTERED
-                or s == ScheduleSlot.FEEDBACK_SUBMITTED
-                for s in state
-            ]
-        ):
-            return ScheduleSlot.FEEDBACK_ENTERED
-
-        return s
-
-    def feedback_number(self, faculty_id):
-        count = get_count(self.assessors.filter_by(id=faculty_id))
-        if count == 0:
-            return None
-
-        submitted = 0
-        total = 0
-        for talk in self.talks:
-            if talk.presentation_assessor_submitted(faculty_id):
-                submitted += 1
-            total += 1
-
-        return submitted, total
-
     def assessor_has_overlap(self, fac_id):
         """
         Determine whether a given assessor lies in the assessor pool for at least one of the presenters,

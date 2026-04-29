@@ -32,7 +32,6 @@ from ..models import (
     CanvasStudent,
     DegreeProgramme,
     DegreeType,
-    FeedbackReport,
     GeneratedAsset,
     MarkingEvent,
     MarkingReport,
@@ -685,60 +684,6 @@ def enrol_canvas_student(cid):
     )
 
     return redirect(redirect_url())
-
-
-@convenor.route("/remove_feedback_report/<int:rec_id>")
-@roles_accepted("faculty", "admin", "root")
-def remove_feedback_report(rec_id):
-    """
-    Manually remove feedback reports from a SubmissionRecord
-    :param sid:
-    :return:
-    """
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(rec_id)
-
-    sub: SubmittingStudent = record.owner
-    config: ProjectClassConfig = sub.config
-    pclass: ProjectClass = config.project_class
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(redirect_url())
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    expiry_date = datetime.now() + timedelta(days=30)
-
-    try:
-        for report in record.feedback_reports:
-            report: FeedbackReport
-            asset: GeneratedAsset = report.asset
-
-            asset.expiry = expiry_date
-            record.feedback_reports.remove(report)
-            db.session.delete(report)
-
-        record.feedback_generated = False
-
-        log_db_commit(
-            "Removed feedback reports from submission record for submitter",
-            user=current_user,
-            student=sub.student,
-            project_classes=pclass,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash(
-            'Could not remove feedback reports for this submitter due to a database error ("{n}"). Please contact a system administrator.'.format(
-                n=e
-            ),
-            "error",
-        )
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(url)
 
 
 @convenor.route("/delete_submitter/<int:sid>", methods=["GET", "POST"])

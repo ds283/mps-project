@@ -509,30 +509,3 @@ def validate_presentation_assessor(record):
     return False
 
 
-def validate_assign_feedback(talk):
-    """
-    Validate that a given talk is marked as 'not attending' for the assessment deployed for its
-    SubmissionPeriodRecord
-    :param talk:
-    :return:
-    """
-    if not talk.period.has_presentation:
-        flash(
-            "Cannot assign feedback to this submission record because it does not belong to a "
-            "submission period that has presentation assessments.",
-            "info",
-        )
-        return False
-
-    if not talk.period.has_deployed_schedule:
-        flash(
-            "Cannot assign feedback to this submission record because its submission period does not yet have a deployed schedule.",
-            "info",
-        )
-        return False
-
-    if not talk.can_assign_feedback:
-        flash("It is not possible to assign further feedback to this record.", "error")
-        return False
-
-    return True

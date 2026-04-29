@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+from scipy.stats import gaussian_kde
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource, HoverTool, NumeralTickFormatter
 from bokeh.plotting import figure
@@ -373,45 +374,66 @@ def _build_histogram(
     bins: int = 20,
 ) -> Tuple[Optional[str], Optional[str]]:
     """
-    Build a Bokeh histogram for *values* and return (script, div).
-    Returns (None, None) if there are fewer than HISTOGRAM_THRESHOLD values.
+    Build a KDE density plot for *values* and return (script, div).
+    Returns (None, None) if there are fewer than HISTOGRAM_THRESHOLD values
+    or if all values are identical (degenerate distribution).
     """
     if len(values) < HISTOGRAM_THRESHOLD:
         return None, None
 
     arr = np.array(values, dtype=float)
-    hist, edges = np.histogram(arr, bins=bins)
 
-    source = ColumnDataSource(
-        dict(top=hist, left=edges[:-1], right=edges[1:], count=hist)
-    )
+    # gaussian_kde produces zero bandwidth when all values are identical
+    if np.std(arr) < 1e-10:
+        return None, None
+
+    kde = gaussian_kde(arr, bw_method="scott")
+
+    x_min, x_max = arr.min(), arr.max()
+    padding = 0.10 * (x_max - x_min)
+    x_pts = np.linspace(x_min - padding, x_max + padding, 300)
+    y_pts = kde(x_pts)
+
+    # Rug ticks: small vertical marks at each data point, scaled to 4% of peak density
+    rug_height = y_pts.max() * 0.04
 
     p = figure(
         title=title,
         x_axis_label=x_label,
-        y_axis_label="Count",
+        y_axis_label="Density",
         width=400,
         height=240,
         toolbar_location=None,
         sizing_mode="scale_width",
     )
 
-    p.quad(
-        source=source,
-        top="top",
-        bottom=0,
-        left="left",
-        right="right",
+    p.varea(
+        x=x_pts,
+        y1=np.zeros(300),
+        y2=y_pts,
         fill_color=fill_color,
+        fill_alpha=0.35,
+    )
+    p.line(
+        x=x_pts,
+        y=y_pts,
         line_color=line_color,
-        fill_alpha=0.80,
-        hover_fill_alpha=1.0,
-        hover_fill_color=fill_color,
+        line_width=2,
+    )
+    p.segment(
+        x0=arr,
+        y0=np.zeros(len(arr)),
+        x1=arr,
+        y1=np.full(len(arr), rug_height),
+        line_color=line_color,
+        line_alpha=0.45,
+        line_width=1,
     )
 
     p.add_tools(
         HoverTool(
-            tooltips=[("Range", "@left{0.000} – @right{0.000}"), ("Count", "@count")]
+            tooltips=[("x", "$x{0.###}"), ("density", "$y{0.####}")],
+            mode="vline",
         )
     )
 

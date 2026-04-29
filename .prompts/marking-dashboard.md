@@ -20,43 +20,88 @@ the user:
   with the "external" role would be associated to specific project classes, like convenors, and would be able to inspect
   `MarkingEvent` instances for only those project classes.
 
+Compare to @app/templates/dashboards/ai_dashboard.html for visual styling and design vocabulary.
+
+Place generated view functions in app/dashboards/views.py.
+Place generated tempates in app/templates/dashboards/.
+
 ### TASK 1. Summary data dashboard
 
 Design a summary data dashboard that includes a row or panel for each `MarkingEvent` within the user's scope. The
 dashboard should include key summary data about the `MarkingWorkflow` instances within the `MarkingEvent`, and also the
 status of the `MarkingEvent` container itself.
 
-At least initially, this is intended to be a ready-only data dashboard.
+This is intended to be a read-only data dashboard. You will need to create a new "card" on the overview grid
+app/templates/dashboards/overview.html. This should be in a visual style matching the existing card for the
+AI dashboard. Do not duplicate code. Implement a Jinja2 macro that abstracts the task of building the UI components
+for the card.
 
-For each constituent `MarkingWorkflow` the dashboard should show metrics, preferably in visual form (e.g., using the
-Bokeh
-library that is already part of the project):
+The dashboard itself should show all current `MarkingEvent` instances together with the project class they are part
+of and the name of the convenor. The convenor name should be a mailto: link targeting their email address.
 
-- the distribution state of `MarkingReport` instances attached to the workdlow
-- the number of submitted `MarkingReport` instances, and the number of instances that are still awaiting submission
-- the number of `SubmitterReport` instances in each workflow state. All states are useful, but it is critical to clearly
-  highlight the `NOT_READY`, `REQUIRES_CONVENOR_INTERVENTION` and `REQURES_MODERATOR_ASSIGNED` states.
-- the number of `SubmitterReport` instances where a moderation event has been triggered
-- statistics on the typical spread of assigned grades where there are multiple `MarkingReport` instances attached to a
-  single `SubmitterReport` instance in a workflow.
+Organize the list by `Tenant`, then by `ProjectClass`, then by `SubmissionPeriodRecord`. so that all `MarkingEvent`s for
+a single class are grouped together. Each `MarkingEvent` should be identified by name. Clearly highlight the deadline
+and the current workflow state, which are critical data.]
 
-Organize the list by `Tenant`, then by `ProjectClass`, then by `SubmissionPeriodRecord`. To prevent the dashboard
-becoming too long it may be necessary to provide a filter to narrow the scope to a single `Tenant` or a single
+To prevent the dashboard becoming too long, provide a filter to narrow the scope to a single `Tenant` or a single
 `ProjectClass`.
 
-Currently, the app is built as a Flask app that builds pages in the backend and serves them as static HTML to the
-browser. There are some small JavaScript components in the front end, mostly DataTables instances that consume AJAX
-endpoints.
+For each `MarkingWorkflow` instance belonging to the `MarkingEvent`, you should surface the following information
+as a concise overview:
 
-Ideally, this dashboard (and the marks register described in Task 2 below) would self-update. Please consider options
-for doing so, and make a recommendation. It is possible to deploy some type of JavaScript-based front end framework, but
-please consider the costs and benefits of doing so. The app is unlikely to be rebuilt based on a front end library
-because there is no compelling business case for doing so.
+- The deadline associated with this workflow and the current workflow state (key data)
+- The role being targeted
+- The marking scheme being used
+- The total number of `SubmitterReport` instances
+- The total number of `MarkingReport` instances
+
+The main dashboard component for each `MarkingWorkflow` should be a set of metric tiles that describe the status
+and health of the workflow. "Health indicators" is a good language to use here. Use the `dashboard_tile` metric
+defined in @app/templates/dashboard_widgets.html to lay out each tile.
+
+- Distribution state: Percentage distributed (healthy), percentage awaiting distrbution (unhealthy)
+- Marking reports: Percentage submitted (healthy), percentage awaiting submission (unhealthy)
+- Moderation: the number of `SubmitterReport` instances where a moderation event has been triggered.
+- Feedback: of the marking reports submitted, what percentage have feedback (healthy), or are missing feedback (
+  unhealthy)
+- `SubmitterReport` workflow states: percentage in `NOT_READY`, percentage in `REQUIRES_CONVENOR_INTERVENTION`,
+  percentage in `REQUIRES_MODERATOR_ASSIGNED` states (broken out separately), which unhealthy; remaining percentage,
+  which are proceeding normally.
+- The standard deviation and coefficient of variation (=standard deviation divided by the mean) of grades, computed
+  for `SubmitterReport` instances that have two or more `MarkingReport` instances attached.
+
+This dashboard should self-update. Please consider options to implement this and make a recommendation.
 
 ### TASK 2. Detailed marks register
 
-For each `MarkingEvent` instance, provide a means to access a register (i.e. COMPACT table view, scrolling, not
-DataTables filtered) of all `MarkingWorkflows`.
+For each `MarkingEvent` instance, provide a button orlink to access a marks register. This should be a relatively
+COMPACT spreadsheet-like view of the current state of the `MarkingWorkflow` instances. It should scroll horizontally
+if needed; it does not need to resize to fit within the current viewport. To prevent the view becoming too long it
+may need to be paginated and it would be helpful to provide an option to filter by student name. This suggests a
+possible DataTables approach, but you can evaluate alternative implementation strategies.
+
+The register view should aggregate all reports for a single student across all `MarkingWorkflow` instances
+belonging to the `MarkingEvent`. In particular, this means:
+
+- a possible `ConflationReport` instance belonging to the parent `MarkingEvent`
+- one `SubmitterReport` instance per `MarkingWorkflow`
+- a number of `MarkingReport` instances per `SubmitterReport`.
+
+The register "spreadsheet" view should be organized as follows. Do not draw a literal grid like a spreadsheet;
+the term "spreadsheet" here is just used to indicate a cell layout.
+
+- The first column should give the student name. Include the candidate number if present.
+- The second column should reflect that status of a `ConflationReport` if present. If absent, show "Not conflated".
+  If present, including "healthy"/"unhealthy" indicators for:
+    - conflation report
+    - feedback generated
+    - feedback sent
+- After this, organize columns into groups, with one group for each `MarkingWorkflow`. Add a header for each
+  group of columns to show the name of the `MarkingWorkflow`.
+    - The first column in each group should reflect the status of the `SubmitterReport` for this `MarkingWorkflow`.
+      Use a SUBTLE colour scheme reflecting the current workflow status of the `SubmitterReport`. If a grade is
+      present, display it. Include a warning indicator for `out_of_tolerance`. Include a status indicator if
+      a moderator report has been accepted.
 
 - for each `MarkingWorkflow`, include a row for each `SubmitterReport`. Colour code by the workflow state of this
   `SubmitterReport` using a sensible system. Please ensure that the colour coding can easily be changed later.

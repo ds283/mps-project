@@ -231,19 +231,19 @@
                                 {%- set has_notes = ev.meeting_summary or ev.supervision_notes -%}
                                 {%- if ev.monitor_attendance and ev.attendance is not none -%}
                                     {%- if ev.attendance == 0 -%}
-                                        {%- set ev_class = 'bg-success text-white' -%}
+                                        {%- set ev_class = 'bg-success-subtle' -%}
                                         {%- set ev_icon = 'check' -%}
                                     {%- elif ev.attendance == 1 -%}
-                                        {%- set ev_class = 'bg-warning text-dark' -%}
+                                        {%- set ev_class = 'bg-warning-subtle' -%}
                                         {%- set ev_icon = 'clock' -%}
                                     {%- elif ev.attendance == 2 -%}
-                                        {%- set ev_class = 'bg-danger text-white' -%}
+                                        {%- set ev_class = 'bg-danger-subtle' -%}
                                         {%- set ev_icon = 'times' -%}
                                     {%- elif ev.attendance == 3 -%}
-                                        {%- set ev_class = 'bg-danger text-white' -%}
+                                        {%- set ev_class = 'bg-danger-subtle' -%}
                                         {%- set ev_icon = 'exclamation' -%}
                                     {%- elif ev.attendance == 4 -%}
-                                        {%- set ev_class = 'bg-secondary text-white' -%}
+                                        {%- set ev_class = 'bg-secondary-subtle' -%}
                                         {%- set ev_icon = 'redo' -%}
                                     {%- else -%}
                                         {%- set ev_class = 'bg-light text-body-secondary border' -%}

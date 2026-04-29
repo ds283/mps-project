@@ -28,6 +28,7 @@ with a direct link to its feedback reports (used by the document manager view).
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect as sa_inspect
 
 
 # revision identifiers, used by Alembic.
@@ -37,7 +38,18 @@ branch_labels = None
 depends_on = None
 
 
+def _fk_names_for_column(inspector, table: str, column: str):
+    """Return FK constraint names on *table* that include *column*."""
+    return [
+        fk["name"]
+        for fk in inspector.get_foreign_keys(table)
+        if column in fk["constrained_columns"] and fk["name"] is not None
+    ]
+
+
 def upgrade():
+    inspector = sa_inspect(op.get_bind())
+
     # Drop legacy feedback columns from submission_role
     with op.batch_alter_table("submission_roles", schema=None) as batch_op:
         batch_op.drop_column("positive_feedback")
@@ -49,6 +61,8 @@ def upgrade():
         batch_op.drop_column("submitted_response")
         batch_op.drop_column("response_timestamp")
         batch_op.drop_column("feedback_sent")
+        for name in _fk_names_for_column(inspector, "submission_roles", "feedback_push_id"):
+            batch_op.drop_constraint(name, type_="foreignkey")
         batch_op.drop_column("feedback_push_id")
         batch_op.drop_column("feedback_push_timestamp")
 
@@ -56,6 +70,8 @@ def upgrade():
     with op.batch_alter_table("submission_records", schema=None) as batch_op:
         batch_op.drop_column("feedback_generated")
         batch_op.drop_column("feedback_sent")
+        for name in _fk_names_for_column(inspector, "submission_records", "feedback_push_id"):
+            batch_op.drop_constraint(name, type_="foreignkey")
         batch_op.drop_column("feedback_push_id")
         batch_op.drop_column("feedback_push_timestamp")
 

@@ -1,0 +1,75 @@
+{% extends "base_app.html" %}
+
+{% block title %}Calculate conflation – {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-calculator fa-fw me-1"></i>
+                    Calculate conflation – <strong>{{ event.name }}</strong>
+                </h4>
+            </div>
+
+            <div class="card border-success mb-3">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-check-circle fa-fw me-1"></i> Confirm conflation calculation
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-3 small">
+                        <dt class="col-sm-4 text-body-secondary">Event</dt>
+                        <dd class="col-sm-8">{{ event.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Period</dt>
+                        <dd class="col-sm-8">{{ event.period.display_name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Project class</dt>
+                        <dd class="col-sm-8">{{ pclass.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Submission records</dt>
+                        <dd class="col-sm-8"><strong>{{ submission_count }}</strong></dd>
+                    </dl>
+
+                    {% if existing_reports > 0 %}
+                        <div class="alert {% if any_stale %}alert-warning{% else %}alert-secondary{% endif %} py-2 mb-3">
+                            <i class="fas fa-{% if any_stale %}exclamation-triangle{% else %}info-circle{% endif %} fa-fw me-1"></i>
+                            {% if any_stale %}
+                                <strong>{{ existing_reports }}</strong> existing conflation result(s) are
+                                <strong>stale</strong>. Re-calculating will discard all existing results and
+                                generate a fresh set.
+                            {% else %}
+                                <strong>{{ existing_reports }}</strong> existing conflation result(s) will be
+                                <strong>discarded</strong> and replaced with a fresh calculation.
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-body-secondary mb-3">
+                            Conflation will be calculated for <strong>{{ submission_count }}</strong>
+                            submission record{{ 's' if submission_count != 1 else '' }}.
+                            Each record must have a completed grade in every workflow before conflation can proceed.
+                        </p>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <form method="POST"
+                              action="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}">
+                            {{ form.hidden_tag() }}
+                            <button class="btn btn-success" type="submit">
+                                <i class="fas fa-calculator fa-fw"></i>
+                                {% if existing_reports > 0 %}Re-calculate{% else %}Calculate{% endif %} conflation
+                            </button>
+                        </form>
+                        <a class="btn btn-outline-secondary" href="{{ url }}">
+                            <i class="fas fa-times fa-fw"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

@@ -990,8 +990,35 @@ _period_marking_event_status = """
     <span class="text-secondary"><i class="fas fa-check-circle"></i> Closed</span>
 {% elif event.workflow_state == READY_TO_PUSH_FEEDBACK %}
     <span class="text-success"><i class="fas fa-paper-plane"></i> Ready to push feedback</span>
+    {% set stale_count = event.conflation_reports.filter_by(is_stale=True).count() %}
+    {% set missing_ns = namespace(count=0) %}
+    {% for cr in event.conflation_reports %}
+        {% if cr.feedback_reports.count() == 0 %}{% set missing_ns.count = missing_ns.count + 1 %}{% endif %}
+    {% endfor %}
+    {% if stale_count > 0 or missing_ns.count > 0 %}
+        <div class="d-flex flex-column gap-1 mt-1">
+            {% if stale_count > 0 %}
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-exclamation-triangle fa-fw"></i> {{ stale_count }} stale
+                </span>
+            {% endif %}
+            {% if missing_ns.count > 0 %}
+                <span class="badge bg-secondary">
+                    <i class="fas fa-file-pdf fa-fw"></i> {{ missing_ns.count }} missing feedback
+                </span>
+            {% endif %}
+        </div>
+    {% endif %}
 {% elif event.workflow_state == READY_TO_GENERATE_FEEDBACK %}
     <span class="text-success"><i class="fas fa-file-alt"></i> Ready to generate feedback</span>
+    {% set stale_count = event.conflation_reports.filter_by(is_stale=True).count() %}
+    {% if stale_count > 0 %}
+        <div class="mt-1">
+            <span class="badge bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> {{ stale_count }} stale
+            </span>
+        </div>
+    {% endif %}
 {% elif event.workflow_state == READY_TO_CONFLATE %}
     <span class="text-success"><i class="fas fa-calculator"></i> Ready to conflate</span>
 {% elif event.workflow_state == OPEN %}
@@ -1022,9 +1049,14 @@ _period_marking_event_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url, text=text) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url_for('convenor.period_marking_events_inspector', period_id=event.period_id), text='Marking events') }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
+        {% if event.workflow_state == READY_TO_CONFLATE %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}">
+                <i class="fas fa-calculator fa-fw"></i> Conflate marks&hellip;
+            </a>
+        {% endif %}
         {% if event.workflow_state >= READY_TO_GENERATE_FEEDBACK %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_event_conflation_reports', event_id=event.id, url=url, text=text) }}">
                 <i class="fas fa-file-contract fa-fw"></i> Conflation reports&hellip;
@@ -1143,7 +1175,6 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
     attachments_tmpl = env.from_string(_marking_workflow_attachments)
     reports_tmpl = env.from_string(_marking_workflow_reports)
     distribution_tmpl = env.from_string(_marking_workflow_distribution)
-    feedback_tmpl = env.from_string(_marking_workflow_feedback)
     menu_tmpl = env.from_string(_event_marking_workflow_menu)
 
     return [
@@ -1153,7 +1184,6 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
             "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
-            "feedback": render_template(feedback_tmpl, workflow=workflow),
             "menu": render_template(
                 menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit
             ),

@@ -301,9 +301,27 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                     title="Ready to generate feedback",
                     description="Conflation is complete. Generate feedback PDFs for all students.",
                     action_url=generate_feedback_url,
-                    action_label="Generate feedback",
+                    action_label="Generate feedback…",
                 )
             )
+
+        # CTA for READY_TO_PUSH_FEEDBACK state — suppress if all records already have feedback
+        if self.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
+            total_crs = self.conflation_reports.count()
+            missing_count = sum(1 for cr in self.conflation_reports if cr.feedback_reports.count() == 0)
+            if missing_count > 0:
+                actions.append(
+                    ConvenorAction(
+                        severity="success",
+                        title="Ready to fill missing feedback",
+                        description=(
+                            f"{missing_count} of {total_crs} record(s) are missing feedback PDFs. "
+                            "Generate the missing feedback before pushing to students."
+                        ),
+                        action_url=generate_feedback_url,
+                        action_label="Fill missing feedback…",
+                    )
+                )
 
         # Check for SubmitterReports in READY_TO_DISTRIBUTE state with undistributed MarkingReports
         ready_count = 0

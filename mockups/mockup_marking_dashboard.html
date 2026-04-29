@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Marking dashboard</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f0ee; }
+/* ── Page header ── */
+.page-header { background: #1a3a5c; color: #fff; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.page-header h1 { font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.page-header .subtitle { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+.hdr-btns { display: flex; gap: 8px; align-items: center; }
+.btn-hdr { font-size: 12px; padding: 5px 12px; border: 0.5px solid rgba(255,255,255,0.4); border-radius: 6px; background: transparent; color: #fff; cursor: pointer; }
+/* ── Filter bar ── */
+.filter-bar { background: #fff; border-bottom: 0.5px solid #ddd; padding: 0.85rem 1.5rem; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.filter-bar label { font-size: 12px; color: #666; margin-right: 4px; }
+.filter-bar select { font-size: 12px; padding: 4px 8px; border: 0.5px solid #ccc; border-radius: 6px; background: #fff; color: #1a1a1a; }
+.apply-btn { font-size: 12px; padding: 5px 14px; border: none; border-radius: 6px; background: #1a3a5c; color: #fff; cursor: pointer; }
+.reset-btn { font-size: 12px; padding: 5px 12px; border: 0.5px solid #ccc; border-radius: 6px; background: #fff; color: #1a1a1a; cursor: pointer; margin-left: auto; }
+.refresh-note { font-size: 11px; color: #888; }
+/* ── Tenant / period headers ── */
+.tenant-header { background: #2d2d2d; color: #fff; padding: 0.55rem 1.5rem; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.period-header { background: #f4f4f2; border-bottom: 0.5px solid #ddd; padding: 0.45rem 1.5rem; font-size: 12px; color: #666; display: flex; align-items: center; gap: 6px; }
+.period-header strong { color: #1a1a1a; }
+/* ── Event card ── */
+.event-card { background: #fff; border-bottom: 0.5px solid #ddd; padding: 1rem 1.5rem; }
+.event-meta { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 8px; }
+.event-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+.event-subtitle { font-size: 12px; color: #666; margin-top: 2px; }
+.event-subtitle a { color: #185FA5; text-decoration: none; }
+.event-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* ── Badges ── */
+.badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.badge-success { background: #EAF3DE; color: #3B6D11; }
+.badge-warning { background: #FAEEDA; color: #854F0B; }
+.badge-danger  { background: #FCEBEB; color: #A32D2D; }
+.link-btn { font-size: 11px; padding: 3px 9px; border: 0.5px solid #ccc; border-radius: 6px; color: #185FA5; text-decoration: none; background: #fff; }
+/* ── Risk flags ── */
+.risk-flags { display: flex; gap: 14px; margin-bottom: 0.7rem; font-size: 12px; align-items: center; flex-wrap: wrap; }
+.risk-label { font-weight: 500; color: #666; }
+.risk-item { color: #666; }
+.risk-item strong { font-weight: 500; }
+.risk-item strong.danger { color: #A32D2D; }
+.risk-item strong.warn   { color: #854F0B; }
+/* ── Workflow block ── */
+.workflow-block { background: #f8f8f6; border: 0.5px solid #ddd; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 0.75rem; }
+.workflow-block + .workflow-block { margin-top: 8px; }
+.wf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem; }
+.wf-title  { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+.wf-meta   { display: flex; gap: 14px; font-size: 11px; color: #666; margin-bottom: 0.65rem; flex-wrap: wrap; }
+/* ── Health indicator tiles ── */
+.tiles-heading { font-size: 10px; color: #888; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); gap: 7px; }
+.tile { background: #fff; border: 0.5px solid #ddd; border-radius: 8px; padding: 7px 9px; min-height: 68px; }
+.tile-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
+.tile-value { font-size: 17px; font-weight: 500; line-height: 1.1; }
+.tv-healthy { color: #3B6D11; }
+.tv-warning { color: #854F0B; }
+.tv-danger  { color: #A32D2D; }
+.tv-muted   { color: #888; }
+.tile-sub   { font-size: 10px; color: #888; margin-top: 2px; }
+.ts-bad  { color: #A32D2D; }
+.ts-warn { color: #854F0B; }
+.tile-bar { height: 4px; border-radius: 2px; background: #e0e0dc; margin-top: 4px; overflow: hidden; }
+.tile-bar-fill { height: 100%; border-radius: 2px; }
+.fs { background: #639922; }
+.fw { background: #BA7517; }
+.fd { background: #E24B4A; }
+/* ── Footer ── */
+.auto-note { font-size: 11px; color: #888; padding: 0.4rem 1.5rem; background: #f4f4f2; border-top: 0.5px solid #ddd; display: flex; align-items: center; gap: 6px; }
+.auto-note a { color: #185FA5; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PAGE HEADER
+════════════════════════════════════════════ -->
+<div class="page-header">
+  <div>
+    <h1>📋 Marking dashboard</h1>
+    <div class="subtitle">Workflow health and progress overview</div>
+  </div>
+  <div class="hdr-btns">
+    <button class="btn-hdr">↺ Reload</button>
+    <button class="btn-hdr">← Dashboards</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     FILTER BAR
+     Narrows scope to a single Tenant or ProjectClass.
+════════════════════════════════════════════ -->
+<div class="filter-bar">
+  <div><label>Tenant</label>
+    <select>
+      <option>Physics &amp; Astronomy</option>
+      <option>— All tenants —</option>
+    </select>
+  </div>
+  <div><label>Project class</label>
+    <select>
+      <option>— All classes —</option>
+      <option>Final Year Project (BSc)</option>
+      <option>Final Year Project (MPhys)</option>
+    </select>
+  </div>
+  <button class="apply-btn">Apply</button>
+  <button class="reset-btn">Reset</button>
+  <span class="refresh-note">Auto-refreshes every 15 min</span>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TENANT GROUP
+════════════════════════════════════════════ -->
+<div class="tenant-header">🏫 Physics &amp; Astronomy</div>
+
+<!-- ── Submission period + project class ── -->
+<div class="period-header">
+  📅 <strong>Autumn term 2025</strong> &nbsp;·&nbsp; Final Year Project (BSc)
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MARKING EVENT CARD
+     One card per MarkingEvent.
+     Shows: name, convenor (mailto link), deadline,
+     workflow state, at-risk flag summary,
+     and one workflow-block per MarkingWorkflow.
+════════════════════════════════════════════ -->
+<div class="event-card">
+  <div class="event-meta">
+    <div>
+      <div class="event-title">BSc Final Year Project — Main marking round</div>
+      <div class="event-subtitle">
+        Convenor: <a href="mailto:a.king@sussex.ac.uk">Dr Alice King</a>
+        &nbsp;·&nbsp; Final Year Project (BSc)
+      </div>
+    </div>
+    <div class="event-actions">
+      <span class="badge badge-success">Active</span>
+      <span class="badge badge-warning">Deadline: 14 May 2026</span>
+      <!-- Link to marks register view for this MarkingEvent -->
+      <a href="#" class="link-btn">📊 Marks register</a>
+    </div>
+  </div>
+
+  <!-- At-risk flag summary for this MarkingEvent -->
+  <div class="risk-flags">
+    <span class="risk-label">At-risk flags:</span>
+    <span class="risk-item">Flagged: <strong class="warn">7</strong></span>
+    <span class="risk-item">Unresolved: <strong class="danger">3</strong></span>
+    <span class="risk-item">AI risk flags: <strong class="warn">2</strong></span>
+  </div>
+
+  <!-- ── WORKFLOW BLOCK 1: Supervisor marking ── -->
+  <!--
+    One .workflow-block per MarkingWorkflow belonging to this MarkingEvent.
+    Health indicator tiles use the dashboard_tile widget pattern.
+    Progress bars encode position in the ordered workflow state machine (0–100%),
+    NOT simply binary distributed/not-distributed.
+    Tile colour scheme:
+      healthy   = green  (#3B6D11 / #639922)
+      warning   = amber  (#854F0B / #BA7517)
+      danger    = red    (#A32D2D / #E24B4A)
+      muted/n/a = gray   (#888)
+    Grade SD/CV tile shows em-dash when fewer than 2 MarkingReports exist
+    per SubmitterReport (insufficient data for meaningful statistics).
+  -->
+  <div class="workflow-block">
+    <div class="wf-header">
+      <span class="wf-title">Supervisor marking</span>
+      <span class="badge badge-success">In progress</span>
+    </div>
+    <div class="wf-meta">
+      <span>🎯 Role: Supervisor</span>
+      <span>📐 Scheme: BSc project (standard)</span>
+      <span>📄 42 submitter reports</span>
+      <span>✏️ 42 marking reports</span>
+      <span class="badge badge-warning" style="font-size:10px">Deadline: 30 Apr 2026</span>
+    </div>
+
+    <div class="tiles-heading">Health indicators</div>
+    <div class="tiles">
+
+      <!-- Distribution state: % distributed (healthy) vs awaiting (unhealthy) -->
+      <div class="tile">
+        <div class="tile-label">Distribution</div>
+        <div class="tile-value tv-healthy">100%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fs" style="width:100%"></div></div>
+        <div class="tile-sub">All distributed</div>
+      </div>
+
+      <!-- Marking reports: % submitted (healthy) vs awaiting (unhealthy) -->
+      <div class="tile">
+        <div class="tile-label">Reports submitted</div>
+        <div class="tile-value tv-warning">71%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fw" style="width:71%"></div></div>
+        <div class="tile-sub ts-warn">12 awaiting</div>
+      </div>
+
+      <!-- Feedback: % of submitted reports that have feedback -->
+      <div class="tile">
+        <div class="tile-label">Feedback</div>
+        <div class="tile-value tv-warning">67%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fw" style="width:67%"></div></div>
+        <div class="tile-sub ts-warn">10 missing</div>
+      </div>
+
+      <!-- Moderation: count of SubmitterReports where moderation triggered -->
+      <div class="tile">
+        <div class="tile-label">Moderation</div>
+        <div class="tile-value tv-warning">4</div>
+        <div class="tile-sub">triggered</div>
+      </div>
+
+      <!-- NOT_READY state: unhealthy -->
+      <div class="tile">
+        <div class="tile-label">NOT_READY</div>
+        <div class="tile-value tv-danger">5%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fd" style="width:5%"></div></div>
+        <div class="tile-sub ts-bad">2 stalled</div>
+      </div>
+
+      <!-- REQUIRES_CONVENOR_INTERVENTION: unhealthy -->
+      <div class="tile">
+        <div class="tile-label">Needs intervention</div>
+        <div class="tile-value tv-danger">2%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fd" style="width:2%"></div></div>
+        <div class="tile-sub ts-bad">1 flagged</div>
+      </div>
+
+      <!-- Grade SD / CV — computed only when ≥2 MarkingReports per SubmitterReport -->
+      <div class="tile">
+        <div class="tile-label">Grade SD / CV</div>
+        <div class="tile-value" style="font-size:14px;color:#1a1a1a">4.2</div>
+        <div class="tile-sub">CV = 0.07</div>
+      </div>
+
+    </div>
+  </div><!-- end workflow-block -->
+
+  <!-- ── WORKFLOW BLOCK 2: Second marker ── -->
+  <div class="workflow-block">
+    <div class="wf-header">
+      <span class="wf-title">Second marker</span>
+      <!-- Overdue deadline — use danger badge -->
+      <span class="badge badge-danger">Overdue</span>
+    </div>
+    <div class="wf-meta">
+      <span>🎯 Role: Second marker</span>
+      <span>📐 Scheme: BSc project (standard)</span>
+      <span>📄 42 submitter reports</span>
+      <span>✏️ 42 marking reports</span>
+      <span class="badge badge-danger" style="font-size:10px">Deadline: 28 Apr 2026 — overdue</span>
+    </div>
+
+    <div class="tiles-heading">Health indicators</div>
+    <div class="tiles">
+
+      <div class="tile">
+        <div class="tile-label">Distribution</div>
+        <div class="tile-value tv-healthy">100%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fs" style="width:100%"></div></div>
+        <div class="tile-sub">All distributed</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Reports submitted</div>
+        <div class="tile-value tv-danger">38%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fd" style="width:38%"></div></div>
+        <div class="tile-sub ts-bad">26 awaiting</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Feedback</div>
+        <div class="tile-value tv-danger">29%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fd" style="width:29%"></div></div>
+        <div class="tile-sub ts-bad">12 missing</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Moderation</div>
+        <div class="tile-value tv-muted">0</div>
+        <div class="tile-sub">triggered</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">NOT_READY</div>
+        <div class="tile-value tv-danger">19%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fd" style="width:19%"></div></div>
+        <div class="tile-sub ts-bad">8 stalled</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Needs intervention</div>
+        <div class="tile-value tv-muted">0%</div>
+        <div class="tile-bar"><div class="tile-bar-fill fs" style="width:0%"></div></div>
+        <div class="tile-sub">None</div>
+      </div>
+
+      <!-- Grade SD / CV: show em-dash when insufficient data -->
+      <div class="tile">
+        <div class="tile-label">Grade SD / CV</div>
+        <div class="tile-value tv-muted" style="font-size:20px">&mdash;</div>
+        <div class="tile-sub">Insufficient data</div>
+      </div>
+
+    </div>
+  </div><!-- end workflow-block -->
+
+</div><!-- end event-card -->
+
+<div class="auto-note">
+  🕐 Next auto-refresh in 15 min &nbsp;·&nbsp; <a href="#">Reload now</a>
+</div>
+
+</body>
+</html>

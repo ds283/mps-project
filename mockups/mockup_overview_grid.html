@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Dashboards overview grid</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5ede0; min-height: 100vh; padding: 2rem; }
+nav { background: #1a1a1a; color: #fff; padding: 0.6rem 1.5rem; display: flex; align-items: center; justify-content: space-between; margin: -2rem -2rem 2rem; font-size: 13px; }
+nav .brand { font-weight: 500; }
+nav .links { display: flex; gap: 1.5rem; opacity: 0.8; font-size: 12px; }
+.page-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.page-title h1 { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+.page-subtitle { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 340px)); gap: 1rem; }
+
+/* Card */
+.card { background: #fff; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction:column; gap: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.card-inner { display: flex; gap: 1rem; align-items: flex-start; }
+.card-icon { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 22px; }
+.card-icon.ai   { background: #EAF1FB; }
+.card-icon.mark { background: #EAF3DE; }
+.card-body h2 { font-size: 15px; font-weight: 500; color: #1a1a1a; margin-bottom: 4px; }
+.card-body p  { font-size: 13px; color: #555; line-height: 1.5; }
+
+/* Tags */
+.card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; background: #3d3d3d; color: #fff; padding: 3px 10px; border-radius: 20px; }
+.tag.alert { background: #7a3520; }
+
+/* Buttons */
+.open-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 500; width: fit-content; }
+.open-btn.ai   { background: #1a56db; color: #fff; }
+.open-btn.mark { background: #2d7a3a; color: #fff; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">MPS projects management</span>
+  <span class="links">
+    <span>My projects</span><span>Reports</span><strong>Dashboards</strong><span>Archive</span><span>Convenor</span><span>Admin</span>
+  </span>
+</nav>
+
+<div class="page-title">
+  <span style="font-size:22px">📊</span>
+  <h1>Dashboards</h1>
+</div>
+<p class="page-subtitle">Data analytics and reporting tools</p>
+
+<div class="grid">
+
+  <!-- Existing card — AI Risk Dashboard -->
+  <div class="card">
+    <div class="card-inner">
+      <div class="card-icon ai">🤖</div>
+      <div class="card-body">
+        <h2>AI Risk Dashboard</h2>
+        <p>Lexical diversity metrics, LLM-assessed grade bands, and AI risk indicators for submitted reports. Distributions across cohorts and academic cycles.</p>
+      </div>
+    </div>
+    <div class="card-tags">
+      <span class="tag">🏫 4 tenants</span>
+      <span class="tag">🎓 4 project classes</span>
+      <span class="tag">📅 7 cycles</span>
+    </div>
+    <button class="open-btn ai">📊 Open dashboard</button>
+  </div>
+
+  <!-- New card — Marking Dashboard -->
+  <div class="card">
+    <div class="card-inner">
+      <div class="card-icon mark">📋</div>
+      <div class="card-body">
+        <h2>Marking Dashboard</h2>
+        <p>Workflow health, progress indicators, and at-risk flags across all marking events. Covers distribution, submission, moderation, and grade consistency.</p>
+      </div>
+    </div>
+    <div class="card-tags">
+      <span class="tag">🏫 4 tenants</span>
+      <span class="tag">🎓 6 marking events</span>
+      <span class="tag alert">⚠ 3 unresolved flags</span>
+    </div>
+    <button class="open-btn mark">📋 Open dashboard</button>
+  </div>
+
+</div>
+</body>
+</html>

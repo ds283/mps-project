@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Marks register</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f0ee; }
+
+/* ── Page header ── */
+.page-header { background: #1a3a5c; color: #fff; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.page-header h1 { font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.page-header .subtitle { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+.hdr-btns { display: flex; gap: 8px; }
+.btn-hdr { font-size: 12px; padding: 5px 12px; border: 0.5px solid rgba(255,255,255,0.4); border-radius: 6px; background: transparent; color: #fff; cursor: pointer; }
+
+/* ── Export bar ── */
+/*
+  One export button per MarkingWorkflow belonging to this MarkingEvent.
+  Excel generation is a background Celery task; completed reports appear
+  in the user's Download Centre.
+*/
+.export-bar { background: #f4f4f2; border-bottom: 0.5px solid #ddd; padding: 0.5rem 1.5rem; font-size: 11px; color: #666; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.export-bar strong { color: #1a1a1a; }
+.ex-btn { font-size: 11px; padding: 3px 10px; border: 0.5px solid #aed99a; border-radius: 6px; background: #fff; color: #3B6D11; cursor: pointer; }
+.export-note { margin-left: auto; font-size: 10px; color: #999; }
+
+/* ── Toolbar ── */
+.toolbar { background: #fff; border-bottom: 0.5px solid #ddd; padding: 0.7rem 1.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.toolbar input { font-size: 12px; padding: 4px 10px; width: 200px; border: 0.5px solid #ccc; border-radius: 6px; }
+.toolbar .count { font-size: 12px; color: #666; }
+.legend { display: flex; gap: 10px; align-items: center; font-size: 11px; color: #666; margin-left: auto; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+.ds { background: #639922; }
+.dw { background: #BA7517; }
+.dd { background: #E24B4A; }
+.dm { background: #B4B2A9; }
+
+/* ── Table ── */
+/*
+  Horizontal scroll is intentional — the register does NOT resize to viewport.
+  Column structure:
+    [Student] [Conflation]
+    then, for each MarkingWorkflow: [SubmitterReport] [MarkingReport×N] [Feedback]
+  The number of MarkingReport columns per workflow is variable; the template
+  should compute max(len(marking_reports)) across all submitters for each
+  workflow and render that many columns, filling absent cells with "—".
+  Column grouping uses a two-tier header:
+    Row 1: colspan group header per MarkingWorkflow (dark blue)
+    Row 2: sub-column headers within each group (light gray)
+*/
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 11px; white-space: nowrap; min-width: 900px; width: 100%; }
+
+thead th { padding: 6px 10px; border: 0.5px solid rgba(0,0,0,0.15); font-weight: 500; font-size: 11px; vertical-align: middle; }
+th.h1 { background: #1a3a5c; color: #fff; }           /* Student + Conflation */
+th.h2 { background: #2d4a6b; color: #fff; text-align: center; } /* MarkingWorkflow group */
+th.h3 { background: #f4f4f2; color: #555; font-size: 10px; font-weight: 500; text-align: center; border-color: #ddd; } /* sub-column */
+
+tbody td { padding: 5px 10px; border: 0.5px solid #ddd; vertical-align: middle; }
+tbody tr:nth-child(even) { background: #f8f8f6; }
+tbody tr:hover { background: #EBF3FB; }
+
+/* ── Cell components ── */
+.sname { font-weight: 500; font-size: 12px; color: #1a1a1a; }
+.cnum  { font-size: 10px; color: #888; }
+
+/* Conflation cell */
+.status-col { display: flex; flex-direction: column; gap: 2px; }
+.sr-row { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #666; }
+.sr-row.bad { color: #A32D2D; }
+
+/*
+  Mini progress bar — encodes position in the ordered workflow state machine:
+    NOT_READY                        → ~10%  danger
+    AWAITING_GRADING_REPORTS         → ~35%  warning
+    up to READY_TO_SIGN_OFF          → ~65%  warning
+    COMPLETED or beyond              → 100%  success
+  (template should map each state to an approximate percentage)
+*/
+.mini-bar { height: 5px; border-radius: 2px; background: #e0e0dc; min-width: 52px; overflow: hidden; margin-bottom: 3px; }
+.mbf { height: 100%; border-radius: 2px; }
+.fs  { background: #639922; }
+.fw  { background: #BA7517; }
+.fd  { background: #E24B4A; }
+
+.grade { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+.grade.muted { color: #888; }
+
+/* Badges — used inside cells for warning indicators */
+.badge { display: inline-flex; align-items: center; font-size: 10px; padding: 1px 6px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.badge-success { background: #EAF3DE; color: #3B6D11; }
+.badge-warning  { background: #FAEEDA; color: #854F0B; }
+.badge-danger   { background: #FCEBEB; color: #A32D2D; }
+
+/* Marker name — dashed underline signals tooltip on hover */
+.marker-name { border-bottom: 1px dashed #bbb; cursor: help; font-size: 11px; }
+
+/* Feedback / status icons */
+.ic     { font-size: 12px; }
+.ok     { color: #3B6D11; }
+.warn   { color: #854F0B; }
+.bad    { color: #A32D2D; }
+.muted  { color: #888; }
+
+/* ── Pagination ── */
+.pager { font-size: 11px; color: #888; padding: 0.5rem 1.5rem; text-align: right; border-top: 0.5px solid #ddd; background: #fff; }
+.pager a { color: #185FA5; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PAGE HEADER
+════════════════════════════════════════════ -->
+<div class="page-header">
+  <div>
+    <h1>📊 Marks register</h1>
+    <div class="subtitle">BSc Final Year Project — Main marking round &nbsp;·&nbsp; Final Year Project (BSc)</div>
+  </div>
+  <div class="hdr-btns">
+    <!-- Back button returns to the main marking dashboard -->
+    <button class="btn-hdr">← Back to dashboard</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     EXPORT BAR
+     One button per MarkingWorkflow.
+     Triggers a background Celery task; result appears in Download Centre.
+════════════════════════════════════════════ -->
+<div class="export-bar">
+  <strong>Export:</strong>
+  <button class="ex-btn">📥 Supervisor marking (Excel)</button>
+  <button class="ex-btn">📥 Second marker (Excel)</button>
+  <span class="export-note">Generated reports appear in your Download Centre</span>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TOOLBAR — search + legend
+════════════════════════════════════════════ -->
+<div class="toolbar">
+  <input type="text" placeholder="Filter by student name…">
+  <span class="count">42 students &nbsp;·&nbsp; page 1 of 14</span>
+  <div class="legend">
+    <span><span class="dot ds"></span>Complete</span>
+    <span><span class="dot dw"></span>In progress</span>
+    <span><span class="dot dd"></span>Not ready</span>
+    <span><span class="dot dm"></span>Not distributed</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     REGISTER TABLE
+     Scrolls horizontally; does NOT resize to viewport width.
+
+     Column layout (two-tier header):
+       Tier 1 (h1): Student | Conflation | [MarkingWorkflow name] ×N
+       Tier 2 (h3): — | — | SubmitterReport | MarkingReport×M | Feedback
+
+     For each MarkingWorkflow, M = max number of MarkingReport instances
+     across all SubmitterReports in that workflow. Cells with fewer reports
+     than M should render "—" in the extra columns.
+
+     Progress bars encode state-machine position (see CSS comment above).
+     Both "out of tolerance" and "moderation triggered" badges may appear
+     simultaneously in a SubmitterReport cell — show both when applicable.
+════════════════════════════════════════════ -->
+<div class="table-wrap">
+<table>
+<thead>
+  <tr>
+    <th class="h1" rowspan="2" style="min-width:120px">Student</th>
+    <th class="h1" rowspan="2" style="min-width:105px">Conflation</th>
+    <!-- MarkingWorkflow group: "Supervisor marking" (2 MarkingReports max) -->
+    <th class="h2" colspan="4">Supervisor marking</th>
+    <!-- MarkingWorkflow group: "Second marker" (2 MarkingReports max) -->
+    <th class="h2" colspan="4">Second marker</th>
+  </tr>
+  <tr>
+    <!-- Supervisor marking sub-columns -->
+    <th class="h3">Submitter report</th>
+    <th class="h3">Assessor 1</th>
+    <th class="h3">Assessor 2</th>
+    <th class="h3">Feedback</th>
+    <!-- Second marker sub-columns -->
+    <th class="h3">Submitter report</th>
+    <th class="h3">Assessor 1</th>
+    <th class="h3">Assessor 2</th>
+    <th class="h3">Feedback</th>
+  </tr>
+</thead>
+<tbody>
+
+  <!-- ── Row 1: complete, conflated, moderator report accepted ── -->
+  <tr>
+    <td>
+      <div class="sname">Amara Okafor</div>
+      <div class="cnum">Cand. 10042</div>
+    </td>
+    <td>
+      <div class="status-col">
+        <div class="sr-row"><span class="ic ok">✓</span> Conflated</div>
+        <div class="sr-row"><span class="ic ok">✓</span> Feedback sent</div>
+      </div>
+    </td>
+    <!-- SubmitterReport for Supervisor marking: complete, mod accepted -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="grade">68</span>
+        <!-- accepted_moderator_report_id is not null -->
+        <span class="badge badge-success">Mod. accepted</span>
+      </div>
+    </td>
+    <!-- MarkingReport 1 for Supervisor marking -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div><span class="marker-name" title="Dr Alice King">Dr A. King</span> · <span class="grade">68</span></div>
+    </td>
+    <!-- MarkingReport 2 for Supervisor marking -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div><span class="marker-name" title="Prof Sebastian Weidt">Prof S. Weidt</span> · <span class="grade">67</span></div>
+    </td>
+    <td><span class="ic ok">✓</span></td>
+    <!-- SubmitterReport for Second marker: complete -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <span class="grade">65</span>
+    </td>
+    <!-- MarkingReport 1 for Second marker -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div><span class="marker-name" title="Prof David Seery">Prof D. Seery</span> · <span class="grade">65</span></div>
+    </td>
+    <!-- MarkingReport 2: absent for this student → em-dash -->
+    <td style="color:#888;font-size:11px">&mdash;</td>
+    <td><span class="ic ok">✓</span></td>
+  </tr>
+
+  <!-- ── Row 2: supervisor in progress, second marker not ready ── -->
+  <tr>
+    <td>
+      <div class="sname">Ben Cartwright</div>
+      <div class="cnum">Cand. 10019</div>
+    </td>
+    <td>
+      <div class="sr-row muted"><span class="dot dm" style="margin-right:3px"></span>Not conflated</div>
+    </td>
+    <!-- SubmitterReport: awaiting sign-off (~65% through state machine) -->
+    <td>
+      <div class="mini-bar"><div class="mbf fw" style="width:65%"></div></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="grade muted">&mdash;</span>
+        <span class="badge badge-warning">Awaiting sign-off</span>
+      </div>
+    </td>
+    <td>
+      <div class="mini-bar"><div class="mbf fw" style="width:80%"></div></div>
+      <div><span class="marker-name" title="Dr Maire Gorman">Dr M. Gorman</span> · <span class="grade">71</span></div>
+    </td>
+    <td style="color:#888;font-size:11px">&mdash;</td>
+    <!-- Feedback not yet submitted -->
+    <td><span class="ic warn">!</span></td>
+    <!-- SubmitterReport for Second marker: NOT_READY (~10%) -->
+    <td>
+      <div class="mini-bar"><div class="mbf fd" style="width:10%"></div></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="grade muted">&mdash;</span>
+        <span class="badge badge-danger">Not ready</span>
+      </div>
+    </td>
+    <td>
+      <div class="mini-bar"><div class="mbf fd" style="width:0%"></div></div>
+      <div style="font-size:11px;color:#888">Not distributed</div>
+    </td>
+    <td style="color:#888;font-size:11px">&mdash;</td>
+    <td><span class="ic bad">✗</span></td>
+  </tr>
+
+  <!-- ── Row 3: out-of-tolerance + moderation triggered, AI risk flag ── -->
+  <!--
+    This row demonstrates that "out of tolerance" and "moderation triggered"
+    badges co-exist simultaneously in the same SubmitterReport cell when
+    both conditions are true. Both badges are always shown; there is no
+    priority ordering that suppresses one in favour of the other.
+    The AI risk flag appears in the Conflation cell as a warning indicator.
+  -->
+  <tr>
+    <td>
+      <div class="sname">Priya Sharma</div>
+      <div class="cnum">Cand. 10055</div>
+    </td>
+    <td>
+      <div class="status-col">
+        <div class="sr-row muted"><span class="dot dm" style="margin-right:3px"></span>Not conflated</div>
+        <!-- AI risk flag on parent SubmissionRecord -->
+        <div class="sr-row bad">⚠ AI risk flag</div>
+      </div>
+    </td>
+    <!-- SubmitterReport: complete but out_of_tolerance = true -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+        <span class="grade">74</span>
+        <span class="badge badge-warning">Out of tolerance</span>
+      </div>
+    </td>
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div><span class="marker-name" title="Dr Alice King">Dr A. King</span> · <span class="grade">74</span></div>
+    </td>
+    <td style="color:#888;font-size:11px">&mdash;</td>
+    <td><span class="ic ok">✓</span></td>
+    <!--
+      SubmitterReport for Second marker: complete, out_of_tolerance AND
+      moderation triggered — both badges shown simultaneously.
+    -->
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+        <span class="grade">81</span>
+        <span class="badge badge-warning">Out of tolerance</span>
+        <span class="badge badge-warning">Moderation triggered</span>
+      </div>
+    </td>
+    <td>
+      <div class="mini-bar"><div class="mbf fs" style="width:100%"></div></div>
+      <div><span class="marker-name" title="Prof Sebastian Weidt">Prof S. Weidt</span> · <span class="grade">81</span></div>
+    </td>
+    <td style="color:#888;font-size:11px">&mdash;</td>
+    <td><span class="ic ok">✓</span></td>
+  </tr>
+
+</tbody>
+</table>
+</div>
+
+<div class="pager">
+  Page 1 of 14 &nbsp;·&nbsp; <a href="#">Next →</a>
+</div>
+
+</body>
+</html>

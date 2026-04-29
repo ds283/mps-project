@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from collections import OrderedDict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -28,11 +29,24 @@ from ..models import (
     ProjectClassConfig,
     SubmissionPeriodRecord,
     SubmissionRecord,
+    SubmittingStudent,
     Tenant,
 )
+from ..models.markingevent import (
+    ConflationReport,
+    MarkingEvent,
+    MarkingReport,
+    MarkingWorkflow,
+    MarkingEventWorkflowStates,
+    SubmitterReport,
+    SubmitterReportWorkflowStates,
+)
+from ..models.students import StudentData
+from ..models.users import User as UserModel
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
+from ..task_queue import progress_update, register_task
 from ..tasks.llm_orchestration import (
     _cleanup_redis,
     _collect_error_record_ids,
@@ -47,6 +61,7 @@ from ..tasks.llm_orchestration import (
     launch_period_pipeline,
     set_pipeline_paused,
 )
+from .forms import MarkingExportForm
 from . import dashboards
 
 # ---------------------------------------------------------------------------
@@ -113,6 +128,40 @@ METRIC_CONFIGS = [
 ]
 
 HISTOGRAM_THRESHOLD = 25  # minimum N to render a Bokeh histogram
+
+# State-machine progress percentages for SubmitterReport workflow states
+_SR_STATE_PCT: Dict[int, int] = {
+    SubmitterReportWorkflowStates.NOT_READY: 5,
+    SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE: 15,
+    SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS: 35,
+    SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF: 50,
+    SubmitterReportWorkflowStates.AWAITING_FEEDBACK: 60,
+    SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED: 65,
+    SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT: 70,
+    SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION: 40,
+    SubmitterReportWorkflowStates.READY_TO_SIGN_OFF: 85,
+    SubmitterReportWorkflowStates.COMPLETED: 100,
+    SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE: 100,
+}
+
+# State-machine progress percentages for MarkingReport
+_MR_STATE_PCT: Dict[str, int] = {
+    "not_distributed": 0,
+    "distributed_not_submitted": 40,
+    "submitted_not_signed_off": 75,
+    "signed_off": 100,
+}
+
+
+def _mr_progress_pct(mr: MarkingReport) -> int:
+    """Return the state-machine progress percentage for a single MarkingReport."""
+    if not mr.distributed:
+        return _MR_STATE_PCT["not_distributed"]
+    if not mr.report_submitted:
+        return _MR_STATE_PCT["distributed_not_submitted"]
+    if mr.signed_off_id is None:
+        return _MR_STATE_PCT["submitted_not_signed_off"]
+    return _MR_STATE_PCT["signed_off"]
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +303,263 @@ def _get_accessible_cycles(pclass_ids: List[int]) -> List[int]:
         .all()
     )
     return [r[0] for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Marking dashboard — access-control helpers
+# ---------------------------------------------------------------------------
+
+
+def _can_access_marking_dashboard() -> bool:
+    """Return True if the current user may view the marking dashboard."""
+    return (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (
+            current_user.has_role("faculty")
+            and current_user.faculty_data is not None
+            and current_user.faculty_data.is_convenor
+        )
+    )
+
+
+def _get_accessible_pclasses_for_marking(
+    tenant_id: Optional[int] = None,
+) -> List[ProjectClass]:
+    """
+    Return ProjectClass instances the current user may view on the marking
+    dashboard. A class is included only when it has at least one MarkingEvent.
+    """
+    from sqlalchemy import exists
+
+    has_events_subq = (
+        db.session.query(MarkingEvent.id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .filter(ProjectClassConfig.pclass_id == ProjectClass.id)
+        .correlate(ProjectClass)
+        .exists()
+    )
+
+    q = db.session.query(ProjectClass).filter(has_events_subq)
+
+    if tenant_id is not None:
+        q = q.filter(ProjectClass.tenant_id == tenant_id)
+
+    if current_user.has_role("root") or current_user.has_role("admin"):
+        return q.order_by(ProjectClass.name).all()
+
+    if current_user.has_role("faculty") and current_user.faculty_data is not None:
+        convenor_ids = {p.id for p in current_user.faculty_data.convenor_list}
+        return [p for p in q.order_by(ProjectClass.name).all() if p.id in convenor_ids]
+
+    return []
+
+
+def _get_accessible_marking_events(
+    tenant_id: Optional[int] = None,
+    pclass_id: Optional[int] = None,
+) -> List[MarkingEvent]:
+    """Return MarkingEvent instances visible to the current user."""
+    q = (
+        db.session.query(MarkingEvent)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+    )
+
+    if tenant_id is not None:
+        q = q.filter(ProjectClass.tenant_id == tenant_id)
+
+    if pclass_id is not None:
+        q = q.filter(ProjectClass.id == pclass_id)
+
+    if current_user.has_role("root") or current_user.has_role("admin"):
+        pass
+    elif current_user.has_role("faculty") and current_user.faculty_data is not None:
+        convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
+        if not convenor_pclass_ids:
+            return []
+        q = q.filter(ProjectClass.id.in_(convenor_pclass_ids))
+    else:
+        return []
+
+    return q.order_by(
+        ProjectClass.name,
+        SubmissionPeriodRecord.submission_period,
+        MarkingEvent.name,
+    ).all()
+
+
+# ---------------------------------------------------------------------------
+# Marking dashboard — data aggregation helpers
+# ---------------------------------------------------------------------------
+
+
+def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
+    """
+    Compute all health metrics for a single MarkingWorkflow.
+    Fetches submitter_reports and marking_reports in a minimal number of
+    round trips and returns a dict safe to pass directly to the template.
+    """
+    srs = workflow.submitter_reports.all()
+    n_sr = len(srs)
+    sr_ids = [sr.id for sr in srs]
+
+    # Single query for all MarkingReports in this workflow
+    mrs = (
+        db.session.query(MarkingReport)
+        .filter(MarkingReport.submitter_report_id.in_(sr_ids))
+        .all()
+        if sr_ids
+        else []
+    )
+    n_mr = len(mrs)
+    n_mr_dist = sum(1 for mr in mrs if mr.distributed)
+    n_mr_submitted = sum(1 for mr in mrs if mr.report_submitted)
+    n_mr_feedback = sum(1 for mr in mrs if mr.feedback_submitted)
+
+    state_counts: Dict[int, int] = {}
+    n_out_of_tolerance = 0
+    grades: List[float] = []
+
+    for sr in srs:
+        state_counts[sr.workflow_state] = state_counts.get(sr.workflow_state, 0) + 1
+        if sr.out_of_tolerance:
+            n_out_of_tolerance += 1
+        if sr.grade is not None:
+            try:
+                grades.append(float(sr.grade))
+            except (TypeError, ValueError):
+                pass
+
+    def pct(num: int, denom: int) -> Optional[float]:
+        if denom == 0:
+            return None
+        return round(100.0 * num / denom, 1)
+
+    n_not_ready = state_counts.get(SubmitterReportWorkflowStates.NOT_READY, 0)
+    n_intervention = state_counts.get(
+        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0
+    )
+    n_needs_moderator = state_counts.get(
+        SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0
+    )
+
+    grade_sd: Optional[float] = None
+    grade_cv: Optional[float] = None
+    if len(grades) >= 2:
+        arr = np.array(grades, dtype=float)
+        grade_sd = float(np.std(arr, ddof=1))
+        mean = float(np.mean(arr))
+        grade_cv = float(grade_sd / mean * 100) if mean != 0.0 else None
+
+    return {
+        "workflow": workflow,
+        "n_submitter_reports": n_sr,
+        "n_marking_reports": n_mr,
+        "distribution_pct": pct(n_mr_dist, n_mr),
+        "submitted_pct": pct(n_mr_submitted, n_mr),
+        "feedback_pct": pct(n_mr_feedback, n_mr),
+        "n_out_of_tolerance": n_out_of_tolerance,
+        "not_ready_pct": pct(n_not_ready, n_sr),
+        "intervention_pct": pct(n_intervention, n_sr),
+        "needs_moderator_pct": pct(n_needs_moderator, n_sr),
+        "grade_sd": grade_sd,
+        "grade_cv": grade_cv,
+        "state_counts": state_counts,
+    }
+
+
+def _compute_event_risk_summary(event: MarkingEvent) -> Dict:
+    """
+    Walk all SubmitterReports for the event and count risk flags on the
+    linked SubmissionRecords. Counts unique records, not SubmitterReports,
+    to avoid double-counting students who appear in multiple workflows.
+    """
+    seen_record_ids: set = set()
+    n_flagged = 0
+    n_unresolved = 0
+    n_ai_risk = 0
+
+    ai_risk_keys = {SubmissionRecord.RISK_AI_COMPLIANCE, SubmissionRecord.RISK_AI_USE}
+
+    for workflow in event.workflows:
+        for sr in workflow.submitter_reports:
+            record = sr.record
+            if record.id in seen_record_ids:
+                continue
+            seen_record_ids.add(record.id)
+
+            present = record.get_present_risk_factors()
+            unresolved = record.get_unresolved_risk_factors()
+            if present:
+                n_flagged += 1
+            if unresolved:
+                n_unresolved += 1
+            if any(k in ai_risk_keys for k, _ in present):
+                n_ai_risk += 1
+
+    return {
+        "n_flagged": n_flagged,
+        "n_unresolved": n_unresolved,
+        "n_ai_risk": n_ai_risk,
+    }
+
+
+def _build_marking_dashboard_sections(events: List[MarkingEvent]) -> List[Dict]:
+    """
+    Group a flat list of MarkingEvents into a nested structure:
+      [{ tenant, pclasses: [{ pclass, periods: [{ period, events: [event_data] }] }] }]
+    Each event_data contains pre-computed workflow health dicts and risk summary.
+    """
+    tenant_map: OrderedDict = OrderedDict()
+
+    for event in events:
+        period = event.period
+        config = period.config
+        pclass = config.project_class
+        tenant = pclass.tenant
+
+        if tenant.id not in tenant_map:
+            tenant_map[tenant.id] = {"tenant": tenant, "pclass_map": OrderedDict()}
+
+        pclass_map = tenant_map[tenant.id]["pclass_map"]
+        if pclass.id not in pclass_map:
+            pclass_map[pclass.id] = {"pclass": pclass, "period_map": OrderedDict()}
+
+        period_map = pclass_map[pclass.id]["period_map"]
+        if period.id not in period_map:
+            period_map[period.id] = {"period": period, "events": []}
+
+        workflow_healths = [_compute_workflow_health(wf) for wf in event.workflows]
+        risk_summary = _compute_event_risk_summary(event)
+
+        period_map[period.id]["events"].append(
+            {
+                "event": event,
+                "workflow_healths": workflow_healths,
+                "risk_summary": risk_summary,
+            }
+        )
+
+    sections = []
+    for t_data in tenant_map.values():
+        pclass_sections = []
+        for p_data in t_data["pclass_map"].values():
+            period_sections = []
+            for pr_data in p_data["period_map"].values():
+                period_sections.append(pr_data)
+            pclass_sections.append({"pclass": p_data["pclass"], "periods": period_sections})
+        sections.append({"tenant": t_data["tenant"], "pclasses": pclass_sections})
+
+    return sections
+
+
+def _marking_summary_for_user() -> Dict:
+    """Return event count for the landing-page card."""
+    events = _get_accessible_marking_events()
+    return {"n_events": len(events)}
 
 
 # ---------------------------------------------------------------------------
@@ -519,10 +825,12 @@ def overview():
         return redirect(url_for("home.homepage"))
 
     summary = _dashboard_summary_for_user()
+    marking_summary = _marking_summary_for_user()
 
     return render_template_context(
         "dashboards/overview.html",
         summary=summary,
+        marking_summary=marking_summary,
     )
 
 
@@ -1633,3 +1941,278 @@ def export_global():
     else:
         flash("No records found.", "info")
     return redirect(redirect_url())
+
+
+# ---------------------------------------------------------------------------
+# Marking dashboard views
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/marking")
+@login_required
+def marking_dashboard():
+    """Summary marking dashboard: health indicators for all MarkingEvents in scope."""
+    if not _can_access_marking_dashboard():
+        flash("You do not have permission to access the marking dashboard.", "error")
+        return redirect(url_for("home.homepage"))
+
+    accessible_tenants = _get_accessible_tenants()
+    if not accessible_tenants:
+        flash("No tenants are accessible with your current role.", "info")
+        return redirect(url_for("dashboards.overview"))
+
+    # Resolve tenant filter
+    if len(accessible_tenants) == 1:
+        selected_tenant_id = accessible_tenants[0].id
+    else:
+        try:
+            selected_tenant_id = int(request.args.get("tenant_id", 0)) or accessible_tenants[0].id
+        except (ValueError, TypeError):
+            selected_tenant_id = accessible_tenants[0].id
+
+    accessible_tenant_ids = {t.id for t in accessible_tenants}
+    if selected_tenant_id not in accessible_tenant_ids:
+        selected_tenant_id = accessible_tenants[0].id
+
+    selected_tenant = next((t for t in accessible_tenants if t.id == selected_tenant_id), None)
+
+    # Resolve pclass filter
+    accessible_pclasses = _get_accessible_pclasses_for_marking(selected_tenant_id)
+
+    try:
+        pclass_id = int(request.args.get("pclass_id", 0)) or None
+    except (ValueError, TypeError):
+        pclass_id = None
+
+    if pclass_id is not None and pclass_id not in {p.id for p in accessible_pclasses}:
+        pclass_id = None
+
+    selected_pclass = next((p for p in accessible_pclasses if p.id == pclass_id), None)
+
+    events = _get_accessible_marking_events(tenant_id=selected_tenant_id, pclass_id=pclass_id)
+    sections = _build_marking_dashboard_sections(events)
+
+    return render_template_context(
+        "dashboards/marking_dashboard.html",
+        accessible_tenants=accessible_tenants,
+        selected_tenant=selected_tenant,
+        accessible_pclasses=accessible_pclasses,
+        selected_pclass=selected_pclass,
+        selected_pclass_id=pclass_id,
+        sections=sections,
+        n_events=len(events),
+    )
+
+
+_REGISTER_PER_PAGE = 25
+
+
+@dashboards.route("/marking/register/<int:event_id>")
+@login_required
+def marking_register(event_id: int):
+    """Compact spreadsheet-like register of marks for a single MarkingEvent."""
+    event: Optional[MarkingEvent] = db.session.get(MarkingEvent, event_id)
+    if event is None:
+        flash("Marking event not found.", "error")
+        return redirect(url_for("dashboards.marking_dashboard"))
+
+    pclass = event.pclass
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (
+            current_user.has_role("faculty")
+            and current_user.faculty_data is not None
+            and pclass in current_user.faculty_data.convenor_list
+        )
+    ):
+        flash("You do not have permission to view this marks register.", "error")
+        return redirect(url_for("dashboards.marking_dashboard"))
+
+    # GET parameters
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (ValueError, TypeError):
+        page = 1
+    q_filter = request.args.get("q", "").strip()
+
+    # Collect all unique SubmissionRecord IDs from all workflows
+    record_id_set: set = set()
+    for wf in event.workflows:
+        for sr in wf.submitter_reports:
+            record_id_set.add(sr.record_id)
+
+    # Build paginated query over SubmissionRecords, sorted by student name
+    records_q = (
+        db.session.query(SubmissionRecord)
+        .filter(SubmissionRecord.id.in_(record_id_set))
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+        .join(UserModel, UserModel.id == StudentData.id)
+    )
+
+    if q_filter:
+        like = f"%{q_filter}%"
+        records_q = records_q.filter(
+            db.or_(
+                UserModel.last_name.ilike(like),
+                UserModel.first_name.ilike(like),
+            )
+        )
+
+    records_q = records_q.order_by(UserModel.last_name, UserModel.first_name)
+
+    total_records = records_q.count()
+    total_pages = max(1, (total_records + _REGISTER_PER_PAGE - 1) // _REGISTER_PER_PAGE)
+    page = min(page, total_pages)
+    offset = (page - 1) * _REGISTER_PER_PAGE
+    page_records = records_q.offset(offset).limit(_REGISTER_PER_PAGE).all()
+
+    # Workflow column structure — computed across ALL records for consistent headers
+    workflows = list(event.workflows.order_by(MarkingWorkflow.name))
+
+    # Build global lookups (all workflows, all records)
+    sr_lookup: Dict = {}   # (wf_id, record_id) -> SubmitterReport
+    mr_lookup: Dict = {}   # sr_id -> [MarkingReport, ...] sorted by id
+
+    for wf in workflows:
+        for sr in wf.submitter_reports:
+            sr_lookup[(wf.id, sr.record_id)] = sr
+            mr_lookup[sr.id] = sorted(sr.marking_reports.all(), key=lambda m: m.id)
+
+    # Max MarkingReports per workflow across ALL submitter reports
+    wf_max_mr: Dict[int, int] = {}
+    for wf in workflows:
+        max_mr = max(
+            (len(mr_lookup.get(sr.id, [])) for sr in wf.submitter_reports),
+            default=0,
+        )
+        wf_max_mr[wf.id] = max_mr
+
+    col_groups = [
+        {
+            "workflow": wf,
+            "n_mr": wf_max_mr[wf.id],
+            "n_cols": 1 + wf_max_mr[wf.id] + 1,  # SR + N MRs + Feedback
+        }
+        for wf in workflows
+    ]
+
+    # ConflationReport lookup
+    cr_lookup: Dict[int, ConflationReport] = {
+        cr.submission_record_id: cr for cr in event.conflation_reports
+    }
+
+    # Build row data for current page
+    rows = []
+    for record in page_records:
+        student_data = record.owner.student
+        student_user = student_data.user
+        cr = cr_lookup.get(record.id)
+
+        wf_cells = []
+        for wf in workflows:
+            sr = sr_lookup.get((wf.id, record.id))
+            sr_pct = _SR_STATE_PCT.get(sr.workflow_state, 0) if sr else 0
+
+            mr_cells = []
+            if sr:
+                mrs = mr_lookup.get(sr.id, [])
+                for mr in mrs:
+                    mr_cells.append(
+                        {
+                            "mr": mr,
+                            "pct": _mr_progress_pct(mr),
+                            "marker_name": (
+                                mr.role.user.name if mr.role and mr.role.user else "—"
+                            ),
+                        }
+                    )
+                while len(mr_cells) < wf_max_mr[wf.id]:
+                    mr_cells.append(None)
+            else:
+                mr_cells = [None] * wf_max_mr[wf.id]
+
+            # Determine feedback status for this SubmitterReport
+            has_feedback = (
+                any(m["mr"].feedback_submitted for m in mr_cells if m is not None)
+                if sr
+                else False
+            )
+
+            wf_cells.append(
+                {
+                    "sr": sr,
+                    "sr_pct": sr_pct,
+                    "mr_cells": mr_cells,
+                    "has_feedback": has_feedback,
+                }
+            )
+
+        rows.append(
+            {
+                "record": record,
+                "student_user": student_user,
+                "student_data": student_data,
+                "cr": cr,
+                "wf_cells": wf_cells,
+            }
+        )
+
+    export_form = MarkingExportForm()
+
+    return render_template_context(
+        "dashboards/marking_register.html",
+        event=event,
+        workflows=workflows,
+        col_groups=col_groups,
+        rows=rows,
+        page=page,
+        total_pages=total_pages,
+        total_records=total_records,
+        per_page=_REGISTER_PER_PAGE,
+        q_filter=q_filter,
+        export_form=export_form,
+    )
+
+
+@dashboards.route("/marking/export/<int:event_id>", methods=["POST"])
+@login_required
+def export_marking_excel(event_id: int):
+    """Queue a background Celery task to generate a marking Excel export."""
+    event: Optional[MarkingEvent] = db.session.get(MarkingEvent, event_id)
+    if event is None:
+        flash("Marking event not found.", "error")
+        return redirect(url_for("dashboards.marking_dashboard"))
+
+    pclass = event.pclass
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (
+            current_user.has_role("faculty")
+            and current_user.faculty_data is not None
+            and pclass in current_user.faculty_data.convenor_list
+        )
+    ):
+        flash("You do not have permission to export this marking event.", "error")
+        return redirect(url_for("dashboards.marking_dashboard"))
+
+    task_id = register_task(
+        f"Marking Excel export: {event.name}",
+        owner=current_user,
+        description=f"Excel export for marking event '{event.name}'",
+    )
+    if task_id is None:
+        flash("Could not register export task. Please try again.", "error")
+        return redirect(url_for("dashboards.marking_register", event_id=event_id))
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks["app.tasks.marking_export.generate_marking_excel_report"]
+    task.apply_async(args=(event_id, current_user.id, task_id), task_id=task_id)
+
+    flash(
+        "Export queued. You will be notified in your Download Centre when it is ready.",
+        "success",
+    )
+    return redirect(url_for("dashboards.marking_register", event_id=event_id))

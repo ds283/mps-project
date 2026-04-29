@@ -3,6 +3,47 @@
 {% block title %}Dashboards{% endblock %}
 
 {% block bodyblock %}
+    {# ------------------------------------------------------------------ #}
+    {# dashboard_card macro                                                 #}
+    {# Parameters:                                                          #}
+    {#   icon_class     — full Font Awesome class string, e.g.             #}
+    {#                    "fas fa-robot fa-2x text-primary"                 #}
+    {#   icon_bg_class  — background wrapper class, e.g.                   #}
+    {#                    "bg-primary bg-opacity-10"                        #}
+    {#   title          — card heading text                                 #}
+    {#   description    — short body text                                   #}
+    {#   open_url       — href for the "Open dashboard" button              #}
+    {#   open_label     — button label text                                 #}
+    {#   open_btn_class — Bootstrap btn class, e.g. "btn-primary"          #}
+    {# Caller block receives one argument (slot):                           #}
+    {#   slot == 'badges'  — render summary badge markup here              #}
+    {# ------------------------------------------------------------------ #}
+    {% macro dashboard_card(icon_class, icon_bg_class, title, description, open_url, open_label, open_btn_class) %}
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="rounded-3 p-3 {{ icon_bg_class }} flex-shrink-0">
+                            <i class="{{ icon_class }}"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-1 fw-semibold">{{ title }}</h5>
+                            <p class="card-text text-body-secondary small mb-0">{{ description }}</p>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        {{ caller('badges') }}
+                    </div>
+                    <div class="mt-auto">
+                        <a href="{{ open_url }}" class="btn {{ open_btn_class }} btn-sm">
+                            <i class="fas fa-chart-area me-1"></i>{{ open_label }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endmacro %}
+
     <div class="container-fluid mt-4 mb-5">
 
         <div class="d-flex align-items-center mb-4 gap-3">
@@ -17,62 +58,69 @@
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
 
             {# ---- AI Data Dashboard card ---- #}
-            <div class="col">
-                <div class="card h-100 border-0 shadow-sm">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <div class="rounded-3 p-3 bg-primary bg-opacity-10 flex-shrink-0">
-                                <i class="fas fa-robot fa-2x text-primary"></i>
-                            </div>
-                            <div>
-                                <h5 class="card-title mb-1 fw-semibold">AI Risk Dashboard</h5>
-                                <p class="card-text text-body-secondary small mb-0">
-                                    Lexical diversity metrics, LLM-assessed grade bands, and AI risk
-                                    indicators for submitted reports. Distributions across cohorts and
-                                    academic cycles.
-                                </p>
-                            </div>
-                        </div>
+            {% call(slot) dashboard_card(
+                icon_class="fas fa-robot fa-2x text-primary",
+                icon_bg_class="bg-primary bg-opacity-10",
+                title="AI Risk Dashboard",
+                description="Lexical diversity metrics, LLM-assessed grade bands, and AI risk indicators for submitted reports. Distributions across cohorts and academic cycles.",
+                open_url=url_for('dashboards.ai_dashboard'),
+                open_label="Open dashboard",
+                open_btn_class="btn-primary"
+            ) %}
+                {% if slot == 'badges' %}
+                    {% if summary.n_tenants > 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-building me-1"></i>{{ summary.n_tenants }} tenants
+                        </span>
+                    {% endif %}
+                    {% if summary.n_pclasses > 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-graduation-cap me-1"></i>{{ summary.n_pclasses }} project classes
+                        </span>
+                    {% elif summary.n_pclasses == 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-graduation-cap me-1"></i>1 project class
+                        </span>
+                    {% endif %}
+                    {% if summary.n_cycles > 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-calendar-alt me-1"></i>{{ summary.n_cycles }} cycles
+                        </span>
+                    {% elif summary.n_cycles == 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-calendar-alt me-1"></i>1 cycle
+                        </span>
+                    {% endif %}
+                    {% if summary.n_cycles == 0 %}
+                        <span class="badge bg-secondary text-body-secondary">No data available</span>
+                    {% endif %}
+                {% endif %}
+            {% endcall %}
 
-                        {# summary badges #}
-                        <div class="d-flex flex-wrap gap-2 mb-3">
-                            {% if summary.n_tenants > 1 %}
-                                <span class="badge bg-secondary">
-                                <i class="fas fa-building me-1"></i>{{ summary.n_tenants }} tenants
-                            </span>
-                            {% endif %}
-                            {% if summary.n_pclasses > 1 %}
-                                <span class="badge bg-secondary">
-                                <i class="fas fa-graduation-cap me-1"></i>{{ summary.n_pclasses }} project classes
-                            </span>
-                            {% elif summary.n_pclasses == 1 %}
-                                <span class="badge bg-secondary">
-                                <i class="fas fa-graduation-cap me-1"></i>1 project class
-                            </span>
-                            {% endif %}
-                            {% if summary.n_cycles > 1 %}
-                                <span class="badge bg-secondary">
-                                <i class="fas fa-calendar-alt me-1"></i>{{ summary.n_cycles }} cycles
-                            </span>
-                            {% elif summary.n_cycles == 1 %}
-                                <span class="badge bg-secondary">
-                                <i class="fas fa-calendar-alt me-1"></i>1 cycle
-                            </span>
-                            {% endif %}
-                            {% if summary.n_cycles == 0 %}
-                                <span class="badge bg-secondary text-body-secondary">No data available</span>
-                            {% endif %}
-                        </div>
-
-                        <div class="mt-auto">
-                            <a href="{{ url_for('dashboards.ai_dashboard') }}"
-                               class="btn btn-primary btn-sm">
-                                <i class="fas fa-chart-area me-1"></i>Open dashboard
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {# ---- Marking Dashboard card ---- #}
+            {% call(slot) dashboard_card(
+                icon_class="fas fa-clipboard-check fa-2x text-success",
+                icon_bg_class="bg-success bg-opacity-10",
+                title="Marking Dashboard",
+                description="Workflow health, progress indicators, and at-risk flags across all marking events. Covers distribution, submission, moderation, and grade consistency.",
+                open_url=url_for('dashboards.marking_dashboard'),
+                open_label="Open dashboard",
+                open_btn_class="btn-success"
+            ) %}
+                {% if slot == 'badges' %}
+                    {% if marking_summary.n_events > 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-calendar-check me-1"></i>{{ marking_summary.n_events }} marking events
+                        </span>
+                    {% elif marking_summary.n_events == 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-calendar-check me-1"></i>1 marking event
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary text-body-secondary">No marking events</span>
+                    {% endif %}
+                {% endif %}
+            {% endcall %}
 
         </div>
 

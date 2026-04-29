@@ -8,20 +8,24 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from flask import has_request_context, session, render_template
+from flask import has_request_context, render_template, session
 from flask_login import current_user
 from jinja2 import Template
 
+from ... import site_copyright_dates, site_revision
+from ...database import db
+from ...models import ProjectClass, ProjectClassConfig, User
+from ...models.markingevent import (
+    MarkingEvent,
+    MarkingEventWorkflowStates,
+    SubmitterReportWorkflowStates,
+)
+from ..utils import home_dashboard_url
 from .assessments import get_assessment_data
 from .matching import get_matching_data
-from .utils import get_pclass_list, get_pclass_config_list
-from ..utils import home_dashboard_url
-from ... import site_revision, site_copyright_dates
-from ...database import db
-from ...models import User, ProjectClass, ProjectClassConfig
-from ...models.markingevent import MarkingEvent, MarkingEventWorkflowStates
+from .utils import get_pclass_config_list, get_pclass_list
 
 
 def get_global_context_data():
@@ -56,6 +60,7 @@ def build_static_context_data(app):
         "website_copyright_dates": site_copyright_dates,
         "MarkingEvent": MarkingEvent,
         "MarkingEventWorkflowStates": MarkingEventWorkflowStates,
+        "SubmitterReportWorkflowStates": SubmitterReportWorkflowStates,
         "branding_label": app.config.get("BRANDING_LABEL", "Not configured"),
         "branding_login_landing_string": app.config.get(
             "BRANDING_LOGIN_LANDING_STRING", "Not configured"
@@ -74,8 +79,8 @@ def build_static_context_data(app):
     }
 
     if (
-            _static_ctx["video_explainer_panopto_server"] is not None
-            and _static_ctx["video_explainer_panopto_session"] is not None
+        _static_ctx["video_explainer_panopto_server"] is not None
+        and _static_ctx["video_explainer_panopto_session"] is not None
     ):
         _static_ctx["enable_video_explainer"] = True
     else:
@@ -114,39 +119,43 @@ def _build_global_context():
 
     # assumes _static_ctx has been suitably initialized
     return (
-            _static_ctx
-            | {
-                "current_time": datetime.now(),
-                "real_user": _get_previous_login(),
-                "home_dashboard_url": home_dashboard_url(),
-                "is_faculty": is_faculty,
-                "is_office": is_office,
-                "is_student": is_student,
-                "is_reports": is_reports,
-                "is_convenor": is_faculty
-                               and current_user.faculty_data is not None
-                               and current_user.faculty_data.is_convenor,
-                "is_root": is_root,
-                "is_admin": is_admin,
-                "is_edit_tags": is_edit_tags,
-                "is_view_email": is_view_email,
-                "is_manage_users": is_manage_users,
-                "is_emailer": is_emailer,
-                "is_archive": is_archive,
-                "is_archive_reports": is_archive_reports,
-                "is_data_dashboard_AI": is_data_dashboard_AI,
-                # Combined flag: can view any data dashboard
-                "can_view_dashboards": is_root or is_admin or is_data_dashboard_AI
-                                       or (is_faculty
-                                           and current_user.faculty_data is not None
-                                           and current_user.faculty_data.is_convenor),
-            }
-            | base_context_data
+        _static_ctx
+        | {
+            "current_time": datetime.now(),
+            "real_user": _get_previous_login(),
+            "home_dashboard_url": home_dashboard_url(),
+            "is_faculty": is_faculty,
+            "is_office": is_office,
+            "is_student": is_student,
+            "is_reports": is_reports,
+            "is_convenor": is_faculty
+            and current_user.faculty_data is not None
+            and current_user.faculty_data.is_convenor,
+            "is_root": is_root,
+            "is_admin": is_admin,
+            "is_edit_tags": is_edit_tags,
+            "is_view_email": is_view_email,
+            "is_manage_users": is_manage_users,
+            "is_emailer": is_emailer,
+            "is_archive": is_archive,
+            "is_archive_reports": is_archive_reports,
+            "is_data_dashboard_AI": is_data_dashboard_AI,
+            # Combined flag: can view any data dashboard
+            "can_view_dashboards": is_root
+            or is_admin
+            or is_data_dashboard_AI
+            or (
+                is_faculty
+                and current_user.faculty_data is not None
+                and current_user.faculty_data.is_convenor
+            ),
+        }
+        | base_context_data
     )
 
 
 def render_template_context(
-        template: str | Template | List[str | Template], **kwargs
+    template: str | Template | List[str | Template], **kwargs
 ) -> str:
     context = _build_global_context()
     return render_template(template, **kwargs, **context)

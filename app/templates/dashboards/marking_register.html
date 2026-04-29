@@ -1,0 +1,296 @@
+{% extends "base_app.html" %}
+
+{% block title %}Marks Register — {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    {# ------------------------------------------------------------------ #}
+    {# Helper: progress bar colour from percentage                          #}
+    {# pct=0 → danger, pct<100 → warning, pct=100 → success               #}
+    {% macro bar_color(pct) %}{% if pct == 0 %}bg-danger{% elif pct < 100 %}bg-warning{% else %}bg-success{% endif %}{% endmacro %}
+
+    <div class="container-fluid px-0">
+
+        {# ── Page header ── #}
+        <div class="bg-primary bg-opacity-10 border-bottom py-3 px-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h4 class="mb-0 fw-semibold">
+                        <i class="fas fa-table text-success me-2"></i>Marks Register
+                    </h4>
+                    <div class="text-body-secondary small mt-1">
+                        {{ event.name }}
+                        &middot;
+                        {{ event.pclass.name }}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('dashboards.marking_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back to dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {# ── Export bar ── #}
+        <div class="bg-light border-bottom px-4 py-2 d-flex align-items-center gap-3 flex-wrap">
+            <span class="small fw-semibold text-body-secondary">Export:</span>
+            <form method="POST" action="{{ url_for('dashboards.export_marking_excel', event_id=event.id) }}"
+                  class="d-inline">
+                {{ export_form.hidden_tag() }}
+                <button type="submit" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-file-excel me-1"></i>Export to Excel
+                </button>
+            </form>
+            <span class="ms-auto text-body-secondary" style="font-size:11px">
+                Generated reports appear in your <a href="{{ url_for('home.download_centre') }}">Download Centre</a>
+            </span>
+        </div>
+
+        {# ── Search / filter toolbar ── #}
+        <div class="bg-white border-bottom px-4 py-2 d-flex align-items-center gap-3 flex-wrap">
+            <form method="GET" class="d-flex align-items-center gap-2">
+                <input type="text" name="q" class="form-control form-control-sm"
+                       placeholder="Filter by student name…"
+                       value="{{ q_filter }}"
+                       style="width:220px">
+                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                {% if q_filter %}
+                    <a href="{{ url_for('dashboards.marking_register', event_id=event.id) }}"
+                       class="btn btn-outline-secondary btn-sm">Clear</a>
+                {% endif %}
+            </form>
+            <span class="small text-body-secondary ms-2">
+                {{ total_records }} student{{ 's' if total_records != 1 else '' }}
+                {% if total_pages > 1 %}&middot; page {{ page }} of {{ total_pages }}{% endif %}
+            </span>
+
+            {# Progress bar legend #}
+            <div class="ms-auto d-flex align-items-center gap-3 small text-body-secondary">
+                <span><span class="badge bg-success">&nbsp;</span> Complete</span>
+                <span><span class="badge bg-warning">&nbsp;</span> In progress</span>
+                <span><span class="badge bg-danger">&nbsp;</span> Not ready / not distributed</span>
+            </div>
+        </div>
+
+        {# ── Register table ── #}
+        <div style="overflow-x:auto;">
+            <table class="table table-sm table-bordered mb-0"
+                   style="font-size:11px; white-space:nowrap; min-width:600px;">
+                <thead>
+                    {# Row 1: group headers #}
+                    <tr>
+                        <th class="table-dark" rowspan="2" style="min-width:120px; vertical-align:middle;">Student</th>
+                        <th class="table-dark" rowspan="2" style="min-width:110px; vertical-align:middle;">Conflation</th>
+                        {% for cg in col_groups %}
+                            <th class="table-primary text-center" colspan="{{ cg.n_cols }}">
+                                {{ cg.workflow.name }}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                    {# Row 2: sub-column headers #}
+                    <tr>
+                        {% for cg in col_groups %}
+                            <th class="table-secondary text-center fw-normal" style="font-size:10px;">SR</th>
+                            {% for i in range(cg.n_mr) %}
+                                <th class="table-secondary text-center fw-normal" style="font-size:10px;">
+                                    Assessor {{ i + 1 }}
+                                </th>
+                            {% endfor %}
+                            <th class="table-secondary text-center fw-normal" style="font-size:10px;">Feedback</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            {# ── Student cell ── #}
+                            <td>
+                                <div class="fw-semibold">{{ row.student_user.name }}</div>
+                                {% if row.student_data.exam_number is not none %}
+                                    <div class="text-body-secondary" style="font-size:10px;">
+                                        Cand.&nbsp;{{ row.student_data.exam_number }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            {# ── Conflation cell ── #}
+                            <td>
+                                {% if row.cr %}
+                                    <div class="d-flex flex-column gap-1">
+                                        {% if row.cr.is_stale %}
+                                            <span class="text-warning" style="font-size:10px;">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Stale
+                                            </span>
+                                        {% else %}
+                                            <span class="text-success" style="font-size:10px;">
+                                                <i class="fas fa-check me-1"></i>Conflated
+                                            </span>
+                                        {% endif %}
+                                        {% if row.cr.feedback_sent %}
+                                            <span class="text-success" style="font-size:10px;">
+                                                <i class="fas fa-paper-plane me-1"></i>Feedback sent
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-body-secondary" style="font-size:10px;">&mdash; Not conflated</span>
+                                {% endif %}
+                                {# Risk flags #}
+                                {% set unresolved = row.record.get_unresolved_risk_factors() %}
+                                {% if unresolved %}
+                                    <div class="mt-1">
+                                        {% for key, factor in unresolved %}
+                                            {% if key in ('ai_compliance', 'ai_use') %}
+                                                <span class="badge bg-warning text-dark" style="font-size:9px;">
+                                                    <i class="fas fa-robot me-1"></i>AI risk
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger" style="font-size:9px;">
+                                                    <i class="fas fa-flag me-1"></i>{{ row.record.RISK_FACTOR_LABELS.get(key, key) }}
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            {# ── Per-workflow cells ── #}
+                            {% for wf_cell in row.wf_cells %}
+                                {# SubmitterReport cell #}
+                                <td>
+                                    {% if wf_cell.sr %}
+                                        {% set sr = wf_cell.sr %}
+                                        <div class="progress mb-1" style="height:5px;"
+                                             title="Progress: {{ wf_cell.sr_pct }}%">
+                                            <div class="progress-bar {{ bar_color(wf_cell.sr_pct) }}"
+                                                 role="progressbar"
+                                                 style="width:{{ wf_cell.sr_pct }}%;"
+                                                 aria-valuenow="{{ wf_cell.sr_pct }}"
+                                                 aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            {% if sr.grade is not none %}
+                                                <span class="fw-semibold">{{ "%.0f"|format(sr.grade) }}</span>
+                                            {% else %}
+                                                <span class="text-body-secondary">&mdash;</span>
+                                            {% endif %}
+                                            {% if sr.out_of_tolerance %}
+                                                <span class="badge bg-warning text-dark" style="font-size:9px;">Out of tolerance</span>
+                                            {% endif %}
+                                            {% if sr.accepted_moderator_report_id is not none %}
+                                                <span class="badge bg-success" style="font-size:9px;">Mod. accepted</span>
+                                            {% endif %}
+                                            {% set sr_state = sr.workflow_state %}
+                                            {% if sr_state == SubmitterReportWorkflowStates.NOT_READY %}
+                                                <span class="badge bg-danger" style="font-size:9px;">Not ready</span>
+                                            {% elif sr_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION %}
+                                                <span class="badge bg-danger" style="font-size:9px;">Needs intervention</span>
+                                            {% elif sr_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED %}
+                                                <span class="badge bg-warning text-dark" style="font-size:9px;">Moderator needed</span>
+                                            {% elif sr_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF %}
+                                                <span class="badge bg-secondary" style="font-size:9px;">Awaiting sign-off</span>
+                                            {% elif sr_state == SubmitterReportWorkflowStates.COMPLETED or sr_state == SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE %}
+                                                <span class="badge bg-success" style="font-size:9px;">Complete</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-body-secondary">&mdash;</span>
+                                    {% endif %}
+                                </td>
+
+                                {# MarkingReport cells #}
+                                {% for mr_cell in wf_cell.mr_cells %}
+                                    {% if mr_cell is not none %}
+                                        {% set mr = mr_cell.mr %}
+                                        <td title="{{ mr_cell.marker_name }}">
+                                            <div class="progress mb-1" style="height:5px;"
+                                                 title="{{ mr_cell.marker_name }} — {{ mr_cell.pct }}%">
+                                                <div class="progress-bar {{ bar_color(mr_cell.pct) }}"
+                                                     role="progressbar"
+                                                     style="width:{{ mr_cell.pct }}%;"
+                                                     aria-valuenow="{{ mr_cell.pct }}"
+                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <span class="border-bottom border-dashed text-body-secondary"
+                                                  style="cursor:help; font-size:10px;"
+                                                  title="{{ mr_cell.marker_name }}">
+                                                {{ mr_cell.marker_name | truncate(12, True, '…') }}
+                                            </span>
+                                            {% if mr.grade is not none %}
+                                                &middot; <span class="fw-semibold">{{ "%.0f"|format(mr.grade) }}</span>
+                                            {% endif %}
+                                            {% if mr.feedback_submitted %}
+                                                <span class="ms-1 text-success" title="Feedback submitted">
+                                                    <i class="fas fa-comment-dots" style="font-size:10px;"></i>
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    {% else %}
+                                        <td class="text-body-secondary text-center">&mdash;</td>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {# Feedback cell #}
+                                <td class="text-center">
+                                    {% if wf_cell.has_feedback %}
+                                        <span class="text-success"><i class="fas fa-check"></i></span>
+                                    {% elif wf_cell.sr %}
+                                        <span class="text-danger"><i class="fas fa-times"></i></span>
+                                    {% else %}
+                                        <span class="text-body-secondary">&mdash;</span>
+                                    {% endif %}
+                                </td>
+
+                            {% endfor %}{# wf_cell #}
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="{{ 2 + col_groups | sum(attribute='n_cols') }}"
+                                class="text-center text-body-secondary py-4">
+                                No students found{% if q_filter %} matching &ldquo;{{ q_filter }}&rdquo;{% endif %}.
+                            </td>
+                        </tr>
+                    {% endfor %}{# row #}
+                </tbody>
+            </table>
+        </div>{# end table-wrap #}
+
+        {# ── Pagination ── #}
+        {% if total_pages > 1 %}
+            <div class="px-4 py-2 bg-white border-top">
+                <nav aria-label="Register pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link"
+                               href="{{ url_for('dashboards.marking_register', event_id=event.id, page=page - 1, q=q_filter) }}">
+                                &laquo; Prev
+                            </a>
+                        </li>
+                        {% for p in range(1, total_pages + 1) %}
+                            {# Show first 3, last 3, and pages around the current page #}
+                            {% if p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link"
+                                       href="{{ url_for('dashboards.marking_register', event_id=event.id, page=p, q=q_filter) }}">
+                                        {{ p }}
+                                    </a>
+                                </li>
+                            {% elif p == 4 and page > 6 %}
+                                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                            {% elif p == total_pages - 3 and page < total_pages - 5 %}
+                                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                            <a class="page-link"
+                               href="{{ url_for('dashboards.marking_register', event_id=event.id, page=page + 1, q=q_filter) }}">
+                                Next &raquo;
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+
+    </div>
+{% endblock %}

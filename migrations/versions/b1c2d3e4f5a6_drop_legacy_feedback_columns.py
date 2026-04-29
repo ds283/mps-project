@@ -39,7 +39,7 @@ depends_on = None
 
 def upgrade():
     # Drop legacy feedback columns from submission_role
-    with op.batch_alter_table("submission_role", schema=None) as batch_op:
+    with op.batch_alter_table("submission_roles", schema=None) as batch_op:
         batch_op.drop_column("positive_feedback")
         batch_op.drop_column("improvements_feedback")
         batch_op.drop_column("submitted_feedback")
@@ -92,7 +92,7 @@ def downgrade():
         )
 
     # Restore submission_role legacy columns
-    with op.batch_alter_table("submission_role", schema=None) as batch_op:
+    with op.batch_alter_table("submission_roles", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True)
         )

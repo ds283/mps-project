@@ -287,7 +287,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                 ConvenorAction(
                     severity="success",
                     title="Ready to conflate",
-                    description="All marking workflows are complete. Calculate conflated grades using the panel below.",
+                    description="All marking workflows are complete. Calculate conflated grades to advance to the next stage.",
                     action_url=conflation_url,
                     action_label="Conflate…" if conflation_url else None,
                 )

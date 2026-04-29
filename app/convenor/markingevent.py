@@ -472,6 +472,7 @@ def marking_event_conflation_reports(event_id):
         in_progress_count=in_progress_count,
         stale_count=stale_count,
         MarkingEventWorkflowStates=MarkingEventWorkflowStates,
+        propagate_form=ActionForm(),
     )
 
 
@@ -2064,10 +2065,15 @@ def event_marking_workflows_inspector(event_id):
         )
         else None
     )
+    conflation_url = (
+        url_for("convenor.calculate_conflation", event_id=event_id)
+        if event.workflow_state == MarkingEventWorkflowStates.READY_TO_CONFLATE
+        else None
+    )
     actions = event.get_convenor_actions(
         event_url=event_url,
         open_event_url=open_event_url,
-        conflation_url=None,  # informational only; Calculate form is in the panel below
+        conflation_url=conflation_url,
         generate_feedback_url=generate_feedback_url,
     )
 
@@ -2214,8 +2220,6 @@ def event_marking_workflows_inspector(event_id):
         can_edit=can_edit,
         actions=actions,
         feedback_jobs=feedback_jobs,
-        conflation_form=ActionForm(),
-        propagate_form=ActionForm(),
     )
 
 
@@ -3581,11 +3585,14 @@ def return_all_submitter_reports(workflow_id):
 # ---------------------------------------------------------------------------
 
 
-@convenor.route("/calculate-conflation/<int:event_id>", methods=["POST"])
+@convenor.route("/calculate-conflation/<int:event_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def calculate_conflation(event_id):
     """
     Calculate conflated target marks for all SubmissionRecords in a MarkingEvent.
+
+    GET: render a confirmation page showing the number of records to be processed.
+    POST: perform the calculation, advance the event state, and redirect.
 
     Requires that the event is in the completed state (all MarkingWorkflows completed).
     Discards any existing ConflationReport instances for this event and generates a fresh set.
@@ -3598,15 +3605,30 @@ def calculate_conflation(event_id):
 
     url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
+    if event.workflow_state < MarkingEventWorkflowStates.READY_TO_CONFLATE:
+        flash("Cannot calculate conflation: not all marking workflows are complete.", "error")
+        return redirect(url)
+
+    if request.method == "GET":
+        submission_count = event.period.submissions.count()
+        existing_reports = event.conflation_reports.count()
+        any_stale = existing_reports > 0 and event.conflation_reports.filter_by(is_stale=True).count() > 0
+        form = ActionForm()
+        return render_template_context(
+            "convenor/markingevent/confirm_calculate_conflation.html",
+            event=event,
+            pclass=pclass,
+            submission_count=submission_count,
+            existing_reports=existing_reports,
+            any_stale=any_stale,
+            form=form,
+            url=url,
+            text="Marking workflows",
+        )
+
     form = ActionForm(request.form)
     if not form.validate_on_submit():
         flash("Invalid request.", "error")
-        return redirect(url)
-
-    if event.workflow_state < MarkingEventWorkflowStates.READY_TO_CONFLATE:
-        flash(
-            "Cannot calculate conflation: not all marking workflows are complete.", "error"
-        )
         return redirect(url)
 
     targets = event.targets_as_dict
@@ -3745,7 +3767,7 @@ def propagate_report_grade(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+    url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():
@@ -3785,7 +3807,7 @@ def propagate_supervision_grade(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+    url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():
@@ -3825,7 +3847,7 @@ def propagate_presentation_grade(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+    url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():

@@ -55,7 +55,7 @@ from ..models import (
     add_notification,
 )
 from ..models.emails import encode_email_payload
-from ..models.markingevent import MarkingEventWorkflowStates
+from ..models.markingevent import ConflationReport, MarkingEventWorkflowStates
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import (
     get_count,
@@ -1305,29 +1305,29 @@ def view_feedback(id):
 
     period = record.period
 
-    # Build list of (event, submitter_report) for closed MarkingEvents associated with this period
+    # Build list of (event, submitter_reports, conflation_report) for closed MarkingEvents
     closed_events = MarkingEvent.query.filter(
         MarkingEvent.period_id == record.period_id,
         MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED,
     ).all()
     event_data = []
     for event in closed_events:
-        sr = (
+        srs = (
             record.submitter_reports.join(
                 MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
             )
             .filter(MarkingWorkflow.event_id == event.id)
-            .first()
+            .all()
         )
-        if sr is not None:
-            event_data.append((event, sr))
+        cr = ConflationReport.query.filter_by(marking_event_id=event.id, submission_record_id=record.id).first()
+        if srs:
+            event_data.append((event, srs, cr))
 
     return render_template_context(
         "student/dashboard/view_feedback.html",
         record=record,
         period=period,
         event_data=event_data,
-        FEEDBACK_AVAILABLE=SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
         ROLE_SUPERVISOR=MarkingReport.ROLE_SUPERVISOR,
         ROLE_RESPONSIBLE_SUPERVISOR=MarkingReport.ROLE_RESPONSIBLE_SUPERVISOR,
         ROLE_PRESENTATION_ASSESSOR=MarkingReport.ROLE_PRESENTATION_ASSESSOR,

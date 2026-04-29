@@ -55,7 +55,7 @@ from ..models import (
     SupervisionEventTemplate,
     User,
 )
-from ..models.markingevent import MarkingEventWorkflowStates
+from ..models.markingevent import ConflationReport, MarkingEventWorkflowStates
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
@@ -891,19 +891,20 @@ def view_feedback():
         period: SubmissionPeriodRecord = rec.period
         form.selector.data = period
 
-    # Build list of (event, submitter_report) for all MarkingEvents associated with this period
+    # Build list of (event, submitter_reports, conflation_report) for all MarkingEvents
     all_events = MarkingEvent.query.filter_by(period_id=rec.period_id).all()
     event_data = []
     for event in all_events:
-        sr = (
+        srs = (
             rec.submitter_reports.join(
                 MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
             )
             .filter(MarkingWorkflow.event_id == event.id)
-            .first()
+            .all()
         )
-        if sr is not None:
-            event_data.append((event, sr))
+        cr = ConflationReport.query.filter_by(marking_event_id=event.id, submission_record_id=rec.id).first()
+        if srs:
+            event_data.append((event, srs, cr))
 
     return render_template_context(
         "convenor/dashboard/view_feedback.html",

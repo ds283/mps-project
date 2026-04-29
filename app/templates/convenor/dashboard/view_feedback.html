@@ -32,7 +32,7 @@
                 </div>
             {% endif %}
 
-            {% for event, submitter_report in event_data %}
+            {% for event, submitter_reports, conflation_report in event_data %}
                 <div class="card mt-3 mb-3">
                     <div class="card-header">
                         <div class="d-flex flex-row justify-content-between align-items-center w-100">
@@ -47,67 +47,98 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        {% set marking_reports = submitter_report.marking_reports.all() %}
-                        {% set visible_reports = marking_reports | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
-                        {% if visible_reports | length == 0 %}
+                        {# Conflated grades #}
+                        {% if conflation_report is not none %}
+                            {% set grade_dict = conflation_report.conflation_report_as_dict %}
+                            {% if grade_dict %}
+                                <div class="mb-3">
+                                    <span class="small text-body-secondary fw-semibold me-2">Conflated grades</span>
+                                    {% if conflation_report.is_stale %}
+                                        <span class="badge bg-secondary ms-1">Stale</span>
+                                    {% endif %}
+                                    <div class="d-flex flex-row flex-wrap gap-3 mt-1">
+                                        {% for target, value in grade_dict.items() %}
+                                            <div class="d-flex flex-column align-items-center border rounded px-3 py-2 bg-light">
+                                                <span class="small text-body-secondary text-capitalize">{{ target }}</span>
+                                                <span class="fw-bold text-success fs-5">{{ value | round(1) }}%</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
+                        {# Per-assessor marking reports #}
+                        {% set ns = namespace(has_visible=false) %}
+                        {% for sr in submitter_reports %}
+                            {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
+                            {% if visible_reports | length > 0 %}
+                                {% set ns.has_visible = true %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if not ns.has_visible %}
                             <div class="text-body-secondary small">No marking reports have been created for this
                                 event.
                             </div>
                         {% else %}
-                            {% for mr in visible_reports %}
-                                <div class="card mt-2 mb-2 border-secondary-subtle">
-                                    <div class="card-header bg-light">
-                                        <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                                            <div>
-                                                <i class="fas fa-user-circle me-1"></i>
-                                                <strong>{{ mr.role.user.name }}</strong>
-                                                <span class="ms-1 text-body-secondary small">({{ mr.workflow.role_as_str }})</span>
-                                            </div>
-                                            <div class="d-flex flex-row justify-content-end align-items-center gap-2">
-                                                {% if mr.feedback_submitted and mr.feedback_timestamp %}
-                                                    <span class="small text-success me-1">Submitted {{ mr.feedback_timestamp.strftime("%a %d %b %Y %H:%M") }}</span>
-                                                {% endif %}
-                                                <a href="{{ url_for('convenor.edit_feedback', id=mr.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
-                                                   class="btn btn-sm btn-outline-secondary">Edit...</a>
-                                                {% if not mr.feedback_submitted %}
-                                                    <a href="{{ url_for('convenor.submit_feedback', id=mr.id) }}"
-                                                       class="btn btn-sm btn-outline-success">Submit</a>
-                                                {% elif event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
-                                                    <a href="{{ url_for('convenor.unsubmit_feedback', id=mr.id) }}"
-                                                       class="btn btn-sm btn-outline-secondary">Unsubmit</a>
-                                                {% endif %}
+                            {% for sr in submitter_reports %}
+                                {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
+                                {% for mr in visible_reports %}
+                                    <div class="card mt-2 mb-2 border-secondary-subtle">
+                                        <div class="card-header bg-light">
+                                            <div class="d-flex flex-row justify-content-between align-items-center w-100">
+                                                <div>
+                                                    <i class="fas fa-user-circle me-1"></i>
+                                                    <strong>{{ mr.role.user.name }}</strong>
+                                                    <span class="ms-1 text-body-secondary small">({{ mr.submitter_report.workflow.role_as_str }})</span>
+                                                </div>
+                                                <div class="d-flex flex-row justify-content-end align-items-center gap-2">
+                                                    {% if mr.feedback_submitted and mr.feedback_timestamp %}
+                                                        <span class="small text-success me-1">Submitted {{ mr.feedback_timestamp.strftime("%a %d %b %Y %H:%M") }}</span>
+                                                    {% endif %}
+                                                    <a href="{{ url_for('convenor.edit_feedback', id=mr.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
+                                                       class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                                    {% if not mr.feedback_submitted %}
+                                                        <a href="{{ url_for('convenor.submit_feedback', id=mr.id) }}"
+                                                           class="btn btn-sm btn-outline-success">Submit</a>
+                                                    {% elif event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
+                                                        <a href="{{ url_for('convenor.unsubmit_feedback', id=mr.id) }}"
+                                                           class="btn btn-sm btn-outline-secondary">Unsubmit</a>
+                                                    {% endif %}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div class="card-body">
+                                            {% if mr.feedback_positive %}
+                                                <div class="dashboard-subtitle">What was good?</div>
+                                                <div class="bg-light p-2">
+                                                    {{ mr.feedback_positive | safe }}
+                                                </div>
+                                            {% else %}
+                                                <div class="dashboard-subtitle">What was good?</div>
+                                                <div class="bg-light p-2">
+                                                    {% call icon_block("exclamation-circle") %}
+                                                        <div>This feedback has not yet been entered.</div>
+                                                    {% endcall %}
+                                                </div>
+                                            {% endif %}
+                                            {% if mr.feedback_improvement %}
+                                                <div class="dashboard-subtitle mt-2">Suggestions for improvement</div>
+                                                <div class="bg-light p-2">
+                                                    {{ mr.feedback_improvement | safe }}
+                                                </div>
+                                            {% else %}
+                                                <div class="dashboard-subtitle mt-2">Suggestions for improvement</div>
+                                                <div class="bg-light p-2">
+                                                    {% call icon_block("exclamation-circle") %}
+                                                        <div>This feedback has not yet been entered.</div>
+                                                    {% endcall %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                    <div class="card-body">
-                                        {% if mr.feedback_positive %}
-                                            <div class="dashboard-subtitle">What was good?</div>
-                                            <div class="bg-light p-2">
-                                                {{ mr.feedback_positive | safe }}
-                                            </div>
-                                        {% else %}
-                                            <div class="dashboard-subtitle">What was good?</div>
-                                            <div class="bg-light p-2">
-                                                {% call icon_block("exclamation-circle") %}
-                                                    <div>This feedback has not yet been entered.</div>
-                                                {% endcall %}
-                                            </div>
-                                        {% endif %}
-                                        {% if mr.feedback_improvement %}
-                                            <div class="dashboard-subtitle mt-2">Suggestions for improvement</div>
-                                            <div class="bg-light p-2">
-                                                {{ mr.feedback_improvement | safe }}
-                                            </div>
-                                        {% else %}
-                                            <div class="dashboard-subtitle mt-2">Suggestions for improvement</div>
-                                            <div class="bg-light p-2">
-                                                {% call icon_block("exclamation-circle") %}
-                                                    <div>This feedback has not yet been entered.</div>
-                                                {% endcall %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
+                                {% endfor %}
                             {% endfor %}
                         {% endif %}
                     </div>

@@ -21,29 +21,37 @@
                 </div>
             {% endif %}
 
-            {% for event, submitter_report in event_data %}
+            {% for event, submitter_reports, conflation_report in event_data %}
                 <div class="card mt-3 mb-3">
                     <div class="card-header">
                         <strong>{{ event.name }}</strong>
                     </div>
                     <div class="card-body">
-                        {% if submitter_report.workflow_state < FEEDBACK_AVAILABLE %}
+                        {% if conflation_report is none or not conflation_report.feedback_sent %}
                             <div class="alert alert-secondary mb-0">
                                 <i class="fas fa-hourglass-half me-2"></i>
                                 Quality assurance for this event is still in progress. Feedback will be available once
                                 it is complete.
                             </div>
                         {% else %}
-                            {# Grade #}
-                            {% if submitter_report.grade is not none %}
+                            {# Conflated grades #}
+                            {% set grade_dict = conflation_report.conflation_report_as_dict %}
+                            {% if grade_dict %}
                                 <div class="mb-3">
-                                    <span class="small text-body-secondary fw-semibold me-2">Grade</span>
-                                    <span class="fw-bold text-success">{{ submitter_report.grade | round(1) }}%</span>
+                                    <span class="small text-body-secondary fw-semibold me-2">Grades</span>
+                                    <div class="d-flex flex-row flex-wrap gap-3 mt-1">
+                                        {% for target, value in grade_dict.items() %}
+                                            <div class="d-flex flex-column align-items-center border rounded px-3 py-2 bg-light">
+                                                <span class="small text-body-secondary text-capitalize">{{ target }}</span>
+                                                <span class="fw-bold text-success fs-5">{{ value | round(1) }}%</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             {% endif %}
 
                             {# Feedback report downloads #}
-                            {% set feedback_reports = submitter_report.feedback_reports.all() %}
+                            {% set feedback_reports = conflation_report.feedback_reports.all() %}
                             {% if feedback_reports | length > 0 %}
                                 <div class="mb-3 d-flex flex-row flex-wrap gap-2 align-items-center">
                                     <span class="small text-body-secondary fw-semibold">Feedback report:</span>
@@ -68,46 +76,52 @@
                             {% endif %}
 
                             {# Per-assessor feedback #}
-                            {% set ns = namespace(marker_count=0) %}
-                            {% set marking_reports = submitter_report.marking_reports.all() %}
-                            {% set has_any_feedback = marking_reports | selectattr('feedback_submitted') | list | length > 0 %}
-
-                            {% if has_any_feedback %}
-                                {% for mr in marking_reports %}
+                            {% set ns = namespace(marker_count=0, has_any_feedback=false) %}
+                            {% for sr in submitter_reports %}
+                                {% for mr in sr.marking_reports.all() %}
                                     {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
-                                        {% if mr.role.role == ROLE_MARKER %}
-                                            {% set ns.marker_count = ns.marker_count + 1 %}
-                                            {% set assessor_label = "Feedback from Marker " ~ ns.marker_count %}
-                                        {% elif mr.role.role == ROLE_PRESENTATION_ASSESSOR %}
-                                            {% set assessor_label = "Presentation feedback from " ~ mr.role.user.name %}
-                                        {% else %}
-                                            {# ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR #}
-                                            {% set assessor_label = "Feedback from " ~ mr.role.user.name %}
-                                        {% endif %}
-                                        <div class="card mt-2 mb-2 border-secondary-subtle">
-                                            <div class="card-header bg-light">
-                                                {{ assessor_label }}
-                                            </div>
-                                            <div class="card-body">
-                                                {% if mr.feedback_positive %}
-                                                    <span class="dashboard-subtitle">What was good?</span>
-                                                    {{ mr.feedback_positive | safe }}
-                                                {% endif %}
-                                                {% if mr.feedback_positive and mr.feedback_improvement %}
-                                                    <hr class="intro-divider">
-                                                {% endif %}
-                                                {% if mr.feedback_improvement %}
-                                                    <span class="dashboard-subtitle">Suggestions for improvement</span>
-                                                    {{ mr.feedback_improvement | safe }}
-                                                {% endif %}
-                                            </div>
-                                        </div>
+                                        {% set ns.has_any_feedback = true %}
                                     {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+
+                            {% if ns.has_any_feedback %}
+                                {% for sr in submitter_reports %}
+                                    {% for mr in sr.marking_reports.all() %}
+                                        {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
+                                            {% if mr.role.role == ROLE_MARKER %}
+                                                {% set ns.marker_count = ns.marker_count + 1 %}
+                                                {% set assessor_label = "Feedback from Marker " ~ ns.marker_count %}
+                                            {% elif mr.role.role == ROLE_PRESENTATION_ASSESSOR %}
+                                                {% set assessor_label = "Presentation feedback from " ~ mr.role.user.name %}
+                                            {% else %}
+                                                {# ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR #}
+                                                {% set assessor_label = "Feedback from " ~ mr.role.user.name %}
+                                            {% endif %}
+                                            <div class="card mt-2 mb-2 border-secondary-subtle">
+                                                <div class="card-header bg-light">
+                                                    {{ assessor_label }}
+                                                </div>
+                                                <div class="card-body">
+                                                    {% if mr.feedback_positive %}
+                                                        <span class="dashboard-subtitle">What was good?</span>
+                                                        {{ mr.feedback_positive | safe }}
+                                                    {% endif %}
+                                                    {% if mr.feedback_positive and mr.feedback_improvement %}
+                                                        <hr class="intro-divider">
+                                                    {% endif %}
+                                                    {% if mr.feedback_improvement %}
+                                                        <span class="dashboard-subtitle">Suggestions for improvement</span>
+                                                        {{ mr.feedback_improvement | safe }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% endfor %}
                             {% else %}
                                 <div class="text-body-secondary small">No individual feedback has been submitted for
-                                    this
-                                    event.
+                                    this event.
                                 </div>
                             {% endif %}
                         {% endif %}

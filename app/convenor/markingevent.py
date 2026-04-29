@@ -197,119 +197,6 @@ def marking_events_ajax(pclass_id):
         return handler.build_payload(archive_marking_event_data)
 
 
-@convenor.route("/marking_workflow_inspector/<int:event_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
-def marking_workflow_inspector(event_id):
-    """
-    View MarkingWorkflow instances associated with a MarkingEvent
-    """
-    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
-    pclass: ProjectClass = event.period.config.project_class
-
-    # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
-        return redirect(redirect_url())
-
-    # Get return URL and text from request args
-    url = request.args.get(
-        "url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id)
-    )
-    text = request.args.get("text", "Assessment archive")
-
-    # Per-workflow ready/completed summary used by the CTA cards
-    workflows = event.workflows.all()
-    workflow_states = []
-    for wf in workflows:
-        wf_total = wf.submitter_reports.count()
-        wf_rts = (
-            db.session.query(func.count())
-            .filter(
-                SubmitterReport.workflow_id == wf.id,
-                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
-            )
-            .scalar()
-        )
-        wf_completed = (
-            db.session.query(func.count())
-            .filter(
-                SubmitterReport.workflow_id == wf.id,
-                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.COMPLETED,
-            )
-            .scalar()
-        )
-        workflow_states.append(
-            {
-                "workflow": wf,
-                "total": wf_total,
-                "all_ready_to_sign_off": wf_total > 0 and wf_rts == wf_total,
-                "any_completed": wf_completed > 0,
-            }
-        )
-
-    feedback_jobs = (
-        db.session.query(FeedbackOrchestrationJob)
-        .filter(
-            FeedbackOrchestrationJob.event_id == event.id,
-            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
-        )
-        .order_by(FeedbackOrchestrationJob.created_at.desc())
-        .all()
-    )
-
-    return render_template_context(
-        "convenor/markingevent/marking_workflow_inspector.html",
-        event=event,
-        pclass=pclass,
-        url=url,
-        text=text,
-        workflow_states=workflow_states,
-        conflation_form=ActionForm(),
-        propagate_form=ActionForm(),
-        complete_all_form=ActionForm(),
-        return_all_form=ActionForm(),
-        feedback_jobs=feedback_jobs,
-    )
-
-
-@convenor.route("/marking_workflow_ajax/<int:event_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
-def marking_workflow_ajax(event_id):
-    """
-    AJAX endpoint for MarkingWorkflow inspector DataTable
-    """
-    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
-    pclass: ProjectClass = event.period.config.project_class
-
-    # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
-        return jsonify({"error": "Access denied"}), 403
-
-    # Use the current inspector page as the return URL for row-level action links
-    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
-    text = "Marking workflows"
-
-    base_query = db.session.query(MarkingWorkflow).filter(
-        MarkingWorkflow.event_id == event_id
-    )
-
-    columns = {
-        "name": {"order": MarkingWorkflow.name, "search": MarkingWorkflow.name},
-    }
-
-    with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.marking_workflow_data, url, text)
-        )
-
-
 @convenor.route("/marking_event_feedback_jobs_status/<int:event_id>")
 @roles_accepted(
     "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
@@ -383,7 +270,7 @@ def feedback_job_pause(uuid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-    return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
 
 @convenor.route("/feedback_job_resume/<string:uuid>")
@@ -413,7 +300,7 @@ def feedback_job_resume(uuid):
         celery = current_app.extensions["celery"]
         t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
         t.apply_async(queue="default")
-    return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
 
 @convenor.route("/feedback_job_cancel/<string:uuid>")
@@ -443,7 +330,7 @@ def feedback_job_cancel(uuid):
         celery = current_app.extensions["celery"]
         t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
         t.apply_async(queue="default")
-    return redirect(url_for("convenor.marking_workflow_inspector", event_id=event.id))
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
 
 @convenor.route("/generate_marking_event_feedback/<int:event_id>", methods=["GET", "POST"])
@@ -1115,7 +1002,7 @@ def submitter_reports_inspector(workflow_id):
 
     # Get return URL and text from request args
     url = request.args.get(
-        "url", url_for("convenor.marking_workflow_inspector", event_id=event.id)
+        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
     )
     text = request.args.get("text", "Marking workflows")
 
@@ -1482,7 +1369,7 @@ def marking_reports_inspector(workflow_id):
 
     # Get return URL and text from request args
     url = request.args.get(
-        "url", url_for("convenor.marking_workflow_inspector", event_id=event.id)
+        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
     )
     text = request.args.get("text", "Marking workflows")
 
@@ -2178,13 +2065,15 @@ def event_marking_workflows_inspector(event_id):
         else None
     )
     actions = event.get_convenor_actions(
-        event_url=event_url, open_event_url=open_event_url, generate_feedback_url=generate_feedback_url
+        event_url=event_url,
+        open_event_url=open_event_url,
+        conflation_url=None,  # informational only; Calculate form is in the panel below
+        generate_feedback_url=generate_feedback_url,
     )
 
-    # Add per-workflow Turnitin CTAs for unresolved high-similarity scores and missing data.
-    # Computed here (not in the model) so that url_for() can be called without
-    # introducing routing knowledge into the model layer.
-    # Only surface these CTAs while the event is still open.
+    # Add per-workflow CTAs.  Computed here (not in the model) so that url_for() can be called
+    # without introducing routing knowledge into the model layer.
+    is_privileged = current_user.has_role("root") or current_user.has_role("admin")
     if event.workflow_state != MarkingEventWorkflowStates.CLOSED:
         for workflow in event.workflows:
             workflow_url = url_for(
@@ -2253,6 +2142,69 @@ def event_marking_workflows_inspector(event_id):
                     )
                 )
 
+            # CTA: all reports ready to complete
+            wf_total = workflow.submitter_reports.count()
+            wf_rts = (
+                db.session.query(func.count())
+                .filter(
+                    SubmitterReport.workflow_id == workflow.id,
+                    SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+                )
+                .scalar()
+            )
+            if wf_total > 0 and wf_rts == wf_total:
+                actions.append(
+                    ConvenorAction(
+                        severity="success",
+                        title=f"{workflow.name}: all reports ready to complete",
+                        description="All submitter reports are in the Ready to sign off state and have grades.",
+                        action_url=url_for(
+                            "convenor.complete_all_submitter_reports",
+                            workflow_id=workflow.id,
+                            url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                            text="Marking workflows",
+                        ),
+                        action_label="Complete all…",
+                    )
+                )
+
+            # CTA: return all completed reports (admin/root only)
+            if is_privileged:
+                wf_completed = (
+                    db.session.query(func.count())
+                    .filter(
+                        SubmitterReport.workflow_id == workflow.id,
+                        SubmitterReport.workflow_state == SubmitterReportWorkflowStates.COMPLETED,
+                    )
+                    .scalar()
+                )
+                if wf_completed > 0:
+                    actions.append(
+                        ConvenorAction(
+                            severity="danger",
+                            title=f"{workflow.name}: return completed reports to convenor",
+                            description=f"{wf_completed} completed report{'s' if wf_completed != 1 else ''} can be returned for re-editing.",
+                            action_url=url_for(
+                                "convenor.return_all_submitter_reports",
+                                workflow_id=workflow.id,
+                                url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                                text="Marking workflows",
+                            ),
+                            action_label="Return all…",
+                        )
+                    )
+
+    # Feedback PDF generation jobs active for this event
+    feedback_jobs = (
+        db.session.query(FeedbackOrchestrationJob)
+        .filter(
+            FeedbackOrchestrationJob.event_id == event.id,
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+        )
+        .order_by(FeedbackOrchestrationJob.created_at.desc())
+        .all()
+    )
+
     return render_template_context(
         "convenor/markingevent/event_marking_workflows_inspector.html",
         event=event,
@@ -2261,6 +2213,9 @@ def event_marking_workflows_inspector(event_id):
         text=text,
         can_edit=can_edit,
         actions=actions,
+        feedback_jobs=feedback_jobs,
+        conflation_form=ActionForm(),
+        propagate_form=ActionForm(),
     )
 
 
@@ -3402,10 +3357,13 @@ def complete_submitter_report(sr_id):
     return redirect(url)
 
 
-@convenor.route("/complete-all-submitter-reports/<int:workflow_id>", methods=["POST"])
+@convenor.route("/complete-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def complete_all_submitter_reports(workflow_id):
-    """Move all READY_TO_SIGN_OFF SubmitterReports in a workflow to COMPLETED."""
+    """
+    GET: Show a confirmation page listing the reports that will be completed.
+    POST: Move all READY_TO_SIGN_OFF SubmitterReports in a workflow to COMPLETED.
+    """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.period.config.project_class
@@ -3413,9 +3371,37 @@ def complete_all_submitter_reports(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
+    url = request.args.get(
+        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
+    )
+    text = request.args.get("text", "Marking workflows")
+
+    # Count reports eligible for completion
+    ready_reports = [
+        sr for sr in workflow.submitter_reports.all()
+        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF and sr.grade is not None
+    ]
+    no_grade_reports = [
+        sr for sr in workflow.submitter_reports.all()
+        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF and sr.grade is None
+    ]
 
     form = ActionForm(request.form)
+
+    if request.method == "GET":
+        return render_template_context(
+            "convenor/markingevent/confirm_complete_all.html",
+            workflow=workflow,
+            event=event,
+            pclass=pclass,
+            url=url,
+            text=text,
+            ready_reports=ready_reports,
+            no_grade_reports=no_grade_reports,
+            form=form,
+        )
+
+    # POST path
     if not form.validate_on_submit():
         flash("Invalid request.", "error")
         return redirect(url)
@@ -3508,17 +3494,45 @@ def return_submitter_report_to_convenor(sr_id):
     return redirect(url)
 
 
-@convenor.route("/return-all-submitter-reports/<int:workflow_id>", methods=["POST"])
+@convenor.route("/return-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"])
 @roles_accepted("admin", "root")
 def return_all_submitter_reports(workflow_id):
-    """Return all COMPLETED SubmitterReports in a workflow to READY_TO_SIGN_OFF (admin/root only)."""
+    """
+    GET: Show a confirmation page listing the reports that will be returned.
+    POST: Return all COMPLETED SubmitterReports in a workflow to READY_TO_SIGN_OFF (admin/root only).
+    """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.period.config.project_class
 
-    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
+    if not validate_is_convenor(pclass, allow_roles=["admin", "root"]):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
+    )
+    text = request.args.get("text", "Marking workflows")
+
+    completed_reports = [
+        sr for sr in workflow.submitter_reports.all()
+        if sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED
+    ]
 
     form = ActionForm(request.form)
+
+    if request.method == "GET":
+        return render_template_context(
+            "convenor/markingevent/confirm_return_all.html",
+            workflow=workflow,
+            event=event,
+            pclass=pclass,
+            url=url,
+            text=text,
+            completed_reports=completed_reports,
+            form=form,
+        )
+
+    # POST path
     if not form.validate_on_submit():
         flash("Invalid request.", "error")
         return redirect(url)
@@ -3582,7 +3596,7 @@ def calculate_conflation(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():
@@ -3731,7 +3745,7 @@ def propagate_report_grade(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():
@@ -3771,7 +3785,7 @@ def propagate_supervision_grade(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():
@@ -3811,7 +3825,7 @@ def propagate_presentation_grade(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():

@@ -8,6 +8,82 @@
     {{ super() }}
     {{ import_datatables() }}
 
+    {% if feedback_jobs %}
+    <script>
+        (function () {
+            var _watchedJobIds = {{ feedback_jobs | map(attribute='uuid') | list | tojson }};
+            var _initialActiveCount = {{ feedback_jobs | length }};
+
+            function fmtRate(elapsedSeconds, done) {
+                if (!elapsedSeconds || done <= 0) return '—';
+                var rate = elapsedSeconds / done;
+                var r_min = Math.floor(rate / 60);
+                var r_sec = Math.round(rate % 60);
+                return (r_min > 0 ? r_min + 'm ' : '') + r_sec + 's';
+            }
+
+            function updateJobRow(uuid, job) {
+                var row = document.querySelector('tr[data-job-uuid="' + uuid + '"]');
+                if (!row) return;
+
+                var total = job.total || 0;
+                var done = (job.completed || 0) + (job.failed || 0);
+                var pct = total > 0 ? Math.min(100, Math.floor(done * 100 / total)) : 0;
+
+                var bar = row.querySelector('[data-cell="progress-bar"]');
+                if (bar) {
+                    bar.style.width = pct + '%';
+                    bar.setAttribute('aria-valuenow', pct);
+                }
+                var pctLabel = row.querySelector('[data-cell="progress-pct"]');
+                if (pctLabel) pctLabel.textContent = pct + '%';
+
+                var compCell = row.querySelector('[data-cell="completed"]');
+                if (compCell) compCell.textContent = job.completed || 0;
+
+                var failCell = row.querySelector('[data-cell="failed"]');
+                if (failCell) {
+                    failCell.textContent = job.failed || 0;
+                    if ((job.failed || 0) > 0) {
+                        failCell.classList.remove('text-body-secondary');
+                        failCell.classList.add('text-danger', 'fw-semibold');
+                    }
+                }
+
+                var rateCell = row.querySelector('[data-cell="rate"]');
+                if (rateCell) rateCell.textContent = fmtRate(job.elapsed_seconds, done);
+            }
+
+            function pollJobs() {
+                var url = '{{ url_for("convenor.marking_event_feedback_jobs_status", event_id=event.id) }}';
+                if (_watchedJobIds.length > 0) {
+                    url += '?ids=' + _watchedJobIds.join(',');
+                }
+                fetch(url)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.just_finished) {
+                            window.location.reload();
+                            return;
+                        }
+                        if (_initialActiveCount === 0 && data.active_count > 0) {
+                            window.location.reload();
+                            return;
+                        }
+                        if (data.jobs) {
+                            Object.keys(data.jobs).forEach(function (uuid) {
+                                updateJobRow(uuid, data.jobs[uuid]);
+                            });
+                        }
+                    })
+                    .catch(function () { /* ignore transient network errors */ });
+            }
+
+            setInterval(pollJobs, 60000);
+        })();
+    </script>
+    {% endif %}
+
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
@@ -136,6 +212,182 @@
             {% if actions %}
                 <div class="mt-3">
                     {{ render_convenor_actions(actions) }}
+                </div>
+            {% endif %}
+
+            {# Active feedback PDF generation jobs panel #}
+            {% if feedback_jobs %}
+                <div class="card border-primary mb-3">
+                    <div class="card-header bg-primary text-white d-flex align-items-center gap-2 flex-wrap">
+                        <i class="fas fa-file-pdf fa-fw"></i>
+                        <strong>Active feedback PDF generation</strong>
+                        <span class="badge bg-light text-dark ms-auto">{{ feedback_jobs|length }} job{%- if feedback_jobs|length != 1 -%}s{%- endif -%}</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Progress</th>
+                                    <th class="text-end">Done</th>
+                                    <th class="text-end">Failed</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Avg</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for job in feedback_jobs %}
+                                    <tr data-job-uuid="{{ job.uuid }}">
+                                        <td class="small">{{ job.description }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+                                            {% if job.paused %}
+                                                <span class="badge bg-secondary ms-1">
+                                                    <i class="fas fa-pause me-1"></i>Paused
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end" style="min-width:120px">
+                                            <div class="progress" style="height:8px; min-width:80px">
+                                                <div class="progress-bar bg-{{ job.status_colour }}"
+                                                     data-cell="progress-bar"
+                                                     role="progressbar"
+                                                     style="width:{{ job.progress_pct }}%"
+                                                     aria-valuenow="{{ job.progress_pct }}"
+                                                     aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <small class="text-body-secondary" data-cell="progress-pct">{{ job.progress_pct }}%</small>
+                                        </td>
+                                        <td class="text-end text-success fw-semibold" data-cell="completed">{{ job.completed_count }}</td>
+                                        <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-body-secondary{% endif %}"
+                                            data-cell="failed">{{ job.failed_count }}</td>
+                                        <td class="text-end text-body-secondary">{{ job.total_count }}</td>
+                                        <td class="text-end text-body-secondary small" data-cell="rate">
+                                            {% set done = job.completed_count + job.failed_count %}
+                                            {% if job.elapsed_seconds and done > 0 %}
+                                                {% set rate = job.elapsed_seconds / done %}
+                                                {% set r_min = (rate // 60)|int %}
+                                                {% set r_sec = (rate % 60)|round|int %}
+                                                {% if r_min > 0 %}{{ r_min }}m {% endif %}{{ r_sec }}s
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if job.is_active and (is_root or is_admin or is_convenor) %}
+                                                {% if job.paused %}
+                                                    <a href="{{ url_for('convenor.feedback_job_resume', uuid=job.uuid) }}"
+                                                       class="btn btn-xs btn-outline-success py-0 px-1"
+                                                       title="Resume this job">
+                                                        <i class="fas fa-play"></i>
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{{ url_for('convenor.feedback_job_pause', uuid=job.uuid) }}"
+                                                       class="btn btn-xs btn-outline-secondary py-0 px-1"
+                                                       title="Pause this job">
+                                                        <i class="fas fa-pause"></i>
+                                                    </a>
+                                                {% endif %}
+                                                <a href="{{ url_for('convenor.feedback_job_cancel', uuid=job.uuid) }}"
+                                                   class="btn btn-xs btn-outline-danger py-0 px-1"
+                                                   title="Cancel this job"
+                                                   onclick="return confirm('Cancel this job? Any queued PDFs will not be generated.')">
+                                                    <i class="fas fa-times"></i>
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Conflation and grade back-propagation (shown when all workflows are complete) #}
+            {% if event.workflow_state >= MarkingEventWorkflowStates.READY_TO_CONFLATE %}
+                {% set targets = event.targets_as_dict %}
+                {% set conflation_reports = event.conflation_reports.all() %}
+                {% set any_stale = conflation_reports | selectattr('is_stale') | list | length > 0 %}
+                <div class="card border-success mb-3">
+                    <div class="card-header bg-success text-white d-flex flex-row align-items-center gap-2">
+                        <i class="fas fa-calculator fa-fw"></i>
+                        <span class="flex-grow-1">Conflation</span>
+                        <form method="POST"
+                              action="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}"
+                              class="flex-shrink-0">
+                            {{ conflation_form.hidden_tag() }}
+                            <button class="btn btn-light btn-sm" type="submit">
+                                <i class="fas fa-calculator fa-fw"></i>
+                                {% if conflation_reports %}Re-calculate{% else %}Calculate{% endif %} conflation
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card-body">
+                        {% if conflation_reports %}
+                            {% if any_stale %}
+                                <div class="alert alert-warning py-2 mb-2">
+                                    <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                                    Some conflation results may be <strong>stale</strong> because a report was returned
+                                    to the convenor after conflation was last run. Re-calculate to refresh.
+                                </div>
+                            {% endif %}
+                            <p class="small text-body-secondary mb-2">
+                                Conflation run for <strong>{{ conflation_reports|length }}</strong> submission record(s).
+                                Generated {{ conflation_reports[0].generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                {% if conflation_reports[0].generated_by is not none %}
+                                    by {{ conflation_reports[0].generated_by.name }}
+                                {% endif %}.
+                            </p>
+                            {% if targets %}
+                                {% set sample_dict = conflation_reports[0].conflation_report_as_dict %}
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    {% if 'report' in sample_dict %}
+                                        <form method="POST"
+                                              action="{{ url_for('convenor.propagate_report_grade', event_id=event.id) }}">
+                                            {{ propagate_form.hidden_tag() }}
+                                            <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                                <i class="fas fa-arrow-right fa-fw"></i>
+                                                Copy &ldquo;report&rdquo; grades &rarr; submission records
+                                                {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    {% if 'supervisor' in sample_dict %}
+                                        <form method="POST"
+                                              action="{{ url_for('convenor.propagate_supervision_grade', event_id=event.id) }}">
+                                            {{ propagate_form.hidden_tag() }}
+                                            <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                                <i class="fas fa-arrow-right fa-fw"></i>
+                                                Copy &ldquo;supervisor&rdquo; grades &rarr; submission records
+                                                {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    {% if 'presentation' in sample_dict %}
+                                        <form method="POST"
+                                              action="{{ url_for('convenor.propagate_presentation_grade', event_id=event.id) }}">
+                                            {{ propagate_form.hidden_tag() }}
+                                            <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                                <i class="fas fa-arrow-right fa-fw"></i>
+                                                Copy &ldquo;presentation&rdquo; grades &rarr; submission records
+                                                {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-body-secondary fst-italic mb-0">
+                                No conflation results yet. Click <strong>Calculate conflation</strong> to generate them.
+                            </p>
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
 

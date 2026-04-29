@@ -56,7 +56,7 @@ _marking_event_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_workflow_inspector', event_id=event.id, url=url_for('convenor.marking_events_inspector', pclass_id=pclass.id), text='Assessment archive') }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url_for('convenor.marking_events_inspector', pclass_id=pclass.id), text='Assessment archive') }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
     </div>

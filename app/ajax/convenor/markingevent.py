@@ -107,7 +107,7 @@ _marking_event_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_workflow_inspector', event_id=event.id, url=url_for('convenor.marking_events_inspector', pclass_id=pclass.id), text='Assessment archive') }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url_for('convenor.marking_events_inspector', pclass_id=pclass.id), text='Assessment archive') }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
     </div>
@@ -222,23 +222,6 @@ _marking_workflow_feedback = """
     {% if total == 0 %}
         <span class="badge bg-secondary">No reports</span>
     {% endif %}
-</div>
-"""
-
-# language=jinja2
-_marking_workflow_menu = """
-<div class="dropdown">
-    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
-        Actions
-    </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, url=url, text=text) }}">
-            <i class="fas fa-user-graduate fa-fw"></i> Submitter reports&hellip;
-        </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, url=url, text=text) }}">
-            <i class="fas fa-marker fa-fw"></i> Marking reports&hellip;
-        </a>
-    </div>
 </div>
 """
 
@@ -824,33 +807,6 @@ def marking_event_data(events):
             "menu": render_template(menu_tmpl, event=event, pclass=event.pclass),
         }
         for event in events
-    ]
-
-
-def marking_workflow_data(url, text, workflows):
-    """Format a MarkingWorkflow row for DataTables"""
-
-    env = current_app.jinja_env
-
-    name_tmpl = env.from_string(_marking_workflow_name)
-    scheme_tmpl = env.from_string(_marking_workflow_scheme)
-    attachments_tmpl = env.from_string(_marking_workflow_attachments)
-    reports_tmpl = env.from_string(_marking_workflow_reports)
-    distribution_tmpl = env.from_string(_marking_workflow_distribution)
-    feedback_tmpl = env.from_string(_marking_workflow_feedback)
-    menu_tmpl = env.from_string(_marking_workflow_menu)
-
-    return [
-        {
-            "name": render_template(name_tmpl, workflow=workflow),
-            "scheme": render_template(scheme_tmpl, workflow=workflow),
-            "attachments": render_template(attachments_tmpl, workflow=workflow),
-            "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
-            "feedback": render_template(feedback_tmpl, workflow=workflow),
-            "menu": render_template(menu_tmpl, workflow=workflow, url=url, text=text),
-        }
-        for workflow in workflows
     ]
 
 

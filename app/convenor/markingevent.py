@@ -221,7 +221,9 @@ def marking_event_feedback_jobs_status(event_id):
         db.session.query(FeedbackOrchestrationJob)
         .filter(
             FeedbackOrchestrationJob.event_id == event_id,
-            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+            FeedbackOrchestrationJob.status.in_(
+                FeedbackOrchestrationJob.ACTIVE_STATUSES
+            ),
         )
         .all()
     )
@@ -270,7 +272,9 @@ def feedback_job_pause(uuid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
+    return redirect(
+        url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
+    )
 
 
 @convenor.route("/feedback_job_resume/<string:uuid>")
@@ -298,9 +302,13 @@ def feedback_job_resume(uuid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         # Kick the coordinator so it picks up the resumed job immediately.
         celery = current_app.extensions["celery"]
-        t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
+        t = celery.tasks[
+            "app.tasks.feedback_orchestration.global_feedback_orchestration_step"
+        ]
         t.apply_async(queue="default")
-    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
+    return redirect(
+        url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
+    )
 
 
 @convenor.route("/feedback_job_cancel/<string:uuid>")
@@ -328,12 +336,18 @@ def feedback_job_cancel(uuid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         # Dispatch coordinator so it cleans up the Redis keys.
         celery = current_app.extensions["celery"]
-        t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
+        t = celery.tasks[
+            "app.tasks.feedback_orchestration.global_feedback_orchestration_step"
+        ]
         t.apply_async(queue="default")
-    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
+    return redirect(
+        url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
+    )
 
 
-@convenor.route("/generate_marking_event_feedback/<int:event_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/generate_marking_event_feedback/<int:event_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root", "convenor")
 def generate_marking_event_feedback(event_id):
     """
@@ -355,12 +369,17 @@ def generate_marking_event_feedback(event_id):
         MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
     )
     if event.workflow_state not in allowed_states:
-        flash("Feedback generation is not available for this event in its current state.", "warning")
+        flash(
+            "Feedback generation is not available for this event in its current state.",
+            "warning",
+        )
         return redirect(
             url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
         )
 
-    fill_missing = event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+    fill_missing = (
+        event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+    )
     all_crs = event.conflation_reports.all()
     cr_count = len(all_crs)
 
@@ -384,8 +403,13 @@ def generate_marking_event_feedback(event_id):
         cr_ids = [cr.id for cr in pending_crs]
 
         if not cr_ids:
-            flash("All students already have feedback documents. Nothing to generate.", "info")
-            return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+            flash(
+                "All students already have feedback documents. Nothing to generate.",
+                "info",
+            )
+            return redirect(
+                url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+            )
 
         try:
             launch_feedback_job(
@@ -398,15 +422,22 @@ def generate_marking_event_feedback(event_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("A database error occurred while creating the feedback job. Please try again.", "error")
-            return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+            flash(
+                "A database error occurred while creating the feedback job. Please try again.",
+                "error",
+            )
+            return redirect(
+                url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+            )
 
         plural = "s" if len(cr_ids) != 1 else ""
         flash(
             f'Queued {len(cr_ids)} feedback PDF{plural} for generation using recipe "{recipe.label}".',
             "success",
         )
-        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+        return redirect(
+            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+        )
 
     return render_template_context(
         "convenor/feedback/generate_feedback_form.html",
@@ -422,7 +453,9 @@ def generate_marking_event_feedback(event_id):
 
 
 @convenor.route("/marking_event_conflation_reports/<int:event_id>")
-@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
+@roles_accepted(
+    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
+)
 def marking_event_conflation_reports(event_id):
     """
     ConflationReport inspector for a MarkingEvent.
@@ -431,7 +464,9 @@ def marking_event_conflation_reports(event_id):
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
+    if not validate_is_convenor(
+        pclass, allow_roles=["office", "external_examiner", "exam_board"]
+    ):
         return redirect(redirect_url())
 
     url = request.args.get(
@@ -444,7 +479,9 @@ def marking_event_conflation_reports(event_id):
         db.session.query(FeedbackOrchestrationJob)
         .filter(
             FeedbackOrchestrationJob.event_id == event.id,
-            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+            FeedbackOrchestrationJob.status.in_(
+                FeedbackOrchestrationJob.ACTIVE_STATUSES
+            ),
         )
         .order_by(FeedbackOrchestrationJob.created_at.desc())
         .all()
@@ -471,13 +508,14 @@ def marking_event_conflation_reports(event_id):
         failed_count=failed_count,
         in_progress_count=in_progress_count,
         stale_count=stale_count,
-        MarkingEventWorkflowStates=MarkingEventWorkflowStates,
         propagate_form=ActionForm(),
     )
 
 
 @convenor.route("/conflation_reports_ajax/<int:event_id>", methods=["POST"])
-@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
+@roles_accepted(
+    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
+)
 def conflation_reports_ajax(event_id):
     """AJAX endpoint for ConflationReport inspector DataTable"""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
@@ -490,7 +528,10 @@ def conflation_reports_ajax(event_id):
 
     base_query = (
         db.session.query(ConflationReport)
-        .join(SubmissionRecord, SubmissionRecord.id == ConflationReport.submission_record_id)
+        .join(
+            SubmissionRecord,
+            SubmissionRecord.id == ConflationReport.submission_record_id,
+        )
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         .join(StudentData, StudentData.id == SubmittingStudent.student_id)
         .join(User, User.id == StudentData.id)
@@ -548,11 +589,16 @@ def reconflate_conflation_report(cr_id):
         return redirect(url)
 
     if not _conflation_report_editable(cr):
-        flash("Cannot reconflate: feedback has already been sent for this student.", "warning")
+        flash(
+            "Cannot reconflate: feedback has already been sent for this student.",
+            "warning",
+        )
         return redirect(url)
 
     if not cr.is_stale:
-        flash("This conflation report is not stale; reconflation is not needed.", "info")
+        flash(
+            "This conflation report is not stale; reconflation is not needed.", "info"
+        )
         return redirect(url)
 
     targets = event.targets_as_dict
@@ -603,10 +649,14 @@ def reconflate_conflation_report(cr_id):
             user=current_user,
             project_classes=pclass,
         )
-        flash(f"Reconflation complete for '{record.owner.student.user.name}'.", "success")
+        flash(
+            f"Reconflation complete for '{record.owner.student.user.name}'.", "success"
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError in reconflate_conflation_report", exc_info=e)
+        current_app.logger.exception(
+            "SQLAlchemyError in reconflate_conflation_report", exc_info=e
+        )
         flash("Could not reconflate due to a database error.", "error")
 
     return redirect(url)
@@ -638,7 +688,10 @@ def delete_conflation_report_feedback(cr_id):
         return redirect(url)
 
     if not _conflation_report_editable(cr):
-        flash("Cannot delete feedback: feedback has already been sent for this student.", "warning")
+        flash(
+            "Cannot delete feedback: feedback has already been sent for this student.",
+            "warning",
+        )
         return redirect(url)
 
     reports = cr.feedback_reports.all()
@@ -659,7 +712,11 @@ def delete_conflation_report_feedback(cr_id):
         # If no ConflationReport in this event now has any feedback, regress the event state
         all_crs = event.conflation_reports.all()
         any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
-        if not any_with_feedback and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
+        if (
+            not any_with_feedback
+            and event.workflow_state
+            == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+        ):
             event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
 
         log_db_commit(
@@ -671,13 +728,17 @@ def delete_conflation_report_feedback(cr_id):
         flash("Feedback reports deleted.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError in delete_conflation_report_feedback", exc_info=e)
+        current_app.logger.exception(
+            "SQLAlchemyError in delete_conflation_report_feedback", exc_info=e
+        )
         flash("Could not delete feedback due to a database error.", "error")
 
     return redirect(url)
 
 
-@convenor.route("/regenerate_conflation_report_feedback/<int:cr_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/regenerate_conflation_report_feedback/<int:cr_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root", "convenor")
 def regenerate_conflation_report_feedback(cr_id):
     """
@@ -701,7 +762,10 @@ def regenerate_conflation_report_feedback(cr_id):
     text = request.args.get("text", "Conflation reports")
 
     if not _conflation_report_editable(cr):
-        flash("Cannot regenerate feedback: feedback has already been sent for this student.", "warning")
+        flash(
+            "Cannot regenerate feedback: feedback has already been sent for this student.",
+            "warning",
+        )
         return redirect(url)
 
     student_name = cr.submission_record.owner.student.user.name
@@ -721,7 +785,9 @@ def regenerate_conflation_report_feedback(cr_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("A database error occurred while queuing the regeneration job.", "error")
+            flash(
+                "A database error occurred while queuing the regeneration job.", "error"
+            )
             return redirect(url)
 
         flash(
@@ -744,7 +810,9 @@ def regenerate_conflation_report_feedback(cr_id):
 
 
 @convenor.route("/view_conflation_report_emails/<int:cr_id>")
-@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
+@roles_accepted(
+    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
+)
 def view_conflation_report_emails(cr_id):
     """
     List the EmailLog entries attached to a ConflationReport (feedback-push emails).
@@ -753,7 +821,9 @@ def view_conflation_report_emails(cr_id):
     event: MarkingEvent = cr.marking_event
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
+    if not validate_is_convenor(
+        pclass, allow_roles=["office", "external_examiner", "exam_board"]
+    ):
         return redirect(redirect_url())
 
     url = request.args.get(
@@ -804,7 +874,10 @@ def push_single_cr_feedback(cr_id):
         return redirect(url)
 
     if cr.feedback_reports.count() == 0:
-        flash("No feedback reports exist for this student. Generate feedback first.", "warning")
+        flash(
+            "No feedback reports exist for this student. Generate feedback first.",
+            "warning",
+        )
         return redirect(url)
 
     student_name = cr.submission_record.owner.student.user.name
@@ -827,7 +900,9 @@ def push_single_cr_feedback(cr_id):
         notify_markers = form.notify_markers.data
         notify_moderators = form.notify_moderators.data
         defer = _td(hours=delay_hours)
-        target_roles = _build_target_roles(notify_supervisors, notify_markers, notify_moderators)
+        target_roles = _build_target_roles(
+            notify_supervisors, notify_markers, notify_moderators
+        )
 
         try:
             # ---- Student feedback email ----
@@ -846,16 +921,19 @@ def push_single_cr_feedback(cr_id):
                 db.session.add(student_workflow)
                 db.session.flush()
 
-                student_item = _build_student_email_item(cr, current_user.id, defer, test_email)
+                student_item = _build_student_email_item(
+                    cr, current_user.id, defer, test_email
+                )
                 if student_item is not None:
                     student_item.workflow = student_workflow
                     db.session.add(student_item)
 
             # ---- Faculty feedback emails ----
             if target_roles:
-                faculty_template = (
-                    EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass)
-                    or EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass)
+                faculty_template = EmailTemplate.find_template_(
+                    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass
+                ) or EmailTemplate.find_template_(
+                    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
                 )
                 if faculty_template is not None:
                     faculty_workflow = EmailWorkflow.build_(
@@ -869,7 +947,9 @@ def push_single_cr_feedback(cr_id):
                     db.session.add(faculty_workflow)
                     db.session.flush()
 
-                    fac_items = _build_faculty_email_items_for_cr(cr, defer, test_email, target_roles)
+                    fac_items = _build_faculty_email_items_for_cr(
+                        cr, defer, test_email, target_roles
+                    )
                     for item in fac_items:
                         item.workflow = faculty_workflow
                         db.session.add(item)
@@ -882,10 +962,16 @@ def push_single_cr_feedback(cr_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("A database error occurred while queuing the feedback email.", "error")
+            flash(
+                "A database error occurred while queuing the feedback email.", "error"
+            )
             return redirect(url)
 
-        delay_desc = f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}" if delay_hours > 0 else "immediately"
+        delay_desc = (
+            f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}"
+            if delay_hours > 0
+            else "immediately"
+        )
         test_note = f" (test mode: {test_email})" if test_email else ""
         flash(
             f'Queued feedback email for "{student_name}", to be dispatched {delay_desc}{test_note}.',
@@ -926,7 +1012,9 @@ def push_marking_event_feedback(event_id):
             "Feedback can only be pushed when the event is in the 'Ready to push feedback' state.",
             "warning",
         )
-        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+        return redirect(
+            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+        )
 
     url = request.args.get(
         "url",
@@ -948,28 +1036,48 @@ def push_marking_event_feedback(event_id):
 
         if unsent_count == 0:
             flash("All students have already had feedback sent. Nothing to do.", "info")
-            return redirect(url_for("convenor.marking_event_conflation_reports", event_id=event_id))
+            return redirect(
+                url_for("convenor.marking_event_conflation_reports", event_id=event_id)
+            )
 
         celery = current_app.extensions["celery"]
-        push_task = celery.tasks.get("app.tasks.push_feedback.push_marking_event_feedback_task")
+        push_task = celery.tasks.get(
+            "app.tasks.push_feedback.push_marking_event_feedback_task"
+        )
         if push_task is None:
-            flash("Feedback push task is not registered. Please contact a system administrator.", "error")
+            flash(
+                "Feedback push task is not registered. Please contact a system administrator.",
+                "error",
+            )
             return redirect(url)
 
         push_task.apply_async(
-            args=[event_id, current_user.id, delay_hours, test_email,
-                  notify_supervisors, notify_markers, notify_moderators]
+            args=[
+                event_id,
+                current_user.id,
+                delay_hours,
+                test_email,
+                notify_supervisors,
+                notify_markers,
+                notify_moderators,
+            ]
         )
 
-        delay_desc = f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}" if delay_hours > 0 else "immediately"
+        delay_desc = (
+            f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}"
+            if delay_hours > 0
+            else "immediately"
+        )
         test_note = f" (test mode: {test_email})" if test_email else ""
         plural = "s" if unsent_count != 1 else ""
         flash(
-            f'Queued feedback email{plural} for {unsent_count} student{plural}, '
-            f'to be dispatched {delay_desc}{test_note}.',
+            f"Queued feedback email{plural} for {unsent_count} student{plural}, "
+            f"to be dispatched {delay_desc}{test_note}.",
             "success",
         )
-        return redirect(url_for("convenor.marking_event_conflation_reports", event_id=event_id))
+        return redirect(
+            url_for("convenor.marking_event_conflation_reports", event_id=event_id)
+        )
 
     return render_template_context(
         "convenor/feedback/push_feedback_form.html",
@@ -1047,7 +1155,8 @@ def submitter_reports_inspector(workflow_id):
     total = workflow.submitter_reports.count()
     all_ready_to_sign_off = (
         total > 0
-        and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0) == total
+        and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0)
+        == total
     )
     any_completed = state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
 
@@ -1154,7 +1263,9 @@ def resolve_risk_factors(record_id):
             # Process each risk factor type: resolve if the corresponding checkbox is checked
             for factor_type in SubmissionRecord.ALL_RISK_TYPES:
                 if getattr(form, f"resolve_{factor_type}").data:
-                    annotation = (getattr(form, f"annotation_{factor_type}").data or "").strip() or None
+                    annotation = (
+                        getattr(form, f"annotation_{factor_type}").data or ""
+                    ).strip() or None
                     record.resolve_risk_factor(factor_type, current_user, annotation)
 
             log_db_commit(
@@ -1164,7 +1275,9 @@ def resolve_risk_factors(record_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError in resolve_risk_factors", exc_info=e)
+            current_app.logger.exception(
+                "SQLAlchemyError in resolve_risk_factors", exc_info=e
+            )
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
@@ -1321,7 +1434,8 @@ def enter_turnitin_score(record_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception(
-                "SQLAlchemyError committing risk factors in enter_turnitin_score", exc_info=e
+                "SQLAlchemyError committing risk factors in enter_turnitin_score",
+                exc_info=e,
             )
 
         # Re-evaluate all SubmitterReport lifecycle states for this record.
@@ -2059,7 +2173,8 @@ def event_marking_workflows_inspector(event_id):
     )
     generate_feedback_url = (
         url_for("convenor.generate_marking_event_feedback", event_id=event_id)
-        if event.workflow_state in (
+        if event.workflow_state
+        in (
             MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
             MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
         )
@@ -2099,7 +2214,8 @@ def event_marking_workflows_inspector(event_id):
                 )
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
-                    SubmitterReport.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                    SubmitterReport.workflow_state
+                    == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
                 )
                 .count()
             )
@@ -2154,7 +2270,8 @@ def event_marking_workflows_inspector(event_id):
                 db.session.query(func.count())
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
-                    SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+                    SubmitterReport.workflow_state
+                    == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
                 )
                 .scalar()
             )
@@ -2167,7 +2284,10 @@ def event_marking_workflows_inspector(event_id):
                         action_url=url_for(
                             "convenor.complete_all_submitter_reports",
                             workflow_id=workflow.id,
-                            url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                            url=url_for(
+                                "convenor.event_marking_workflows_inspector",
+                                event_id=event_id,
+                            ),
                             text="Marking workflows",
                         ),
                         action_label="Complete all…",
@@ -2180,7 +2300,8 @@ def event_marking_workflows_inspector(event_id):
                     db.session.query(func.count())
                     .filter(
                         SubmitterReport.workflow_id == workflow.id,
-                        SubmitterReport.workflow_state == SubmitterReportWorkflowStates.COMPLETED,
+                        SubmitterReport.workflow_state
+                        == SubmitterReportWorkflowStates.COMPLETED,
                     )
                     .scalar()
                 )
@@ -2193,7 +2314,10 @@ def event_marking_workflows_inspector(event_id):
                             action_url=url_for(
                                 "convenor.return_all_submitter_reports",
                                 workflow_id=workflow.id,
-                                url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                                url=url_for(
+                                    "convenor.event_marking_workflows_inspector",
+                                    event_id=event_id,
+                                ),
                                 text="Marking workflows",
                             ),
                             action_label="Return all…",
@@ -2205,7 +2329,9 @@ def event_marking_workflows_inspector(event_id):
         db.session.query(FeedbackOrchestrationJob)
         .filter(
             FeedbackOrchestrationJob.event_id == event.id,
-            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+            FeedbackOrchestrationJob.status.in_(
+                FeedbackOrchestrationJob.ACTIVE_STATUSES
+            ),
         )
         .order_by(FeedbackOrchestrationJob.created_at.desc())
         .all()
@@ -3361,7 +3487,9 @@ def complete_submitter_report(sr_id):
     return redirect(url)
 
 
-@convenor.route("/complete-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/complete-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root")
 def complete_all_submitter_reports(workflow_id):
     """
@@ -3382,12 +3510,16 @@ def complete_all_submitter_reports(workflow_id):
 
     # Count reports eligible for completion
     ready_reports = [
-        sr for sr in workflow.submitter_reports.all()
-        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF and sr.grade is not None
+        sr
+        for sr in workflow.submitter_reports.all()
+        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+        and sr.grade is not None
     ]
     no_grade_reports = [
-        sr for sr in workflow.submitter_reports.all()
-        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF and sr.grade is None
+        sr
+        for sr in workflow.submitter_reports.all()
+        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+        and sr.grade is None
     ]
 
     form = ActionForm(request.form)
@@ -3498,7 +3630,9 @@ def return_submitter_report_to_convenor(sr_id):
     return redirect(url)
 
 
-@convenor.route("/return-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/return-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"]
+)
 @roles_accepted("admin", "root")
 def return_all_submitter_reports(workflow_id):
     """
@@ -3518,7 +3652,8 @@ def return_all_submitter_reports(workflow_id):
     text = request.args.get("text", "Marking workflows")
 
     completed_reports = [
-        sr for sr in workflow.submitter_reports.all()
+        sr
+        for sr in workflow.submitter_reports.all()
         if sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED
     ]
 
@@ -3568,7 +3703,10 @@ def return_all_submitter_reports(workflow_id):
                 user=current_user,
                 project_classes=pclass,
             )
-            flash(f"{returned_count} report(s) returned to convenor for editing.", "success")
+            flash(
+                f"{returned_count} report(s) returned to convenor for editing.",
+                "success",
+            )
         else:
             db.session.commit()
             flash("No completed reports found in this workflow.", "info")
@@ -3606,13 +3744,19 @@ def calculate_conflation(event_id):
     url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
     if event.workflow_state < MarkingEventWorkflowStates.READY_TO_CONFLATE:
-        flash("Cannot calculate conflation: not all marking workflows are complete.", "error")
+        flash(
+            "Cannot calculate conflation: not all marking workflows are complete.",
+            "error",
+        )
         return redirect(url)
 
     if request.method == "GET":
         submission_count = event.period.submissions.count()
         existing_reports = event.conflation_reports.count()
-        any_stale = existing_reports > 0 and event.conflation_reports.filter_by(is_stale=True).count() > 0
+        any_stale = (
+            existing_reports > 0
+            and event.conflation_reports.filter_by(is_stale=True).count() > 0
+        )
         form = ActionForm()
         return render_template_context(
             "convenor/markingevent/confirm_calculate_conflation.html",
@@ -3711,12 +3855,12 @@ def calculate_conflation(event_id):
             user=current_user,
             project_classes=pclass,
         )
-        flash(
-            f"Conflation complete: {generated_count} record(s) processed.", "success"
-        )
+        flash(f"Conflation complete: {generated_count} record(s) processed.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError in calculate_conflation", exc_info=e)
+        current_app.logger.exception(
+            "SQLAlchemyError in calculate_conflation", exc_info=e
+        )
         flash("Could not calculate conflation due to a database error.", "error")
 
     return redirect(url)
@@ -3727,10 +3871,15 @@ def calculate_conflation(event_id):
 # ---------------------------------------------------------------------------
 
 
-def _propagate_grade_to_records(event: MarkingEvent, target_key: str, grade_field: str,
-                                 generated_id_field: str, generated_ts_field: str,
-                                 event_id_field: str,
-                                 pclass: ProjectClass) -> tuple[int, str | None]:
+def _propagate_grade_to_records(
+    event: MarkingEvent,
+    target_key: str,
+    grade_field: str,
+    generated_id_field: str,
+    generated_ts_field: str,
+    event_id_field: str,
+    pclass: ProjectClass,
+) -> tuple[int, str | None]:
     """
     Copy the named target value from each ConflationReport to the given SubmissionRecord field.
     Also records which MarkingEvent was the source of the grade in event_id_field.
@@ -3776,8 +3925,13 @@ def propagate_report_grade(event_id):
 
     try:
         count, err = _propagate_grade_to_records(
-            event, "report", "report_grade", "report_generated_id", "report_generated_timestamp",
-            "report_event_id", pclass
+            event,
+            "report",
+            "report_grade",
+            "report_generated_id",
+            "report_generated_timestamp",
+            "report_event_id",
+            pclass,
         )
         if err:
             flash(err, "error")
@@ -3791,7 +3945,9 @@ def propagate_report_grade(event_id):
         flash(f"Report grades copied to {count} submission record(s).", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError in propagate_report_grade", exc_info=e)
+        current_app.logger.exception(
+            "SQLAlchemyError in propagate_report_grade", exc_info=e
+        )
         flash("Could not propagate report grades due to a database error.", "error")
 
     return redirect(url)
@@ -3816,8 +3972,13 @@ def propagate_supervision_grade(event_id):
 
     try:
         count, err = _propagate_grade_to_records(
-            event, "supervisor", "supervision_grade", "supervision_generated_id", "supervision_generated_timestamp",
-            "supervision_event_id", pclass
+            event,
+            "supervisor",
+            "supervision_grade",
+            "supervision_generated_id",
+            "supervision_generated_timestamp",
+            "supervision_event_id",
+            pclass,
         )
         if err:
             flash(err, "error")
@@ -3831,8 +3992,12 @@ def propagate_supervision_grade(event_id):
         flash(f"Supervision grades copied to {count} submission record(s).", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError in propagate_supervision_grade", exc_info=e)
-        flash("Could not propagate supervision grades due to a database error.", "error")
+        current_app.logger.exception(
+            "SQLAlchemyError in propagate_supervision_grade", exc_info=e
+        )
+        flash(
+            "Could not propagate supervision grades due to a database error.", "error"
+        )
 
     return redirect(url)
 
@@ -3856,8 +4021,13 @@ def propagate_presentation_grade(event_id):
 
     try:
         count, err = _propagate_grade_to_records(
-            event, "presentation", "presentation_grade", "presentation_generated_id", "presentation_generated_timestamp",
-            "presentation_event_id", pclass
+            event,
+            "presentation",
+            "presentation_grade",
+            "presentation_generated_id",
+            "presentation_generated_timestamp",
+            "presentation_event_id",
+            pclass,
         )
         if err:
             flash(err, "error")
@@ -3871,7 +4041,11 @@ def propagate_presentation_grade(event_id):
         flash(f"Presentation grades copied to {count} submission record(s).", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError in propagate_presentation_grade", exc_info=e)
-        flash("Could not propagate presentation grades due to a database error.", "error")
+        current_app.logger.exception(
+            "SQLAlchemyError in propagate_presentation_grade", exc_info=e
+        )
+        flash(
+            "Could not propagate presentation grades due to a database error.", "error"
+        )
 
     return redirect(url)

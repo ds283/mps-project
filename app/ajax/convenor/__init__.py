@@ -33,7 +33,6 @@ from .markingevent import (
     marking_event_data,
     marking_report_data,
     marking_scheme_data,
-    marking_workflow_data,
     period_marking_event_data,
     submitter_report_data,
 )

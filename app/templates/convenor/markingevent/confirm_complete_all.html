@@ -1,0 +1,75 @@
+{% extends "base_app.html" %}
+
+{% block title %}Complete all reports – {{ workflow.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-check-double fa-fw me-1"></i>
+                    Complete all reports – <strong>{{ workflow.name }}</strong>
+                </h4>
+            </div>
+
+            <div class="card border-success mb-3">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-check-circle fa-fw me-1"></i> Confirm bulk completion
+                </div>
+                <div class="card-body">
+                    <p>
+                        This will mark <strong>{{ ready_reports|length }}</strong>
+                        report{{ 's' if ready_reports|length != 1 else '' }} in workflow
+                        <strong>{{ workflow.name }}</strong> (event: <strong>{{ event.name }}</strong>) as
+                        <span class="badge bg-success">Completed</span>.
+                    </p>
+
+                    {% if no_grade_reports %}
+                        <div class="alert alert-secondary py-2 mb-3">
+                            <i class="fas fa-exclamation-circle fa-fw me-1"></i>
+                            <strong>{{ no_grade_reports|length }}</strong>
+                            report{{ 's' if no_grade_reports|length != 1 else '' }} without a grade will be
+                            <strong>skipped</strong> and left in the Ready to sign off state.
+                        </div>
+                    {% endif %}
+
+                    {% if ready_reports %}
+                        <ul class="list-group list-group-flush mb-3">
+                            {% for sr in ready_reports %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                                    <span>{{ sr.student.user.name }}</span>
+                                    <span class="badge bg-secondary">{{ "%.1f"|format(sr.grade) }}%</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-body-secondary fst-italic mb-3">
+                            No reports are currently in the Ready to sign off state with a grade. Nothing will be changed.
+                        </p>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <form method="POST"
+                              action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=workflow.id, url=url, text=text) }}">
+                            {{ form.hidden_tag() }}
+                            <button class="btn btn-success" type="submit"
+                                    {% if not ready_reports %}disabled{% endif %}>
+                                <i class="fas fa-check-double fa-fw"></i> Complete {{ ready_reports|length }} report{{ 's' if ready_reports|length != 1 else '' }}
+                            </button>
+                        </form>
+                        <a class="btn btn-outline-secondary" href="{{ url }}">
+                            <i class="fas fa-times fa-fw"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

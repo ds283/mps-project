@@ -107,7 +107,7 @@ _marking_event_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_workflow_inspector', event_id=event.id, url=url_for('convenor.marking_events_inspector', pclass_id=pclass.id), text='Assessment archive') }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url_for('convenor.marking_events_inspector', pclass_id=pclass.id), text='Assessment archive') }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
     </div>
@@ -222,23 +222,6 @@ _marking_workflow_feedback = """
     {% if total == 0 %}
         <span class="badge bg-secondary">No reports</span>
     {% endif %}
-</div>
-"""
-
-# language=jinja2
-_marking_workflow_menu = """
-<div class="dropdown">
-    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
-        Actions
-    </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, url=url, text=text) }}">
-            <i class="fas fa-user-graduate fa-fw"></i> Submitter reports&hellip;
-        </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, url=url, text=text) }}">
-            <i class="fas fa-marker fa-fw"></i> Marking reports&hellip;
-        </a>
-    </div>
 </div>
 """
 
@@ -827,33 +810,6 @@ def marking_event_data(events):
     ]
 
 
-def marking_workflow_data(url, text, workflows):
-    """Format a MarkingWorkflow row for DataTables"""
-
-    env = current_app.jinja_env
-
-    name_tmpl = env.from_string(_marking_workflow_name)
-    scheme_tmpl = env.from_string(_marking_workflow_scheme)
-    attachments_tmpl = env.from_string(_marking_workflow_attachments)
-    reports_tmpl = env.from_string(_marking_workflow_reports)
-    distribution_tmpl = env.from_string(_marking_workflow_distribution)
-    feedback_tmpl = env.from_string(_marking_workflow_feedback)
-    menu_tmpl = env.from_string(_marking_workflow_menu)
-
-    return [
-        {
-            "name": render_template(name_tmpl, workflow=workflow),
-            "scheme": render_template(scheme_tmpl, workflow=workflow),
-            "attachments": render_template(attachments_tmpl, workflow=workflow),
-            "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
-            "feedback": render_template(feedback_tmpl, workflow=workflow),
-            "menu": render_template(menu_tmpl, workflow=workflow, url=url, text=text),
-        }
-        for workflow in workflows
-    ]
-
-
 def submitter_report_data(reports):
     """Format a SubmitterReport row for DataTables"""
 
@@ -1033,11 +989,62 @@ _period_marking_event_status = """
 {% if event.workflow_state == CLOSED %}
     <span class="text-secondary"><i class="fas fa-check-circle"></i> Closed</span>
 {% elif event.workflow_state == READY_TO_PUSH_FEEDBACK %}
-    <span class="text-success"><i class="fas fa-paper-plane"></i> Ready to push feedback</span>
+    <span class="text-success"><i class="fas fa-paper-plane fa-fw"></i> Ready to push feedback</span>
+    {% set stale_count = event.conflation_reports.filter_by(is_stale=True).count() %}
+    {% set missing_ns = namespace(count=0) %}
+    {% for cr in event.conflation_reports %}
+        {% if cr.feedback_reports.count() == 0 %}{% set missing_ns.count = missing_ns.count + 1 %}{% endif %}
+    {% endfor %}
+    {% if stale_count > 0 or missing_ns.count > 0 %}
+        <div class="d-flex flex-column gap-1 mt-1">
+            {% if stale_count > 0 %}
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-exclamation-triangle fa-fw"></i> {{ stale_count }} stale
+                </span>
+            {% endif %}
+            {% if missing_ns.count > 0 %}
+                <span class="badge bg-secondary">
+                    <i class="fas fa-file-pdf fa-fw"></i> {{ missing_ns.count }} missing feedback
+                </span>
+            {% endif %}
+        </div>
+    {% endif %}
+    <div class="d-flex flex-column gap-1 mt-2">
+        {% if missing_ns.count > 0 %}
+            <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+               class="btn btn-sm btn-outline-success">
+                <i class="fas fa-file-pdf fa-fw"></i> Fill missing feedback&hellip;
+            </a>
+        {% endif %}
+        <a href="{{ url_for('convenor.push_marking_event_feedback', event_id=event.id) }}"
+           class="btn btn-sm btn-success">
+            <i class="fas fa-paper-plane fa-fw"></i> Send feedback&hellip;
+        </a>
+    </div>
 {% elif event.workflow_state == READY_TO_GENERATE_FEEDBACK %}
-    <span class="text-success"><i class="fas fa-file-alt"></i> Ready to generate feedback</span>
+    <span class="text-success"><i class="fas fa-file-alt fa-fw"></i> Ready to generate feedback</span>
+    {% set stale_count = event.conflation_reports.filter_by(is_stale=True).count() %}
+    {% if stale_count > 0 %}
+        <div class="mt-1">
+            <span class="badge bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> {{ stale_count }} stale
+            </span>
+        </div>
+    {% endif %}
+    <div class="mt-2">
+        <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+           class="btn btn-sm btn-success">
+            <i class="fas fa-file-pdf fa-fw"></i> Generate feedback&hellip;
+        </a>
+    </div>
 {% elif event.workflow_state == READY_TO_CONFLATE %}
-    <span class="text-success"><i class="fas fa-calculator"></i> Ready to conflate</span>
+    <span class="text-success"><i class="fas fa-calculator fa-fw"></i> Ready to conflate</span>
+    <div class="mt-2">
+        <a href="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}"
+           class="btn btn-sm btn-success">
+            <i class="fas fa-calculator fa-fw"></i> Conflate marks&hellip;
+        </a>
+    </div>
 {% elif event.workflow_state == OPEN %}
     <span class="text-primary"><i class="fas fa-check-circle"></i> Open &mdash; marking in progress</span>
 {% else %}
@@ -1046,7 +1053,7 @@ _period_marking_event_status = """
         <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Waiting</span>
         <div class="mt-2">
             <a href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}"
-               class="btn btn-xs btn-outline-primary">
+               class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-play fa-fw"></i> Open event&hellip;
             </a>
         </div>
@@ -1066,9 +1073,14 @@ _period_marking_event_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url, text=text) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url_for('convenor.period_marking_events_inspector', period_id=event.period_id), text='Marking events') }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
+        {% if event.workflow_state == READY_TO_CONFLATE %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}">
+                <i class="fas fa-calculator fa-fw"></i> Conflate marks&hellip;
+            </a>
+        {% endif %}
         {% if event.workflow_state >= READY_TO_GENERATE_FEEDBACK %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_event_conflation_reports', event_id=event.id, url=url, text=text) }}">
                 <i class="fas fa-file-contract fa-fw"></i> Conflation reports&hellip;
@@ -1187,7 +1199,6 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
     attachments_tmpl = env.from_string(_marking_workflow_attachments)
     reports_tmpl = env.from_string(_marking_workflow_reports)
     distribution_tmpl = env.from_string(_marking_workflow_distribution)
-    feedback_tmpl = env.from_string(_marking_workflow_feedback)
     menu_tmpl = env.from_string(_event_marking_workflow_menu)
 
     return [
@@ -1197,7 +1208,6 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
             "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
-            "feedback": render_template(feedback_tmpl, workflow=workflow),
             "menu": render_template(
                 menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit
             ),

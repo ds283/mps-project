@@ -212,6 +212,81 @@
         </div>
     {% endif %}
 
+    {# Grade back-propagation panel (shown when conflation results exist) #}
+    {% set conflation_reports = event.conflation_reports.all() %}
+    {% if conflation_reports %}
+        {% set targets = event.targets_as_dict %}
+        {% set any_stale = conflation_reports | selectattr('is_stale') | list | length > 0 %}
+        {% if targets %}
+            {% set sample_dict = conflation_reports[0].conflation_report_as_dict %}
+            {% set propagatable = ('report' in sample_dict) or ('supervisor' in sample_dict) or ('presentation' in sample_dict) %}
+            {% if propagatable %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white d-flex align-items-center gap-2">
+                        <i class="fas fa-arrow-right fa-fw"></i>
+                        <strong>Copy grades to submission records</strong>
+                        {% if any_stale %}
+                            <span class="badge bg-warning text-dark ms-auto">
+                                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>Some results stale
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if any_stale %}
+                            <div class="alert alert-warning py-2 mb-3">
+                                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                                Some conflation results are <strong>stale</strong> because a report was returned
+                                after conflation was last run. Re-run conflation before copying grades.
+                            </div>
+                        {% endif %}
+                        <p class="small text-body-secondary mb-2">
+                            Conflation run for <strong>{{ conflation_reports|length }}</strong> record(s).
+                            Generated {{ conflation_reports[0].generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                            {% if conflation_reports[0].generated_by is not none %}
+                                by {{ conflation_reports[0].generated_by.name }}
+                            {% endif %}.
+                        </p>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if 'report' in sample_dict %}
+                                <form method="POST"
+                                      action="{{ url_for('convenor.propagate_report_grade', event_id=event.id) }}">
+                                    {{ propagate_form.hidden_tag() }}
+                                    <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                        <i class="fas fa-arrow-right fa-fw"></i>
+                                        Copy &ldquo;report&rdquo; grades &rarr; submission records
+                                        {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                            {% if 'supervisor' in sample_dict %}
+                                <form method="POST"
+                                      action="{{ url_for('convenor.propagate_supervision_grade', event_id=event.id) }}">
+                                    {{ propagate_form.hidden_tag() }}
+                                    <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                        <i class="fas fa-arrow-right fa-fw"></i>
+                                        Copy &ldquo;supervisor&rdquo; grades &rarr; submission records
+                                        {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                            {% if 'presentation' in sample_dict %}
+                                <form method="POST"
+                                      action="{{ url_for('convenor.propagate_presentation_grade', event_id=event.id) }}">
+                                    {{ propagate_form.hidden_tag() }}
+                                    <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                        <i class="fas fa-arrow-right fa-fw"></i>
+                                        Copy &ldquo;presentation&rdquo; grades &rarr; submission records
+                                        {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+
     {# Active feedback PDF generation jobs panel #}
     {% if feedback_jobs %}
         <div class="card border-primary mb-3">

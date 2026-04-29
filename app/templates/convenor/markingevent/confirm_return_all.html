@@ -1,0 +1,74 @@
+{% extends "base_app.html" %}
+
+{% block title %}Return all reports – {{ workflow.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-undo fa-fw me-1"></i>
+                    Return all reports – <strong>{{ workflow.name }}</strong>
+                </h4>
+            </div>
+
+            <div class="card border-danger mb-3">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-triangle fa-fw me-1"></i> Confirm bulk return
+                </div>
+                <div class="card-body">
+                    <p>
+                        This will return <strong>{{ completed_reports|length }}</strong>
+                        completed report{{ 's' if completed_reports|length != 1 else '' }} in workflow
+                        <strong>{{ workflow.name }}</strong> (event: <strong>{{ event.name }}</strong>)
+                        to the <span class="badge bg-secondary">Ready to sign off</span> state.
+                    </p>
+                    <p class="text-body-secondary small">
+                        If conflation has already been run for this event, all conflation results will be
+                        marked as <strong>stale</strong> and must be re-calculated before feedback can be generated.
+                    </p>
+
+                    {% if completed_reports %}
+                        <ul class="list-group list-group-flush mb-3">
+                            {% for sr in completed_reports %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                                    <span>{{ sr.student.user.name }}</span>
+                                    {% if sr.grade is not none %}
+                                        <span class="badge bg-secondary">{{ "%.1f"|format(sr.grade) }}%</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No grade</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-body-secondary fst-italic mb-3">
+                            No completed reports found in this workflow. Nothing will be changed.
+                        </p>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <form method="POST"
+                              action="{{ url_for('convenor.return_all_submitter_reports', workflow_id=workflow.id, url=url, text=text) }}">
+                            {{ form.hidden_tag() }}
+                            <button class="btn btn-danger" type="submit"
+                                    {% if not completed_reports %}disabled{% endif %}>
+                                <i class="fas fa-undo fa-fw"></i> Return {{ completed_reports|length }} report{{ 's' if completed_reports|length != 1 else '' }}
+                            </button>
+                        </form>
+                        <a class="btn btn-outline-secondary" href="{{ url }}">
+                            <i class="fas fa-times fa-fw"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

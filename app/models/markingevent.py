@@ -272,6 +272,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         self,
         event_url: Optional[str] = None,
         open_event_url: Optional[str] = None,
+        conflation_url: Optional[str] = None,
         generate_feedback_url: Optional[str] = None,
     ) -> list:
         """
@@ -279,6 +280,18 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         Extend this method as the SubmitterReport workflow grows to surface new CTA items.
         """
         actions = []
+
+        # CTA for READY_TO_CONFLATE state
+        if self.workflow_state == MarkingEventWorkflowStates.READY_TO_CONFLATE:
+            actions.append(
+                ConvenorAction(
+                    severity="success",
+                    title="Ready to conflate",
+                    description="All marking workflows are complete. Calculate conflated grades to advance to the next stage.",
+                    action_url=conflation_url,
+                    action_label="Conflate…" if conflation_url else None,
+                )
+            )
 
         # CTA for READY_TO_GENERATE_FEEDBACK state
         if self.workflow_state == MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK:
@@ -291,6 +304,24 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                     action_label="Generate feedback…",
                 )
             )
+
+        # CTA for READY_TO_PUSH_FEEDBACK state — suppress if all records already have feedback
+        if self.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
+            total_crs = self.conflation_reports.count()
+            missing_count = sum(1 for cr in self.conflation_reports if cr.feedback_reports.count() == 0)
+            if missing_count > 0:
+                actions.append(
+                    ConvenorAction(
+                        severity="success",
+                        title="Ready to fill missing feedback",
+                        description=(
+                            f"{missing_count} of {total_crs} record(s) are missing feedback PDFs. "
+                            "Generate the missing feedback before pushing to students."
+                        ),
+                        action_url=generate_feedback_url,
+                        action_label="Fill missing feedback…",
+                    )
+                )
 
         # Check for SubmitterReports in READY_TO_DISTRIBUTE state with undistributed MarkingReports
         ready_count = 0
@@ -326,7 +357,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready. Open this event to trigger distribution.",
                         action_url=open_event_url,
-                        action_label="Open event\u2026",
+                        action_label="Open event",
                     )
                 )
 
@@ -1198,7 +1229,9 @@ class ConflationReport(db.Model, EditingMetadataMixin):
 
     # who pushed the feedback?
     feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    feedback_push_by = db.relationship("User", foreign_keys=[feedback_push_id], uselist=False)
+    feedback_push_by = db.relationship(
+        "User", foreign_keys=[feedback_push_id], uselist=False
+    )
 
     # timestamp when feedback was pushed
     feedback_push_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1209,10 +1242,14 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     )
 
     # label of the FeedbackRecipe used to generate the PDFs (archived string, not FK)
-    recipe = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+    recipe = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
 
     # Celery task ID for an in-progress PDF generation; non-null means generation underway
-    feedback_celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+    feedback_celery_id = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
 
     # set True when the last PDF generation attempt failed
     feedback_generation_failed = db.Column(db.Boolean(), default=False, nullable=False)

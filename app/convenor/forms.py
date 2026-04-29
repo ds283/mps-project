@@ -1109,7 +1109,6 @@ def GenerateFeedbackFormFactory(pclass_id: int):
             get_pk=lambda r: r.id,
             get_label=lambda r: r.label,
             allow_blank=False,
-            widget_kwargs={"selectionCssClass": "select2-small", "dropdownCssClass": "select2-small"},
             description="Select the feedback recipe to use when generating PDF feedback documents.",
         )
 

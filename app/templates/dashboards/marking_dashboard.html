@@ -34,27 +34,31 @@
     {# ------------------------------------------------------------------ #}
     {# Helper: map MarkingEvent workflow_state to (Bootstrap colour, label) #}
     {% set _state_badge = {
-        MarkingEventWorkflowStates.WAITING: ("secondary", "Waiting"),
-        MarkingEventWorkflowStates.OPEN: ("primary", "Open"),
-        MarkingEventWorkflowStates.READY_TO_CONFLATE: ("success", "Ready to conflate"),
-        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK: ("warning", "Ready for feedback"),
-        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK: ("warning", "Ready to push"),
-        MarkingEventWorkflowStates.CLOSED: ("dark", "Closed"),
+        MarkingEventWorkflowStates.WAITING:                    ("bg-secondary-subtle text-secondary-emphasis", "Waiting"),
+        MarkingEventWorkflowStates.OPEN:                       ("bg-primary-subtle text-primary-emphasis",     "Open"),
+        MarkingEventWorkflowStates.READY_TO_CONFLATE:          ("bg-success-subtle text-success-emphasis",     "Ready to conflate"),
+        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK: ("bg-warning-subtle text-warning-emphasis",     "Ready for feedback"),
+        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:     ("bg-warning-subtle text-warning-emphasis",     "Ready to push"),
+        MarkingEventWorkflowStates.CLOSED:                     ("bg-dark-subtle text-dark-emphasis",           "Closed"),
     } %}
 
     {# Helper: colour class for a percentage value (high % = healthy) #}
     {# Used for distribution, submitted, feedback tiles                 #}
-    {% macro pct_color(val) %}{% if val is none %}text-secondary{% elif val >= 100 %}text-success{% elif val >= 70 %}text-warning{% else %}text-danger{% endif %}{% endmacro %}
-    {% macro bar_color(val) %}{% if val is none %}bg-secondary{% elif val >= 100 %}bg-success{% elif val >= 70 %}bg-warning{% else %}bg-danger{% endif %}{% endmacro %}
+    {% macro pct_color(val) %}{% if val is none %}text-secondary{% elif val >= 100 %}text-success{% elif val >= 70 %}
+        text-warning{% else %}text-danger{% endif %}{% endmacro %}
+    {% macro bar_color(val) %}{% if val is none %}bg-secondary{% elif val >= 100 %}bg-success{% elif val >= 70 %}
+        bg-warning{% else %}bg-danger{% endif %}{% endmacro %}
 
     {# Helper: colour class for a "low % = bad" tile (NOT_READY, intervention) #}
-    {% macro alert_pct_color(val) %}{% if val is none or val == 0 %}text-secondary{% elif val > 0 %}text-danger{% endif %}{% endmacro %}
-    {% macro alert_bar_color(val) %}{% if val is none or val == 0 %}bg-secondary{% elif val > 0 %}bg-danger{% endif %}{% endmacro %}
+    {% macro alert_pct_color(val) %}{% if val is none or val == 0 %}text-secondary{% elif val > 0 %}text-danger
+    {% endif %}{% endmacro %}
+    {% macro alert_bar_color(val) %}{% if val is none or val == 0 %}bg-secondary{% elif val > 0 %}bg-danger
+    {% endif %}{% endmacro %}
 
     {# Helper: human-readable workflow state label                       #}
     {% macro state_badge(event) %}
-        {% set info = _state_badge.get(event.workflow_state, ("secondary", "Unknown")) %}
-        <span class="badge bg-{{ info[0] }}">{{ info[1] }}</span>
+        {% set info = _state_badge.get(event.workflow_state, ("bg-secondary-subtle text-secondary-emphasis", "Unknown")) %}
+        <span class="badge {{ info[0] }}">{{ info[1] }}</span>
     {% endmacro %}
 
     {# ------------------------------------------------------------------ #}
@@ -70,11 +74,12 @@
                     <div class="text-body-secondary small mt-1">Workflow health and progress overview</div>
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="badge bg-secondary fs-6">
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis fs-6">
                         <i class="fas fa-calendar-check me-1"></i>{{ n_events }} event{{ 's' if n_events != 1 else '' }}
                     </span>
                     <span class="badge bg-light text-body-secondary border small">
-                        <i class="fas fa-clock me-1"></i>Auto-refresh in: <span id="refresh-countdown">15m&nbsp;00s</span>
+                        <i class="fas fa-clock me-1"></i>Auto-refresh in: <span
+                            id="refresh-countdown">15m&nbsp;00s</span>
                     </span>
                     <button id="reload-now-btn" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-sync-alt me-1"></i>Reload now
@@ -89,12 +94,15 @@
         {# ── Filter bar ── #}
         <div class="bg-white border-bottom px-4 py-3">
             <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
+
+                {# Tenant selector (only shown when the user can access multiple tenants) #}
                 {% if accessible_tenants | length > 1 %}
                     <div class="d-flex align-items-center gap-2">
                         <label class="form-label mb-0 small fw-semibold text-body-secondary">Tenant</label>
                         <select name="tenant_id" class="form-select form-select-sm" style="width:auto;">
                             {% for t in accessible_tenants %}
-                                <option value="{{ t.id }}" {% if selected_tenant and selected_tenant.id == t.id %}selected{% endif %}>
+                                <option value="{{ t.id }}"
+                                        {% if selected_tenant and selected_tenant.id == t.id %}selected{% endif %}>
                                     {{ t.name }}
                                 </option>
                             {% endfor %}
@@ -105,6 +113,23 @@
                         <input type="hidden" name="tenant_id" value="{{ selected_tenant.id }}">
                     {% endif %}
                 {% endif %}
+
+                {# Year dropdown (hidden when there is only one available year) #}
+                {% if accessible_years | length > 1 %}
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-semibold text-body-secondary">Year</label>
+                        <select name="year" class="form-select form-select-sm" style="width:auto;">
+                            <option value="" {% if not selected_year %}selected{% endif %}>— All years —</option>
+                            {% for y in accessible_years %}
+                                <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>
+                                    {{ y }}–{{ y + 1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% endif %}
+
+                {# Project-class selector #}
                 <div class="d-flex align-items-center gap-2">
                     <label class="form-label mb-0 small fw-semibold text-body-secondary">Project class</label>
                     <select name="pclass_id" class="form-select form-select-sm" style="width:auto;">
@@ -116,8 +141,28 @@
                         {% endfor %}
                     </select>
                 </div>
+
+                {# Sort order #}
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small fw-semibold text-body-secondary">Sort</label>
+                    <select name="sort_order" class="form-select form-select-sm" style="width:auto;">
+                        <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Newest first</option>
+                        <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Oldest first</option>
+                    </select>
+                </div>
+
+                {# Include-closed checkbox #}
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input" type="checkbox" name="include_closed"
+                           id="include_closed" value="1" {% if include_closed %}checked{% endif %}>
+                    <label class="form-check-label small text-body-secondary" for="include_closed">
+                        Include closed events
+                    </label>
+                </div>
+
                 <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                <a href="{{ url_for('dashboards.marking_dashboard') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                <a href="{{ url_for('dashboards.marking_dashboard') }}"
+                   class="btn btn-outline-secondary btn-sm">Reset</a>
                 <span class="ms-auto text-body-secondary small">Auto-refreshes every 15&thinsp;min</span>
             </form>
         </div>
@@ -125,7 +170,7 @@
         {# ── No events ── #}
         {% if not sections %}
             <div class="container-fluid px-4 mt-4">
-                <div class="alert alert-info">
+                <div class="alert alert-secondary">
                     <i class="fas fa-info-circle me-2"></i>No marking events found for the current filter selection.
                 </div>
             </div>
@@ -147,13 +192,11 @@
                     {# Period / ProjectClass sub-header #}
                     <div class="bg-light border-bottom px-4 py-2 d-flex align-items-center gap-2 small text-body-secondary">
                         <i class="fas fa-calendar-alt"></i>
-                        <strong class="text-body">
-                            {% if period_section.period.name %}
-                                {{ period_section.period.name }}
-                            {% else %}
-                                Submission Period {{ period_section.period.submission_period }}
-                            {% endif %}
-                        </strong>
+                        <strong class="text-body">{{ period_section.period.display_name }}</strong>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis"
+                              style="font-size:10px; font-weight:normal;">
+                            {{ period_section.period.config.year }}–{{ period_section.period.config.year + 1 }}
+                        </span>
                         &middot;
                         {{ pclass_section.pclass.name }}
                     </div>
@@ -175,7 +218,8 @@
                                         {% set cfg = event.config %}
                                         {% set pc = cfg.project_class %}
                                         {% if pc.convenor and pc.convenor.user %}
-                                            <a href="mailto:{{ pc.convenor.user.email }}">{{ pc.convenor.user.name }}</a>
+                                            <a class="link-primary text-decoration-none"
+                                               href="mailto:{{ pc.convenor.user.email }}">{{ pc.convenor.user.name }}</a>
                                         {% else %}
                                             <span class="text-body-secondary">Not assigned</span>
                                         {% endif %}
@@ -184,24 +228,29 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     {# Workflow state badge #}
-                                    {% set badge_info = _state_badge.get(event.workflow_state, ("secondary", "Unknown")) %}
-                                    <span class="badge bg-{{ badge_info[0] }}{% if badge_info[0] == 'warning' %} text-dark{% endif %}">{{ badge_info[1] }}</span>
+                                    {% set badge_info = _state_badge.get(event.workflow_state, ("bg-secondary-subtle text-secondary-emphasis", "Unknown")) %}
+                                    <span class="badge {{ badge_info[0] }}">{{ badge_info[1] }}</span>
 
                                     {# Deadline badge #}
                                     {% if event.deadline %}
                                         {% if event.deadline < now %}
-                                            <span class="badge bg-danger">
+                                            <span class="badge bg-danger-subtle text-danger-emphasis">
                                                 <i class="fas fa-exclamation-triangle me-1"></i>Deadline: {{ event.deadline.strftime('%d %b %Y') }} — overdue
                                             </span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">
+                                            <span class="badge bg-warning-subtle text-warning-emphasis">
                                                 <i class="fas fa-calendar me-1"></i>Deadline: {{ event.deadline.strftime('%d %b %Y') }}
                                             </span>
                                         {% endif %}
                                     {% endif %}
 
-                                    {# Link to marks register #}
-                                    <a href="{{ url_for('dashboards.marking_register', event_id=event.id) }}"
+                                    {# Link to marks register — thread current filter state #}
+                                    <a href="{{ url_for('dashboards.marking_register', event_id=event.id,
+                                        tenant_id=(selected_tenant.id if selected_tenant else ''),
+                                        pclass_id=(selected_pclass.id if selected_pclass else ''),
+                                        year=(selected_year if selected_year else ''),
+                                        sort_order=sort_order,
+                                        include_closed=('1' if include_closed else '0')) }}"
                                        class="btn btn-outline-secondary btn-sm">
                                         <i class="fas fa-table me-1"></i>Marks register
                                     </a>
@@ -213,17 +262,17 @@
                                 <div class="d-flex align-items-center gap-3 mb-2 small">
                                     <span class="fw-semibold text-body-secondary">At-risk flags:</span>
                                     {% if risk.n_flagged > 0 %}
-                                        <span class="badge bg-warning text-dark">
+                                        <span class="badge bg-warning-subtle text-warning-emphasis">
                                             <i class="fas fa-flag me-1"></i>{{ risk.n_flagged }} flagged
                                         </span>
                                     {% endif %}
                                     {% if risk.n_unresolved > 0 %}
-                                        <span class="badge bg-danger">
+                                        <span class="badge bg-danger-subtle text-danger-emphasis">
                                             <i class="fas fa-exclamation-circle me-1"></i>{{ risk.n_unresolved }} unresolved
                                         </span>
                                     {% endif %}
                                     {% if risk.n_ai_risk > 0 %}
-                                        <span class="badge bg-warning text-dark">
+                                        <span class="badge bg-warning-subtle text-warning-emphasis">
                                             <i class="fas fa-robot me-1"></i>{{ risk.n_ai_risk }} AI risk
                                         </span>
                                     {% endif %}
@@ -233,7 +282,7 @@
                             {# ── Workflow health blocks ── #}
                             {% for wh in event_data.workflow_healths %}
                                 {% set wf = wh.workflow %}
-                                <div class="border rounded-2 bg-light p-3 mt-2">
+                                <div class="border rounded-2 bg-secondary-subtle p-3 mt-2">
 
                                     {# Workflow sub-header #}
                                     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
@@ -241,19 +290,23 @@
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
                                             {% if wf.effective_deadline %}
                                                 {% if wf.effective_deadline < now %}
-                                                    <span class="badge bg-danger" style="font-size:10px">
+                                                    <span class="badge bg-danger-subtle text-danger-emphasis"
+                                                          style="font-size:10px">
                                                         <i class="fas fa-exclamation-triangle me-1"></i>Deadline: {{ wf.effective_deadline.strftime('%d %b %Y') }} — overdue
                                                     </span>
                                                 {% else %}
-                                                    <span class="badge bg-warning text-dark" style="font-size:10px">
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis"
+                                                          style="font-size:10px">
                                                         <i class="fas fa-calendar me-1"></i>Deadline: {{ wf.effective_deadline.strftime('%d %b %Y') }}
                                                     </span>
                                                 {% endif %}
                                             {% endif %}
                                             {% if wf.completed %}
-                                                <span class="badge bg-success" style="font-size:10px">Completed</span>
+                                                <span class="badge bg-success-subtle text-success-emphasis"
+                                                      style="font-size:10px">Completed</span>
                                             {% else %}
-                                                <span class="badge bg-primary" style="font-size:10px">In progress</span>
+                                                <span class="badge bg-primary-subtle text-primary-emphasis"
+                                                      style="font-size:10px">In progress</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -265,20 +318,26 @@
                                             <span><i class="fas fa-ruler me-1"></i>Scheme: {{ wf.scheme.name }}</span>
                                         {% endif %}
                                         <span><i class="fas fa-file-alt me-1"></i>{{ wh.n_submitter_reports }} submitter report{{ 's' if wh.n_submitter_reports != 1 else '' }}</span>
-                                        <span><i class="fas fa-pen me-1"></i>{{ wh.n_marking_reports }} marking report{{ 's' if wh.n_marking_reports != 1 else '' }}</span>
+                                        <span><i
+                                                class="fas fa-pen me-1"></i>{{ wh.n_marking_reports }} marking report{{ 's' if wh.n_marking_reports != 1 else '' }}</span>
                                     </div>
 
                                     {# Health indicator tiles #}
-                                    <div class="text-uppercase fw-semibold text-body-secondary mb-2" style="font-size:10px; letter-spacing:0.05em;">Health indicators</div>
+                                    <div class="text-uppercase fw-semibold text-body-secondary mb-2"
+                                         style="font-size:10px; letter-spacing:0.05em;">Health indicators
+                                    </div>
                                     <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-7 g-2">
 
                                         {# Distribution #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Distribution", title_icon="share-alt",
-                                                icon_state=(wh.distribution_pct is not none and wh.distribution_pct >= 100) if wh.distribution_pct is not none else none) %}
+                                                icon_state=(wh.distribution_pct is not none and wh.distribution_pct >= 100) if wh.distribution_pct is not none else none,
+                                                bg="white") %}
                                                 {% if blk == 'body' %}
                                                     <div class="fw-bold fs-5 {{ pct_color(wh.distribution_pct) }}">
-                                                        {% if wh.distribution_pct is not none %}{{ wh.distribution_pct | round(0) | int }}%{% else %}&mdash;{% endif %}
+                                                        {% if wh.distribution_pct is not none %}
+                                                            {{ wh.distribution_pct | round(0) | int }}%
+                                                            {% else %}&mdash;{% endif %}
                                                     </div>
                                                     {% if wh.distribution_pct is not none %}
                                                         <div class="progress mt-1" style="height:4px">
@@ -289,8 +348,10 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="small text-body-secondary" style="font-size:10px">
-                                                        {% if wh.distribution_pct is not none and wh.distribution_pct >= 100 %}All distributed
-                                                        {% elif wh.distribution_pct is not none %}{{ (100 - wh.distribution_pct) | round(0) | int }}% awaiting
+                                                        {% if wh.distribution_pct is not none and wh.distribution_pct >= 100 %}
+                                                            All distributed
+                                                            {% elif wh.distribution_pct is not none %}{{ (100 - wh.distribution_pct) | round(0) | int }}
+                                                            % awaiting
                                                         {% else %}No data{% endif %}
                                                     </div>
                                                 {% endif %}
@@ -300,10 +361,13 @@
                                         {# Reports submitted #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Submitted", title_icon="check-circle",
-                                                icon_state=(wh.submitted_pct is not none and wh.submitted_pct >= 100) if wh.submitted_pct is not none else none) %}
+                                                icon_state=(wh.submitted_pct is not none and wh.submitted_pct >= 100) if wh.submitted_pct is not none else none,
+                                                bg="white") %}
                                                 {% if blk == 'body' %}
                                                     <div class="fw-bold fs-5 {{ pct_color(wh.submitted_pct) }}">
-                                                        {% if wh.submitted_pct is not none %}{{ wh.submitted_pct | round(0) | int }}%{% else %}&mdash;{% endif %}
+                                                        {% if wh.submitted_pct is not none %}
+                                                            {{ wh.submitted_pct | round(0) | int }}%
+                                                            {% else %}&mdash;{% endif %}
                                                     </div>
                                                     {% if wh.submitted_pct is not none %}
                                                         <div class="progress mt-1" style="height:4px">
@@ -314,8 +378,10 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="small text-body-secondary" style="font-size:10px">
-                                                        {% if wh.submitted_pct is not none and wh.submitted_pct >= 100 %}All submitted
-                                                        {% elif wh.submitted_pct is not none %}{{ (100 - wh.submitted_pct) | round(0) | int }}% awaiting
+                                                        {% if wh.submitted_pct is not none and wh.submitted_pct >= 100 %}
+                                                            All submitted
+                                                            {% elif wh.submitted_pct is not none %}{{ (100 - wh.submitted_pct) | round(0) | int }}
+                                                            % awaiting
                                                         {% else %}No data{% endif %}
                                                     </div>
                                                 {% endif %}
@@ -325,10 +391,13 @@
                                         {# Feedback #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Feedback", title_icon="comment-alt",
-                                                icon_state=(wh.feedback_pct is not none and wh.feedback_pct >= 100) if wh.feedback_pct is not none else none) %}
+                                                icon_state=(wh.feedback_pct is not none and wh.feedback_pct >= 100) if wh.feedback_pct is not none else none,
+                                                bg="white") %}
                                                 {% if blk == 'body' %}
                                                     <div class="fw-bold fs-5 {{ pct_color(wh.feedback_pct) }}">
-                                                        {% if wh.feedback_pct is not none %}{{ wh.feedback_pct | round(0) | int }}%{% else %}&mdash;{% endif %}
+                                                        {% if wh.feedback_pct is not none %}
+                                                            {{ wh.feedback_pct | round(0) | int }}%
+                                                            {% else %}&mdash;{% endif %}
                                                     </div>
                                                     {% if wh.feedback_pct is not none %}
                                                         <div class="progress mt-1" style="height:4px">
@@ -339,8 +408,10 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="small text-body-secondary" style="font-size:10px">
-                                                        {% if wh.feedback_pct is not none and wh.feedback_pct >= 100 %}All present
-                                                        {% elif wh.feedback_pct is not none %}{{ (100 - wh.feedback_pct) | round(0) | int }}% missing
+                                                        {% if wh.feedback_pct is not none and wh.feedback_pct >= 100 %}
+                                                            All present
+                                                            {% elif wh.feedback_pct is not none %}{{ (100 - wh.feedback_pct) | round(0) | int }}
+                                                            % missing
                                                         {% else %}No data{% endif %}
                                                     </div>
                                                 {% endif %}
@@ -350,7 +421,8 @@
                                         {# Moderation count #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Moderation", title_icon="balance-scale",
-                                                icon_state=(wh.n_out_of_tolerance == 0)) %}
+                                                icon_state=(wh.n_out_of_tolerance == 0),
+                                                bg="white") %}
                                                 {% if blk == 'body' %}
                                                     <div class="fw-bold fs-5 {% if wh.n_out_of_tolerance > 0 %}text-danger{% else %}text-success{% endif %}">
                                                         {{ wh.n_out_of_tolerance }}
@@ -358,7 +430,8 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="small text-body-secondary" style="font-size:10px">
-                                                        {% if wh.n_out_of_tolerance > 0 %}triggered{% else %}none triggered{% endif %}
+                                                        {% if wh.n_out_of_tolerance > 0 %}triggered{% else %}none
+                                                            triggered{% endif %}
                                                     </div>
                                                 {% endif %}
                                             {% endcall %}
@@ -367,10 +440,13 @@
                                         {# NOT_READY #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Not ready", title_icon="times-circle",
-                                                icon_state=(wh.not_ready_pct is none or wh.not_ready_pct == 0)) %}
+                                                icon_state=(wh.not_ready_pct is none or wh.not_ready_pct == 0),
+                                                bg="white") %}
                                                 {% if blk == 'body' %}
                                                     <div class="fw-bold fs-5 {{ alert_pct_color(wh.not_ready_pct) }}">
-                                                        {% if wh.not_ready_pct is not none %}{{ wh.not_ready_pct | round(0) | int }}%{% else %}&mdash;{% endif %}
+                                                        {% if wh.not_ready_pct is not none %}
+                                                            {{ wh.not_ready_pct | round(0) | int }}%
+                                                            {% else %}&mdash;{% endif %}
                                                     </div>
                                                     {% if wh.not_ready_pct is not none and wh.not_ready_pct > 0 %}
                                                         <div class="progress mt-1" style="height:4px">
@@ -390,10 +466,13 @@
                                         {# REQUIRES_CONVENOR_INTERVENTION #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Needs action", title_icon="exclamation-triangle",
-                                                icon_state=(wh.intervention_pct is none or wh.intervention_pct == 0)) %}
+                                                icon_state=(wh.intervention_pct is none or wh.intervention_pct == 0),
+                                                bg="white") %}
                                                 {% if blk == 'body' %}
                                                     <div class="fw-bold fs-5 {{ alert_pct_color(wh.intervention_pct) }}">
-                                                        {% if wh.intervention_pct is not none %}{{ wh.intervention_pct | round(0) | int }}%{% else %}&mdash;{% endif %}
+                                                        {% if wh.intervention_pct is not none %}
+                                                            {{ wh.intervention_pct | round(0) | int }}%
+                                                            {% else %}&mdash;{% endif %}
                                                     </div>
                                                     {% if wh.intervention_pct is not none and wh.intervention_pct > 0 %}
                                                         <div class="progress mt-1" style="height:4px">
@@ -412,7 +491,7 @@
 
                                         {# Grade SD / CV #}
                                         <div class="col">
-                                            {% call(blk) dashboard_tile("Grade SD/CV", title_icon="chart-bar", icon_state=none) %}
+                                            {% call(blk) dashboard_tile("Grade SD/CV", title_icon="chart-bar", icon_state=none, bg="white") %}
                                                 {% if blk == 'body' %}
                                                     {% if wh.grade_sd is not none %}
                                                         <div class="fw-bold" style="font-size:15px; color:#1a1a1a;">
@@ -424,7 +503,8 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="small text-body-secondary" style="font-size:10px">
-                                                        {% if wh.grade_cv is not none %}CV&nbsp;=&nbsp;{{ "%.2f"|format(wh.grade_cv / 100) }}
+                                                        {% if wh.grade_cv is not none %}CV&nbsp;=&nbsp;
+                                                            {{ "%.2f"|format(wh.grade_cv / 100) }}
                                                         {% elif wh.grade_sd is not none %}CV&nbsp;n/a
                                                         {% else %}Insufficient data{% endif %}
                                                     </div>
@@ -432,10 +512,13 @@
                                             {% endcall %}
                                         </div>
 
-                                    </div>{# end health tiles row #}
+                                    </div>
+                                    {# end health tiles row #}
                                 </div>{# end workflow block #}
                             {% else %}
-                                <div class="text-body-secondary small fst-italic mt-2">No marking workflows defined for this event.</div>
+                                <div class="text-body-secondary small fst-italic mt-2">No marking workflows defined for
+                                    this event.
+                                </div>
                             {% endfor %}
 
                         </div>{# end event card #}

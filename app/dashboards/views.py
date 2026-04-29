@@ -359,12 +359,74 @@ def _get_accessible_pclasses_for_marking(
 def _get_accessible_marking_events(
     tenant_id: Optional[int] = None,
     pclass_id: Optional[int] = None,
+    include_closed: bool = False,
+    year: Optional[int] = None,
+    sort_order: str = "desc",
 ) -> List[MarkingEvent]:
-    """Return MarkingEvent instances visible to the current user."""
+    """Return MarkingEvent instances visible to the current user.
+
+    Parameters
+    ----------
+    tenant_id:      restrict to a single tenant (None = all accessible tenants)
+    pclass_id:      restrict to a single ProjectClass (None = all)
+    include_closed: when False (default), events in the CLOSED workflow state are
+                    excluded; set True to include them
+    year:           restrict to a single academic year (ProjectClassConfig.year);
+                    None = all years
+    sort_order:     "desc" (newest year first, default) or "asc" (oldest year first)
+    """
     q = (
         db.session.query(MarkingEvent)
         .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
         .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+    )
+
+    if tenant_id is not None:
+        q = q.filter(ProjectClass.tenant_id == tenant_id)
+
+    if pclass_id is not None:
+        q = q.filter(ProjectClass.id == pclass_id)
+
+    if not include_closed:
+        q = q.filter(MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED)
+
+    if year is not None:
+        q = q.filter(ProjectClassConfig.year == year)
+
+    if current_user.has_role("root") or current_user.has_role("admin"):
+        pass
+    elif current_user.has_role("faculty") and current_user.faculty_data is not None:
+        convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
+        if not convenor_pclass_ids:
+            return []
+        q = q.filter(ProjectClass.id.in_(convenor_pclass_ids))
+    else:
+        return []
+
+    year_col = (
+        ProjectClassConfig.year.desc()
+        if sort_order == "desc"
+        else ProjectClassConfig.year.asc()
+    )
+    return q.order_by(
+        ProjectClass.name,
+        year_col,
+        SubmissionPeriodRecord.submission_period,
+        MarkingEvent.name,
+    ).all()
+
+
+def _get_accessible_years_for_marking(
+    tenant_id: Optional[int] = None,
+    pclass_id: Optional[int] = None,
+) -> List[int]:
+    """Return distinct academic years (ProjectClassConfig.year) that have at least
+    one MarkingEvent visible to the current user, sorted newest first."""
+    q = (
+        db.session.query(ProjectClassConfig.year)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(MarkingEvent, MarkingEvent.period_id == SubmissionPeriodRecord.id)
         .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
     )
 
@@ -384,11 +446,8 @@ def _get_accessible_marking_events(
     else:
         return []
 
-    return q.order_by(
-        ProjectClass.name,
-        SubmissionPeriodRecord.submission_period,
-        MarkingEvent.name,
-    ).all()
+    rows = q.distinct().order_by(ProjectClassConfig.year.desc()).all()
+    return [r[0] for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -557,8 +616,8 @@ def _build_marking_dashboard_sections(events: List[MarkingEvent]) -> List[Dict]:
 
 
 def _marking_summary_for_user() -> Dict:
-    """Return event count for the landing-page card."""
-    events = _get_accessible_marking_events()
+    """Return active (non-closed) event count for the landing-page card."""
+    events = _get_accessible_marking_events(include_closed=False)
     return {"n_events": len(events)}
 
 
@@ -1989,7 +2048,33 @@ def marking_dashboard():
 
     selected_pclass = next((p for p in accessible_pclasses if p.id == pclass_id), None)
 
-    events = _get_accessible_marking_events(tenant_id=selected_tenant_id, pclass_id=pclass_id)
+    # Sort order
+    sort_order = request.args.get("sort_order", "desc")
+    if sort_order not in ("asc", "desc"):
+        sort_order = "desc"
+
+    # Include-closed filter (checkbox: value "1" when ticked)
+    include_closed = request.args.get("include_closed", "0") == "1"
+
+    # Year filter — compute the full list of available years (stable regardless of other filters)
+    accessible_years = _get_accessible_years_for_marking(
+        tenant_id=selected_tenant_id, pclass_id=pclass_id
+    )
+    raw_year = request.args.get("year", "").strip()
+    try:
+        selected_year = int(raw_year) if raw_year else None
+        if selected_year not in accessible_years:
+            selected_year = None
+    except (ValueError, TypeError):
+        selected_year = None
+
+    events = _get_accessible_marking_events(
+        tenant_id=selected_tenant_id,
+        pclass_id=pclass_id,
+        include_closed=include_closed,
+        year=selected_year,
+        sort_order=sort_order,
+    )
     sections = _build_marking_dashboard_sections(events)
 
     return render_template_context(
@@ -1999,6 +2084,10 @@ def marking_dashboard():
         accessible_pclasses=accessible_pclasses,
         selected_pclass=selected_pclass,
         selected_pclass_id=pclass_id,
+        accessible_years=accessible_years,
+        selected_year=selected_year,
+        sort_order=sort_order,
+        include_closed=include_closed,
         sections=sections,
         n_events=len(events),
     )
@@ -2035,6 +2124,13 @@ def marking_register(event_id: int):
     except (ValueError, TypeError):
         page = 1
     q_filter = request.args.get("q", "").strip()
+
+    # Dashboard filter round-trip params (not used for filtering here)
+    back_tenant_id = request.args.get("tenant_id", "")
+    back_pclass_id = request.args.get("pclass_id", "")
+    back_year = request.args.get("year", "")
+    back_sort_order = request.args.get("sort_order", "desc")
+    back_include_closed = request.args.get("include_closed", "0")
 
     # Collect all unique SubmissionRecord IDs from all workflows
     record_id_set: set = set()
@@ -2173,6 +2269,11 @@ def marking_register(event_id: int):
         per_page=_REGISTER_PER_PAGE,
         q_filter=q_filter,
         export_form=export_form,
+        back_tenant_id=back_tenant_id,
+        back_pclass_id=back_pclass_id,
+        back_year=back_year,
+        back_sort_order=back_sort_order,
+        back_include_closed=back_include_closed,
     )
 
 

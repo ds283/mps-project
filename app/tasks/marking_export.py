@@ -36,9 +36,9 @@ from ..models import (
 )
 from ..models.markingevent import (
     ConflationReport,
+    MarkingEvent,
     MarkingReport,
     MarkingWorkflow,
-    MarkingEvent,
     SubmitterReport,
 )
 from ..shared.asset_tools import AssetUploadManager
@@ -51,7 +51,7 @@ from .thumbnails import dispatch_thumbnail_task
 _EXPORT_READY_TMPL = (
     "<div><strong>Your marking export for &ldquo;{{ event_name }}&rdquo; is now available.</strong></div>"
     '<div class="mt-2">You can find it in your '
-    '<a href="{{ url_for(\'home.download_centre\') }}">Download Centre</a>.</div>'
+    "<a href=\"{{ url_for('home.download_centre') }}\">Download Centre</a>.</div>"
 )
 
 
@@ -73,8 +73,7 @@ def _make_asset(source_path, target_name, now, expiry, object_store, user):
             audit_data="marking_export.generate_marking_excel_report",
             length=size,
             mimetype=(
-                "application/vnd.openxmlformats-officedocument"
-                ".spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ),
         ):
             pass
@@ -93,24 +92,46 @@ def register_marking_export_tasks(celery):
         Build an Excel workbook for the given MarkingEvent and deliver it to the
         requesting user's Download Centre.
         """
-        progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
+        progress_update(
+            task_id,
+            TaskRecord.RUNNING,
+            5,
+            "Loading database records...",
+            autocommit=True,
+        )
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
-            event: MarkingEvent = db.session.query(MarkingEvent).filter_by(id=event_id).first()
+            event: MarkingEvent = (
+                db.session.query(MarkingEvent).filter_by(id=event_id).first()
+            )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
                 "SQLAlchemyError loading records in generate_marking_excel_report",
                 exc_info=exc,
             )
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Database error loading records.", autocommit=True)
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Database error loading records.",
+                autocommit=True,
+            )
             raise self.retry()
 
         if user is None or event is None:
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Could not find required records.", autocommit=True)
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Could not find required records.",
+                autocommit=True,
+            )
             return
 
-        progress_update(task_id, TaskRecord.RUNNING, 15, "Building export data...", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.RUNNING, 15, "Building export data...", autocommit=True
+        )
 
         try:
             import pandas as pd
@@ -130,13 +151,15 @@ def register_marking_export_tasks(celery):
                     record_id_set.add(sr.record_id)
 
             # Build lookups used for both sheets
-            sr_lookup = {}   # (wf_id, record_id) -> SubmitterReport
-            mr_lookup = {}   # sr_id -> [MarkingReport, ...] sorted by id
+            sr_lookup = {}  # (wf_id, record_id) -> SubmitterReport
+            mr_lookup = {}  # sr_id -> [MarkingReport, ...] sorted by id
 
             for wf in workflows:
                 for sr in wf.submitter_reports:
                     sr_lookup[(wf.id, sr.record_id)] = sr
-                    mr_lookup[sr.id] = sorted(sr.marking_reports.all(), key=lambda m: m.id)
+                    mr_lookup[sr.id] = sorted(
+                        sr.marking_reports.all(), key=lambda m: m.id
+                    )
 
             # Max MarkingReports per workflow (for column alignment)
             wf_max_mr = {}
@@ -153,9 +176,11 @@ def register_marking_export_tasks(celery):
             records = (
                 db.session.query(SubmissionRecord)
                 .filter(SubmissionRecord.id.in_(record_id_set))
-                .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+                .join(
+                    SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id
+                )
                 .join(StudentData, StudentData.id == SubmittingStudent.student_id)
-                .join(User, User.id == StudentData.user_id)
+                .join(User, User.id == StudentData.id)
                 .order_by(User.last_name, User.first_name)
                 .all()
             )
@@ -168,7 +193,9 @@ def register_marking_export_tasks(celery):
 
             if has_conflation:
                 target_names = list(event.targets_as_dict.keys())
-                cr_lookup = {cr.submission_record_id: cr for cr in event.conflation_reports}
+                cr_lookup = {
+                    cr.submission_record_id: cr for cr in event.conflation_reports
+                }
 
                 for record in records:
                     cr: ConflationReport = cr_lookup.get(record.id)
@@ -180,7 +207,9 @@ def register_marking_export_tasks(celery):
                     row = {
                         "Student": student_user.name,
                         "Exam Number": exam_number if exam_number is not None else "",
-                        "Generated By": cr.generated_by.name if cr and cr.generated_by else "",
+                        "Generated By": cr.generated_by.name
+                        if cr and cr.generated_by
+                        else "",
                         "Generated At": (
                             cr.generated_timestamp.strftime("%Y-%m-%d %H:%M")
                             if cr and cr.generated_timestamp
@@ -201,7 +230,13 @@ def register_marking_export_tasks(celery):
 
                     overview_rows.append(row)
 
-            progress_update(task_id, TaskRecord.RUNNING, 50, "Building register sheet...", autocommit=True)
+            progress_update(
+                task_id,
+                TaskRecord.RUNNING,
+                50,
+                "Building register sheet...",
+                autocommit=True,
+            )
 
             # ----------------------------------------------------------------
             # Sheet 2: Register (all workflows side-by-side)
@@ -262,9 +297,7 @@ def register_marking_export_tasks(celery):
                             float(mr.grade) if mr and mr.grade is not None else None
                         )
                         row[f"{pfx}: Assessor {n} Name"] = (
-                            mr.role.user.name
-                            if mr and mr.role and mr.role.user
-                            else ""
+                            mr.role.user.name if mr and mr.role and mr.role.user else ""
                         )
                         row[f"{pfx}: Assessor {n} Submitted At"] = (
                             mr.grade_submitted_timestamp.strftime("%Y-%m-%d %H:%M")
@@ -300,7 +333,13 @@ def register_marking_export_tasks(celery):
 
                 register_rows.append(row)
 
-            progress_update(task_id, TaskRecord.RUNNING, 70, "Writing Excel workbook...", autocommit=True)
+            progress_update(
+                task_id,
+                TaskRecord.RUNNING,
+                70,
+                "Writing Excel workbook...",
+                autocommit=True,
+            )
 
             # ----------------------------------------------------------------
             # Write workbook and upload
@@ -348,7 +387,11 @@ def register_marking_export_tasks(celery):
                 "SQLAlchemyError in generate_marking_excel_report", exc_info=exc
             )
             progress_update(
-                task_id, TaskRecord.FAILURE, 100, "Database error during export.", autocommit=True
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Database error during export.",
+                autocommit=True,
             )
             raise self.retry()
 
@@ -357,10 +400,16 @@ def register_marking_export_tasks(celery):
                 "Unexpected error in generate_marking_excel_report", exc_info=exc
             )
             progress_update(
-                task_id, TaskRecord.FAILURE, 100, "Unexpected error during export.", autocommit=True
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Unexpected error during export.",
+                autocommit=True,
             )
             return
 
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Export complete.", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.SUCCESS, 100, "Export complete.", autocommit=True
+        )
 
     return (generate_marking_excel_report,)

@@ -24,7 +24,13 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('dashboards.marking_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ url_for('dashboards.marking_dashboard',
+                           tenant_id=back_tenant_id,
+                           pclass_id=back_pclass_id,
+                           year=back_year,
+                           sort_order=back_sort_order,
+                           include_closed=back_include_closed) }}"
+                       class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i>Back to dashboard
                     </a>
                 </div>
@@ -66,9 +72,9 @@
 
             {# Progress bar legend #}
             <div class="ms-auto d-flex align-items-center gap-3 small text-body-secondary">
-                <span><span class="badge bg-success">&nbsp;</span> Complete</span>
-                <span><span class="badge bg-warning">&nbsp;</span> In progress</span>
-                <span><span class="badge bg-danger">&nbsp;</span> Not ready / not distributed</span>
+                <span><span class="badge bg-success-subtle text-success-emphasis">&nbsp;</span> Complete</span>
+                <span><span class="badge bg-warning-subtle text-warning-emphasis">&nbsp;</span> In progress</span>
+                <span><span class="badge bg-danger-subtle text-danger-emphasis">&nbsp;</span> Not ready / not distributed</span>
             </div>
         </div>
 
@@ -79,8 +85,8 @@
                 <thead>
                     {# Row 1: group headers #}
                     <tr>
-                        <th class="table-dark" rowspan="2" style="min-width:120px; vertical-align:middle;">Student</th>
-                        <th class="table-dark" rowspan="2" style="min-width:110px; vertical-align:middle;">Conflation</th>
+                        <th class="table-secondary" rowspan="2" style="min-width:120px; vertical-align:middle;">Student</th>
+                        <th class="table-secondary" rowspan="2" style="min-width:110px; vertical-align:middle;">Conflation</th>
                         {% for cg in col_groups %}
                             <th class="table-primary text-center" colspan="{{ cg.n_cols }}">
                                 {{ cg.workflow.name }}
@@ -118,7 +124,7 @@
                                 {% if row.cr %}
                                     <div class="d-flex flex-column gap-1">
                                         {% if row.cr.is_stale %}
-                                            <span class="text-warning" style="font-size:10px;">
+                                            <span class="text-danger" style="font-size:10px;">
                                                 <i class="fas fa-exclamation-triangle me-1"></i>Stale
                                             </span>
                                         {% else %}
@@ -132,6 +138,17 @@
                                             </span>
                                         {% endif %}
                                     </div>
+                                    {% set cr_data = row.cr.conflation_report_as_dict %}
+                                    {% if cr_data %}
+                                        <div class="mt-1">
+                                            {% for target, pct in cr_data.items() %}
+                                                <div style="font-size:10px;">
+                                                    <span class="text-body-secondary">{{ target }}:</span>
+                                                    <span class="fw-semibold">{{ "%.0f"|format(pct) }}%</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-body-secondary" style="font-size:10px;">&mdash; Not conflated</span>
                                 {% endif %}
@@ -141,11 +158,11 @@
                                     <div class="mt-1">
                                         {% for key, factor in unresolved %}
                                             {% if key in ('ai_compliance', 'ai_use') %}
-                                                <span class="badge bg-warning text-dark" style="font-size:9px;">
+                                                <span class="badge bg-warning-subtle text-warning-emphasis" style="font-size:9px;">
                                                     <i class="fas fa-robot me-1"></i>AI risk
                                                 </span>
                                             {% else %}
-                                                <span class="badge bg-danger" style="font-size:9px;">
+                                                <span class="badge bg-danger-subtle text-danger-emphasis" style="font-size:9px;">
                                                     <i class="fas fa-flag me-1"></i>{{ row.record.RISK_FACTOR_LABELS.get(key, key) }}
                                                 </span>
                                             {% endif %}
@@ -170,27 +187,27 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-1 flex-wrap">
                                             {% if sr.grade is not none %}
-                                                <span class="fw-semibold">{{ "%.0f"|format(sr.grade) }}</span>
+                                                <span class="fw-semibold">{{ "%.0f"|format(sr.grade) }}%</span>
                                             {% else %}
                                                 <span class="text-body-secondary">&mdash;</span>
                                             {% endif %}
                                             {% if sr.out_of_tolerance %}
-                                                <span class="badge bg-warning text-dark" style="font-size:9px;">Out of tolerance</span>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis" style="font-size:9px;">Out of tolerance</span>
                                             {% endif %}
                                             {% if sr.accepted_moderator_report_id is not none %}
-                                                <span class="badge bg-success" style="font-size:9px;">Mod. accepted</span>
+                                                <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">Mod. accepted</span>
                                             {% endif %}
                                             {% set sr_state = sr.workflow_state %}
                                             {% if sr_state == SubmitterReportWorkflowStates.NOT_READY %}
-                                                <span class="badge bg-danger" style="font-size:9px;">Not ready</span>
+                                                <span class="badge bg-danger-subtle text-danger-emphasis" style="font-size:9px;">Not ready</span>
                                             {% elif sr_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION %}
-                                                <span class="badge bg-danger" style="font-size:9px;">Needs intervention</span>
+                                                <span class="badge bg-danger-subtle text-danger-emphasis" style="font-size:9px;">Needs intervention</span>
                                             {% elif sr_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED %}
-                                                <span class="badge bg-warning text-dark" style="font-size:9px;">Moderator needed</span>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis" style="font-size:9px;">Moderator needed</span>
                                             {% elif sr_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF %}
-                                                <span class="badge bg-secondary" style="font-size:9px;">Awaiting sign-off</span>
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">Awaiting sign-off</span>
                                             {% elif sr_state == SubmitterReportWorkflowStates.COMPLETED or sr_state == SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE %}
-                                                <span class="badge bg-success" style="font-size:9px;">Complete</span>
+                                                <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">Complete</span>
                                             {% endif %}
                                         </div>
                                     {% else %}
@@ -202,22 +219,19 @@
                                 {% for mr_cell in wf_cell.mr_cells %}
                                     {% if mr_cell is not none %}
                                         {% set mr = mr_cell.mr %}
-                                        <td title="{{ mr_cell.marker_name }}">
-                                            <div class="progress mb-1" style="height:5px;"
-                                                 title="{{ mr_cell.marker_name }} — {{ mr_cell.pct }}%">
+                                        <td>
+                                            <div class="progress mb-1" style="height:5px;">
                                                 <div class="progress-bar {{ bar_color(mr_cell.pct) }}"
                                                      role="progressbar"
                                                      style="width:{{ mr_cell.pct }}%;"
                                                      aria-valuenow="{{ mr_cell.pct }}"
                                                      aria-valuemin="0" aria-valuemax="100"></div>
                                             </div>
-                                            <span class="border-bottom border-dashed text-body-secondary"
-                                                  style="cursor:help; font-size:10px;"
-                                                  title="{{ mr_cell.marker_name }}">
-                                                {{ mr_cell.marker_name | truncate(12, True, '…') }}
+                                            <span class="text-body-secondary" style="font-size:10px;">
+                                                {{ mr_cell.marker_name }}
                                             </span>
                                             {% if mr.grade is not none %}
-                                                &middot; <span class="fw-semibold">{{ "%.0f"|format(mr.grade) }}</span>
+                                                &middot; <span class="fw-semibold">{{ "%.0f"|format(mr.grade) }}%</span>
                                             {% endif %}
                                             {% if mr.feedback_submitted %}
                                                 <span class="ms-1 text-success" title="Feedback submitted">

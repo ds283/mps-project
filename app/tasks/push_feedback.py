@@ -256,6 +256,15 @@ def register_push_feedback_tasks(celery):
         cr.feedback_push_timestamp = datetime.now()
         cr.feedback_emails.append(email_log)
 
+        # Mirror the FeedbackReport objects into SubmissionRecord.feedback_reports so that
+        # the document manager can surface them to the student.
+        record: SubmissionRecord = cr.submission_record
+        if record is not None:
+            existing_ids = {r.id for r in record.feedback_reports.all()}
+            for report in cr.feedback_reports.all():
+                if report.id not in existing_ids:
+                    record.feedback_reports.append(report)
+
         # Advance MarkingEvent to CLOSED if all CRs now have feedback sent (Task 4)
         event: MarkingEvent = cr.marking_event
         if event is not None and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:

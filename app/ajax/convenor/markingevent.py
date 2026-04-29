@@ -989,7 +989,7 @@ _period_marking_event_status = """
 {% if event.workflow_state == CLOSED %}
     <span class="text-secondary"><i class="fas fa-check-circle"></i> Closed</span>
 {% elif event.workflow_state == READY_TO_PUSH_FEEDBACK %}
-    <span class="text-success"><i class="fas fa-paper-plane"></i> Ready to push feedback</span>
+    <span class="text-success"><i class="fas fa-paper-plane fa-fw"></i> Ready to push feedback</span>
     {% set stale_count = event.conflation_reports.filter_by(is_stale=True).count() %}
     {% set missing_ns = namespace(count=0) %}
     {% for cr in event.conflation_reports %}
@@ -1009,8 +1009,20 @@ _period_marking_event_status = """
             {% endif %}
         </div>
     {% endif %}
+    <div class="d-flex flex-column gap-1 mt-2">
+        {% if missing_ns.count > 0 %}
+            <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+               class="btn btn-sm btn-outline-success">
+                <i class="fas fa-file-pdf fa-fw"></i> Fill missing feedback&hellip;
+            </a>
+        {% endif %}
+        <a href="{{ url_for('convenor.push_marking_event_feedback', event_id=event.id) }}"
+           class="btn btn-sm btn-success">
+            <i class="fas fa-paper-plane fa-fw"></i> Send feedback&hellip;
+        </a>
+    </div>
 {% elif event.workflow_state == READY_TO_GENERATE_FEEDBACK %}
-    <span class="text-success"><i class="fas fa-file-alt"></i> Ready to generate feedback</span>
+    <span class="text-success"><i class="fas fa-file-alt fa-fw"></i> Ready to generate feedback</span>
     {% set stale_count = event.conflation_reports.filter_by(is_stale=True).count() %}
     {% if stale_count > 0 %}
         <div class="mt-1">
@@ -1019,8 +1031,20 @@ _period_marking_event_status = """
             </span>
         </div>
     {% endif %}
+    <div class="mt-2">
+        <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+           class="btn btn-sm btn-success">
+            <i class="fas fa-file-pdf fa-fw"></i> Generate feedback&hellip;
+        </a>
+    </div>
 {% elif event.workflow_state == READY_TO_CONFLATE %}
-    <span class="text-success"><i class="fas fa-calculator"></i> Ready to conflate</span>
+    <span class="text-success"><i class="fas fa-calculator fa-fw"></i> Ready to conflate</span>
+    <div class="mt-2">
+        <a href="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}"
+           class="btn btn-sm btn-success">
+            <i class="fas fa-calculator fa-fw"></i> Conflate marks&hellip;
+        </a>
+    </div>
 {% elif event.workflow_state == OPEN %}
     <span class="text-primary"><i class="fas fa-check-circle"></i> Open &mdash; marking in progress</span>
 {% else %}
@@ -1029,7 +1053,7 @@ _period_marking_event_status = """
         <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Waiting</span>
         <div class="mt-2">
             <a href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}"
-               class="btn btn-xs btn-outline-primary">
+               class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-play fa-fw"></i> Open event&hellip;
             </a>
         </div>

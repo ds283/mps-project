@@ -297,12 +297,11 @@
     <div class="list-group" id="P{{ config.id }}-bookmarks">
         {% for bookmark in sel.ordered_bookmarks %}
         {% set project = bookmark.liveproject %}
-            <div id="P{{ config.id }}-{{ project.id }}"
+            <div id="P{{ config.id }}-{{ project.id }}" data-id="{{ project.id }}"
                  class="row vertical-top list-group-item {% if config.uses_selection and (loop.index <= sel.number_choices) %}selected-project{% else %}deselected-project{% endif %}">
                 <div class="col-1">
                     <i class="fas fa-bars drag-handle"></i>
-                    <span id="ranking"
-                          class="{% if not config.uses_selection %}text-secondary{% elif loop.index <= sel.number_choices %}text-success{% else %}text-danger{% endif %}">#<strong>{{ loop.index }}</strong></span>
+                    <span class="ranking {% if not config.uses_selection %}text-secondary{% elif loop.index <= sel.number_choices %}text-success{% else %}text-danger{% endif %}">#<strong>{{ loop.index }}</strong></span>
                 </div>
                 <div class="col-3">
                     <div><a class="text-decoration-none link-primary"

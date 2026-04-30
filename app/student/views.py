@@ -13,7 +13,6 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from typing import Optional
 
-import parse
 from flask import current_app, flash, jsonify, redirect, request, session, url_for
 from flask_security import current_user, roles_accepted, roles_required
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -75,7 +74,7 @@ from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from . import student
 from .actions import store_selection
-from .forms import StudentSettingsFormFactory
+from .forms import ReorderForm, StudentSettingsFormFactory
 from .utils import (
     verify_open,
     verify_selector,
@@ -222,6 +221,7 @@ def dashboard():
         pane=pane,
         has_selections=has_selections,
         has_submissions=has_submissions,
+        form=ReorderForm(),
     )
 
 
@@ -928,12 +928,6 @@ def cancel_confirmation(sid, pid):
     return redirect(redirect_url())
 
 
-def _demap_project(item_id):
-    result = parse.parse("P{configid}-{pid}", item_id)
-
-    return int(result["pid"])
-
-
 @student.route("/update_ranking", methods=["POST"])
 @roles_accepted("student", "admin", "root")
 def update_ranking():
@@ -967,13 +961,7 @@ def update_ranking():
         return jsonify({"status": "insufficient_privileges"})
 
     # convert ranking data from the payload into an ordered list of project ids
-    projects = map(_demap_project, ranking)
-
-    rmap = {}
-    index = 1
-    for p in projects:
-        rmap[p] = index
-        index += 1
+    rmap = {p: i + 1 for i, p in enumerate(map(int, ranking))}
 
     # update ranking
     for bookmark in sel.bookmarks:

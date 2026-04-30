@@ -1,11 +1,12 @@
 {% extends "base_app.html" %}
 
 {% from "convenor/macros.html" import bookmark_projects %}
+{% from "sortable.html" import import_sortable %}
 
 {% block scripts %}
     {{ super() }}
     {% if not sel.retired %}
-        <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+        {{ import_sortable() }}
 
         <script type=text/javascript>
             $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -15,24 +16,33 @@
                    url: $SCRIPT_ROOT + "/convenor/update_student_bookmarks",
                    type: "POST",
                    data: JSON.stringify({ranking: ranking, sid: selid}),
-                   contentType: "application/json; charset=utf-8"
+                   contentType: "application/json; charset=utf-8",
+                   error: function() { console.log('Failed to save bookmark order'); }
                 });
             }
+
+            $.ajaxSetup({
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-CSRFToken', $('#csrf-token').val());
+                }
+            });
+
+            let _saveTimer = null;
 
             Sortable.create(document.getElementById("project-bookmarks"), {
                 handle: '.drag-handle',
                 animation: 150,
-                onSort: function(e) {
+                onEnd: function(e) {
+                    if (e.oldIndex === e.newIndex) return;
                     const items = e.to.children;
                     let result = [];
-                    for (let i=0; i < items.length; i++) {
-                        // push id onto ranking list
-                        result.push($(items[i]).attr("id"));
-
-                        rspan = $(items[i]).find('#ranking');
-                        rspan.html("#" + (i+1));
+                    for (let i = 0; i < items.length; i++) {
+                        result.push(items[i].dataset.id);
+                        const rspan = $(items[i]).find('.ranking');
+                        rspan.html("#" + (i + 1));
                     }
-                    sendAjax(result, {{ sel.id }});
+                    clearTimeout(_saveTimer);
+                    _saveTimer = setTimeout(function() { sendAjax(result, {{ sel.id }}); }, 400);
                 }
             })
         </script>
@@ -44,6 +54,9 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% if not sel.retired %}
+        <input type="hidden" id="csrf-token" value="{{ form.csrf_token._value() }}">
+    {% endif %}
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">

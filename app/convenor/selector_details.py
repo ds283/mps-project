@@ -11,7 +11,6 @@
 
 from datetime import datetime
 
-import parse
 from flask import (
     current_app,
     flash,
@@ -55,6 +54,7 @@ from ..shared.workflow_logging import log_db_commit
 from .forms import (
     CreateCustomOfferFormFactory,
     EditCustomOfferFormFactory,
+    ReorderForm,
 )
 
 
@@ -77,7 +77,7 @@ def selector_bookmarks(id):
         return redirect(redirect_url())
 
     return render_template_context(
-        "convenor/selector/selector_bookmarks.html", sel=sel, now=datetime.now()
+        "convenor/selector/selector_bookmarks.html", sel=sel, now=datetime.now(), form=ReorderForm()
     )
 
 
@@ -104,12 +104,6 @@ def project_bookmarks(id):
         project=proj,
         student_emails=[p.owner_email for p in proj.bookmarks],
     )
-
-
-def _demap_project(item_id):
-    result = parse.parse("P-{pid}", item_id)
-
-    return int(result["pid"])
 
 
 @convenor.route("/update_student_bookmarks", methods=["POST"])
@@ -140,13 +134,7 @@ def update_student_bookmarks():
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         return jsonify({"status": "too_early"})
 
-    projects = map(_demap_project, ranking)
-
-    rmap = {}
-    index = 1
-    for p in projects:
-        rmap[p] = index
-        index += 1
+    rmap = {p: i + 1 for i, p in enumerate(map(int, ranking))}
 
     # update ranking
     for bookmark in sel.bookmarks:
@@ -406,7 +394,7 @@ def selector_choices(id):
         return redirect(redirect_url())
 
     return render_template_context(
-        "convenor/selector/selector_choices.html", sel=sel, text=text, url=url
+        "convenor/selector/selector_choices.html", sel=sel, text=text, url=url, form=ReorderForm()
     )
 
 
@@ -462,13 +450,7 @@ def update_student_choices():
     if not validate_is_convenor(sel.config.project_class, message=False):
         return jsonify({"status": "insufficient_privileges"})
 
-    projects = map(_demap_project, ranking)
-
-    rmap = {}
-    index = 1
-    for p in projects:
-        rmap[p] = index
-        index += 1
+    rmap = {p: i + 1 for i, p in enumerate(map(int, ranking))}
 
     # update ranking
     for selection in sel.selections:

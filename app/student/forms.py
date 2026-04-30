@@ -18,6 +18,10 @@ from ..shared.forms.mixins import (
 )
 
 
+class ReorderForm(Form):
+    pass
+
+
 def StudentSettingsFormFactory(enable_canvas=False):
     class StudentSettingsForm(
         Form,

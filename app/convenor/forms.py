@@ -1573,6 +1573,10 @@ class ActionForm(Form):
     pass
 
 
+class ReorderForm(Form):
+    pass
+
+
 def build_resolve_risk_factors_form():
     """
     Dynamically build a WTForms form class with one BooleanField and one TextAreaField

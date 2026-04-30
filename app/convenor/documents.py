@@ -11,7 +11,6 @@
 
 from datetime import datetime, timedelta
 
-import parse
 from flask import (
     current_app,
     flash,
@@ -52,6 +51,7 @@ from ..student.actions import store_selection
 from ..tasks.thumbnails import dispatch_thumbnail_task
 from .forms import (
     CustomCATSLimitForm,
+    ReorderForm,
 )
 
 
@@ -301,6 +301,7 @@ def submission_period_documents(pid):
         state=state,
         config=config,
         deletable=deletable,
+        form=ReorderForm(),
     )
 
 
@@ -713,12 +714,6 @@ def edit_period_attachment(aid):
     )
 
 
-def _demap_attachment(item_id):
-    result = parse.parse("PA-{attach_id}", item_id)
-
-    return int(result["attach_id"])
-
-
 @convenor.route("/update_period_attachments", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def update_period_attachments():
@@ -742,13 +737,7 @@ def update_period_attachments():
     if not validate_is_convenor(record.config.project_class, message=False):
         return jsonify({"status": "insufficient_privileges"})
 
-    items = map(_demap_attachment, ranking)
-
-    rmap = {}
-    index = 1
-    for p in items:
-        rmap[p] = index
-        index += 1
+    rmap = {p: i + 1 for i, p in enumerate(map(int, ranking))}
 
     # update ranking
     for attach in record.attachments:

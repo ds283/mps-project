@@ -2,10 +2,11 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "labels.html" import simple_label %}
+{% from "sortable.html" import import_sortable %}
 
 {% block scripts %}
     {{ super() }}
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    {{ import_sortable() }}
 
     <script type=text/javascript>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -15,24 +16,33 @@
                 url: $SCRIPT_ROOT + "/convenor/update_period_attachments",
                 type: "POST",
                 data: JSON.stringify({ranking: ranking, period_id: period_id}),
-                contentType: "application/json; charset=utf-8"
+                contentType: "application/json; charset=utf-8",
+                error: function() { console.log('Failed to save attachment order'); }
             });
         }
+
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-CSRFToken', $('#csrf-token').val());
+            }
+        });
+
+        let _saveTimer = null;
 
         Sortable.create(document.getElementById("period-attachments"), {
             handle: '.drag-handle',
             animation: 150,
-            onSort: function (e) {
+            onEnd: function(e) {
+                if (e.oldIndex === e.newIndex) return;
                 const items = e.to.children;
                 let result = [];
                 for (let i = 0; i < items.length; i++) {
-                    // push id onto ranking list
-                    result.push($(items[i]).attr("id"));
-
-                    rspan = $(items[i]).find('#ranking');
+                    result.push(items[i].dataset.id);
+                    const rspan = $(items[i]).find('.ranking');
                     rspan.html("#" + (i + 1));
                 }
-                sendAjax(result, {{ record.id }});
+                clearTimeout(_saveTimer);
+                _saveTimer = setTimeout(function() { sendAjax(result, {{ record.id }}); }, 400);
             }
         })
     </script>
@@ -47,10 +57,10 @@
 
 {% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none,
                     acl_url=none, log_url=none, deletable=true) %}
-    <tr id="PA-{{ attachment.id }}">
+    <tr id="PA-{{ attachment.id }}" data-id="{{ attachment.id }}">
         <td>
             <i class="fas fa-bars drag-handle"></i>
-            <span id="ranking" class="badge bg-primary">#{{ attachment.rank_order }}</span>
+            <span class="ranking badge bg-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
             <div class="d-flex flex-column justify-content-start align-items-start gap-1">
@@ -166,6 +176,7 @@
 {% endmacro %}
 
 {% block bodyblock %}
+    <input type="hidden" id="csrf-token" value="{{ form.csrf_token._value() }}">
     {% if url and text %}
         <div class="top-return-link">
             <a class="text-decoration-none" href="{{ url }}">

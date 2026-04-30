@@ -41,10 +41,10 @@
             {% for item in list %}
                 {% set project = item.liveproject %}
                 {% set config = project.config %}
-                <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
+                <div id="P-{{ project.id }}" data-id="{{ project.id }}" class="row vertical-top final-selection-table">
                     <div class="col-1">
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
-                        <span id="ranking" class="text-primary">#<strong>{{ item.rank }}</strong></span>
+                        <span class="ranking text-primary">#<strong>{{ item.rank }}</strong></span>
                     </div>
                     <div class="col-5">
                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
@@ -237,10 +237,10 @@
             {% for item in list %}
                 {% set project = item.liveproject %}
                 {% set config = project.config %}
-                <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
+                <div id="P-{{ project.id }}" data-id="{{ project.id }}" class="row vertical-top final-selection-table">
                     <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}>
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
-                        <div id="ranking" class="text-success rank-hint-button">#<strong>{{ item.rank }}</strong></div>
+                        <div class="ranking text-success rank-hint-button">#<strong>{{ item.rank }}</strong></div>
                         {% if show_hint %}
                             <div class="rank-hint-button">
                                 <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">

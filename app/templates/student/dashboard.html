@@ -10,9 +10,11 @@
 {% from "macros.html" import message_card %}
 {% from "icon_block.html" import icon_block %}
 
+{% from "sortable.html" import import_sortable %}
+
 {% block scripts %}
     {{ super() }}
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    {{ import_sortable() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -55,6 +57,7 @@
                 type: "POST",
                 data: JSON.stringify({ranking: ranking, configid: configid, sid: selid}),
                 contentType: "application/json; charset=utf-8",
+                error: function() { console.log('Failed to save bookmark order'); },
                 success: function(dat) {
                     // write payload to console for debugging
                     console.log(dat);
@@ -112,17 +115,25 @@
             });
         }
 
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-CSRFToken', $('#csrf-token').val());
+            }
+        });
+
+        let _saveTimer = null;
+
         {% for config, sel, sub in enrollments %}
             {% if sel is not none and sel.has_bookmarks %}
                 Sortable.create(document.getElementById("P{{ config.id }}-bookmarks"), {
                     handle: '.drag-handle',
                     animation: 150,
-                    onSort: function(e) {
+                    onEnd: function(e) {
+                        if (e.oldIndex === e.newIndex) return;
                         const items = e.to.children;
                         let result = [];
-                        for (let i=0; i < items.length; i++) {
-                            // push id to ranking list
-                            result.push($(items[i]).attr('id'));
+                        for (let i = 0; i < items.length; i++) {
+                            result.push(items[i].dataset.id);
 
                             // update colours of list items to indicate selection status
                             {% if config.uses_selection %}
@@ -136,8 +147,8 @@
                             {% endif %}
 
                             // update numerical rankings
-                            rspan = $(items[i]).find('#ranking');
-                            rspan.html("#" + (i+1));
+                            const rspan = $(items[i]).find('.ranking');
+                            rspan.html("#" + (i + 1));
                             {% if config.uses_selection %}
                                 if (i < {{ sel.number_choices }}) {
                                     rspan.addClass('bg-success');
@@ -148,7 +159,8 @@
                                 }
                             {% endif %}
                         }
-                        sendAjax(result, {{ config.id }}, {{ sel.id }});
+                        clearTimeout(_saveTimer);
+                        _saveTimer = setTimeout(function() { sendAjax(result, {{ config.id }}, {{ sel.id }}); }, 400);
                     }
                 });
             {% endif %}
@@ -230,6 +242,7 @@
 {% endmacro %}
 
 {% block bodyblock %}
+    <input type="hidden" id="csrf-token" value="{{ form.csrf_token._value() }}">
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">

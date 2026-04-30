@@ -534,7 +534,7 @@
                                     {% for code, crit in band_data['criteria'].items() %}
                                         <tr>
                                             <td class="text-body-secondary pe-2" style="width:5%">{{ code }}</td>
-                                            <td style="width:50%">{{ criterion_map.get(code, code) }}</td>
+                                            <td style="width:50%">{{ criterion_map.get(code, {}).get('text', code) }}</td>
                                             <td style="width:20%">
                                                 {% set a = crit.get('assessment', '') %}
                                                 {% if a == 'Strong evidence' %}

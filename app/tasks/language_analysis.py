@@ -8,11 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import hashlib
 import json
 import re
 import time
 import unicodedata
-from datetime import datetime
 
 import numpy as np
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -34,59 +34,64 @@ from ..shared.llm_thresholds import (
 from ..shared.workflow_logging import log_db_commit
 
 # ---------------------------------------------------------------------------
-# Rubric: grade bands and criteria.
-# Defined as a module-level constant so they are easy to update.
-# Each higher band subsumes the criteria of all lower bands.
+# Prompt versioning.
+# Bump PROMPT_VERSION whenever prompt text is intentionally changed, so stored
+# results can be compared against the prompt that generated them.
 # ---------------------------------------------------------------------------
 
-GRADE_BANDS = [
-    {
-        "band": "3rd class",
-        "criteria": [
-            "Scientific work of limited quality",
-            "Demonstrates some relevant knowledge and understanding, with limitations",
-            "Limited evidence for technical and practical skills",
-            "At least some attempt to explain and interpret the results of the project",
-            "Report shows evidence of at least some editing and proof-reading",
-        ],
-    },
-    {
-        "band": "2.2 class",
-        "criteria": [
-            "Scientific work of competent quality",
-            "Demonstrates reasonable understanding and analysis; competent technical or practical skills; some organisational and presentation skills",
-            "Report edited and proof-read to a competent standard",
-            "Report is structured into chapters, but parts of the organisation may be unclear",
-            "Explanations mostly adequate",
-        ],
-    },
-    {
-        "band": "2.1 class",
-        "criteria": [
-            "Demonstrates very good understanding and analysis; very good technical or practical skills; very good organisational and presentation skills",
-            "Report edited, typeset, and proof-read to a good standard",
-            "Text mostly in a good scientific style",
-            "Partial assessment of wider significance of the results",
-            "Partial discussion of relation to previously published work, if appropriate",
-            "Explanations are clear and not verbose",
-            "Sources of error in techniques, approximations or methodologies are mostly considered",
-            "Some discussion of future directions or improvements",
-        ],
-    },
-    {
-        "band": "1st class",
-        "criteria": [
-            "Demonstrates excellent understanding and analysis; excellent technical or practical skills; excellent organisational and presentation skills",
-            "Report edited, typeset, and proof-read to a high standard",
-            "Text is written in a good scientific style",
-            "Clear assessment of wider significance or context of the results",
-            "Relation to previously published work is explained, if appropriate",
-            "Explanations are clear and succinct",
-            "Sources of error in techniques, approximations or methodologies are considered",
-            "Clear, well-defined suggestions for future directions or improvements",
-        ],
-    },
-]
+PROMPT_VERSION = 1
+
+
+def _prompt_hash(prompt: str) -> str:
+    return hashlib.sha256(prompt.encode()).hexdigest()[:12]
+
+
+# ---------------------------------------------------------------------------
+# Pre-loaded rubric snapshot, safe to use after db.session.close().
+# ---------------------------------------------------------------------------
+
+
+class _RubricSnapshot:
+    """Holds eagerly-loaded rubric data extracted from the ORM before session close."""
+
+    __slots__ = ("id", "label", "_bands")
+
+    def __init__(self, rubric):
+        self.id = rubric.id
+        self.label = rubric.label
+        self._bands = [
+            {
+                "id": b.id,
+                "label": b.label,
+                "criteria": [
+                    {"id": c.id, "text": c.text, "tag": c.tag}
+                    for c in b.criteria
+                ],
+            }
+            for b in rubric.bands
+        ]
+
+    def to_prompt_bands(self):
+        return [
+            {"band": b["label"], "criteria": [c["text"] for c in b["criteria"]]}
+            for b in self._bands
+        ]
+
+    def negative_criteria(self):
+        return frozenset(
+            c["text"]
+            for b in self._bands
+            for c in b["criteria"]
+            if c["tag"] == "negative"
+        )
+
+    def positive_floor_criteria(self):
+        return frozenset(
+            c["text"]
+            for b in self._bands
+            for c in b["criteria"]
+            if c["tag"] == "positive_floor"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -899,37 +904,6 @@ def _ai_concern_flag(
 # LLM helpers.
 # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Criterion type annotations for the LLM checklist.
-#
-# 3rd class criteria mix two types that the LLM must treat differently for
-# submissions that exceed that band:
-#
-#   NEGATIVE criteria describe deficiencies.  A higher-band submission does NOT
-#   exhibit these deficiencies, so the correct assessment is "Not evident".
-#
-#   POSITIVE FLOOR criteria describe minimum positive requirements.  A
-#   higher-band submission clearly meets and exceeds these floors, so the
-#   correct assessment is "Strong evidence".
-#
-# All criteria for 2.2 and above are achievement-level descriptors and are not
-# tagged — they should be assessed normally against the evidence in the text.
-# ---------------------------------------------------------------------------
-
-_NEGATIVE_CRITERIA: frozenset = frozenset(
-    [
-        "Scientific work of limited quality",
-        "Demonstrates some relevant knowledge and understanding, with limitations",
-        "Limited evidence for technical and practical skills",
-    ]
-)
-
-_POSITIVE_FLOOR_CRITERIA: frozenset = frozenset(
-    [
-        "At least some attempt to explain and interpret the results of the project",
-        "Report shows evidence of at least some editing and proof-reading",
-    ]
-)
 
 _TRUNCATION_MARKER = "\n\n[... middle section omitted due to length ...]\n\n"
 _MAX_WORDS_BEFORE_TRUNCATION = 12000
@@ -996,11 +970,15 @@ def _truncate_text(text: str) -> tuple[str, bool]:
     return head + _TRUNCATION_MARKER + tail, True
 
 
-def _build_system_prompt(truncated: bool) -> str:
+def _build_system_prompt(truncated: bool, rubric) -> str:
     """Construct the LLM system prompt including the rubric and explicit criteria checklist."""
+    prompt_bands = rubric.to_prompt_bands()
+    negative_criteria = rubric.negative_criteria()
+    positive_floor_criteria = rubric.positive_floor_criteria()
+
     # Rubric narrative section (used for context and assessment rules)
     band_sections = []
-    for band in GRADE_BANDS:
+    for band in prompt_bands:
         criteria_list = "\n".join(f"  - {c}" for c in band["criteria"])
         band_sections.append(f"### {band['band']}\n{criteria_list}")
     rubric_text = "\n\n".join(band_sections)
@@ -1009,12 +987,12 @@ def _build_system_prompt(truncated: bool) -> str:
     # accidentally omit or paraphrase any of them.  The criterion text here must
     # be reproduced verbatim in the "criterion" field of each response entry.
     checklist_sections = []
-    for band_idx, band in enumerate(GRADE_BANDS, start=1):
+    for band_idx, band in enumerate(prompt_bands, start=1):
         lines = [f"Band {band_idx} — {band['band']}:"]
         for crit_idx, criterion in enumerate(band["criteria"], start=1):
-            if criterion in _NEGATIVE_CRITERIA:
+            if criterion in negative_criteria:
                 tag = "  [NEGATIVE — 'Not evident' for submissions above this band]"
-            elif criterion in _POSITIVE_FLOOR_CRITERIA:
+            elif criterion in positive_floor_criteria:
                 tag = "  [POSITIVE FLOOR — 'Strong evidence' for submissions above this band]"
             else:
                 tag = ""
@@ -1218,11 +1196,11 @@ def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
 #
 # Top-level structure:
 #   report_summary         — 1-2 paragraph narrative description of the report content
-#   classification         — recommended grade band (enum-constrained to GRADE_BANDS)
+#   classification         — recommended grade band (enum-constrained to rubric bands)
 #   overall_reasoning      — one paragraph justifying the recommended band
-#   bands                  — fixed-key object, one property per GRADE_BANDS entry, each
+#   bands                  — fixed-key object, one property per rubric band, each
 #                            containing a band_assessment summary and a 'criteria' object.
-#                            'bands' as an object enforces that all four band names are
+#                            'bands' as an object enforces that all band names are
 #                            present exactly once (object keys are unique and required).
 #                            'criteria' is also modelled as a fixed-key object keyed by
 #                            short numeric codes ("1.1", "1.2", …) rather than the full
@@ -1237,45 +1215,49 @@ def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
 #   genai_statement        — verbatim AI use statement, or empty string
 #   preface_found          — whether a preface / personal contribution section exists
 #   preface_precis         — 1-3 sentence précis of the contribution statement, or ""
-_LLM_RESPONSE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "report_summary": {"type": "string"},
-        "classification": {
-            "type": "string",
-            "enum": [band["band"] for band in GRADE_BANDS],
-        },
-        "overall_reasoning": {"type": "string"},
-        "bands": {
-            "type": "object",
-            "properties": {
-                band["band"]: _make_band_schema(band_idx, band["criteria"])
-                for band_idx, band in enumerate(GRADE_BANDS, start=1)
+
+
+def _make_llm_response_schema(rubric) -> dict:
+    prompt_bands = rubric.to_prompt_bands()
+    return {
+        "type": "object",
+        "properties": {
+            "report_summary": {"type": "string"},
+            "classification": {
+                "type": "string",
+                "enum": [band["band"] for band in prompt_bands],
             },
-            "required": [band["band"] for band in GRADE_BANDS],
+            "overall_reasoning": {"type": "string"},
+            "bands": {
+                "type": "object",
+                "properties": {
+                    band["band"]: _make_band_schema(band_idx, band["criteria"])
+                    for band_idx, band in enumerate(prompt_bands, start=1)
+                },
+                "required": [band["band"] for band in prompt_bands],
+            },
+            "caveats": {"type": "string"},
+            "stated_word_count_found": {"type": "boolean"},
+            "stated_word_count": {"type": ["integer", "null"]},
+            "genai_statement_found": {"type": "boolean"},
+            "genai_statement": {"type": "string"},
+            "preface_found": {"type": "boolean"},
+            "preface_precis": {"type": "string"},
         },
-        "caveats": {"type": "string"},
-        "stated_word_count_found": {"type": "boolean"},
-        "stated_word_count": {"type": ["integer", "null"]},
-        "genai_statement_found": {"type": "boolean"},
-        "genai_statement": {"type": "string"},
-        "preface_found": {"type": "boolean"},
-        "preface_precis": {"type": "string"},
-    },
-    "required": [
-        "report_summary",
-        "classification",
-        "overall_reasoning",
-        "bands",
-        "caveats",
-        "stated_word_count_found",
-        "stated_word_count",
-        "genai_statement_found",
-        "genai_statement",
-        "preface_found",
-        "preface_precis",
-    ],
-}
+        "required": [
+            "report_summary",
+            "classification",
+            "overall_reasoning",
+            "bands",
+            "caveats",
+            "stated_word_count_found",
+            "stated_word_count",
+            "genai_statement_found",
+            "genai_statement",
+            "preface_found",
+            "preface_precis",
+        ],
+    }
 
 
 def _validate_llm_response(data: dict) -> bool:
@@ -1662,10 +1644,10 @@ _LLM_CHUNK_SCHEMA = {
 }
 
 
-def _build_chunk_system_prompt(chunk_idx: int, total_chunks: int) -> str:
+def _build_chunk_system_prompt(chunk_idx: int, total_chunks: int, rubric) -> str:
     """Compact system prompt for the map-phase evidence extraction call."""
     criterion_lines = []
-    for band_idx, band in enumerate(GRADE_BANDS, start=1):
+    for band_idx, band in enumerate(rubric.to_prompt_bands(), start=1):
         for crit_idx, criterion in enumerate(band["criteria"], start=1):
             criterion_lines.append(f"  {band_idx}.{crit_idx}: {criterion}")
     criterion_list = "\n".join(criterion_lines)
@@ -1749,15 +1731,7 @@ def _build_metadata_user_prompt(candidate_text: str) -> str:
 # Map-phase evidence aggregation helpers.
 # ---------------------------------------------------------------------------
 
-# All valid criterion codes — used to filter out hallucinated codes from the LLM.
-_ALL_CRITERION_CODES: frozenset = frozenset(
-    f"{band_idx}.{crit_idx}"
-    for band_idx, band in enumerate(GRADE_BANDS, start=1)
-    for crit_idx in range(1, len(band["criteria"]) + 1)
-)
-
-
-def _merge_chunk_evidence(chunk_results: dict) -> dict:
+def _merge_chunk_evidence(chunk_results: dict, all_criterion_codes: frozenset) -> dict:
     """
     Aggregate per-chunk evidence from the map phase.
 
@@ -1821,7 +1795,7 @@ def _merge_chunk_evidence(chunk_results: dict) -> dict:
         for entry in chunk_data.get("evidence", []):
             code = entry.get("criterion_code", "")
             polarity = entry.get("polarity", "neutral")
-            if code not in _ALL_CRITERION_CODES:
+            if code not in all_criterion_codes:
                 continue
             if polarity not in ("supports", "undermines", "neutral"):
                 polarity = "neutral"
@@ -1870,7 +1844,7 @@ def _merge_chunk_evidence(chunk_results: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _build_synthesis_evidence_text(merged: dict, total_chunks: int) -> str:
+def _build_synthesis_evidence_text(merged: dict, total_chunks: int, rubric) -> str:
     """
     Format aggregated chunk evidence as structured text for the synthesis prompt.
     This replaces the document text in the synthesis user prompt.
@@ -1885,7 +1859,7 @@ def _build_synthesis_evidence_text(merged: dict, total_chunks: int) -> str:
 
     lines = [f"## Extracted evidence ({total_chunks} {chunk_word})", ""]
 
-    for band_idx, band in enumerate(GRADE_BANDS, start=1):
+    for band_idx, band in enumerate(rubric.to_prompt_bands(), start=1):
         lines.append(f"### Band {band_idx} — {band['band']}")
         for crit_idx, criterion in enumerate(band["criteria"], start=1):
             code = f"{band_idx}.{crit_idx}"
@@ -2299,7 +2273,7 @@ def register_language_analysis_tasks(celery):
           Reduce phase — _merge_chunk_evidence() aggregates the map results,
                          preserving preponderance (evidence counts per criterion
                          are passed to the synthesis LLM alongside excerpts).
-                         The synthesis call uses the full _LLM_RESPONSE_SCHEMA
+                         The synthesis call uses the full grading response schema
                          and produces output structurally identical to the
                          single-pass result.
 
@@ -2334,6 +2308,10 @@ def register_language_analysis_tasks(celery):
         data = record.language_analysis_data
         raw_text: str = data.get("_extracted_text", "")
 
+        # Load rubric while session is still open; snapshot before session.close().
+        _rubric_orm = record.period.config.grading_rubric
+        rubric_snap: _RubricSnapshot | None = _RubricSnapshot(_rubric_orm) if _rubric_orm is not None else None
+
         # Build the text for grade-band assessment: core body + appendices.
         # The reference list is excluded (bibliographic entries are noise for
         # the LLM assessor).  Math-extraction artefacts are stripped so that
@@ -2358,16 +2336,68 @@ def register_language_analysis_tasks(celery):
         # The record will be reloaded from the DB before each subsequent write.
         db.session.close()
 
+        errors: list = data.get("errors", [])
+        _t_llm = time.monotonic()
+
+        # ----------------------------------------------------------------
+        # No-rubric path: run metadata extraction only, skip grading.
+        # ----------------------------------------------------------------
+        if rubric_snap is None:
+            candidate_text = _extract_metadata_regions(clean_text)
+            meta_parsed, _, meta_exc = _call_llm(
+                client,
+                model,
+                _build_metadata_system_prompt(),
+                _build_metadata_user_prompt(candidate_text),
+                _LLM_METADATA_SCHEMA,
+                options={"num_ctx": context_size},
+                label=f"submit_to_llm/metadata-only (record #{record_id})",
+            )
+            data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
+            data["grading_skipped"] = True
+            if meta_parsed is not None:
+                data["_llm_metadata"] = meta_parsed
+            else:
+                current_app.logger.warning(
+                    f"language_analysis.submit_to_llm: metadata-only extraction failed "
+                    f"for record #{record_id}: {meta_exc}"
+                )
+            data["errors"] = errors
+            record = db.session.get(SubmissionRecord, record_id)
+            if record is None:
+                raise Exception(
+                    f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (no-rubric)"
+                )
+            record.set_language_analysis_data(data)
+            try:
+                db.session.commit()
+            except SQLAlchemyError as exc:
+                db.session.rollback()
+                current_app.logger.exception(
+                    "SQLAlchemyError committing no-rubric metadata result", exc_info=exc
+                )
+                raise self.retry()
+            return
+
+        # ----------------------------------------------------------------
+        # Rubric-present grading path.
+        # ----------------------------------------------------------------
+        all_criterion_codes: frozenset = frozenset(
+            f"{band_idx}.{crit_idx}"
+            for band_idx, band in enumerate(rubric_snap._bands, start=1)
+            for crit_idx in range(1, len(band["criteria"]) + 1)
+        )
+        llm_response_schema = _make_llm_response_schema(rubric_snap)
+
         single_pass_word_budget = max(
             int((context_size - _SINGLE_PASS_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 0
         )
         doc_words = len(clean_text.split())
-        errors: list = data.get("errors", [])
-        _t_llm = time.monotonic()
 
         accumulated = ""
         last_exc: Exception | None = None
         parsed_result: dict | None = None
+        prompt_hash_val: str | None = None
         num_chunks = 1  # updated to actual chunk count on the chunked path
 
         if doc_words <= single_pass_word_budget:
@@ -2375,12 +2405,14 @@ def register_language_analysis_tasks(celery):
             # Single-pass path: document fits within the context window.
             # ----------------------------------------------------------------
             document_text, was_truncated = _truncate_text(clean_text)
+            _system_prompt = _build_system_prompt(was_truncated, rubric_snap)
+            prompt_hash_val = _prompt_hash(_system_prompt)
             parsed_result, accumulated, last_exc = _call_llm(
                 client,
                 model,
-                _build_system_prompt(was_truncated),
+                _system_prompt,
                 _build_user_prompt(document_text),
-                _LLM_RESPONSE_SCHEMA,
+                llm_response_schema,
                 options={"num_ctx": context_size},
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/single-pass (record #{record_id})",
@@ -2472,7 +2504,7 @@ def register_language_analysis_tasks(celery):
                 chunk_parsed, accumulated, last_exc = _call_llm(
                     client,
                     model,
-                    _build_chunk_system_prompt(idx, total_chunks),
+                    _build_chunk_system_prompt(idx, total_chunks, rubric_snap),
                     _build_chunk_user_prompt(chunk_text, idx, total_chunks),
                     _LLM_CHUNK_SCHEMA,
                     options={"num_ctx": context_size},
@@ -2542,7 +2574,7 @@ def register_language_analysis_tasks(celery):
                 return
 
             # -- Step 3: synthesis (reduce phase) -------------------------
-            merged = _merge_chunk_evidence(chunk_results)
+            merged = _merge_chunk_evidence(chunk_results, all_criterion_codes)
 
             # Override aggregated metadata with the dedicated extraction result,
             # which is more reliable (regex-located, purpose-built prompt).
@@ -2555,15 +2587,17 @@ def register_language_analysis_tasks(celery):
                 "preface_precis": metadata_result.get("preface_precis", ""),
             }
 
-            evidence_text = _build_synthesis_evidence_text(merged, total_chunks)
+            evidence_text = _build_synthesis_evidence_text(merged, total_chunks, rubric_snap)
             synthesis_ctx = max(context_size, _SYNTHESIS_MIN_CTX)
 
+            _system_prompt = _build_system_prompt(False, rubric_snap)
+            prompt_hash_val = _prompt_hash(_system_prompt)
             parsed_result, accumulated, last_exc = _call_llm(
                 client,
                 model,
-                _build_system_prompt(False),
+                _system_prompt,
                 _build_synthesis_user_prompt(evidence_text),
-                _LLM_RESPONSE_SCHEMA,
+                llm_response_schema,
                 options={"num_ctx": synthesis_ctx},
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/synthesis (record #{record_id})",
@@ -2611,12 +2645,20 @@ def register_language_analysis_tasks(celery):
             # _extracted_text is left intact here so the subsequent
             # submit_to_llm_feedback task can reuse it; finalize() cleans it up.
             data["llm_result"] = parsed_result
-            # Build a code→full-text mapping so the template can display criterion text.
+            data["prompt_version"] = PROMPT_VERSION
+            data["prompt_hash"] = prompt_hash_val
+            # Build a code→criterion mapping so the template can display criterion text.
             # Codes match those used as JSON Schema property keys in _make_band_schema.
             data["criterion_map"] = {
-                f"{band_idx}.{crit_idx}": criterion
-                for band_idx, band in enumerate(GRADE_BANDS, start=1)
-                for crit_idx, criterion in enumerate(band["criteria"], start=1)
+                f"{band_idx}.{crit_idx}": {
+                    "text": c["text"],
+                    "criterion_id": c["id"],
+                    "band_id": band["id"],
+                    "rubric_id": rubric_snap.id,
+                    "rubric_label": rubric_snap.label,
+                }
+                for band_idx, band in enumerate(rubric_snap._bands, start=1)
+                for crit_idx, c in enumerate(band["criteria"], start=1)
             }
             # Clean up intermediate chunking state.
             data.pop("_llm_chunks", None)

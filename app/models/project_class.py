@@ -782,6 +782,10 @@ class ProjectClassConfig(
     # creation timestamp
     creation_timestamp = db.Column(db.DateTime())
 
+    # grading rubric for language analysis pipeline
+    grading_rubric_id = db.Column(db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=True)
+    grading_rubric = db.relationship("GradingRubric", uselist=False, foreign_keys=[grading_rubric_id])
+
     # LOCAL CONFIGURATION
 
     # these settings replicate settings in ProjectClass (for where they are inherited if nothing else is done),

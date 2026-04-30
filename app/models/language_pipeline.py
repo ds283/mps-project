@@ -15,7 +15,7 @@ from ..database import db
 
 class GradingRubric(db.Model):
     __tablename__ = "grading_rubric"
-    __table_args__ = (db.UniqueConstraint("project_class_id", "label"),)
+    __table_args__ = (db.UniqueConstraint("pclass_id", "label"),)
 
     id = db.Column(db.Integer(), primary_key=True)
 

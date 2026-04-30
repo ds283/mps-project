@@ -152,7 +152,8 @@
                                 {% else %}
                                     <span class="text-body-secondary" style="font-size:10px;">&mdash; Not conflated</span>
                                 {% endif %}
-                                {# Risk flags #}
+                                {# Risk flags — always show a positive or negative indicator so the
+                                   convenor can distinguish clean records from unreviewed ones. #}
                                 {% set unresolved = row.record.get_unresolved_risk_factors() %}
                                 {% if unresolved %}
                                     <div class="mt-1">
@@ -167,6 +168,21 @@
                                                 </span>
                                             {% endif %}
                                         {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {% set present = row.record.get_present_risk_factors() %}
+                                    <div class="mt-1">
+                                        {% if present %}
+                                            {# Flags were raised but all resolved #}
+                                            <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">
+                                                <i class="fas fa-check-circle me-1"></i>Resolved
+                                            </span>
+                                        {% else %}
+                                            {# No risk factors at all #}
+                                            <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">
+                                                <i class="fas fa-check-circle me-1"></i>No flags
+                                            </span>
+                                        {% endif %}
                                     </div>
                                 {% endif %}
                             </td>
@@ -247,9 +263,13 @@
                                 {# Feedback cell #}
                                 <td class="text-center">
                                     {% if wf_cell.has_feedback %}
-                                        <span class="text-success"><i class="fas fa-check"></i></span>
+                                        <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">
+                                            <i class="fas fa-check me-1"></i>Submitted
+                                        </span>
                                     {% elif wf_cell.sr %}
-                                        <span class="text-danger"><i class="fas fa-times"></i></span>
+                                        <span class="badge bg-danger-subtle text-danger-emphasis" style="font-size:9px;">
+                                            <i class="fas fa-times me-1"></i>Missing
+                                        </span>
                                     {% else %}
                                         <span class="text-body-secondary">&mdash;</span>
                                     {% endif %}

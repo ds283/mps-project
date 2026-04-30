@@ -257,25 +257,21 @@
                                 </div>
                             </div>
 
-                            {# At-risk flag summary #}
+                            {# At-risk flag summary — show section whenever any count is non-zero,
+                               but always render all three badges so the unresolved and AI counts
+                               are never silently absent. #}
                             {% if risk.n_flagged > 0 or risk.n_unresolved > 0 or risk.n_ai_risk > 0 %}
                                 <div class="d-flex align-items-center gap-3 mb-2 small">
                                     <span class="fw-semibold text-body-secondary">At-risk flags:</span>
-                                    {% if risk.n_flagged > 0 %}
-                                        <span class="badge bg-warning-subtle text-warning-emphasis">
-                                            <i class="fas fa-flag me-1"></i>{{ risk.n_flagged }} flagged
-                                        </span>
-                                    {% endif %}
-                                    {% if risk.n_unresolved > 0 %}
-                                        <span class="badge bg-danger-subtle text-danger-emphasis">
-                                            <i class="fas fa-exclamation-circle me-1"></i>{{ risk.n_unresolved }} unresolved
-                                        </span>
-                                    {% endif %}
-                                    {% if risk.n_ai_risk > 0 %}
-                                        <span class="badge bg-warning-subtle text-warning-emphasis">
-                                            <i class="fas fa-robot me-1"></i>{{ risk.n_ai_risk }} AI risk
-                                        </span>
-                                    {% endif %}
+                                    <span class="badge {% if risk.n_flagged > 0 %}bg-warning-subtle text-warning-emphasis{% else %}bg-secondary-subtle text-secondary-emphasis{% endif %}">
+                                        <i class="fas fa-flag me-1"></i>{{ risk.n_flagged }} flagged
+                                    </span>
+                                    <span class="badge {% if risk.n_unresolved > 0 %}bg-danger-subtle text-danger-emphasis{% else %}bg-success-subtle text-success-emphasis{% endif %}">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ risk.n_unresolved }} unresolved
+                                    </span>
+                                    <span class="badge {% if risk.n_ai_risk > 0 %}bg-warning-subtle text-warning-emphasis{% else %}bg-success-subtle text-success-emphasis{% endif %}">
+                                        <i class="fas fa-robot me-1"></i>{{ risk.n_ai_risk }} AI risk
+                                    </span>
                                 </div>
                             {% endif %}
 
@@ -326,7 +322,7 @@
                                     <div class="text-uppercase fw-semibold text-body-secondary mb-2"
                                          style="font-size:10px; letter-spacing:0.05em;">Health indicators
                                     </div>
-                                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-7 g-2">
+                                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-8 g-2">
 
                                         {# Distribution #}
                                         <div class="col">
@@ -432,6 +428,36 @@
                                                     <div class="small text-body-secondary" style="font-size:10px">
                                                         {% if wh.n_out_of_tolerance > 0 %}triggered{% else %}none
                                                             triggered{% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            {% endcall %}
+                                        </div>
+
+                                        {# NEEDS_MODERATOR_ASSIGNED #}
+                                        <div class="col">
+                                            {% call(blk) dashboard_tile("Mod. unassigned", title_icon="user-slash",
+                                                icon_state=(wh.needs_moderator_pct is none or wh.needs_moderator_pct == 0),
+                                                bg="white") %}
+                                                {% if blk == 'body' %}
+                                                    <div class="fw-bold fs-5 {{ alert_pct_color(wh.needs_moderator_pct) }}">
+                                                        {% if wh.needs_moderator_pct is not none %}
+                                                            {{ wh.needs_moderator_pct | round(0) | int }}%
+                                                        {% else %}&mdash;{% endif %}
+                                                    </div>
+                                                    {% if wh.needs_moderator_pct is not none and wh.needs_moderator_pct > 0 %}
+                                                        <div class="progress mt-1" style="height:4px">
+                                                            <div class="progress-bar bg-danger"
+                                                                 style="width:{{ wh.needs_moderator_pct }}%"></div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endif %}
+                                                {% if blk == 'footer' %}
+                                                    <div class="small text-body-secondary" style="font-size:10px">
+                                                        {% if wh.needs_moderator_pct is not none and wh.needs_moderator_pct > 0 %}
+                                                            need moderator
+                                                        {% else %}
+                                                            none
+                                                        {% endif %}
                                                     </div>
                                                 {% endif %}
                                             {% endcall %}

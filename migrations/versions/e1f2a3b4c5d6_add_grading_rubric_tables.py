@@ -35,12 +35,12 @@ def upgrade():
     op.create_table(
         "grading_rubric",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("project_class_id", sa.Integer(), sa.ForeignKey("project_classes.id"), nullable=False),
+        sa.Column("pclass_id", sa.Integer(), sa.ForeignKey("project_classes.id"), nullable=False),
         sa.Column("label", sa.String(length=255, collation="utf8_bin"), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.text("now()")),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("project_class_id", "label"),
+        sa.UniqueConstraint("pclass_id", "label"),
     )
 
     op.create_table(

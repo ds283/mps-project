@@ -26,6 +26,7 @@ from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, TaskRecord, Tenant
 from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.ai_calibration import mahalanobis_distance
+from ..shared.scraped_text_store import get_scraped_text, store_scraped_text
 from ..task_queue import progress_update
 from ..shared.llm_thresholds import (
     classify_burstiness,
@@ -2005,8 +2006,8 @@ def register_language_analysis_tasks(celery):
     def download_and_extract(self, record_id: int):
         """
         Stage 1 (llm_tasks queue): download the submitted report asset and
-        extract plain text from it.  The extracted text is stored temporarily
-        in the language_analysis JSON blob under the key '_extracted_text'.
+        extract plain text from it.  The extracted text is stored in the
+        MongoDB scraped-text cache for use by subsequent pipeline stages.
         """
         self.update_state(
             state=states.STARTED, meta={"msg": "Downloading report asset"}
@@ -2083,9 +2084,12 @@ def register_language_analysis_tasks(celery):
                 {"stage": "download", "type": type(exc).__name__, "message": str(exc)}
             )
 
-        # Persist extracted text in the JSON blob
+        # Cache extracted text in MongoDB for use by subsequent pipeline stages
+        # and future pairwise similarity analysis.
+        normalized_text = unicodedata.normalize("NFKC", raw_text)
+        store_scraped_text(record_id, asset.id, mimetype, normalized_text, page_count)
+
         data = record.language_analysis_data
-        data["_extracted_text"] = unicodedata.normalize("NFKC", raw_text)
         data["_page_count"] = page_count
         if errors:
             data.setdefault("errors", []).extend(errors)
@@ -2132,7 +2136,8 @@ def register_language_analysis_tasks(celery):
             )
 
         data = record.language_analysis_data
-        raw_text: str = data.get("_extracted_text", "")
+        _cached = get_scraped_text(record_id)
+        raw_text: str = _cached["scraped_text"] if _cached else ""
         errors: list = data.get("errors", [])
 
         metrics: dict = {}
@@ -2373,7 +2378,8 @@ def register_language_analysis_tasks(celery):
             return
 
         data = record.language_analysis_data
-        raw_text: str = data.get("_extracted_text", "")
+        _cached = get_scraped_text(record_id)
+        raw_text: str = _cached["scraped_text"] if _cached else ""
 
         # Load rubric while session is still open; snapshot before session.close().
         _rubric_orm = record.period.config.grading_rubric
@@ -2765,8 +2771,6 @@ def register_language_analysis_tasks(celery):
 
         if parsed_result is not None:
             # Success: store result.
-            # _extracted_text is left intact here so the subsequent
-            # submit_to_llm_feedback task can reuse it; finalize() cleans it up.
             data["llm_result"] = parsed_result
             data["prompt_version"] = PROMPT_VERSION
             data["prompt_hash"] = prompt_hash_val
@@ -2822,8 +2826,8 @@ def register_language_analysis_tasks(celery):
         """
         Stage 4 (llm_tasks queue): submit the extracted report text to an Ollama
         LLM for formative feedback generation (positive feedback and improvement
-        suggestions).  Runs after submit_to_llm in the chain so both tasks share
-        the same _extracted_text without redundant downloads.
+        suggestions).  Runs after submit_to_llm in the chain; both tasks read from
+        the shared MongoDB scraped-text cache without redundant downloads.
 
         If the document exceeds the per-chunk feedback word budget, it is split
         into chunks via _build_chunks() and each chunk is submitted independently.
@@ -2860,7 +2864,8 @@ def register_language_analysis_tasks(celery):
             return
 
         data = record.language_analysis_data
-        raw_text: str = data.get("_extracted_text", "")
+        _cached = get_scraped_text(record_id)
+        raw_text: str = _cached["scraped_text"] if _cached else ""
 
         # Build submission text using the 3-tier strategy:
         #   Tier 1: core + appendices if they fit within the context window.
@@ -3018,12 +3023,6 @@ def register_language_analysis_tasks(celery):
                 f"language_analysis.finalize: SubmissionRecord #{record_id} not found"
             )
 
-        # Remove the bulky intermediate extracted text now that both LLM tasks
-        # have completed (or been skipped due to failure).
-        data = record.language_analysis_data
-        data.pop("_extracted_text", None)
-        record.set_language_analysis_data(data)
-
         record.language_analysis_complete = True
 
         # Compute/refresh risk factors using current analysis data and project configuration.
@@ -3091,7 +3090,6 @@ def register_language_analysis_tasks(celery):
 
         # Record the workflow-level failure in the JSON blob
         data = record.language_analysis_data
-        data.pop("_extracted_text", None)  # clean up large intermediate data
         data.setdefault("errors", []).append(
             {
                 "stage": "workflow",
@@ -3161,7 +3159,7 @@ def register_language_analysis_tasks(celery):
         Process a batch of SubmissionRecord IDs for full lexical-metrics recomputation.
 
         For each record the task:
-          1. Reads _extracted_text from the cached language_analysis JSON blob.
+          1. Reads scraped text from the MongoDB scraped-text cache.
           2. Re-runs _split_document, _strip_math_lines.
           3. Recomputes MATTR, MTLD, burstiness, and sentence CV via the current
              pipeline implementations (including any code-block filtering).
@@ -3170,8 +3168,8 @@ def register_language_analysis_tasks(celery):
           6. Re-runs compute_risk_factors().
           7. Commits in batches of 50.
 
-        When _extracted_text is absent (removed by finalize() after the original
-        analysis), the report asset is re-downloaded from the object store.
+        On a MongoDB cache miss the report asset is re-downloaded from the object
+        store and the result is stored in the cache for future use.
         Records with no report asset or a missing object-store file are skipped.
         Per-record errors are caught so that the chord callback always fires.
 
@@ -3205,11 +3203,11 @@ def register_language_analysis_tasks(celery):
                     continue
 
                 la = record.language_analysis_data
-                raw_text = la.get("_extracted_text")
+                _cached = get_scraped_text(record_id)
+                raw_text = _cached["scraped_text"] if _cached else None
 
                 if not raw_text:
-                    # Cached text was removed by finalize() after the original analysis.
-                    # Fall back to re-downloading the report asset from the object store.
+                    # Cache miss — re-download from object store and populate the MongoDB cache.
                     if record.report is None:
                         current_app.logger.warning(
                             f"recalculate_ai_concern_batch: record #{record_id} has no report asset — skipping"
@@ -3232,19 +3230,21 @@ def register_language_analysis_tasks(celery):
                         continue
 
                     mimetype = (asset.mimetype or "").lower()
+                    page_count = 0
                     with adapter.download_to_scratch() as scratch:
                         path = str(scratch.path)
                         if "pdf" in mimetype or path.lower().endswith(".pdf"):
-                            raw_text, _ = _extract_pdf_text(path)
+                            raw_text, page_count = _extract_pdf_text(path)
                         elif (
                             "word" in mimetype
                             or "officedocument" in mimetype
                             or path.lower().endswith((".docx", ".doc"))
                         ):
-                            raw_text, _ = _extract_docx_text(path)
+                            raw_text, page_count = _extract_docx_text(path)
                         else:
-                            raw_text, _ = _extract_pdf_text(path)
+                            raw_text, page_count = _extract_pdf_text(path)
                     raw_text = unicodedata.normalize("NFKC", raw_text)
+                    store_scraped_text(record_id, asset.id, mimetype, raw_text, page_count)
 
                 # Re-process from text using the current pipeline.
                 _core, _references, _appendices = _split_document(raw_text)

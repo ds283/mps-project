@@ -46,6 +46,7 @@ from ..models import (
     AlternativesPriorityMixin,
     ConvenorGenericTask,
     FacultyData,
+    GradingRubric,
     LiveProject,
     MarkingScheme,
     MarkingWorkflow,
@@ -424,6 +425,7 @@ class EditSubmissionPeriodRecordPresentationsForm(
 
 def EditProjectConfigFormFactory(config: ProjectClassConfig):
     canvas_enabled = config.main_config.enable_canvas_sync
+    _pclass_rubrics = config.project_class.grading_rubrics.order_by(GradingRubric.label).all()
 
     class EditProjectConfigForm(Form, SaveChangesMixin):
         skip_matching = BooleanField(
@@ -554,6 +556,17 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
                 NumberRange(min=0, max=100, message="Tolerance must be between 0 and 100"),
             ],
             description="Override the word count discrepancy tolerance for this cycle. Leave blank to inherit the project class default.",
+        )
+
+        # AI grading rubric — choose which rubric applies this cycle, or None to opt out
+        grading_rubric = QuerySelectField(
+            "AI grading rubric",
+            query_factory=lambda: _pclass_rubrics,
+            allow_blank=True,
+            blank_text="— None (opt out of AI grading for this cycle) —",
+            get_label="label",
+            description="Select the grading rubric to use for AI-assisted assessment. "
+            "Choose 'None' to disable AI grading for this academic year.",
         )
 
         # only include Canvas-related fields if Canvas integration is actually switched on

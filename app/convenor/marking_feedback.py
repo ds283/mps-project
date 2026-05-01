@@ -368,6 +368,8 @@ def edit_project_config(pid):
         config.page_limit = form.page_limit.data
         config.word_count_tolerance = (form.word_count_tolerance.data / 100.0) if form.word_count_tolerance.data is not None else None
 
+        config.grading_rubric = form.grading_rubric.data
+
         if hasattr(form, "canvas_module_id"):
             config.canvas_module_id = form.canvas_module_id.data
         if hasattr(form, "canvas_login"):

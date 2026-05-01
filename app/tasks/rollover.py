@@ -97,6 +97,7 @@ def insert_new_pclass_config(self, old_config: ProjectClassConfig, convenor_id: 
             CATS_marking=pclass.CATS_marking,
             CATS_moderation=pclass.CATS_moderation,
             CATS_presentation=pclass.CATS_presentation,
+            grading_rubric_id=old_config.grading_rubric_id,
             submission_period=1,
             canvas_module_id=None,
             canvas_login_id=None,

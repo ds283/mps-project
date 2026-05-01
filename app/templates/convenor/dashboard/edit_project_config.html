@@ -39,6 +39,10 @@
             {{ wtf.render_field(form.canvas_login) }}
         {% endif %}
 
+        <p class="form-group-heading mt-2">AI grading</p>
+        {{ wtf.render_field(form.grading_rubric) }}
+        <hr class="intro-divider">
+
         <p class="form-group-heading mt-2">Supervision and assessment</p>
         <div class="row vertical-top">
             <div class="col-6">

@@ -333,6 +333,15 @@ def _create_and_dispatch_job(
     )
     db.session.add(job)
     db.session.flush()
+    if clear_existing and record_ids:
+        records = db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(record_ids)).all()
+        for record in records:
+            _clear_record_state(record)
+        try:
+            db.session.flush()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
     _populate_redis_queue(job, record_ids)
     try:
         log_db_commit(log_message, **log_db_commit_kwargs)
@@ -1193,10 +1202,6 @@ def register_llm_orchestration_tasks(celery):
                     db.session.rollback()
                 dispatched += 1
                 continue
-
-            # ------- optionally clear existing results -------
-            if job.clear_existing:
-                _clear_record_state(record)
 
             # ------- prepare record for (re-)submission -------
             record.language_analysis_started = True

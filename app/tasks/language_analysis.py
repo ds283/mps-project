@@ -825,40 +825,11 @@ def _count_patterns(text: str) -> dict:
 
 
 def _compute_chunk_nll(chunk_text: str, ollama_url: str, model: str) -> float | None:
-    """
-    Return mean NLL per token (base e) for chunk_text.
-
-    Uses the Ollama OpenAI-compatible /v1/completions endpoint with echo=True
-    and logprobs=1 so that log-probabilities are returned for prompt tokens
-    without generating any new tokens.
-
-    Returns None on any error (non-fatal).
-    """
-    try:
-        resp = requests.post(
-            f"{ollama_url.rstrip('/')}/v1/completions",
-            json={
-                "model": model,
-                "prompt": chunk_text,
-                "max_tokens": 0,
-                "echo": True,
-                "logprobs": 1,
-            },
-            timeout=300,
-        )
-        resp.raise_for_status()
-        body = resp.json()
-        choices = body.get("choices", [])
-        if not choices:
-            return None
-        token_logprobs = (choices[0].get("logprobs") or {}).get("token_logprobs", [])
-        # First token has no preceding context → logprob is None; skip it.
-        valid = [lp for lp in token_logprobs if lp is not None]
-        if not valid:
-            return None
-        return float(-np.mean(valid))
-    except Exception:
-        return None
+    # Ollama does not currently support logprob computation via the
+    # /v1/completions endpoint (echo=True, logprobs=1, max_tokens=0).
+    # NLL calculation is disabled until Ollama gains this capability.
+    # To re-enable: restore the requests.post() call that was removed here.
+    return None
 
 
 def _aggregate_nll(chunk_nlls: list) -> dict | None:

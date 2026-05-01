@@ -51,6 +51,7 @@ from ..tasks.llm_orchestration import (
     _cleanup_redis,
     _collect_error_record_ids,
     _dispatch_global_coordinator,
+    get_inflight_record_ids,
     is_pipeline_paused,
     launch_cycle_pipeline,
     launch_error_cycle_pipeline,
@@ -626,7 +627,7 @@ def _marking_summary_for_user() -> Dict:
 # ---------------------------------------------------------------------------
 
 
-def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
+def _aggregate_records(records: List[SubmissionRecord], inflight_ids: set = None) -> Dict:
     """
     Compute descriptive statistics for a collection of SubmissionRecords.
 
@@ -642,6 +643,7 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
         "reference_count": [],
         "page_count": [],
     }
+    _inflight = inflight_ids if inflight_ids is not None else set()
     n_missing = 0
     n_stuck = 0
     n_ai_flagged = 0
@@ -660,6 +662,7 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
                 record.language_analysis_started
                 and not record.llm_analysis_failed
                 and not record.llm_feedback_failed
+                and record.id not in _inflight
             ):
                 n_stuck += 1
             continue
@@ -1002,6 +1005,9 @@ def ai_dashboard():
         .all()
     )
 
+    # ---- collect in-flight record IDs so the stalled counter is accurate ---
+    inflight_ids: set = get_inflight_record_ids(active_jobs)
+
     # ---- global pause state -----------------------------------------------
     pipeline_paused: bool = is_pipeline_paused()
 
@@ -1060,7 +1066,7 @@ def ai_dashboard():
                 if not records:
                     continue
 
-                agg = _aggregate_records(records)
+                agg = _aggregate_records(records, inflight_ids)
                 histograms = _build_histograms_for_agg(agg)
                 can_launch = _can_launch_orchestration(pclass)
 
@@ -1080,7 +1086,7 @@ def ai_dashboard():
             continue
 
         # Cycle-level aggregate
-        cycle_agg = _aggregate_records(cycle_records)
+        cycle_agg = _aggregate_records(cycle_records, inflight_ids)
         cycle_histograms = _build_histograms_for_agg(cycle_agg)
         can_launch_cycle = current_user.has_role("root") or current_user.has_role(
             "admin"

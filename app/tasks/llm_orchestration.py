@@ -112,6 +112,28 @@ def _get_orchestration_redis() -> redis_lib.Redis:
     return redis_lib.Redis.from_url(url, decode_responses=False)
 
 
+def get_inflight_record_ids(active_jobs: List[LLMOrchestrationJob]) -> set:
+    """Return the set of SubmissionRecord IDs currently in any active job's inflight list.
+
+    Used by the dashboard to exclude genuinely in-flight records from the stalled counter.
+    Returns an empty set on any Redis error so the caller degrades gracefully.
+    """
+    if not active_jobs:
+        return set()
+    try:
+        r = _get_orchestration_redis()
+        ids: set = set()
+        for job in active_jobs:
+            for raw in r.lrange(job.redis_inflight_key, 0, -1):
+                ids.add(int(raw))
+        return ids
+    except Exception as exc:
+        current_app.logger.warning(
+            f"get_inflight_record_ids: Redis error fetching inflight IDs: {exc}"
+        )
+        return set()
+
+
 def _cleanup_redis(job: LLMOrchestrationJob) -> None:
     """Delete both Redis keys for a job (best-effort)."""
     try:

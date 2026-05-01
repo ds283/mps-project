@@ -50,6 +50,8 @@
                     let result = [];
                     for (let i = 0; i < items.length; i++) {
                         result.push(items[i].dataset.id);
+                        const badge = items[i].querySelector('.band-position-badge');
+                        if (badge) badge.textContent = i;
                     }
                     clearTimeout(_bandSaveTimer);
                     _bandSaveTimer = setTimeout(function() { sendBandAjax(result); }, 400);
@@ -179,6 +181,12 @@
                 </div>
 
                 {# Band list #}
+                <p class="text-body-secondary small mb-2">
+                    <i class="fas fa-info-circle fa-fw me-1"></i>
+                    Bands must be ordered <strong>lowest grade first</strong> (e.g. Fail &rarr; Pass &rarr; Merit &rarr; Distinction).
+                    The LLM grading prompt uses this order to apply cross-band assessment rules correctly.
+                    Drag bands to reorder them.
+                </p>
                 {% if grading_rubric.bands.count() == 0 %}
                     <p class="text-body-secondary">
                         No bands defined yet. Use <strong>Add band</strong> below to start building your rubric.
@@ -190,6 +198,9 @@
                         <div class="card border-secondary mb-3" data-id="{{ band.id }}">
                             <div class="card-header bg-secondary-subtle d-flex flex-row align-items-center gap-2">
                                 <i class="fas fa-bars band-drag-handle me-1 text-muted" style="cursor:grab; flex-shrink:0"></i>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border band-position-badge"
+                                      style="flex-shrink:0; font-variant-numeric: tabular-nums"
+                                      title="Stored position value (lower = presented first in the grading prompt)">{{ band.position }}</span>
                                 <form method="POST"
                                       action="{{ url_for('convenor.edit_rubric_band', band_id=band.id) }}"
                                       class="flex-grow-1 me-2">

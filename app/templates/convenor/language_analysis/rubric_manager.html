@@ -1,0 +1,312 @@
+{% extends "base_app.html" %}
+{% from "sortable.html" import import_sortable %}
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}Grading rubric &mdash; {{ pclass.name }}{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {% if grading_rubric is not none %}
+        {{ import_sortable() }}
+
+        <script type="text/javascript">
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+            $.ajaxSetup({
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-CSRFToken', $('#csrf-token').val());
+                }
+            });
+
+            function sendBandAjax(ranking) {
+                $.ajax({
+                    url: $SCRIPT_ROOT + '/convenor/reorder_rubric_bands/{{ grading_rubric.id }}',
+                    type: 'POST',
+                    data: JSON.stringify({ranking: ranking}),
+                    contentType: 'application/json; charset=utf-8',
+                    error: function() { console.log('Failed to save band order'); }
+                });
+            }
+
+            function sendCritAjax(ranking, bandId) {
+                $.ajax({
+                    url: $SCRIPT_ROOT + '/convenor/reorder_rubric_criteria/' + bandId,
+                    type: 'POST',
+                    data: JSON.stringify({ranking: ranking, band_id: bandId}),
+                    contentType: 'application/json; charset=utf-8',
+                    error: function() { console.log('Failed to save criterion order'); }
+                });
+            }
+
+            let _bandSaveTimer = null;
+            let _critSaveTimer = null;
+
+            Sortable.create(document.getElementById('band-list'), {
+                handle: '.band-drag-handle',
+                animation: 150,
+                onEnd: function(e) {
+                    if (e.oldIndex === e.newIndex) return;
+                    const items = e.to.children;
+                    let result = [];
+                    for (let i = 0; i < items.length; i++) {
+                        result.push(items[i].dataset.id);
+                    }
+                    clearTimeout(_bandSaveTimer);
+                    _bandSaveTimer = setTimeout(function() { sendBandAjax(result); }, 400);
+                }
+            });
+
+            document.querySelectorAll('.criterion-list').forEach(function(el) {
+                Sortable.create(el, {
+                    handle: '.crit-drag-handle',
+                    animation: 150,
+                    group: 'criteria',
+                    onEnd: function(e) {
+                        if (e.oldIndex === e.newIndex && e.from === e.to) return;
+                        const destList = e.to;
+                        const destBandId = destList.dataset.bandId;
+                        const items = destList.children;
+                        let result = [];
+                        for (let i = 0; i < items.length; i++) {
+                            result.push(items[i].dataset.id);
+                        }
+                        clearTimeout(_critSaveTimer);
+                        _critSaveTimer = setTimeout(function() { sendCritAjax(result, destBandId); }, 400);
+                    }
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock %}
+
+{% block bodyblock %}
+    {% if grading_rubric is not none %}
+        <input type="hidden" id="csrf-token" value="{{ form.csrf_token._value() }}">
+    {% endif %}
+
+    {% if url is not none and text is not none %}
+        <div class="d-flex align-items-center mt-1 mb-2">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="alert alert-primary mt-1 mb-2">
+        {% call icon_block("graduation-cap") %}
+            <strong>Grading rubric &mdash; {{ pclass.name }}</strong>
+            <div class="mt-1">
+                Configure the AI grading rubric used when automatically assessing student report submissions.
+                Bands group related criteria; criteria specify individual assessment points.
+                Drag bands or criteria to reorder them. Criteria can be dragged between bands.
+            </div>
+        {% endcall %}
+    </div>
+
+    {# ------------------------------------------------------------------ #}
+    {# Rubric selector row — always visible                                #}
+    {# ------------------------------------------------------------------ #}
+    <div class="d-flex flex-row align-items-center gap-2 mt-2 mb-2">
+        {% if all_rubrics|length > 0 %}
+            <label class="form-label mb-0 text-nowrap fw-semibold small" for="rubric-selector">Editing rubric:</label>
+            <select id="rubric-selector" class="form-select form-select-sm" style="max-width:20rem"
+                    onchange="window.location.href=this.options[this.selectedIndex].dataset.url">
+                {% for r in all_rubrics %}
+                    <option data-url="{{ url_for('convenor.grading_rubric', pclass_id=pclass.id,
+                                                 rubric_id=r.id, url=url, text=text) }}"
+                            {% if grading_rubric is not none and r.id == grading_rubric.id %}selected{% endif %}>
+                        {{ r.label }}
+                    </option>
+                {% endfor %}
+            </select>
+        {% endif %}
+        <form method="POST"
+              action="{{ url_for('convenor.create_grading_rubric', pclass_id=pclass.id) }}">
+            {{ action_form.hidden_tag() }}
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-plus fa-fw me-1"></i> New rubric&hellip;
+            </button>
+        </form>
+    </div>
+
+    <div class="card border-primary mt-2 mb-3">
+        <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
+            <span><i class="fas fa-graduation-cap fa-fw me-1"></i> Grading rubric</span>
+            {% if grading_rubric is not none %}
+                <a href="{{ url_for('convenor.clone_grading_rubric', pclass_id=pclass.id) }}"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-copy fa-fw me-1"></i> Clone from another project class&hellip;
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+
+            {% if grading_rubric is none %}
+                {# ------------------------------------------------------------------ #}
+                {# No rubric selected / none exist yet                                #}
+                {# ------------------------------------------------------------------ #}
+                <div class="text-body-secondary mb-3">
+                    No grading rubric is currently configured for this project class.
+                    LLM-based automated grading will be skipped until a rubric is defined.
+                    Use the <strong>New rubric&hellip;</strong> button above to create one,
+                    or clone an existing rubric from another project class.
+                </div>
+                {% if all_rubrics|length == 0 %}
+                    {# Clone button only shown when no rubrics exist yet (card-header has none either) #}
+                    <a href="{{ url_for('convenor.clone_grading_rubric', pclass_id=pclass.id) }}"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-copy fa-fw me-1"></i> Clone from another project class&hellip;
+                    </a>
+                {% endif %}
+
+            {% else %}
+                {# ------------------------------------------------------------------ #}
+                {# Rubric editor                                                       #}
+                {# ------------------------------------------------------------------ #}
+
+                {# Rubric label — subtle header, no Save button (press Enter) #}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary-subtle">
+                        <i class="fas fa-tag fa-fw me-1"></i> Rubric label
+                    </div>
+                    <div class="card-body">
+                        <form method="POST"
+                              action="{{ url_for('convenor.edit_grading_rubric_label', rubric_id=grading_rubric.id) }}">
+                            {{ label_form.hidden_tag() }}
+                            {{ label_form.label(class="form-control", placeholder="Rubric label") }}
+                        </form>
+                    </div>
+                </div>
+
+                {# Band list #}
+                {% if grading_rubric.bands.count() == 0 %}
+                    <p class="text-body-secondary">
+                        No bands defined yet. Use <strong>Add band</strong> below to start building your rubric.
+                    </p>
+                {% endif %}
+
+                <div id="band-list">
+                    {% for band in grading_rubric.bands %}
+                        <div class="card border-secondary mb-3" data-id="{{ band.id }}">
+                            <div class="card-header bg-secondary-subtle d-flex flex-row align-items-center gap-2">
+                                <i class="fas fa-bars band-drag-handle me-1 text-muted" style="cursor:grab; flex-shrink:0"></i>
+                                <form method="POST"
+                                      action="{{ url_for('convenor.edit_rubric_band', band_id=band.id) }}"
+                                      class="flex-grow-1 me-2">
+                                    {{ band_form.hidden_tag() }}
+                                    <input type="text" name="label" value="{{ band.label }}"
+                                           class="form-control form-control-sm"
+                                           placeholder="Band label">
+                                </form>
+                                {% if band.criteria.count() == 0 %}
+                                    <form method="POST"
+                                          action="{{ url_for('convenor.delete_rubric_band', band_id=band.id) }}">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Delete this band?')">
+                                            <i class="fas fa-trash fa-fw"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+
+                                {% if band.criteria.count() == 0 %}
+                                    <p class="text-body-secondary small">No criteria in this band yet.</p>
+                                {% endif %}
+
+                                <div class="criterion-list" data-band-id="{{ band.id }}">
+                                    {% for criterion in band.criteria %}
+                                        <div class="d-flex flex-row align-items-center gap-2 mb-2 p-1 border rounded"
+                                             data-id="{{ criterion.id }}">
+                                            <i class="fas fa-bars crit-drag-handle text-muted"
+                                               style="cursor:grab; flex-shrink:0"></i>
+
+                                            {# Tag badge doubles as the cycle button — fixed-width cell for alignment #}
+                                            <div style="width:5.5rem; flex-shrink:0; text-align:center">
+                                                <form method="POST"
+                                                      action="{{ url_for('convenor.cycle_rubric_criterion_tag', criterion_id=criterion.id) }}">
+                                                    {{ action_form.hidden_tag() }}
+                                                    {% if criterion.tag == 'negative' %}
+                                                        <button type="submit"
+                                                                class="badge bg-danger-subtle text-danger-emphasis border-0 fw-normal"
+                                                                style="cursor:pointer; font-size:0.8em"
+                                                                data-bs-toggle="tooltip"
+                                                                title="Click to cycle tag: plain → negative → floor → plain">negative</button>
+                                                    {% elif criterion.tag == 'positive_floor' %}
+                                                        <button type="submit"
+                                                                class="badge bg-success-subtle text-success-emphasis border-0 fw-normal"
+                                                                style="cursor:pointer; font-size:0.8em"
+                                                                data-bs-toggle="tooltip"
+                                                                title="Click to cycle tag: plain → negative → floor → plain">floor</button>
+                                                    {% else %}
+                                                        <button type="submit"
+                                                                class="badge bg-secondary-subtle text-secondary-emphasis border-0 fw-normal"
+                                                                style="cursor:pointer; font-size:0.8em"
+                                                                data-bs-toggle="tooltip"
+                                                                title="Click to cycle tag: plain → negative → floor → plain">plain</button>
+                                                    {% endif %}
+                                                </form>
+                                            </div>
+
+                                            {# Criterion text — no Save button, press Enter #}
+                                            <form method="POST"
+                                                  action="{{ url_for('convenor.edit_rubric_criterion', criterion_id=criterion.id) }}"
+                                                  class="flex-grow-1">
+                                                {{ crit_form.hidden_tag() }}
+                                                <input type="text" name="text" value="{{ criterion.text }}"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="Criterion text">
+                                            </form>
+
+                                            {# Delete #}
+                                            <form method="POST"
+                                                  action="{{ url_for('convenor.delete_rubric_criterion', criterion_id=criterion.id) }}">
+                                                {{ action_form.hidden_tag() }}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger flex-shrink-0"
+                                                        onclick="return confirm('Delete this criterion?')">
+                                                    <i class="fas fa-trash fa-fw"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="mt-2">
+                                    <form method="POST"
+                                          action="{{ url_for('convenor.add_rubric_criterion', band_id=band.id) }}">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-plus fa-fw me-1"></i> Add criterion
+                                        </button>
+                                    </form>
+                                </div>
+
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {# Add band button #}
+                <div class="d-flex flex-row gap-2 mt-2">
+                    <form method="POST"
+                          action="{{ url_for('convenor.add_rubric_band', rubric_id=grading_rubric.id) }}">
+                        {{ action_form.hidden_tag() }}
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="fas fa-plus fa-fw me-1"></i> Add band
+                        </button>
+                    </form>
+                </div>
+
+                {# Tag legend #}
+                <div class="mt-3 p-2 border rounded bg-light small text-body-secondary">
+                    <strong>Tag meanings:</strong>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">plain</span> no special weighting &nbsp;
+                    <span class="badge bg-danger-subtle text-danger-emphasis ms-1">negative</span> criterion penalises the overall score &nbsp;
+                    <span class="badge bg-success-subtle text-success-emphasis ms-1">floor</span> criterion sets a positive minimum score floor
+                </div>
+
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

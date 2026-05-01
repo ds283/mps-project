@@ -1577,6 +1577,22 @@ class ReorderForm(Form):
     pass
 
 
+class EditRubricLabelForm(Form):
+    label = StringField("Label", validators=[DataRequired()])
+
+
+class EditRubricBandForm(Form):
+    label = StringField("Label", validators=[DataRequired()])
+
+
+class EditRubricCriterionForm(Form):
+    text = StringField("Text", validators=[DataRequired()])
+
+
+class CloneRubricForm(Form):
+    source_rubric_id = SelectField("Source rubric", coerce=int, validators=[DataRequired()])
+
+
 def build_resolve_risk_factors_form():
     """
     Dynamically build a WTForms form class with one BooleanField and one TextAreaField

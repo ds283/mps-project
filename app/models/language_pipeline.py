@@ -46,7 +46,7 @@ class GradingRubric(db.Model):
 
     def clone_to(self, target_project_class):
         new_rubric = GradingRubric(
-            project_class_id=target_project_class.id,
+            pclass_id=target_project_class.id,
             label=self.label,
         )
         for band in self.bands:

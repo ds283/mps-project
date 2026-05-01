@@ -1,0 +1,72 @@
+{% extends "base_app.html" %}
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}Clone grading rubric &mdash; {{ pclass.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-1 mb-2">
+        <a href="{{ url_for('convenor.grading_rubric', pclass_id=pclass.id) }}"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Grading rubric
+        </a>
+    </div>
+
+    <div class="alert alert-primary mt-1 mb-2">
+        {% call icon_block("copy") %}
+            <strong>Clone grading rubric &mdash; {{ pclass.name }}</strong>
+            <div class="mt-1">
+                Copy a rubric from another project class and add it to <strong>{{ pclass.name }}</strong>.
+                Existing rubrics are not affected.
+                The copy is independent &mdash; changes made afterwards will not affect the source.
+                If the rubric label already exists for this project class, a unique name is generated automatically.
+            </div>
+        {% endcall %}
+    </div>
+
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-copy fa-fw me-1"></i> Select source rubric
+        </div>
+        <div class="card-body">
+
+            {% if candidate_rubrics|length == 0 %}
+                <p class="text-body-secondary">
+                    No rubrics are available to clone from other project classes.
+                </p>
+                <a href="{{ url_for('convenor.grading_rubric', pclass_id=pclass.id) }}"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </a>
+
+            {% else %}
+                <form method="POST"
+                      action="{{ url_for('convenor.clone_grading_rubric', pclass_id=pclass.id) }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label for="{{ form.source_rubric_id.id }}" class="form-label fw-semibold">
+                            Source rubric
+                        </label>
+                        {{ form.source_rubric_id(class="form-select", id=form.source_rubric_id.id) }}
+                        {% if form.source_rubric_id.errors %}
+                            {% for error in form.source_rubric_id.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex flex-row gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-copy fa-fw me-1"></i> Clone rubric
+                        </button>
+                        <a href="{{ url_for('convenor.grading_rubric', pclass_id=pclass.id) }}"
+                           class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

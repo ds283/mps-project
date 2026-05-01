@@ -45,6 +45,14 @@
                             url=url_for('convenor.resources', pclass_id=pclass.id),
                             text='Resources manager')
                 ) }}
+                {{ resource_card(
+                    "fas fa-graduation-cap fa-fw text-primary",
+                    "Grading rubric",
+                    "Configure the AI grading rubric used to automatically assess student report submissions.",
+                    url_for('convenor.grading_rubric', pclass_id=pclass.id,
+                            url=url_for('convenor.resources', pclass_id=pclass.id),
+                            text='Resources manager')
+                ) }}
             {% endcall %}
         </div>
     </div>

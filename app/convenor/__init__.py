@@ -19,6 +19,7 @@ from . import (
     email_templates,
     feedback_resources,
     journal,
+    language_analysis,
     lifecycle,
     markingevent,
     marking_feedback,

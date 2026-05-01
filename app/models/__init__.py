@@ -55,6 +55,7 @@ from .scheduling import *
 from .students import *
 from .submissions import *
 from .tenants import *
+from .ai_calibration import *
 from .users import *
 from .utilities import *
 from .journal import *

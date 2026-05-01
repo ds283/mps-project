@@ -14,6 +14,8 @@ import re
 import time
 import unicodedata
 
+import requests
+
 import numpy as np
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery import chord, group as cgroup, states
@@ -822,82 +824,170 @@ def _count_patterns(text: str) -> dict:
     }
 
 
+def _compute_chunk_nll(chunk_text: str, ollama_url: str, model: str) -> float | None:
+    """
+    Return mean NLL per token (base e) for chunk_text.
+
+    Uses the Ollama OpenAI-compatible /v1/completions endpoint with echo=True
+    and logprobs=1 so that log-probabilities are returned for prompt tokens
+    without generating any new tokens.
+
+    Returns None on any error (non-fatal).
+    """
+    try:
+        resp = requests.post(
+            f"{ollama_url.rstrip('/')}/v1/completions",
+            json={
+                "model": model,
+                "prompt": chunk_text,
+                "max_tokens": 0,
+                "echo": True,
+                "logprobs": 1,
+            },
+            timeout=300,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        choices = body.get("choices", [])
+        if not choices:
+            return None
+        token_logprobs = (choices[0].get("logprobs") or {}).get("token_logprobs", [])
+        # First token has no preceding context → logprob is None; skip it.
+        valid = [lp for lp in token_logprobs if lp is not None]
+        if not valid:
+            return None
+        return float(-np.mean(valid))
+    except Exception:
+        return None
+
+
+def _aggregate_nll(chunk_nlls: list) -> dict | None:
+    """
+    Aggregate per-chunk NLL values.
+
+    Returns {"mean_nll": float, "nll_cv": float} when ≥2 valid values are
+    present, otherwise None.  nll_cv (coefficient of variation) is
+    informational only — stored for display but not used as a Mahalanobis
+    feature dimension.
+    """
+    valid = [v for v in chunk_nlls if v is not None]
+    if len(valid) < 2:
+        return None
+    arr = np.array(valid, dtype=float)
+    mean_nll = float(arr.mean())
+    nll_cv = float(arr.std(ddof=1) / mean_nll) if mean_nll != 0.0 else 0.0
+    return {"mean_nll": mean_nll, "nll_cv": nll_cv}
+
+
 def _ai_concern_flag(
     mattr: float | None,
     mtld: float | None,
     sentence_cv: float | None,
-    calibration: dict | None,
+    calibrations: list | None,
+    mean_nll: float | None = None,
+    llm_model_name: str | None = None,
+    llm_context_window: int | None = None,
 ) -> dict:
     """
-    Classify the overall AI concern level using the Mahalanobis distance from
-    the pre-LLM centroid in (MATTR, MTLD, sentence_CV) space.
+    Classify the overall AI concern level using Mahalanobis distance tests
+    across all applicable TenantAICalibration objects.
 
-    Background
-    ----------
-    Let x = (MATTR, MTLD, sentence_CV) and let μ, Σ be the mean vector and
-    covariance matrix estimated from a set of pre-LLM submissions (years
-    2019/20–2021/22 by default).  The squared Mahalanobis distance
+    For each calibration:
+      "lexical" (3D) — uses (MATTR, MTLD, sentence_cv) if all are available.
+      "full"    (4D) — uses (MATTR, MTLD, sentence_cv, mean_nll) if all are
+                       available and the calibration's LLM model/context window
+                       matches (llm_model_name, llm_context_window).
 
-        D² = (x − μ)ᵀ Σ⁻¹ (x − μ)
-
-    follows a chi²(df=3) distribution under the null hypothesis that the
-    submission was drawn from the same pre-LLM population.  We therefore
-    classify using survival-function (upper-tail) p-value thresholds:
-
-        p > 0.05          → "low"    (D² < chi²_0.95(3) ≈ 7.815, σ < 2.80)
-        0.01 < p ≤ 0.05   → "medium" (D² ≥ chi²_0.95(3), σ ≥ 2.80)
-        p ≤ 0.01          → "high"   (D² ≥ chi²_0.99(3) ≈ 11.345, σ ≥ 3.37)
-
-    The chi² thresholds are derived at runtime from scipy.stats.chi2.isf so
-    the source of the cut-off values is transparent and not hard-coded.
-
-    Because MATTR and MTLD are strongly correlated the empirical covariance
-    matrix is often ill-conditioned; the calibration module inverts it via the
-    Moore-Penrose pseudoinverse (numpy.linalg.pinv), which is robust to this.
+    Bonferroni correction: per-test alpha = 0.05/K (medium) and 0.01/K (high),
+    where K is the number of calibrations actually evaluated.  The flag fires
+    if any individual test exceeds its corrected threshold.
 
     Graceful degradation
     --------------------
-    Returns concern="uncalibrated" (with sigma=None, p_value=None) when:
-      - calibration is None (tenant has not yet run the calibration step), or
-      - any of the three required metric values is None (report too short for
-        reliable measurement).
+    Returns concern="uncalibrated" (sigma=None, p_value=None) when:
+      - calibrations is None or empty, or
+      - no calibration has all required features available.
 
     Returns
     -------
     dict with keys:
         "concern"  : "low" | "medium" | "high" | "uncalibrated"
-        "sigma"    : float | None  — Mahalanobis sigma (= sqrt(D²))
-        "p_value"  : float | None  — P(chi²(3) > D²)
+        "sigma"    : float | None  — sigma from the most significant test
+        "p_value"  : float | None  — p_value from the most significant test
     """
-    from scipy.stats import chi2 as _chi2
-
     _UNCALIBRATED = {"concern": "uncalibrated", "sigma": None, "p_value": None}
 
-    if calibration is None or mattr is None or mtld is None or sentence_cv is None:
+    if not calibrations:
         return _UNCALIBRATED
 
-    try:
-        sigma, p_value = mahalanobis_distance(mattr, mtld, sentence_cv, calibration)
-    except Exception:
+    # Build the list of (calibration_obj, feature_vector) pairs that can be
+    # evaluated given the metrics available for this submission.
+    applicable = []
+    for cal in calibrations:
+        if cal.feature_set == "lexical":
+            if mattr is None or mtld is None or sentence_cv is None:
+                continue
+            applicable.append((cal, [mattr, mtld, sentence_cv]))
+        elif cal.feature_set == "full":
+            if any(v is None for v in [mattr, mtld, sentence_cv, mean_nll]):
+                continue
+            if not cal.is_llm_matched(llm_model_name, llm_context_window):
+                continue
+            applicable.append((cal, [mattr, mtld, sentence_cv, mean_nll]))
+
+    K = len(applicable)
+    if K == 0:
         return _UNCALIBRATED
 
-    # Derive thresholds from the chi²(df=3) distribution at the desired
-    # significance levels.  isf(q, df) = inverse survival function = the value
-    # x such that P(chi²(df) > x) = q.
-    #
-    #   isf(0.05, 3) ≈ 7.815  →  sqrt ≈ 2.795  (commonly quoted as 2.80)
-    #   isf(0.01, 3) ≈ 11.345 →  sqrt ≈ 3.368  (commonly quoted as 3.37)
-    _SIGMA_MEDIUM = float(_chi2.isf(0.05, df=3) ** 0.5)  # p < 0.05 threshold
-    _SIGMA_HIGH = float(_chi2.isf(0.01, df=3) ** 0.5)    # p < 0.01 threshold
+    alpha_medium = 0.05 / K
+    alpha_high = 0.01 / K
 
-    if sigma >= _SIGMA_HIGH:
-        concern = "high"
-    elif sigma >= _SIGMA_MEDIUM:
-        concern = "medium"
-    else:
-        concern = "low"
+    best_sigma: float | None = None
+    best_p_value: float = 1.0
+    overall_concern = "low"
+    cal_results = []
 
-    return {"concern": concern, "sigma": sigma, "p_value": p_value}
+    for cal, features in applicable:
+        try:
+            sigma, p_value = mahalanobis_distance(features, cal)
+        except Exception:
+            continue
+
+        if best_sigma is None or p_value < best_p_value:
+            best_sigma = sigma
+            best_p_value = p_value
+
+        if p_value <= alpha_high:
+            this_concern = "high"
+            overall_concern = "high"
+        elif p_value <= alpha_medium:
+            this_concern = "medium"
+            if overall_concern != "high":
+                overall_concern = "medium"
+        else:
+            this_concern = "low"
+
+        cal_results.append({
+            "feature_set": cal.feature_set,
+            "llm_model_name": cal.llm_model_name,
+            "llm_context_window": cal.llm_context_window,
+            "sigma": sigma,
+            "p_value": p_value,
+            "concern": this_concern,
+        })
+
+    if best_sigma is None:
+        return _UNCALIBRATED
+
+    return {
+        "concern": overall_concern,
+        "sigma": best_sigma,
+        "p_value": best_p_value,
+        "calibration_results": cal_results,
+        "bonferroni_k": K,
+        "bonferroni_alpha_medium": alpha_medium,
+        "bonferroni_alpha_high": alpha_high,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -2203,20 +2293,22 @@ def register_language_analysis_tasks(celery):
         burst_flag = classify_burstiness(metrics.get("burstiness"))
         cv_flag = classify_sentence_cv(metrics.get("sentence_cv"))
 
-        # Fetch calibration data from the tenant associated with this project class.
-        calibration: dict | None = None
+        # Fetch calibrations from the tenant associated with this project class.
+        # NLL metrics are not available at this stage; full calibrations will be
+        # re-evaluated by submit_to_llm once NLL has been computed.
+        calibrations: list = []
         try:
             pclass = record.period.config.project_class
             tenant = pclass.tenant if pclass else None
-            calibration = tenant.ai_calibration_data if tenant else None
+            calibrations = list(tenant.ai_calibrations) if tenant else []
         except Exception:
-            calibration = None
+            calibrations = []
 
         ai_result = _ai_concern_flag(
             metrics.get("mattr"),
             metrics.get("mtld"),
             metrics.get("sentence_cv"),
-            calibration,
+            calibrations,
         )
 
         flags = {
@@ -2227,6 +2319,10 @@ def register_language_analysis_tasks(celery):
             "ai_concern": ai_result["concern"],
             "mahalanobis_sigma": ai_result["sigma"],
             "mahalanobis_pvalue": ai_result["p_value"],
+            "calibration_results": ai_result.get("calibration_results", []),
+            "bonferroni_k": ai_result.get("bonferroni_k", 0),
+            "bonferroni_alpha_medium": ai_result.get("bonferroni_alpha_medium"),
+            "bonferroni_alpha_high": ai_result.get("bonferroni_alpha_high"),
         }
 
         # --- persist ---------------------------------------------------------
@@ -2400,6 +2496,12 @@ def register_language_analysis_tasks(celery):
         prompt_hash_val: str | None = None
         num_chunks = 1  # updated to actual chunk count on the chunked path
 
+        # NLL accumulators — populated by whichever path runs below.
+        single_pass_mean_nll: float | None = None
+        single_pass_nll_cv: float | None = None
+        chunked_mean_nll: float | None = None
+        chunked_nll_cv: float | None = None
+
         if doc_words <= single_pass_word_budget:
             # ----------------------------------------------------------------
             # Single-pass path: document fits within the context window.
@@ -2417,6 +2519,9 @@ def register_language_analysis_tasks(celery):
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/single-pass (record #{record_id})",
             )
+            # One NLL call for the whole document; nll_cv cannot be computed
+            # from a single value and stays None.
+            single_pass_mean_nll = _compute_chunk_nll(clean_text, base_url, model)
 
         else:
             # ----------------------------------------------------------------
@@ -2516,6 +2621,9 @@ def register_language_analysis_tasks(celery):
                     chunk_failure_reason = f"chunk {idx + 1}/{total_chunks} failed: {last_exc}"
                     break
 
+                # Compute NLL alongside evidence extraction; non-fatal if None.
+                chunk_nll = _compute_chunk_nll(chunk_text, base_url, model)
+
                 chunk_results[str(idx)] = chunk_parsed
                 completed_chunks.add(idx)
                 chunk_state = {
@@ -2523,6 +2631,7 @@ def register_language_analysis_tasks(celery):
                     "chunk_word_budget": chunk_word_budget,
                     "completed": list(completed_chunks),
                     "results": chunk_results,
+                    "nll_per_chunk": {**chunk_state.get("nll_per_chunk", {}), str(idx): chunk_nll},
                 }
                 data["_llm_chunks"] = chunk_state
                 record = db.session.get(SubmissionRecord, record_id)
@@ -2572,6 +2681,12 @@ def register_language_analysis_tasks(celery):
                     )
                     raise self.retry()
                 return
+
+            # -- Aggregate NLL across chunks before synthesis ---------------
+            raw_nlls = [chunk_state.get("nll_per_chunk", {}).get(str(i)) for i in range(total_chunks)]
+            nll_agg = _aggregate_nll(raw_nlls)
+            chunked_mean_nll = nll_agg["mean_nll"] if nll_agg else None
+            chunked_nll_cv = nll_agg["nll_cv"] if nll_agg else None
 
             # -- Step 3: synthesis (reduce phase) -------------------------
             merged = _merge_chunk_evidence(chunk_results, all_criterion_codes)
@@ -2631,6 +2746,15 @@ def register_language_analysis_tasks(celery):
             "context_size": context_size,
             "num_chunks": num_chunks,
         }
+
+        # Merge NLL values into metrics now that they are available.
+        mean_nll = single_pass_mean_nll if doc_words <= single_pass_word_budget else chunked_mean_nll
+        nll_cv = single_pass_nll_cv if doc_words <= single_pass_word_budget else chunked_nll_cv
+        metrics = data.get("metrics", {})
+        metrics["mean_nll"] = mean_nll
+        metrics["nll_cv"] = nll_cv  # informational; not a Mahalanobis feature
+        data["metrics"] = metrics
+
         # Reload the record with a fresh DB connection before writing results.
         # The session was closed before the LLM call to prevent connection staleness.
         record = db.session.get(SubmissionRecord, record_id)
@@ -2639,6 +2763,34 @@ def register_language_analysis_tasks(celery):
         record.llm_model_name = model
         record.llm_context_size = context_size
         record.llm_num_chunks = num_chunks
+
+        # Re-evaluate the AI concern flag now that NLL is available, so full
+        # (4D) calibrations can be applied alongside lexical ones.
+        try:
+            _pclass = record.period.config.project_class if record.period and record.period.config else None
+            _tenant = _pclass.tenant if _pclass else None
+            _calibrations = list(_tenant.ai_calibrations) if _tenant else []
+        except Exception:
+            _calibrations = []
+
+        _ai_result = _ai_concern_flag(
+            metrics.get("mattr"),
+            metrics.get("mtld"),
+            metrics.get("sentence_cv"),
+            _calibrations,
+            mean_nll=mean_nll,
+            llm_model_name=model,
+            llm_context_window=context_size,
+        )
+        _flags = data.get("flags", {})
+        _flags["ai_concern"] = _ai_result["concern"]
+        _flags["mahalanobis_sigma"] = _ai_result["sigma"]
+        _flags["mahalanobis_pvalue"] = _ai_result["p_value"]
+        _flags["calibration_results"] = _ai_result.get("calibration_results", [])
+        _flags["bonferroni_k"] = _ai_result.get("bonferroni_k", 0)
+        _flags["bonferroni_alpha_medium"] = _ai_result.get("bonferroni_alpha_medium")
+        _flags["bonferroni_alpha_high"] = _ai_result.get("bonferroni_alpha_high")
+        data["flags"] = _flags
 
         if parsed_result is not None:
             # Success: store result.
@@ -2991,7 +3143,7 @@ def register_language_analysis_tasks(celery):
     # Helpers shared by both recalculate modes
     # ---------------------------------------------------------------------------
 
-    def _reclassify_record(record, calibration) -> bool:
+    def _reclassify_record(record, calibrations: list) -> bool:
         """Re-run _ai_concern_flag and risk factors for *record* using stored metrics.
 
         Returns True on success.  Caller is responsible for committing.
@@ -3004,11 +3156,18 @@ def register_language_analysis_tasks(celery):
             metrics.get("mattr"),
             metrics.get("mtld"),
             metrics.get("sentence_cv"),
-            calibration,
+            calibrations,
+            mean_nll=metrics.get("mean_nll"),
+            llm_model_name=record.llm_model_name,
+            llm_context_window=record.llm_context_size,
         )
         flags["ai_concern"] = ai_result["concern"]
         flags["mahalanobis_sigma"] = ai_result["sigma"]
         flags["mahalanobis_pvalue"] = ai_result["p_value"]
+        flags["calibration_results"] = ai_result.get("calibration_results", [])
+        flags["bonferroni_k"] = ai_result.get("bonferroni_k", 0)
+        flags["bonferroni_alpha_medium"] = ai_result.get("bonferroni_alpha_medium")
+        flags["bonferroni_alpha_high"] = ai_result.get("bonferroni_alpha_high")
         la["flags"] = flags
         record.set_language_analysis_data(la)
 
@@ -3061,8 +3220,8 @@ def register_language_analysis_tasks(celery):
             current_app.logger.error(f"recalculate_ai_concern_batch: Tenant #{tenant_id} not found")
             return {"updated": 0, "skipped": len(record_ids), "errors": 0}
 
-        calibration = tenant.ai_calibration_data
-        if calibration is None:
+        calibrations = list(tenant.ai_calibrations)
+        if not calibrations:
             current_app.logger.warning("recalculate_ai_concern_batch: no calibration data — skipping batch")
             return {"updated": 0, "skipped": len(record_ids), "errors": 0}
 
@@ -3139,10 +3298,20 @@ def register_language_analysis_tasks(celery):
 
                 # Re-classify using fresh metric values.
                 flags = la.get("flags", {})
-                ai_result = _ai_concern_flag(mattr, mtld, sentence_cv, calibration)
+                ai_result = _ai_concern_flag(
+                    mattr, mtld, sentence_cv,
+                    calibrations,
+                    mean_nll=metrics.get("mean_nll"),
+                    llm_model_name=record.llm_model_name,
+                    llm_context_window=record.llm_context_size,
+                )
                 flags["ai_concern"] = ai_result["concern"]
                 flags["mahalanobis_sigma"] = ai_result["sigma"]
                 flags["mahalanobis_pvalue"] = ai_result["p_value"]
+                flags["calibration_results"] = ai_result.get("calibration_results", [])
+                flags["bonferroni_k"] = ai_result.get("bonferroni_k", 0)
+                flags["bonferroni_alpha_medium"] = ai_result.get("bonferroni_alpha_medium")
+                flags["bonferroni_alpha_high"] = ai_result.get("bonferroni_alpha_high")
                 la["flags"] = flags
                 record.set_language_analysis_data(la)
 
@@ -3251,8 +3420,8 @@ def register_language_analysis_tasks(celery):
             progress_update(task_id, TaskRecord.FAILURE, 100, "Tenant not found", autocommit=True)
             return
 
-        calibration = tenant.ai_calibration_data
-        if calibration is None:
+        calibrations = list(tenant.ai_calibrations)
+        if not calibrations:
             current_app.logger.warning("recalculate_ai_concern: tenant has no calibration data — aborting")
             progress_update(task_id, TaskRecord.FAILURE, 100, "No calibration data available", autocommit=True)
             return
@@ -3338,7 +3507,7 @@ def register_language_analysis_tasks(celery):
         updated = 0
         for i, record in enumerate(records, start=1):
             try:
-                _reclassify_record(record, calibration)
+                _reclassify_record(record, calibrations)
                 updated += 1
 
                 if updated % 50 == 0:

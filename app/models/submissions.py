@@ -2343,6 +2343,13 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         ai_concern = flags.get("ai_concern", "low")
         mahalanobis_sigma = flags.get("mahalanobis_sigma")
         mahalanobis_pvalue = flags.get("mahalanobis_pvalue")
+        calibration_results = flags.get("calibration_results", [])
+        bonferroni_k = flags.get("bonferroni_k", 0)
+        bonferroni_alpha_medium = flags.get("bonferroni_alpha_medium")
+        bonferroni_alpha_high = flags.get("bonferroni_alpha_high")
+
+        mean_nll = metrics.get("mean_nll")
+        nll_cv = metrics.get("nll_cv")
 
         return {
             "mattr": metric_entry(mattr, MATTR_NOTE_LOW_THRESHOLD, "mattr_flag"),
@@ -2352,6 +2359,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             "ai_concern": ai_concern,
             "mahalanobis_sigma": mahalanobis_sigma,
             "mahalanobis_pvalue": mahalanobis_pvalue,
+            "calibration_results": calibration_results,
+            "bonferroni_k": bonferroni_k,
+            "bonferroni_alpha_medium": bonferroni_alpha_medium,
+            "bonferroni_alpha_high": bonferroni_alpha_high,
+            "mean_nll": mean_nll,
+            "nll_cv": nll_cv,
             "hedging_count": patterns.get("hedging_total"),
             "filler_count": patterns.get("filler_total"),
             "em_dash_count": patterns.get("em_dash_count"),

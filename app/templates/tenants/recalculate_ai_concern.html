@@ -44,15 +44,73 @@
     </h4>
 </div>
 
-{# ── CURRENT CALIBRATION SUMMARY ── #}
-{% if calibration %}
-<div class="alert alert-secondary small py-2 mb-3">
-    <i class="fas fa-ruler-combined fa-fw me-1"></i>
-    Using calibration from
-    <strong>{{ calibration.calibrated_at[:19].replace("T", " ") if calibration.calibrated_at else "unknown date" }}</strong>
-    &nbsp;|&nbsp; {{ calibration.n_samples }} samples
-    &nbsp;|&nbsp; Years:
-    {% for yr in calibration.included_years %}{{ yr }}{% if not loop.last %}, {% endif %}{% endfor %}
+{# ── CALIBRATIONS SUMMARY TABLE ── #}
+{% if calibrations %}
+<div class="card mb-3">
+    <div class="card-header bg-light small">
+        <i class="fas fa-ruler-combined fa-fw me-1"></i>
+        <strong>Active calibrations</strong>
+        {% if bonferroni_k > 0 %}
+            &mdash; Bonferroni K&nbsp;=&nbsp;{{ bonferroni_k }},
+            per-test &alpha;: medium&nbsp;&lt;&nbsp;{{ "%.4f"|format(alpha_medium) }},
+            high&nbsp;&lt;&nbsp;{{ "%.4f"|format(alpha_high) }}
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>LLM config</th>
+                        <th>Context</th>
+                        <th>Samples</th>
+                        <th>Years</th>
+                        <th>Calibrated</th>
+                        <th>Corrected &alpha; (medium / high)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cal in calibrations %}
+                        <tr class="small">
+                            <td class="align-middle">
+                                {% if cal.feature_set == 'full' %}
+                                    <span class="badge bg-primary">Full (4D)</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Lexical (3D)</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle font-monospace">
+                                {{ cal.llm_model_name or '—' }}
+                            </td>
+                            <td class="align-middle">
+                                {% if cal.llm_context_window %}
+                                    {{ "{:,}".format(cal.llm_context_window) }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">{{ cal.n_samples }}</td>
+                            <td class="align-middle">
+                                {% set yrs = cal.included_years_data %}
+                                {% if yrs %}
+                                    {% if yrs | min == yrs | max %}{{ yrs | min }}{% else %}{{ yrs | min }}&ndash;{{ yrs | max }}{% endif %}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {{ cal.calibrated_at.strftime('%Y-%m-%d') if cal.calibrated_at else '—' }}
+                            </td>
+                            <td class="align-middle font-monospace">
+                                {% if alpha_medium %}
+                                    {{ "%.4f"|format(alpha_medium) }} / {{ "%.4f"|format(alpha_high) }}
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endif %}
 

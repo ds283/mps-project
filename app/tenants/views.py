@@ -25,7 +25,7 @@ from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery, ServerSideInMemoryHandler
 from . import tenants
-from .forms import AddTenantForm, CalibrateAIConcernFormFactory, EditTenantForm, RecalculateAIConcernFormFactory
+from .forms import AddAICalibrationFormFactory, AddTenantForm, DeleteForm, EditTenantForm, RecalculateAIConcernFormFactory
 from ..shared.email_templates import clone_email_template
 from ..shared.workflow_logging import log_db_commit
 
@@ -553,42 +553,154 @@ def _get_available_years(tenant_id: int) -> list[int]:
     return [r[0] for r in rows if r[0] is not None]
 
 
-@tenants.route("/calibrate_ai_concern/<int:tenant_id>", methods=["GET", "POST"])
-@roles_required("root")
-def calibrate_ai_concern(tenant_id):
-    """
-    View and update the Mahalanobis AI-concern calibration for a tenant.
+def _get_llm_configs_from_data(tenant_id: int) -> list[tuple]:
+    """Return sorted distinct (llm_model_name, llm_context_size) pairs from completed submissions."""
+    from ..models import SubmissionPeriodRecord, SubmissionRecord
 
-    GET  — show current calibration status and a form to re-run calibration.
-    POST — run calibration on the selected project classes and years, then
-           redirect back (recalculation of existing submissions is a separate step).
-    """
+    rows = (
+        db.session.query(SubmissionRecord.llm_model_name, SubmissionRecord.llm_context_size)
+        .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+        .join(ProjectClassConfig, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
+        .filter(
+            ProjectClass.tenant_id == tenant_id,
+            SubmissionRecord.llm_model_name.isnot(None),
+            SubmissionRecord.llm_context_size.isnot(None),
+        )
+        .distinct()
+        .order_by(SubmissionRecord.llm_model_name, SubmissionRecord.llm_context_size)
+        .all()
+    )
+    return [(r[0], r[1]) for r in rows]
+
+
+def _uncovered_pclasses(tenant: Tenant) -> list:
+    """Return ProjectClass objects with uses_submission set that have no TenantAICalibration."""
+    covered_ids: set[int] = set()
+    for cal in tenant.ai_calibrations:
+        covered_ids.update(cal.included_pclass_ids_data)
+
+    return [
+        p for p in ProjectClass.query.filter_by(tenant_id=tenant.id).all()
+        if p.uses_submission and p.id not in covered_ids
+    ]
+
+
+@tenants.route("/ai_calibrations/<int:tenant_id>")
+@roles_required("root")
+def ai_calibrations(tenant_id):
+    """Show all TenantAICalibration objects for a tenant and surface coverage warnings."""
+    from ..shared.ai_calibration import CALIBRATION_MIN_SAMPLES
+
+    tenant: Tenant = Tenant.query.get_or_404(tenant_id)
+
+    pclass_by_id = {p.id: p for p in ProjectClass.query.filter_by(tenant_id=tenant_id).all()}
+
+    bonferroni_k = len(tenant.ai_calibrations)
+    alpha_medium = 0.05 / bonferroni_k if bonferroni_k else None
+    alpha_high = 0.01 / bonferroni_k if bonferroni_k else None
+
+    uncovered = _uncovered_pclasses(tenant)
+    delete_form = DeleteForm()
+
+    return render_template_context(
+        "tenants/ai_calibrations.html",
+        tenant=tenant,
+        calibrations=tenant.ai_calibrations,
+        pclass_by_id=pclass_by_id,
+        bonferroni_k=bonferroni_k,
+        alpha_medium=alpha_medium,
+        alpha_high=alpha_high,
+        uncovered=uncovered,
+        min_samples=CALIBRATION_MIN_SAMPLES,
+        delete_form=delete_form,
+        url=url_for("tenants.edit_tenants"),
+        text="Tenant list",
+    )
+
+
+@tenants.route("/add_ai_calibration/<int:tenant_id>", methods=["GET", "POST"])
+@roles_required("root")
+def add_ai_calibration(tenant_id):
+    """Add a new TenantAICalibration for a tenant."""
+    import json as _json
+    from datetime import datetime as _dt
+
+    from ..models.ai_calibration import TenantAICalibration
     from ..shared.ai_calibration import CALIBRATION_MIN_SAMPLES, compute_calibration
 
     tenant: Tenant = Tenant.query.get_or_404(tenant_id)
 
     available_years = _get_available_years(tenant_id)
     year_choices = [(y, str(y)) for y in available_years]
-    pre_llm_default = [y for y in available_years if y <= 2022]
+    llm_configs = _get_llm_configs_from_data(tenant_id)
 
-    FormClass = CalibrateAIConcernFormFactory(tenant_id)
+    FormClass = AddAICalibrationFormFactory(tenant_id, llm_configs)
     form = FormClass(request.form)
     form.years.choices = year_choices
 
     if form.validate_on_submit():
+        feature_set = form.feature_set.data
+        llm_config_val = form.llm_config.data or ""
         pclass_ids = [p.id for p in form.project_classes.data] if form.project_classes.data else None
         years = [int(y) for y in form.years.data] if form.years.data else None
 
+        llm_model_name = None
+        llm_context_window = None
+        if llm_config_val and "::" in llm_config_val:
+            parts = llm_config_val.split("::", 1)
+            llm_model_name = parts[0]
+            try:
+                llm_context_window = int(parts[1])
+            except ValueError:
+                llm_context_window = None
+
+        if feature_set == "full" and (llm_model_name is None or llm_context_window is None):
+            flash("A valid LLM configuration must be selected for full (4D) calibrations.", "error")
+            return redirect(request.url)
+
         try:
-            cal_data = compute_calibration(tenant_id, pclass_ids=pclass_ids, years=years)
-            tenant.set_ai_calibration_data(cal_data)
-            db.session.commit()
-            flash(
-                f"AI concern calibration updated successfully using {cal_data['n_samples']} samples.",
-                "success",
+            cal_data = compute_calibration(
+                tenant_id, pclass_ids=pclass_ids, years=years, feature_set=feature_set
             )
         except ValueError as exc:
             flash(str(exc), "error")
+            return redirect(request.url)
+
+        cal = TenantAICalibration(
+            tenant_id=tenant_id,
+            feature_set=feature_set,
+            llm_model_name=llm_model_name,
+            llm_context_window=llm_context_window,
+            calibrated_at=_dt.fromisoformat(cal_data["calibrated_at"]),
+            n_samples=cal_data["n_samples"],
+            mu=_json.dumps(cal_data["mu"]),
+            sigma_inv=_json.dumps(cal_data["sigma_inv"]),
+            included_pclass_ids=_json.dumps(cal_data["included_pclass_ids"]),
+            included_years=_json.dumps(cal_data["included_years"]),
+        )
+
+        conflicts = cal.validate_pclass_exclusivity(db.session)
+        if conflicts:
+            pcs = ProjectClass.query.filter(ProjectClass.id.in_(conflicts)).all()
+            names = ", ".join(p.abbreviation or p.name for p in pcs)
+            flash(
+                f"Cannot save: the following project classes are already assigned to another "
+                f"calibration with the same feature set and LLM configuration: {names}",
+                "error",
+            )
+            return redirect(request.url)
+
+        try:
+            db.session.add(cal)
+            log_db_commit(
+                f"Added AI calibration ({feature_set}) for tenant {tenant.name}",
+                user=current_user,
+            )
+            flash(
+                f"Calibration saved successfully using {cal_data['n_samples']} samples.",
+                "success",
+            )
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError saving AI calibration", exc_info=exc)
@@ -597,43 +709,58 @@ def calibrate_ai_concern(tenant_id):
                 "error",
             )
 
-        return redirect(url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id))
+        return redirect(url_for("tenants.ai_calibrations", tenant_id=tenant_id))
 
-    # Pre-select all project classes and pre-LLM years on GET.
     if request.method == "GET":
         all_pclasses = ProjectClass.query.filter_by(tenant_id=tenant_id).all()
         form.project_classes.data = all_pclasses
-        form.years.data = pre_llm_default
-
-    cal = tenant.ai_calibration_data
-
-    # Compute eigenvalues of Sigma_inv for display (informational).
-    eigenvalues = None
-    if cal is not None:
-        try:
-            import numpy as np
-            sigma_inv = np.array(cal["sigma_inv"])
-            eigenvalues = sorted(np.linalg.eigvalsh(sigma_inv).tolist(), reverse=True)
-        except Exception:
-            eigenvalues = None
-
-    # Resolve project class names for included IDs.
-    included_pclass_names = []
-    if cal is not None and cal.get("included_pclass_ids"):
-        pcs = ProjectClass.query.filter(ProjectClass.id.in_(cal["included_pclass_ids"])).all()
-        included_pclass_names = [p.name for p in pcs]
+        form.years.data = [y for y in available_years if y <= 2022]
 
     return render_template_context(
-        "tenants/calibrate_ai_concern.html",
+        "tenants/add_ai_calibration.html",
         tenant=tenant,
         form=form,
-        calibration=cal,
-        included_pclass_names=included_pclass_names,
-        eigenvalues=eigenvalues,
+        llm_configs=llm_configs,
         min_samples=CALIBRATION_MIN_SAMPLES,
-        url=url_for("tenants.edit_tenants"),
-        text="Tenant list",
+        url=url_for("tenants.ai_calibrations", tenant_id=tenant_id),
+        text="AI calibrations",
     )
+
+
+@tenants.route("/delete_ai_calibration/<int:tenant_id>/<int:cal_id>", methods=["POST"])
+@roles_required("root")
+def delete_ai_calibration(tenant_id, cal_id):
+    """Delete a TenantAICalibration."""
+    from ..models.ai_calibration import TenantAICalibration
+
+    form = DeleteForm(request.form)
+    if not form.validate():
+        flash("Request validation failed. Please try again.", "error")
+        return redirect(url_for("tenants.ai_calibrations", tenant_id=tenant_id))
+
+    tenant: Tenant = Tenant.query.get_or_404(tenant_id)
+    cal: TenantAICalibration = TenantAICalibration.query.get_or_404(cal_id)
+
+    if cal.tenant_id != tenant_id:
+        flash("This calibration does not belong to the specified tenant.", "error")
+        return redirect(url_for("tenants.ai_calibrations", tenant_id=tenant_id))
+
+    try:
+        db.session.delete(cal)
+        log_db_commit(
+            f"Deleted AI calibration ({cal.feature_set}) for tenant {tenant.name}",
+            user=current_user,
+        )
+        flash("Calibration deleted successfully.", "success")
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError deleting AI calibration", exc_info=exc)
+        flash(
+            "A database error occurred while deleting the calibration. Please contact an administrator.",
+            "error",
+        )
+
+    return redirect(url_for("tenants.ai_calibrations", tenant_id=tenant_id))
 
 
 @tenants.route("/recalculate_ai_concern/<int:tenant_id>", methods=["GET", "POST"])
@@ -648,12 +775,12 @@ def recalculate_ai_concern(tenant_id):
     """
     tenant: Tenant = Tenant.query.get_or_404(tenant_id)
 
-    if tenant.ai_calibration_data is None:
+    if not tenant.ai_calibrations:
         flash(
-            "This tenant has no calibration data yet. Please run the AI calibration step first.",
+            "This tenant has no calibration data yet. Please add a calibration first.",
             "warning",
         )
-        return redirect(url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id))
+        return redirect(url_for("tenants.ai_calibrations", tenant_id=tenant_id))
 
     available_years = _get_available_years(tenant_id)
     year_choices = [(y, str(y)) for y in available_years]
@@ -661,6 +788,11 @@ def recalculate_ai_concern(tenant_id):
     FormClass = RecalculateAIConcernFormFactory(tenant_id)
     form = FormClass(request.form)
     form.years.choices = year_choices
+
+    calibrations = list(tenant.ai_calibrations)
+    bonferroni_k = len(calibrations)
+    alpha_medium = 0.05 / bonferroni_k if bonferroni_k else None
+    alpha_high = 0.01 / bonferroni_k if bonferroni_k else None
 
     if form.validate_on_submit():
         from ..task_queue import register_task
@@ -687,9 +819,8 @@ def recalculate_ai_concern(tenant_id):
                 "Recalculation task has been launched. It will run in the background.",
                 "success",
             )
-        return redirect(url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id))
+        return redirect(url_for("tenants.ai_calibrations", tenant_id=tenant_id))
 
-    # Pre-select all project classes and all years on GET.
     if request.method == "GET":
         all_pclasses = ProjectClass.query.filter_by(tenant_id=tenant_id).all()
         form.project_classes.data = all_pclasses
@@ -699,7 +830,10 @@ def recalculate_ai_concern(tenant_id):
         "tenants/recalculate_ai_concern.html",
         tenant=tenant,
         form=form,
-        calibration=tenant.ai_calibration_data,
-        url=url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id),
-        text="AI calibration",
+        calibrations=calibrations,
+        bonferroni_k=bonferroni_k,
+        alpha_medium=alpha_medium,
+        alpha_high=alpha_high,
+        url=url_for("tenants.ai_calibrations", tenant_id=tenant_id),
+        text="AI calibrations",
     )

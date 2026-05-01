@@ -1,0 +1,102 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    <script>
+        $(document).ready(function () {
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            });
+            $('#years').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            });
+
+            function toggleLLMField() {
+                var fs = $('#feature_set').val();
+                if (fs === 'full') {
+                    $('#llm-config-row').show();
+                } else {
+                    $('#llm-config-row').hide();
+                    $('#llm_config').val('');
+                }
+            }
+            $('#feature_set').on('change', toggleLLMField);
+            toggleLLMField();
+        });
+    </script>
+{% endblock %}
+
+{% block title %}Add AI calibration – {{ tenant.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-plus fa-fw me-1"></i> Add AI calibration
+            <span class="text-body-secondary fw-normal fs-6 ms-2">{{ tenant.name }}</span>
+        </h4>
+    </div>
+
+    {% if llm_configs %}
+        <div class="alert alert-secondary small py-2 mb-3">
+            <i class="fas fa-robot fa-fw me-1"></i>
+            <strong>{{ llm_configs | length }}</strong> LLM configuration{{ 's' if llm_configs | length != 1 else '' }}
+            discovered in stored submission data for this tenant.
+        </div>
+    {% else %}
+        <div class="alert alert-secondary small py-2 mb-3">
+            <i class="fas fa-robot fa-fw me-1"></i>
+            No LLM configurations found in stored submission data.
+            Only <strong>Lexical (3D)</strong> calibrations can be created at this time.
+        </div>
+    {% endif %}
+
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-calculator fa-fw me-1"></i>
+            <strong>Calibration parameters</strong>
+        </div>
+        <div class="card-body">
+            <p class="small text-body-secondary mb-3">
+                Select the calibration type, the project classes and academic years to use as the
+                pre-LLM baseline. The calibration fits a multivariate mean vector &mu; and inverse
+                covariance matrix &Sigma;&sup1; (Moore-Penrose pseudoinverse) for Mahalanobis
+                distance scoring.
+                Minimum {{ min_samples }} samples required.
+            </p>
+            <form action="{{ request.path }}" method="POST" name="add_calibration_form">
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    {{ wtf.render_field(form.feature_set) }}
+                </div>
+
+                <div class="mb-3" id="llm-config-row">
+                    {{ wtf.render_field(form.llm_config) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ wtf.render_field(form.project_classes) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ wtf.render_field(form.years) }}
+                </div>
+
+                <div class="mt-3">
+                    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

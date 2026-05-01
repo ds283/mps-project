@@ -8,11 +8,16 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import json
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import ColouredLabelMixin
+
+if TYPE_CHECKING:
+    from .ai_calibration import TenantAICalibration
 
 
 class Tenant(db.Model, ColouredLabelMixin):
@@ -31,28 +36,22 @@ class Tenant(db.Model, ColouredLabelMixin):
     # in 2026 ATAS campaign
     in_2026_ATAS_campaign = db.Column(db.Boolean, default=False)
 
-    # AI concern calibration data — JSON blob storing the Mahalanobis calibration
-    # for the (MATTR, MTLD, sentence_CV) space. Null until first calibration run.
-    # Schema: {
-    #   "mu": [mu_mattr, mu_mtld, mu_cv],
-    #   "sigma_inv": [[...3×3 row-major pseudoinverse...]],
-    #   "calibrated_at": "ISO datetime string",
-    #   "included_pclass_ids": [int, ...],
-    #   "included_years": [int, ...],
-    #   "n_samples": int
-    # }
-    ai_calibration = db.Column(db.Text(), default=None)
+    # ai_calibrations relationship is defined via backref on TenantAICalibration
 
-    @property
-    def ai_calibration_data(self) -> dict | None:
-        """Deserialise the ai_calibration JSON blob. Returns None if not yet set."""
-        if not self.ai_calibration:
-            return None
-        return json.loads(self.ai_calibration)
-
-    def set_ai_calibration_data(self, data: dict) -> None:
-        """Serialise and store calibration data."""
-        self.ai_calibration = json.dumps(data)
+    def get_calibration(
+        self,
+        feature_set: str = "lexical",
+        llm_model_name: str | None = None,
+        llm_context_window: int | None = None,
+    ) -> "TenantAICalibration | None":
+        """Return the matching TenantAICalibration, or None if not yet calibrated."""
+        for cal in self.ai_calibrations:
+            if cal.feature_set != feature_set:
+                continue
+            if feature_set == "full" and not cal.is_llm_matched(llm_model_name, llm_context_window):
+                continue
+            return cal
+        return None
 
     def make_label(self, text=None):
         if text is None:

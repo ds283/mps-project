@@ -1993,6 +1993,88 @@ def _build_lexical_gauge(metrics_data) -> tuple:
     return div, script
 
 
+def _build_nll_gauge(metrics_data) -> tuple:
+    """
+    Build a single Bokeh gauge for mean NLL (negative log-likelihood per token).
+    Returns (div, script) or (None, None) if mean_nll is absent.
+
+    Lower NLL → text more predictable to the model → higher AI-use concern.
+    The gauge colours accordingly: low NLL values are in the concern zone.
+    Thresholds are illustrative; adjust once empirical ranges are established.
+    """
+    if metrics_data is None:
+        return None, None
+
+    mean_nll = metrics_data.get("mean_nll")
+    if mean_nll is None:
+        return None, None
+
+    _NLL_LOW = 0.0
+    _NLL_HIGH = 6.0
+    _NOTE_THRESHOLD = 2.0   # below this → elevated concern
+    _STRONG_THRESHOLD = 1.0  # below this → strong concern
+
+    display_val = max(_NLL_LOW, min(_NLL_HIGH, mean_nll))
+    flag_col = "#dc3545" if mean_nll <= _STRONG_THRESHOLD else "#ffc107" if mean_nll <= _NOTE_THRESHOLD else "#198754"
+
+    p = figure(
+        height=80,
+        min_width=300,
+        x_range=(_NLL_LOW, _NLL_HIGH),
+        y_range=(-1, 1),
+        toolbar_location=None,
+    )
+    p.sizing_mode = "stretch_width"
+    p.background_fill_color = None
+    p.border_fill_color = None
+    p.outline_line_color = None
+    p.axis.visible = False
+    p.xgrid.visible = False
+    p.ygrid.visible = False
+    p.toolbar.logo = None
+
+    p.quad(left=_NLL_LOW, right=_NLL_HIGH, bottom=-0.35, top=0.35,
+           fill_color="#e9ecef", line_color=None)
+    p.quad(left=_NLL_LOW, right=_STRONG_THRESHOLD, bottom=-0.35, top=0.35,
+           fill_color="#f8d7da", line_color=None)
+    p.quad(left=_STRONG_THRESHOLD, right=_NOTE_THRESHOLD, bottom=-0.35, top=0.35,
+           fill_color="#fff3cd", line_color=None)
+    p.quad(left=_NOTE_THRESHOLD, right=_NLL_HIGH, bottom=-0.35, top=0.35,
+           fill_color="#d1e7dd", line_color=None)
+
+    p.add_layout(Span(location=_STRONG_THRESHOLD, dimension="height",
+                      line_color="#dc3545", line_dash="dashed", line_width=1.5))
+    p.add_layout(Span(location=_NOTE_THRESHOLD, dimension="height",
+                      line_color="#495057", line_dash="dashed", line_width=1.5))
+
+    for x, txt, align, row in [
+        (_NLL_LOW, f"{_NLL_LOW:.1f}", "left", -0.38),
+        (_NLL_HIGH, f"{_NLL_HIGH:.1f}", "right", -0.38),
+        (_NOTE_THRESHOLD, f"note {_NOTE_THRESHOLD:.1f}", "center", -0.38),
+        (_STRONG_THRESHOLD, f"strong {_STRONG_THRESHOLD:.1f}", "center", -0.62),
+    ]:
+        p.add_layout(Label(x=x, y=row, x_units="data", y_units="data",
+                           text=txt, text_font_size="9px",
+                           text_color="#6c757d" if align != "center" else ("#dc3545" if row == -0.62 else "#495057"),
+                           text_align=align, text_baseline="top", background_fill_alpha=0))
+
+    p.add_layout(Label(x=_NLL_LOW, y=0, x_units="data", y_units="data",
+                       text="Mean NLL", text_font_size="11px", text_font_style="bold",
+                       text_align="left", text_baseline="middle",
+                       x_offset=2, y_offset=0, background_fill_alpha=0))
+
+    p.scatter(x=[display_val], y=[0], size=14,
+              fill_color=flag_col, line_color="white", line_width=1.5)
+    p.add_layout(Label(x=display_val, y=0.5, x_units="data", y_units="data",
+                       text=f"{mean_nll:.3f}", text_font_size="10px",
+                       text_color=flag_col, text_font_style="bold",
+                       text_align="center", text_baseline="bottom",
+                       background_fill_alpha=0))
+
+    script, div = components(p)
+    return div, script
+
+
 def _build_document_length_gauge(la_metrics: dict, config) -> tuple:
     """
     Build Bokeh gauge figure(s) for word count and/or page count versus configured limits.
@@ -2236,6 +2318,7 @@ def llm_report(record_id):
     can_admin = current_user.has_role("root") or current_user.has_role("admin")
 
     gauge_div, gauge_script = _build_lexical_gauge(metrics_data)
+    nll_gauge_div, nll_gauge_script = _build_nll_gauge(metrics_data)
 
     la_metrics = la.get("metrics", {})
     length_gauge_div, length_gauge_script = _build_document_length_gauge(
@@ -2258,6 +2341,8 @@ def llm_report(record_id):
         can_admin=can_admin,
         gauge_div=gauge_div,
         gauge_script=gauge_script,
+        nll_gauge_div=nll_gauge_div,
+        nll_gauge_script=nll_gauge_script,
         length_gauge_div=length_gauge_div,
         length_gauge_script=length_gauge_script,
         url=url,

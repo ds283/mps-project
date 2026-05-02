@@ -19,6 +19,145 @@ Each task receives:
 
 The task builds a flat table, uploads the file to MinIO, creates a
 GeneratedAsset + DownloadCentreItem, and posts an in-app notification.
+
+---------------------------------------------------------------------------
+Exported columns
+---------------------------------------------------------------------------
+
+Identifiers and context
+  Record ID             — SubmissionRecord primary key.
+  Academic Year         — Academic year of the submission (e.g. "2025/2026"),
+                          derived from the ProjectClassConfig year field.
+  Project Class         — Abbreviation of the project class (e.g. "MPhys"),
+                          derived from ProjectClass.abbreviation.
+  Submission Period     — Human-readable submission period name.
+  Analysis Complete     — Boolean: True when the language analysis pipeline
+                          has finished for this record.
+
+Lexical diversity metrics
+  These are computed from the body text of the submitted PDF/Word document,
+  after stripping bibliographies, appendices, equations, and code blocks.
+
+  MATTR               — Moving-Average Type-Token Ratio (window 100 tokens).
+                        Measures lexical diversity: lower values may indicate
+                        repetitive phrasing characteristic of LLM output.
+  MTLD                — Measure of Textual Lexical Diversity (threshold 0.72).
+                        Higher values indicate greater vocabulary richness.
+  Burstiness R        — Goh-Barabási burstiness parameter for a set of
+                        AI-tendency indicator words (e.g. "suggest", "indicate",
+                        "significant"). B > 0 means the words cluster; B < 0
+                        means they are evenly spaced. Human writing tends to
+                        produce moderate clustering; AI output can be unusually
+                        uniform (negative B) or unusually clustered.
+  CV                  — Coefficient of variation (σ/μ) of sentence lengths.
+                        Low CV means unnaturally uniform sentence lengths,
+                        which can be a signal of AI-generated text.
+
+LLM-derived statistics
+  These require a successful LLM analysis pass and are None when the LLM
+  pipeline was skipped or fewer than two text chunks were processed.
+
+  Mean NLL            — Mean negative log-likelihood (NLL) of the document
+                        text under the LLM, averaged over processing chunks.
+                        Lower NLL means the model finds the text highly
+                        probable, which can indicate AI authorship. Currently
+                        None in all records because Ollama does not yet expose
+                        logprob computation; the column is reserved for when
+                        that capability becomes available.
+  NLL CV              — Coefficient of variation of per-chunk NLL values.
+                        Informational only; not used as a Mahalanobis feature.
+                        None when fewer than two chunks were processed.
+
+Document properties
+  Pages               — Number of pages in the uploaded PDF (0 for Word docs).
+  Words               — Word count of the main body text (captions excluded).
+  References          — Number of entries detected in the reference list.
+
+Classification flags
+  Individual threshold tests. Each flag value is a string ("low", "medium",
+  or "high") indicating the degree of anomaly detected.
+
+  MATTR Flag          — Concern level for the MATTR score.
+  MTLD Flag           — Concern level for the MTLD score.
+  Burstiness Flag     — Concern level for the burstiness R score.
+  CV Flag             — Concern level for the sentence-length CV score.
+  AI Concern          — Overall AI concern level: "low", "medium", "high",
+                        or "uncalibrated" (when no calibration data exists).
+                        Determined by Mahalanobis distance tests; see below.
+
+Mahalanobis distance statistics
+  The AI concern level is determined by multivariate Mahalanobis distance
+  tests against population calibration data (TenantAICalibration). Two
+  feature sets are supported:
+
+    lexical (3-D) — (MATTR, MTLD, sentence CV)
+    full    (4-D) — (MATTR, MTLD, sentence CV, mean NLL)
+
+  Each calibration object is tested independently and a Bonferroni correction
+  is applied across all K calibrations evaluated. The concern is "high" if any
+  single test exceeds its corrected threshold; "medium" if any exceeds the
+  medium threshold; "low" otherwise.
+
+  Mahalanobis σ (best)    — Sigma (standard deviations from the calibration
+                            centroid) from the most statistically significant
+                            calibration test (lowest p-value).
+  Mahalanobis p (best)    — Corresponding p-value.
+  Mahalanobis σ (lexical) — Sigma from the 3-D lexical calibration, if one
+                            was evaluated. Empty when no lexical calibration
+                            is configured or applicable metrics are missing.
+  Mahalanobis p (lexical) — p-value from the lexical calibration.
+  Mahalanobis σ (full)    — Sigma from the 4-D full calibration, if one was
+                            evaluated. Requires Mean NLL to be non-None and
+                            the LLM model/context window to match the
+                            calibration record.
+  Mahalanobis p (full)    — p-value from the full calibration.
+  Bonferroni K            — Number of calibrations actually evaluated (K).
+                            The alpha thresholds below are divided by K to
+                            control the family-wise error rate.
+  Bonferroni α (medium)   — Corrected significance threshold for the "medium"
+                            concern level: 0.05 / K.
+  Bonferroni α (high)     — Corrected significance threshold for the "high"
+                            concern level: 0.01 / K.
+
+Risk flags
+  Risk Flags (active)  — Semicolon-separated list of active (present and not
+                         yet resolved) risk factor keys for this submission.
+                         Known keys: RISK_TURNITIN, RISK_AI_COMPLIANCE,
+                         RISK_AI_USE, RISK_DOCUMENT_LENGTH,
+                         RISK_WORD_COUNT_DISCREPANCY. Empty when no active
+                         risk factors are present.
+
+Assessment grades
+  Supervision Grade (%)  — Numeric supervision mark, as a percentage.
+  Report Grade (%)       — Numeric report mark, as a percentage.
+  Presentation Grade (%) — Numeric presentation mark, as a percentage.
+
+LLM results and provenance
+  Stated Word Count    — Word count stated by the student in the document
+                         (e.g. near a "Word count:" label), extracted by the
+                         LLM metadata pass. None if not found.
+  LLM Grade Band       — Recommended grade band produced by the LLM assessment
+                         pass (e.g. "1st class", "2.1 class"). Empty if the
+                         LLM analysis failed or was skipped.
+  LLM Model            — Identifier of the LLM model used for analysis
+                         (e.g. "llama3.1:70b"). Empty if LLM analysis was not
+                         run. Mean NLL and Mahalanobis σ (full) values are
+                         only comparable between records that used the same
+                         model and context window.
+  LLM Context Window   — Token context window size used for LLM analysis.
+                         Together with LLM Model, identifies which NLL values
+                         can be validly compared across submissions.
+  LLM Analysis Failed  — Boolean: True when the LLM assessment pass failed
+                         (inference error or JSON parse failure after retries).
+  LLM Feedback Failed  — Boolean: True when all LLM feedback chunks failed;
+                         False when at least one chunk succeeded; None when
+                         the feedback pass was not attempted.
+
+Derived quantities
+  Report Grade Band    — UK degree classification band derived from the
+                         numeric report grade: "1st class" (≥70%), "2.1 class"
+                         (≥60%), "2.2 class" (≥50%), "3rd class" (≥40%),
+                         "Fail" (<40%). Empty when no report grade is recorded.
 """
 
 from datetime import datetime, timedelta
@@ -54,6 +193,8 @@ _COLUMNS = [
     "MTLD",
     "Burstiness R",
     "CV",
+    "Mean NLL",
+    "NLL CV",
     "Pages",
     "Words",
     "References",
@@ -62,12 +203,23 @@ _COLUMNS = [
     "Burstiness Flag",
     "CV Flag",
     "AI Concern",
+    "Mahalanobis σ (best)",
+    "Mahalanobis p (best)",
+    "Mahalanobis σ (lexical)",
+    "Mahalanobis p (lexical)",
+    "Mahalanobis σ (full)",
+    "Mahalanobis p (full)",
+    "Bonferroni K",
+    "Bonferroni α (medium)",
+    "Bonferroni α (high)",
     "Risk Flags (active)",
     "Supervision Grade (%)",
     "Report Grade (%)",
     "Presentation Grade (%)",
     "Stated Word Count",
     "LLM Grade Band",
+    "LLM Model",
+    "LLM Context Window",
     "LLM Analysis Failed",
     "LLM Feedback Failed",
     "Report Grade Band",
@@ -138,6 +290,11 @@ def _build_row(record: SubmissionRecord) -> dict:
         if factor.get("present", False) and not factor.get("resolved", False):
             active_rf.append(key)
 
+    # Per-calibration Mahalanobis results (lexical = 3-D, full = 4-D)
+    cal_results = flags.get("calibration_results", [])
+    lexical_cal = next((c for c in cal_results if c.get("feature_set") == "lexical"), None)
+    full_cal = next((c for c in cal_results if c.get("feature_set") == "full"), None)
+
     return {
         "Record ID": record.id,
         "Academic Year": f"{year}/{year + 1}" if year is not None else "",
@@ -148,6 +305,8 @@ def _build_row(record: SubmissionRecord) -> dict:
         "MTLD": _float(metrics.get("mtld")),
         "Burstiness R": _float(metrics.get("burstiness")),
         "CV": _float(metrics.get("sentence_cv")),
+        "Mean NLL": _float(metrics.get("mean_nll")),
+        "NLL CV": _float(metrics.get("nll_cv")),
         "Pages": _float(la.get("_page_count")),
         "Words": _float(metrics.get("word_count")),
         "References": _float(metrics.get("reference_count")),
@@ -156,12 +315,23 @@ def _build_row(record: SubmissionRecord) -> dict:
         "Burstiness Flag": flags.get("burstiness_flag", ""),
         "CV Flag": flags.get("sentence_cv_flag", ""),
         "AI Concern": flags.get("ai_concern", ""),
+        "Mahalanobis σ (best)": _float(flags.get("mahalanobis_sigma")),
+        "Mahalanobis p (best)": _float(flags.get("mahalanobis_pvalue")),
+        "Mahalanobis σ (lexical)": _float(lexical_cal["sigma"]) if lexical_cal else None,
+        "Mahalanobis p (lexical)": _float(lexical_cal["p_value"]) if lexical_cal else None,
+        "Mahalanobis σ (full)": _float(full_cal["sigma"]) if full_cal else None,
+        "Mahalanobis p (full)": _float(full_cal["p_value"]) if full_cal else None,
+        "Bonferroni K": flags.get("bonferroni_k"),
+        "Bonferroni α (medium)": _float(flags.get("bonferroni_alpha_medium")),
+        "Bonferroni α (high)": _float(flags.get("bonferroni_alpha_high")),
         "Risk Flags (active)": "; ".join(active_rf) if active_rf else "",
         "Supervision Grade (%)": _float(record.supervision_grade),
         "Report Grade (%)": _float(record.report_grade),
         "Presentation Grade (%)": _float(record.presentation_grade),
         "Stated Word Count": llm_result.get("stated_word_count"),
         "LLM Grade Band": llm_result.get("classification", ""),
+        "LLM Model": record.llm_model_name or "",
+        "LLM Context Window": record.llm_context_size,
         "LLM Analysis Failed": record.llm_analysis_failed,
         "LLM Feedback Failed": record.llm_feedback_failed,
         "Report Grade Band": _grade_band(record.report_grade),

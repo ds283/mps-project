@@ -31,6 +31,7 @@ from app.models import (
     EmailTemplateTypesMixin,
     EnrollmentRecord,
     FacultyData,
+    GradingRubric,
     LiveMarkingScheme,
     LiveProject,
     MarkingEvent,
@@ -488,3 +489,45 @@ def ensure_roles(app) -> None:
                 app.logger.exception("SQLAlchemyError in ensure_roles", exc_info=e)
         else:
             print("** ensure_roles: all required roles already present")
+
+
+# ---------------------------------------------------------------------------
+# Back-fill ProjectClassConfig.grading_rubric
+# ---------------------------------------------------------------------------
+
+
+def ensure_config_rubrics(app) -> None:
+    """
+    Idempotently assign a grading rubric to any ProjectClassConfig whose
+    grading_rubric is currently None.  Picks the GradingRubric with the
+    lowest primary key that belongs to the same ProjectClass.  Safe to call
+    on every startup.
+    """
+    with app.app_context():
+        updated = 0
+        configs = db.session.query(ProjectClassConfig).all()
+        for config in configs:
+            if config.grading_rubric is not None:
+                continue
+
+            rubric = (
+                db.session.query(GradingRubric)
+                .filter(GradingRubric.pclass_id == config.pclass_id)
+                .order_by(GradingRubric.id.asc())
+                .first()
+            )
+            if rubric is None:
+                continue
+
+            config.grading_rubric = rubric
+            updated += 1
+            print(f"** ensure_config_rubrics: {config.project_class.name} ({config.year}) → rubric '{rubric.label}'")
+
+        if updated:
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                app.logger.exception("SQLAlchemyError in ensure_config_rubrics", exc_info=e)
+        else:
+            print("** ensure_config_rubrics: all ProjectClassConfig instances already have a rubric (or none available)")

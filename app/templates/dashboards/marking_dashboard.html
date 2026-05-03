@@ -65,11 +65,11 @@
     <div class="container-fluid px-0">
 
         {# ── Page header ── #}
-        <div class="bg-primary bg-opacity-10 border-bottom py-3 px-4 mb-0">
+        <div class="marking-page-header py-3 px-4 mb-0">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div>
                     <h4 class="mb-0 fw-semibold">
-                        <i class="fas fa-clipboard-check text-success me-2"></i>Marking Dashboard
+                        <i class="fas fa-clipboard-check me-2" style="color: var(--db-green-600);"></i>Marking Dashboard
                     </h4>
                     <div class="text-body-secondary small mt-1">Workflow health and progress overview</div>
                 </div>
@@ -160,7 +160,7 @@
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                <button type="submit" class="btn btn-db-green btn-sm">Apply</button>
                 <a href="{{ url_for('dashboards.marking_dashboard') }}"
                    class="btn btn-outline-secondary btn-sm">Reset</a>
                 <span class="ms-auto text-body-secondary small">Auto-refreshes every 15&thinsp;min</span>
@@ -301,8 +301,8 @@
                                                 <span class="badge bg-success-subtle text-success-emphasis"
                                                       style="font-size:10px">Completed</span>
                                             {% else %}
-                                                <span class="badge bg-primary-subtle text-primary-emphasis"
-                                                      style="font-size:10px">In progress</span>
+                                                <span class="badge"
+                                                      style="font-size:10px; background-color: var(--db-green-50); color: var(--db-green-800);">In progress</span>
                                             {% endif %}
                                         </div>
                                     </div>

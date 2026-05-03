@@ -307,7 +307,7 @@
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <div>
                 <h2 class="mb-0 fw-semibold">
-                    <i class="fas fa-robot text-primary me-2"></i>AI Risk Dashboard
+                    <i class="fas fa-robot me-2" style="color: var(--db-blue-600);"></i>AI Risk Dashboard
                 </h2>
                 <p class="text-body-secondary small mb-0">Lexical diversity and language analysis metrics</p>
             </div>
@@ -323,8 +323,8 @@
 
         {# ---- active orchestration jobs panel ---- #}
         {% if active_jobs %}
-            <div class="card border-primary mb-4">
-                <div class="card-header bg-primary text-white d-flex align-items-center gap-2 flex-wrap">
+            <div class="card mb-4" style="border-color: var(--db-blue-200);">
+                <div class="card-header pipeline-panel-header d-flex align-items-center gap-2 flex-wrap">
                     <i class="fas fa-tasks fa-fw"></i>
                     <strong>Active analysis pipeline jobs</strong>
                     {% if pipeline_paused %}
@@ -335,13 +335,13 @@
                     {% if avg_seconds_per_record is not none %}
                         {% set avg_min = (avg_seconds_per_record // 60)|int %}
                         {% set avg_sec = (avg_seconds_per_record % 60)|round|int %}
-                        <span class="text-white-50 small">
+                        <span class="text-body-secondary small">
                             Avg
                             {% if avg_min > 0 %}{{ avg_min }}m {% endif %}{{ avg_sec }}s / report
                             <span style="opacity:0.6; font-size:0.85em">(hist.)</span>
                         </span>
                     {% endif %}
-                    <span class="badge bg-light text-dark ms-auto">{{ active_jobs|length }} job
+                    <span class="badge ms-auto" style="background-color: var(--db-blue-100); color: var(--db-blue-800);">{{ active_jobs|length }} job
                         {%- if active_jobs|length != 1 -%}s{%- endif -%}</span>
                     {% if is_root or is_admin %}
                         {% if pipeline_paused %}
@@ -402,7 +402,7 @@
                                     </td>
                                     <td class="text-end" style="min-width:120px">
                                         <div class="progress" style="height:8px; min-width:80px">
-                                            <div class="progress-bar bg-{{ bar_colour }}"
+                                            <div class="progress-bar {% if job.paused %}bg-secondary{% else %}pipeline-progress-fill{% endif %}"
                                                  data-cell="progress-bar"
                                                  role="progressbar"
                                                  style="width:{{ job.progress_pct }}%"
@@ -536,7 +536,7 @@
                     </div>
 
                     <div class="col-auto">
-                        <button type="submit" class="btn btn-sm btn-primary">
+                        <button type="submit" class="btn btn-sm btn-db-blue">
                             <i class="fas fa-filter me-1"></i>Apply
                         </button>
                         <a href="{{ url_for('dashboards.ai_dashboard', tenant_id=selected_tenant.id) }}"
@@ -609,8 +609,7 @@
         {# ---- per-cycle sections ---- #}
         {% for section in sections %}
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header d-flex align-items-center justify-content-between py-2"
-                     style="background: linear-gradient(135deg, #1a3c5e 0%, #2d6fa8 100%); color: white;">
+                <div class="card-header year-section-header d-flex align-items-center justify-content-between py-2">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-calendar-alt fa-fw"></i>
                         <h5 class="mb-0 fw-semibold">Academic year {{ section.label }}</h5>
@@ -619,7 +618,7 @@
                         {{ export_buttons(
                         url_for('dashboards.export_cycle', year=section.year, fmt='xlsx', pclass_id=selected_pclass_ids),
                         url_for('dashboards.export_cycle', year=section.year, fmt='csv', pclass_id=selected_pclass_ids),
-                        outline=false
+                        outline=true
                     ) }}
                     </div>
                 </div>
@@ -709,9 +708,9 @@
 
                     {# ---- cycle summary ---- #}
                     {% if section.period_subsections|length > 1 %}
-                        <div class="card border border-primary mt-3">
-                            <div class="card-header bg-primary bg-opacity-10 border-primary py-2">
-                                <span class="fw-semibold text-primary">
+                        <div class="card mt-3" style="border-color: var(--db-blue-200);">
+                            <div class="card-header cycle-summary-header py-2">
+                                <span class="fw-semibold">
                                     <i class="fas fa-layer-group me-1"></i>
                                     Cycle summary — {{ section.label }}
                                     <span class="text-body-secondary fw-normal small ms-1">(all selected periods combined)</span>

@@ -1,3 +1,47 @@
+:root {
+  /* Dashboard blue (AI Risk) */
+  --db-blue-50:  #EAF2FB;
+  --db-blue-100: #C3DBEF;
+  --db-blue-200: #9DC4E4;
+  --db-blue-400: #4A8DBF;
+  --db-blue-600: #2A6090;
+  --db-blue-800: #173D5E;
+
+  /* Dashboard green (Marking) */
+  --db-green-50:  #EAF4E8;
+  --db-green-100: #C2DFB8;
+  --db-green-200: #94C487;
+  --db-green-400: #4C9A5C;
+  --db-green-600: #2D6B3E;
+  --db-green-800: #1A4225;
+}
+
+.btn-db-blue  { background-color: var(--db-blue-400);  color: #fff; border-color: var(--db-blue-600); }
+.btn-db-green { background-color: var(--db-green-400); color: #fff; border-color: var(--db-green-600); }
+.btn-db-blue:hover  { background-color: var(--db-blue-600);  border-color: var(--db-blue-800); color: #fff; }
+.btn-db-green:hover { background-color: var(--db-green-600); border-color: var(--db-green-800); color: #fff; }
+
+.pipeline-panel-header {
+  background-color: var(--db-blue-50);
+  border-bottom: 1px solid var(--db-blue-200);
+  color: var(--db-blue-800);
+}
+.pipeline-progress-fill { background-color: var(--db-blue-400); }
+.year-section-header {
+  background-color: var(--db-blue-100);
+  color: var(--db-blue-800);
+  border-bottom: 1px solid var(--db-blue-200);
+}
+.cycle-summary-header {
+  background-color: var(--db-blue-50);
+  border-color: var(--db-blue-200);
+  color: var(--db-blue-800);
+}
+.marking-page-header {
+  background-color: var(--db-green-50);
+  border-bottom: 1px solid var(--db-green-200);
+}
+
 html {
     padding-bottom: 4rem;
 }

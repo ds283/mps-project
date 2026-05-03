@@ -18,12 +18,12 @@
     {# Caller block receives one argument (slot):                           #}
     {#   slot == 'badges'  — render summary badge markup here              #}
     {# ------------------------------------------------------------------ #}
-    {% macro dashboard_card(icon_class, icon_bg_class, title, description, open_url, open_label, open_btn_class) %}
+    {% macro dashboard_card(icon_class, icon_bg_style, title, description, open_url, open_label, open_btn_class) %}
         <div class="col">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body d-flex flex-column">
                     <div class="d-flex align-items-start gap-3 mb-3">
-                        <div class="rounded-3 p-3 {{ icon_bg_class }} flex-shrink-0">
+                        <div class="rounded-3 p-3 flex-shrink-0" style="{{ icon_bg_style }}">
                             <i class="{{ icon_class }}"></i>
                         </div>
                         <div>
@@ -60,12 +60,12 @@
             {# ---- AI Data Dashboard card ---- #}
             {% call(slot) dashboard_card(
                 icon_class="fas fa-robot fa-2x text-primary",
-                icon_bg_class="bg-primary bg-opacity-10",
+                icon_bg_style="background-color: var(--db-blue-50);",
                 title="AI Risk Dashboard",
                 description="Lexical diversity metrics, LLM-assessed grade bands, and AI risk indicators for submitted reports. Distributions across cohorts and academic cycles.",
                 open_url=url_for('dashboards.ai_dashboard'),
                 open_label="Open dashboard",
-                open_btn_class="btn-primary"
+                open_btn_class="btn-db-blue"
             ) %}
                 {% if slot == 'badges' %}
                     {% if summary.n_tenants > 1 %}
@@ -100,12 +100,12 @@
             {# ---- Marking Dashboard card ---- #}
             {% call(slot) dashboard_card(
                 icon_class="fas fa-clipboard-check fa-2x text-success",
-                icon_bg_class="bg-success bg-opacity-10",
+                icon_bg_style="background-color: var(--db-green-50);",
                 title="Marking Dashboard",
                 description="Workflow health, progress indicators, and at-risk flags across all marking events. Covers distribution, submission, moderation, and grade consistency.",
                 open_url=url_for('dashboards.marking_dashboard'),
                 open_label="Open dashboard",
-                open_btn_class="btn-success"
+                open_btn_class="btn-db-green"
             ) %}
                 {% if slot == 'badges' %}
                     {% if marking_summary.n_events > 1 %}

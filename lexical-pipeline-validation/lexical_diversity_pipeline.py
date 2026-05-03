@@ -1,42 +1,95 @@
 """
-Lexical Diversity Analysis Pipeline
-====================================
-Generates the full suite of plots and statistical tests for the
-AI-use detection analysis based on MATTR, MTLD, Burstiness, and
-Sentence CV metrics computed from student final-year project reports.
+lexical_diversity_pipeline.py — Statistical analysis and plotting pipeline
+for AI-use detection in student final-year project reports.
+
+Role in the analysis chain
+--------------------------
+This script is the analysis and visualisation stage, consuming outputs from
+two upstream sources and producing plots and statistics:
+
+    AI dashboard export (.xlsx)           arXiv control results (.xlsx)
+        (student metrics + optional           (from arxiv_control_analysis.py;
+         Calibrations sheet)                   one sheet per paper set)
+               ↓                                          ↓
+               └──────────────────┬───────────────────────┘
+                                  ↓
+                  lexical_diversity_pipeline.py  (this script)
+                                  ↓  produces
+                          pipeline_outputs/
+                          ├── 01_violin_boxplots.png
+                          ├── 02_mahal_histograms.png
+                          ├── 03_mahal_kde.png
+                          ├── 04a/b/c_scatter_*.png
+                          ├── 05_metric_kde.png
+                          └── stats_summary.txt
+
+Mahalanobis distance modes
+--------------------------
+This script computes 3-D Mahalanobis σ in two modes, controlled by
+--calibration-file:
+
+  Self-built mode (default)
+      Fits its own centroid and correlation matrix from the pre-LLM student
+      cohort (PRE_LLM_YEARS). Uses standardised z-scores:
+          z = (x − mean) / std,  σ = √(z ᵀ inv_corr z)
+      σ values are NOT numerically comparable to production values because
+      production uses the raw covariance inverse (see below).
+
+  Production calibration mode (--calibration-file PATH)
+      Loads mu and sigma_inv from the "Calibrations" sheet of an AI dashboard
+      export workbook.  Production fits: sigma_inv = pinv(cov(X.T)) in raw
+      (non-standardised) feature space (confirmed in
+      app/shared/ai_calibration.compute_calibration()).  Distance computation:
+          delta = x − mu,  σ = √(delta ᵀ sigma_inv delta)
+      σ values produced in this mode are numerically identical to production
+      values and can be directly compared with the Mahalanobis σ columns in
+      the AI dashboard export.
+
+      Scatter plot display coordinates still use the self-built standardised
+      reference for axis positioning (ellipses, human-normal bands, etc.),
+      even when production calibration is active for σ values.  The σ labels
+      on individual outlier points reflect production values.
 
 Usage
 -----
-    python lexical_diversity_pipeline.py
+  python lexical_diversity_pipeline.py [options]
 
-Configuration
--------------
-Edit the CONFIGURATION block below to point to your data files and
-adjust cohort definitions as new data arrives.
+  # Use production calibration from an AI dashboard export:
+  python lexical_diversity_pipeline.py --calibration-file AI_Dashboard_...xlsx
+
+Options
+-------
+  --student FILE              Student report Excel file
+  --arxiv FILE                arXiv control results Excel file
+  --output DIR                Output directory [default: pipeline_outputs]
+  --sheets NAME,...           Comma-separated arXiv sheets to include
+  --exclude-sheets NAME,...   Comma-separated arXiv sheets to exclude
+  --scatter SPEC              Custom scatter plot spec (repeatable)
+  --calibration-file PATH     AI dashboard export .xlsx with Calibrations sheet
+  --calibration-type STR      Feature set to use: lexical or full [default: lexical]
+  --calibration-llm MODEL     LLM model name to select among full calibrations
 
 Dependencies
 ------------
-    pandas, numpy, scipy, matplotlib
+    pandas, numpy, scipy, matplotlib, openpyxl
     Install with:  pip install pandas numpy scipy matplotlib openpyxl
 
 Outputs (written to OUTPUT_DIR)
 --------------------------------
-    01_violin_boxplots.png          - Violin + box + strip plots per year
-    02_mahal_histograms.png         - Mahalanobis distance histograms per year
-    03_mahal_kde.png                - KDE of Mahalanobis distances, all datasets
-    04a_scatter_students_zoom.png   - (MATTR+MTLD, CV) scatter, student core
-    04b_scatter_students_full.png   - (MATTR+MTLD, CV) scatter, all outliers
-    04c_scatter_control.png         - (MATTR+MTLD, CV) scatter, arXiv controls only
-    05_metric_kde.png               - KDE per metric, all datasets
-    stats_summary.txt               - Statistical test results
+    01_violin_boxplots.png
+    02_mahal_histograms.png
+    03_mahal_kde.png
+    04a_scatter_students_zoom.png
+    04b_scatter_students_full.png
+    04c_scatter_control.png
+    05_metric_kde.png
+    stats_summary.txt
 
 Author notes
 ------------
-Pipeline developed through iterative analysis in Claude.ai (April 2026).
+Pipeline developed through iterative analysis in Claude.ai (April–May 2026).
 Pre-LLM reference cohort: 2019/20, 2020/21, 2021/22 (n=148 complete cases).
 Post-LLM cohort: 2023/24, 2024/25 (2022/23 treated as transitional).
-Mahalanobis distance computed in standardised space (correlation matrix),
-using MATTR, MTLD, and CV only (Burstiness excluded due to ~20% missingness).
 """
 
 import argparse
@@ -174,6 +227,35 @@ def parse_args():
             "--scatter students,claude-ai --scatter students,djs61"
         ),
     )
+
+    cal = p.add_argument_group(
+        "Production calibration",
+        "Load mu/sigma_inv from the Calibrations sheet of an AI dashboard export "
+        "so that σ values are numerically identical to production values.",
+    )
+    cal.add_argument(
+        "--calibration-file",
+        default=None,
+        metavar="PATH",
+        dest="calibration_file",
+        help="AI dashboard export .xlsx file containing a 'Calibrations' sheet",
+    )
+    cal.add_argument(
+        "--calibration-type",
+        default="lexical",
+        choices=["lexical", "full"],
+        dest="calibration_type",
+        help="Feature set to use from the calibration: lexical (3-D) or full (4-D) "
+             "[default: lexical]",
+    )
+    cal.add_argument(
+        "--calibration-llm",
+        default=None,
+        metavar="MODEL",
+        dest="calibration_llm",
+        help="LLM model name used to select among multiple full calibrations",
+    )
+
     return p.parse_args()
 
 
@@ -250,6 +332,103 @@ def mahal_dist(df, mean_3, std_3, inv_corr):
     def _d(row):
         z = (row.values - mean_3) / std_3
         return np.sqrt(z @ inv_corr @ z)
+
+    return sub.apply(_d, axis=1).values
+
+
+def load_production_calibration(
+    cal_file: str,
+    cal_type: str = "lexical",
+    cal_llm: str | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load mu and sigma_inv from the Calibrations sheet of an AI dashboard export.
+
+    The Calibrations sheet is produced by the production export task
+    (app/tasks/ai_dashboard_export.export_ai_dashboard_xlsx) and contains
+    the pre-computed TenantAICalibration parameters: mu (raw mean vector) and
+    sigma_inv (Moore-Penrose pseudoinverse of raw covariance matrix).
+
+    Feature ordering is validated against the feature_i label columns in the
+    sheet to catch export/version mismatches before any computation.
+
+    Returns (mu, sigma_inv) as numpy arrays for use with mahal_dist_production().
+    Feature order for lexical (3-D): [MATTR, MTLD, sentence_cv]
+                   for full    (4-D): [MATTR, MTLD, sentence_cv, mean_nll]
+    Note: the student export uses the column name 'CV' for sentence_cv.
+    """
+    df = pd.read_excel(cal_file, sheet_name="Calibrations")
+
+    mask = df["feature_set"] == cal_type
+    if cal_llm is not None:
+        mask = mask & (df["llm_model_name"] == cal_llm)
+
+    candidates = df[mask]
+    if candidates.empty:
+        desc = f"feature_set={cal_type!r}"
+        if cal_llm:
+            desc += f", llm_model_name={cal_llm!r}"
+        raise ValueError(
+            f"No calibration found in {cal_file!r} matching {desc}. "
+            f"Available rows:\n{df[['feature_set', 'llm_model_name']].to_string()}"
+        )
+    if len(candidates) > 1:
+        raise ValueError(
+            f"Multiple calibrations match feature_set={cal_type!r} in {cal_file!r}. "
+            "Use --calibration-llm to select one by LLM model name."
+        )
+
+    row = candidates.iloc[0]
+    n = 3 if cal_type == "lexical" else 4
+    expected_labels = ["MATTR", "MTLD", "sentence_cv"] + (["mean_nll"] if n == 4 else [])
+
+    for i, exp in enumerate(expected_labels):
+        got = str(row.get(f"feature_{i}", ""))
+        if got != exp:
+            raise ValueError(
+                f"Feature label mismatch at index {i}: expected {exp!r}, got {got!r}. "
+                "The export may be from an incompatible pipeline version."
+            )
+
+    mu = np.array([float(row[f"mu_{i}"]) for i in range(n)], dtype=float)
+    sigma_inv = np.array(
+        [[float(row[f"sigma_inv_{i}_{j}"]) for j in range(n)] for i in range(n)],
+        dtype=float,
+    )
+
+    n_samples = int(row.get("n_samples", 0))
+    calibrated_at = str(row.get("calibrated_at", "unknown"))
+    print(f"\nProduction calibration loaded from {cal_file!r}:")
+    print(f"  feature_set={cal_type!r}  n_samples={n_samples}  calibrated_at={calibrated_at}")
+    print(f"  mu = {mu}")
+    print(f"  sigma_inv shape = {sigma_inv.shape}")
+    print(
+        "\n  NOTE: σ values computed in this mode use raw feature space and are\n"
+        "  numerically identical to production values.  Scatter plot display\n"
+        "  coordinates still use the self-built standardised reference.\n"
+    )
+    return mu, sigma_inv
+
+
+def mahal_dist_production(
+    df: pd.DataFrame,
+    mu: np.ndarray,
+    sigma_inv: np.ndarray,
+) -> np.ndarray:
+    """Compute Mahalanobis distances using production calibration parameters.
+
+    Mirrors app/shared/ai_calibration.mahalanobis_distance() exactly:
+        delta = x − mu  (raw feature values, NOT z-scores)
+        σ = sqrt(max(delta ᵀ · sigma_inv · delta, 0))
+
+    The student export uses column 'CV' for sentence_cv (feature index 2).
+    Only rows with non-null MATTR, MTLD, and CV are processed.
+    """
+    sub = df.dropna(subset=["MATTR", "MTLD", "CV"])[["MATTR", "MTLD", "CV"]]
+
+    def _d(row):
+        delta = row.values - mu
+        D_sq = float(delta @ sigma_inv @ delta)
+        return float(np.sqrt(max(D_sq, 0.0)))
 
     return sub.apply(_d, axis=1).values
 
@@ -401,12 +580,16 @@ def plot_violin_box(student_main, output_dir):
 
 
 def plot_mahal_histograms(
-    student_main, mean_3, std_3, inv_corr, thresh_05, thresh_01, output_dir
+    student_main, mahal_fn, thresh_05, thresh_01, output_dir
 ):
+    """Plot per-year Mahalanobis distance histograms.
+
+    *mahal_fn* is a callable (df) → np.ndarray of σ values; it is either the
+    self-built mahal_dist() closure or mahal_dist_production() closure,
+    depending on whether --calibration-file was supplied.
+    """
     all_vals = [
-        mahal_dist(
-            student_main[student_main["Academic Year"] == yr], mean_3, std_3, inv_corr
-        )
+        mahal_fn(student_main[student_main["Academic Year"] == yr])
         for yr in YEAR_ORDER
     ]
     global_max = max(v.max() for v in all_vals)
@@ -1177,21 +1360,24 @@ def run_stats(
     controls,
     controls_mahal,
     student_main,
-    mean_3,
-    std_3,
-    inv_corr,
+    mahal_fn,
     thresh_05,
     thresh_01,
     output_dir,
 ):
+    """Run statistical tests and write stats_summary.txt.
+
+    *mahal_fn* is a callable (df) → np.ndarray of σ values, consistent with
+    the mode used to compute controls_mahal (self-built or production).
+    """
     lines = []
 
     def p(s):
         lines.append(s)
         print(s)
 
-    m_pre = mahal_dist(pre, mean_3, std_3, inv_corr)
-    m_post = mahal_dist(post, mean_3, std_3, inv_corr)
+    m_pre = mahal_fn(pre)
+    m_post = mahal_fn(post)
 
     p("=" * 72)
     p("STATISTICAL TESTS ON MAHALANOBIS DISTANCE DISTRIBUTIONS")
@@ -1217,9 +1403,7 @@ def run_stats(
     p(f"{'Comparison':<40} {'n_yr':>5} {'mean':>7} {'MW p':>12} {'KS p':>12}")
     p("-" * 75)
     for yr in YEAR_ORDER:
-        m_yr = mahal_dist(
-            student_main[student_main["Academic Year"] == yr], mean_3, std_3, inv_corr
-        )
+        m_yr = mahal_fn(student_main[student_main["Academic Year"] == yr])
         if len(m_yr) == 0:
             continue
         _, mw_p = stats.mannwhitneyu(m_yr, m_pre, alternative="two-sided")
@@ -1275,12 +1459,7 @@ def run_stats(
         f"\n--- Power analysis: next cohort (n={NEXT_COHORT_N}, "
         f"assuming 2024/25 distribution) ---"
     )
-    m_2425 = mahal_dist(
-        student_main[student_main["Academic Year"] == "2024/2025"],
-        mean_3,
-        std_3,
-        inv_corr,
-    )
+    m_2425 = mahal_fn(student_main[student_main["Academic Year"] == "2024/2025"])
     np.random.seed(42)
     n_sim = 20000
     mw_ps = []
@@ -1324,6 +1503,8 @@ def main():
     markers = assign_control_markers(list(controls.keys()))
 
     student_main, pre, post, trans = split_cohorts(student)
+
+    # self-built reference — always computed; needed for scatter display coordinates
     mean_3, std_3, corr_3, inv_corr = build_reference(pre)
 
     thresh_05 = np.sqrt(stats.chi2.ppf(0.95, df=3))
@@ -1331,17 +1512,28 @@ def main():
     print(f"  p=0.05 threshold: {thresh_05:.4f}σ")
     print(f"  p=0.01 threshold: {thresh_01:.4f}σ")
 
-    m_pre = mahal_dist(pre, mean_3, std_3, inv_corr)
-    m_post = mahal_dist(post, mean_3, std_3, inv_corr)
-    controls_mahal = {
-        name: mahal_dist(df, mean_3, std_3, inv_corr) for name, df in controls.items()
-    }
+    # Production calibration mode: load mu/sigma_inv from the Calibrations sheet
+    # of an AI dashboard export.  σ values produced here match production exactly.
+    # Scatter plot display coordinates still use the self-built standardised reference.
+    if args.calibration_file:
+        cal_mu, cal_sigma_inv = load_production_calibration(
+            args.calibration_file,
+            cal_type=args.calibration_type,
+            cal_llm=args.calibration_llm,
+        )
+        def mahal_fn(df):  # noqa: E306
+            return mahal_dist_production(df, cal_mu, cal_sigma_inv)
+    else:
+        def mahal_fn(df):  # noqa: E306
+            return mahal_dist(df, mean_3, std_3, inv_corr)
+
+    m_pre = mahal_fn(pre)
+    m_post = mahal_fn(post)
+    controls_mahal = {name: mahal_fn(df) for name, df in controls.items()}
 
     print("\nGenerating plots...")
     plot_violin_box(student_main, output_dir)
-    plot_mahal_histograms(
-        student_main, mean_3, std_3, inv_corr, thresh_05, thresh_01, output_dir
-    )
+    plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_dir)
     plot_mahal_kde(
         m_pre, m_post, controls_mahal, colors, thresh_05, thresh_01, output_dir
     )
@@ -1388,9 +1580,7 @@ def main():
         controls,
         controls_mahal,
         student_main,
-        mean_3,
-        std_3,
-        inv_corr,
+        mahal_fn,
         thresh_05,
         thresh_01,
         output_dir,

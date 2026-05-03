@@ -1863,11 +1863,19 @@ def _record_ids_global(
 
 
 def _dispatch_export(
-    fmt: str, record_ids: List[int], filename_stem: str, description: str
+    fmt: str,
+    record_ids: List[int],
+    filename_stem: str,
+    description: str,
+    tenant_ids: Optional[List[int]] = None,
 ) -> bool:
     """
     Dispatch the appropriate export Celery task.
     Returns True if dispatched, False if no records or unknown format.
+
+    *tenant_ids* is forwarded to the xlsx task so it can embed a Calibrations
+    sheet with the TenantAICalibration parameters for those tenants.
+    The CSV task ignores tenant_ids (single flat sheet, no calibration data).
     """
     if not record_ids:
         return False
@@ -1878,10 +1886,17 @@ def _dispatch_export(
         else "app.tasks.ai_dashboard_export.export_ai_dashboard_csv"
     )
     task = celery.tasks[task_name]
-    task.apply_async(
-        args=[current_user.id, record_ids, filename_stem, description],
-        queue="default",
-    )
+    if fmt == "xlsx":
+        task.apply_async(
+            args=[current_user.id, record_ids, filename_stem, description,
+                  tenant_ids or []],
+            queue="default",
+        )
+    else:
+        task.apply_async(
+            args=[current_user.id, record_ids, filename_stem, description],
+            queue="default",
+        )
     return True
 
 
@@ -1905,9 +1920,10 @@ def export_period(period_id: int):
         return redirect(redirect_url())
 
     record_ids = _record_ids_for_period(period_id)
+    tenant_ids = [pclass.tenant_id] if pclass and pclass.tenant_id else []
     stem = f"AI_Dashboard_{period.display_name.replace(' ', '_')}"
     desc = f"AI dashboard export — {period.display_name}"
-    if _dispatch_export(fmt, record_ids, stem, desc):
+    if _dispatch_export(fmt, record_ids, stem, desc, tenant_ids=tenant_ids):
         flash(
             "Export queued. You will be notified in your Download Centre when it is ready.",
             "success",
@@ -1935,9 +1951,14 @@ def export_pclass(config_id: int):
         config.project_class.abbreviation if config.project_class else str(config_id)
     )
     record_ids = _record_ids_for_pclass_config(config_id)
+    tenant_ids = (
+        [config.project_class.tenant_id]
+        if config.project_class and config.project_class.tenant_id
+        else []
+    )
     stem = f"AI_Dashboard_{pclass_abbr}_{config.year}"
     desc = f"AI dashboard export — {pclass_abbr} {config.year}/{config.year + 1}"
-    if _dispatch_export(fmt, record_ids, stem, desc):
+    if _dispatch_export(fmt, record_ids, stem, desc, tenant_ids=tenant_ids):
         flash(
             "Export queued. You will be notified in your Download Centre when it is ready.",
             "success",
@@ -1967,9 +1988,10 @@ def export_cycle(year: int):
         pclass_ids = None
 
     record_ids = _record_ids_for_cycle(year, pclass_ids=pclass_ids)
+    tenant_ids = list({t.id for t in current_user.tenants})
     stem = f"AI_Dashboard_Cycle_{year}"
     desc = f"AI dashboard export — cycle {year}/{year + 1}"
-    if _dispatch_export(fmt, record_ids, stem, desc):
+    if _dispatch_export(fmt, record_ids, stem, desc, tenant_ids=tenant_ids):
         flash(
             "Export queued. You will be notified in your Download Centre when it is ready.",
             "success",
@@ -1996,9 +2018,10 @@ def export_global():
         years = None
 
     record_ids = _record_ids_global(pclass_ids=pclass_ids, years=years)
+    tenant_ids = list({t.id for t in current_user.tenants})
     stem = "AI_Dashboard_Global"
     desc = "AI dashboard export — all records"
-    if _dispatch_export(fmt, record_ids, stem, desc):
+    if _dispatch_export(fmt, record_ids, stem, desc, tenant_ids=tenant_ids):
         flash(
             "Export queued. You will be notified in your Download Centre when it is ready.",
             "success",

@@ -40,6 +40,18 @@ from ..shared.workflow_logging import log_db_commit
 # Prompt versioning.
 # Bump PROMPT_VERSION whenever prompt text is intentionally changed, so stored
 # results can be compared against the prompt that generated them.
+#
+# MAINTENANCE NOTE — standalone script mirror:
+# This file is mirrored by lexical-pipeline-validation/language_analysis_core.py
+# for use in offline analysis. Any changes to metric computation (MATTR, MTLD,
+# sentence_cv, burstiness, reference counting, LLM prompt text) must be reflected
+# there. Related standalone scripts that may also need updating:
+#   - lexical-pipeline-validation/arxiv_control_analysis.py  (cache + metric collection)
+#   - lexical-pipeline-validation/analysis_cache.py          (SQLite cache schema)
+#   - lexical-pipeline-validation/lexical_diversity_pipeline.py (Mahalanobis / calibration)
+#
+# PROMPT_VERSION (here) and PIPELINE_VERSION in language_analysis_core.py should
+# be kept in sync: bump both when the LLM prompt text changes intentionally.
 # ---------------------------------------------------------------------------
 
 PROMPT_VERSION = 1

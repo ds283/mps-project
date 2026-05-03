@@ -11,13 +11,47 @@
 """
 Celery tasks to export AI dashboard data to Excel or CSV.
 
+Role in the analysis chain
+---------------------------------------------------------------------------
+The Excel export (export_ai_dashboard_xlsx) produces a two-sheet workbook:
+
+  Sheet "Data"          — one row per SubmissionRecord (see column list below)
+  Sheet "Calibrations"  — one row per TenantAICalibration for the tenant(s)
+                          involved in the export.  This sheet is omitted when
+                          no calibrations are configured.
+
+The Calibrations sheet is the bridge between production σ values and the
+standalone lexical_diversity_pipeline.py script.  It exports the raw mu and
+sigma_inv parameters so the standalone script can compute Mahalanobis σ
+values that are numerically identical to production values (raw feature space,
+not standardised).  See lexical-pipeline-validation/lexical_diversity_pipeline.py
+for the --calibration-file flag and its Calibrations sheet schema.
+
+Calibrations sheet columns
+  cal_id, tenant_id, feature_set, llm_model_name, llm_context_window
+  n_samples, calibrated_at, years (semicolon-joined), pclass_ids (semicolon-joined)
+  feature_0 … feature_3    — human-readable feature labels ("MATTR", "MTLD",
+                              "sentence_cv", "mean_nll"); empty for unused slots
+  mu_0 … mu_3              — mean vector components; NaN for unused slots
+  sigma_inv_0_0 … sigma_inv_3_3  — inverse covariance matrix (row-major);
+                                    NaN for unused (i, j) slots
+
+Feature ordering contract (must be validated by the consuming script):
+  lexical (3-D): [MATTR, MTLD, sentence_cv]
+  full    (4-D): [MATTR, MTLD, sentence_cv, mean_nll]
+
+The CSV export (export_ai_dashboard_csv) remains single-sheet and does not
+include calibration parameters.
+
 Each task receives:
   - user_id         : int  — user to notify and attach the download to
   - record_ids      : list[int] — SubmissionRecord PKs to include
+  - tenant_ids      : list[int] — tenant IDs whose calibrations to include
+                      (empty list → Calibrations sheet omitted)
   - filename_stem   : str  — base filename without extension
   - description     : str  — human-readable description for the Download Centre item
 
-The task builds a flat table, uploads the file to MinIO, creates a
+The task builds the workbook, uploads it to MinIO, creates a
 GeneratedAsset + DownloadCentreItem, and posts an in-app notification.
 
 ---------------------------------------------------------------------------
@@ -174,8 +208,8 @@ from ..models import (
     SubmissionRecord,
     User,
 )
+from ..models.ai_calibration import TenantAICalibration
 from ..shared.asset_tools import AssetUploadManager
-from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
 from .thumbnails import dispatch_thumbnail_task
 
@@ -338,6 +372,82 @@ def _build_row(record: SubmissionRecord) -> dict:
     }
 
 
+def _build_calibrations_sheet(tenant_ids: List[int]):
+    """Build a flat DataFrame of TenantAICalibration parameters for *tenant_ids*.
+
+    Returns a pandas DataFrame, or None when no calibrations exist for the
+    given tenants.  The caller should omit the sheet entirely when None is
+    returned.
+
+    Column layout:
+        identity   — cal_id, tenant_id, feature_set, llm_model_name, llm_context_window
+        metadata   — n_samples, calibrated_at, years, pclass_ids
+        feature labels — feature_0 … feature_3
+        mean vector    — mu_0 … mu_3
+        inverse covariance — sigma_inv_0_0 … sigma_inv_3_3  (all 16 slots)
+    NaN is used for unused (i > n_features) slots in mu and sigma_inv.
+    Empty string is used for unused feature label slots.
+    """
+    import numpy as np  # noqa: PLC0415
+    import pandas as pd  # noqa: PLC0415
+
+    if not tenant_ids:
+        return None
+
+    cals = (
+        db.session.query(TenantAICalibration)
+        .filter(TenantAICalibration.tenant_id.in_(tenant_ids))
+        .all()
+    )
+    if not cals:
+        return None
+
+    _FEATURE_NAMES = {
+        "lexical": ["MATTR", "MTLD", "sentence_cv"],
+        "full": ["MATTR", "MTLD", "sentence_cv", "mean_nll"],
+    }
+
+    rows = []
+    for cal in cals:
+        mu = cal.mu_data
+        sigma_inv = cal.sigma_inv_data
+        n = cal.n_features
+        feature_names = _FEATURE_NAMES.get(cal.feature_set, ["MATTR", "MTLD", "sentence_cv"])
+
+        row = {
+            "cal_id": cal.id,
+            "tenant_id": cal.tenant_id,
+            "feature_set": cal.feature_set,
+            "llm_model_name": cal.llm_model_name or "",
+            "llm_context_window": cal.llm_context_window,
+            "n_samples": cal.n_samples,
+            "calibrated_at": cal.calibrated_at.isoformat() if cal.calibrated_at else "",
+            "years": ";".join(str(y) for y in cal.included_years_data),
+            "pclass_ids": ";".join(str(p) for p in cal.included_pclass_ids_data),
+        }
+
+        for i in range(4):
+            row[f"feature_{i}"] = feature_names[i] if i < n else ""
+
+        for i in range(4):
+            row[f"mu_{i}"] = float(mu[i]) if i < n else np.nan
+
+        for i in range(4):
+            for j in range(4):
+                row[f"sigma_inv_{i}_{j}"] = float(sigma_inv[i][j]) if (i < n and j < n) else np.nan
+
+        rows.append(row)
+
+    identity_cols = ["cal_id", "tenant_id", "feature_set", "llm_model_name", "llm_context_window"]
+    meta_cols = ["n_samples", "calibrated_at", "years", "pclass_ids"]
+    feature_cols = [f"feature_{i}" for i in range(4)]
+    mu_cols = [f"mu_{i}" for i in range(4)]
+    sigma_cols = [f"sigma_inv_{i}_{j}" for i in range(4) for j in range(4)]
+    all_cols = identity_cols + meta_cols + feature_cols + mu_cols + sigma_cols
+
+    return pd.DataFrame(rows, columns=all_cols)
+
+
 def _load_and_build_rows(record_ids: List[int]) -> List[dict]:
     """Load SubmissionRecords in batches and build the export row list."""
     rows = []
@@ -377,10 +487,21 @@ def register_ai_dashboard_export_tasks(celery):
         record_ids: List[int],
         filename_stem: str,
         description: str,
+        tenant_ids: Optional[List[int]] = None,
     ):
         """
         Export AI dashboard data for the given SubmissionRecord IDs to an
         Excel workbook, upload it to MinIO, and notify the requesting user.
+
+        Produces a two-sheet workbook:
+          "Data"         — one row per SubmissionRecord
+          "Calibrations" — TenantAICalibration parameters for *tenant_ids*
+                           (omitted when no calibrations exist or tenant_ids
+                           is None/empty)
+
+        The Calibrations sheet allows lexical_diversity_pipeline.py to
+        compute Mahalanobis σ values that match production exactly by
+        supplying --calibration-file to that script.
         """
         self.update_state(state="STARTED", meta={"msg": "Loading records"})
 
@@ -414,14 +535,14 @@ def register_ai_dashboard_export_tasks(celery):
             import pandas as pd
 
             df = pd.DataFrame(rows, columns=_COLUMNS)
+            cal_df = _build_calibrations_sheet(tenant_ids or [])
             stem_ts = f"{filename_stem}_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
 
             with ScratchFileManager(suffix=".xlsx") as mgr:
-                df.to_excel(
-                    mgr.path,
-                    sheet_name=_normalize_excel_sheet_name("AI Dashboard"),
-                    index=False,
-                )
+                with pd.ExcelWriter(mgr.path, engine="openpyxl") as writer:
+                    df.to_excel(writer, sheet_name="Data", index=False)
+                    if cal_df is not None:
+                        cal_df.to_excel(writer, sheet_name="Calibrations", index=False)
 
                 asset = GeneratedAsset(
                     timestamp=now,

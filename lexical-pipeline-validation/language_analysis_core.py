@@ -1,23 +1,45 @@
 """
 language_analysis_core.py — Standalone mirror of the MPS language analysis pipeline.
 
-Provides clean (non-diagnostic) implementations of every metric computed by
-the production Celery pipeline (app/tasks/language_analysis.py) and the
-classification thresholds from app/shared/llm_thresholds.py, with no
-Flask/Celery/SQLAlchemy dependencies.
+Role in the analysis chain
+--------------------------
+This module is the shared algorithm library for the lexical-pipeline-validation
+scripts. It mirrors the production pipeline (app/tasks/language_analysis.py)
+with no Flask/Celery/SQLAlchemy dependencies and sits at the base of the
+dependency tree:
 
-Used by:
-    test_language_analysis.py  — single-PDF diagnostic tool
-    arxiv_control_analysis.py  — batch arXiv control-sample runner
+    language_analysis_core.py  (this file — metrics only, no Mahalanobis)
+        ↑ imported by
+        ├── arxiv_control_analysis.py  — batch arXiv PDF runner; uses
+        │                                PIPELINE_VERSION for cache tagging,
+        │                                and analyse_paper_from_text() to
+        │                                hash text before computing metrics
+        ├── analysis_cache.py          — references PIPELINE_VERSION to tag
+        │                                cached rows
+        └── test_language_analysis.py  — single-PDF interactive diagnostic
 
-Keeping all shared algorithm code here means both tools stay automatically in
-sync with each other.  When the production pipeline changes, only this file
-(and the production file) need updating.
+Mahalanobis σ computation and plotting are deliberately NOT done here — they
+belong to lexical_diversity_pipeline.py, which can operate in two modes:
+
+  self-built reference  — fits its own centroid from pre-LLM student data
+                          (standardised/correlation-matrix approach)
+  production calibration — ingests mu / sigma_inv from the Calibrations sheet
+                           of an AI dashboard export, using raw feature values
+                           to match app/shared/ai_calibration.mahalanobis_distance()
+
+Version constants
+-----------------
+PIPELINE_VERSION  — integer; increment when any metric computation changes.
+                    Cache entries store this value; stale entries must be
+                    evicted manually (delete the .sqlite file or --no-cache).
+
+NLL_ENABLED       — False until Ollama exposes logprob computation.  When True,
+                    mean_nll / nll_cv become available in llm_metrics cache rows
+                    and the 4-D "full" feature set becomes usable for Mahalanobis.
 
 spaCy dependency
 ----------------
-Burstiness and sentence CV require spaCy + the en_core_web_sm model.
-These are available in the arxiv_analysis_venv/ Python 3.12 environment.
+Burstiness and sentence CV require spaCy + en_core_web_sm.
 Both functions return None gracefully if spaCy is not installed.
 """
 
@@ -26,6 +48,13 @@ from __future__ import annotations
 import re
 
 import numpy as np
+
+# ---------------------------------------------------------------------------
+# Version constants — see module docstring for semantics
+# ---------------------------------------------------------------------------
+
+PIPELINE_VERSION = 1
+NLL_ENABLED = False
 
 # ---------------------------------------------------------------------------
 # Classification thresholds (mirrors app/shared/llm_thresholds.py)
@@ -255,6 +284,15 @@ def extract_pdf_text(path: str) -> tuple[str, int]:
     page_count = len(doc)
     doc.close()
     return "\n\n".join(pages), page_count
+
+
+def get_pymupdf_version() -> str:
+    """Return the installed PyMuPDF version string, or 'unknown' on import failure."""
+    try:
+        import fitz  # noqa: PLC0415
+        return fitz.__version__
+    except Exception:
+        return "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -659,26 +697,22 @@ def count_patterns(text: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def analyse_paper(pdf_path) -> dict:
-    """Run the complete language analysis pipeline on *pdf_path*.
+def analyse_paper_from_text(raw_text: str, page_count: int = 0) -> dict:
+    """Run the complete language analysis pipeline on already-extracted text.
 
-    Returns a dict with keys:
-        page_count, word_count,
-        mattr, mtld, burstiness, sentence_cv,
-        mattr_flag, mtld_flag, burstiness_flag, sentence_cv_flag,
-        error   (None on success, otherwise an error string)
+    Equivalent to analyse_paper() but accepts raw text directly, allowing
+    the caller to SHA-256 hash the text (for cache keying) before passing it
+    in without calling extract_pdf_text() a second time.
 
-    This is the minimal pipeline used by the batch arXiv runner.  The
-    diagnostic tool (test_language_analysis.py) calls the individual
-    functions directly for more verbose output.
+    *page_count* should be provided by the caller when known from a prior
+    extract_pdf_text() call; pass 0 if unavailable.
+
+    Returns the same dict as analyse_paper().
+
+    Used by: arxiv_control_analysis.py (cache-aware code path)
     """
-    from pathlib import Path  # noqa: PLC0415
-
-    result: dict = {"error": None}
+    result: dict = {"error": None, "page_count": page_count}
     try:
-        raw_text, page_count = extract_pdf_text(str(pdf_path))
-        result["page_count"] = page_count
-
         _core, _references, _appendices = split_document(raw_text)
 
         clean_core = strip_math_lines(_core)
@@ -705,3 +739,27 @@ def analyse_paper(pdf_path) -> dict:
         result["error"] = f"{type(exc).__name__}: {exc}"
 
     return result
+
+
+def analyse_paper(pdf_path) -> dict:
+    """Run the complete language analysis pipeline on *pdf_path*.
+
+    Returns a dict with keys:
+        page_count, word_count,
+        mattr, mtld, burstiness, sentence_cv,
+        mattr_flag, mtld_flag, burstiness_flag, sentence_cv_flag,
+        error   (None on success, otherwise an error string)
+
+    This is the minimal pipeline used by the batch arXiv runner.  The
+    diagnostic tool (test_language_analysis.py) calls the individual
+    functions directly for more verbose output.
+
+    Delegates to analyse_paper_from_text() after extracting text; callers
+    that need to hash the raw text before analysis should call
+    extract_pdf_text() + analyse_paper_from_text() directly instead.
+    """
+    try:
+        raw_text, page_count = extract_pdf_text(str(pdf_path))
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+    return analyse_paper_from_text(raw_text, page_count=page_count)

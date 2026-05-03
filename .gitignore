@@ -2,6 +2,10 @@ admin_passwords.pwd
 arxiv_analysis_venv/
 lexical-pipeline-validation/arxiv_pdf_cache/
 lexical-pipeline-validation/arxiv_control_results.xlsx
+# SQLite analysis caches (contain derived data, may be large)
+lexical-pipeline-validation/*.sqlite
+# Exported AI dashboard workbooks (contain tenant/student data)
+lexical-pipeline-validation/AI_Dashboard_*.xlsx
 docker-compose.yml
 /instance
 /nginx

@@ -1,16 +1,50 @@
 #!/usr/bin/env python3
 """
-arxiv_control_analysis.py — Download arXiv papers and run the full language
-analysis pipeline (MATTR, MTLD, Goh-Barabási burstiness, sentence-length CV)
-to build a control-sample distribution from known-human, non-LLM text.
+arxiv_control_analysis.py — Download arXiv papers and compute lexical metrics
+(MATTR, MTLD, Goh-Barabási burstiness, sentence-length CV) to build a
+control-sample distribution from known-human, pre-LLM text.
 
-Paper sets analysed:
+Role in the analysis chain
+--------------------------
+This script is the data-collection stage for the arXiv control samples.  It
+sits between language_analysis_core.py (which it calls for metric computation)
+and lexical_diversity_pipeline.py (which consumes its Excel output for
+comparative analysis against student reports).
+
+    language_analysis_core.py  ←  algorithm implementation
+            ↓
+    arxiv_control_analysis.py  (this script)
+            ↓  writes
+    arxiv_control_results.xlsx  (one sheet per paper set)
+            ↓  consumed by
+    lexical_diversity_pipeline.py  ←  also reads AI dashboard export
+                                       (student metrics + Calibrations sheet)
+
+This script produces ONLY raw lexical metrics; it does NOT compute Mahalanobis
+distances. Distance computation and all plotting are done by
+lexical_diversity_pipeline.py. To compare arXiv σ values with production
+values, run lexical_diversity_pipeline.py with --calibration-file pointing to
+an AI dashboard export that contains a Calibrations sheet.
+
+Cache
+-----
+Repeated runs re-process the same PDFs from disk by default, which is slow.
+Use --cache (default: analysis_cache.sqlite) to persist computed metrics
+between runs using analysis_cache.py.  The cache is keyed by SHA-256 of the
+raw extracted PDF text — stable for a given file and PyMuPDF version.  If
+PyMuPDF is upgraded, all cache entries become cold misses; the pymupdf_version
+column in the cache database lets you detect this.
+
+Cache invalidation is manual: delete the .sqlite file or pass --no-cache.
+See analysis_cache.py for details.
+
+Paper sets analysed
+-------------------
   1. All papers by each arXiv author (scraped from their arXiv author page).
      Default authors: Seery (djs61), Byrnes (byrnes_c), Burrage (burrage_c).
   2. ~200 papers from the astro-ph.CO category submitted before a fixed cutoff
      date (default: 2026-04-20) to ensure a stable, reproducible reference set.
-
-Results are written to an Excel file with one worksheet per set.
+  3. Local PDF folders (default: ai_cache/ → sheet "Claude-ai").
 
 Usage
 -----
@@ -21,15 +55,15 @@ Options
   --output PATH              Output .xlsx path  [default: arxiv_control_results.xlsx]
   --pdf-cache DIR            Directory for downloaded PDFs  [default: arxiv_pdf_cache/]
   --author SHEET URL         Worksheet name + author page URL (repeatable)
-                             [default: three authors listed above]
   --category CAT             arXiv subject category  [default: astro-ph.CO]
   --category-max N           Max papers to fetch from category  [default: 200]
-  --category-before DATE     Cutoff date YYYY-MM-DD for category papers  [default: 2026-04-20]
+  --category-before DATE     Cutoff date YYYY-MM-DD  [default: 2026-04-20]
   --pdf-folder SHEET DIR     Worksheet name + local folder of PDFs (repeatable)
-                             [default: Claude-ai → ai_cache/]
   --no-author                Skip all author sets
   --no-category              Skip the category set
   --no-pdf-folder            Skip all local PDF folder sets
+  --cache PATH               SQLite cache path  [default: analysis_cache.sqlite]
+  --no-cache                 Bypass the cache entirely for this run
 
 Requirements (run inside arxiv_analysis_venv)
 ---------------------------------------------
@@ -46,14 +80,25 @@ import html as html_module
 import re
 import sys
 import time
+from hashlib import sha256
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 import feedparser
 import pandas as pd
 import requests
 
 # All algorithm code comes from the shared core module.
-from language_analysis_core import analyse_paper, _get_nlp
+from language_analysis_core import (
+    analyse_paper,
+    analyse_paper_from_text,
+    extract_pdf_text,
+    get_pymupdf_version,
+    _get_nlp,
+)
+
+if TYPE_CHECKING:
+    from analysis_cache import AnalysisCache
 
 # ---------------------------------------------------------------------------
 # arXiv helpers
@@ -219,15 +264,52 @@ def download_pdf(arxiv_id: str, cache_dir: Path) -> Path | None:
 # ---------------------------------------------------------------------------
 
 
+def _run_analysis_with_cache(
+    pdf_path: Path,
+    arxiv_id: Optional[str],
+    cache: Optional["AnalysisCache"],
+) -> dict:
+    """Run language analysis on *pdf_path*, consulting *cache* when available.
+
+    Returns the same metrics dict as analyse_paper_from_text().  On a cache
+    hit, prints "(cached)" and skips reprocessing.  Falls back to direct
+    analysis if text extraction fails or the cache raises an unexpected error.
+    """
+    if cache is not None:
+        try:
+            raw_text, page_count = extract_pdf_text(str(pdf_path))
+            text_hash = sha256(raw_text.encode()).hexdigest()
+            cached = cache.get_metrics(text_hash)
+            if cached is not None:
+                print("(cached)", end=" ", flush=True)
+                return cached
+            metrics = analyse_paper_from_text(raw_text, page_count=page_count)
+            if not metrics.get("error"):
+                cache.store_metrics(
+                    text_hash,
+                    metrics,
+                    source_path=str(pdf_path),
+                    arxiv_id=arxiv_id,
+                    pymupdf_version=get_pymupdf_version(),
+                )
+            return metrics
+        except Exception as exc:
+            print(f"(cache error: {exc}) ", end="", file=sys.stderr)
+            # Fall through to direct analysis below
+    return analyse_paper(pdf_path)
+
+
 def process_paper_set(
     label: str,
     papers: list[dict],
     cache_dir: Path,
     first_download: bool,
+    cache: Optional["AnalysisCache"] = None,
 ) -> list[dict]:
     """Download PDFs and run analysis for each paper in *papers*.
 
     Returns a list of result dicts (one per paper, metadata merged in).
+    Pass *cache* to skip reprocessing PDFs whose text hash is already stored.
     """
     rows = []
     total = len(papers)
@@ -264,9 +346,9 @@ def process_paper_set(
             )
         else:
             print(f"    Analysing …", end=" ", flush=True)
-            metrics = analyse_paper(pdf_path)
+            metrics = _run_analysis_with_cache(pdf_path, arxiv_id, cache)
             row.update(metrics)
-            if metrics["error"]:
+            if metrics.get("error"):
                 print(f"ERROR: {metrics['error']}")
             else:
                 all_numeric = all(
@@ -291,11 +373,16 @@ def process_paper_set(
 # ---------------------------------------------------------------------------
 
 
-def process_local_folder(label: str, folder_path: Path) -> list[dict]:
+def process_local_folder(
+    label: str,
+    folder_path: Path,
+    cache: Optional["AnalysisCache"] = None,
+) -> list[dict]:
     """Run analysis on every PDF in folder_path.
 
     Returns rows in the same format as process_paper_set, using the PDF
     filename stem as the arxiv_id/title placeholder (no download needed).
+    Pass *cache* to skip reprocessing PDFs whose text hash is already stored.
     """
     pdfs = sorted(folder_path.glob("*.pdf"))
     rows = []
@@ -314,9 +401,9 @@ def process_local_folder(label: str, folder_path: Path) -> list[dict]:
             "published": "",
         }
         print(f"    Analysing …", end=" ", flush=True)
-        metrics = analyse_paper(pdf_path)
+        metrics = _run_analysis_with_cache(pdf_path, arxiv_id=None, cache=cache)
         row = meta | metrics
-        if metrics["error"]:
+        if metrics.get("error"):
             print(f"ERROR: {metrics['error']}")
         else:
             all_numeric = all(
@@ -450,6 +537,18 @@ def main() -> None:
     parser.add_argument("--no-author", action="store_true", help="Skip all author paper sets")
     parser.add_argument("--no-category", action="store_true", help="Skip category paper set")
     parser.add_argument("--no-pdf-folder", action="store_true", help="Skip all local PDF folder sets")
+    parser.add_argument(
+        "--cache",
+        default="analysis_cache.sqlite",
+        metavar="PATH",
+        help="SQLite cache path for computed metrics (default: analysis_cache.sqlite)",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        dest="no_cache",
+        help="Bypass the cache entirely; always recompute metrics from PDFs",
+    )
     args = parser.parse_args()
 
     if not args.authors:
@@ -466,53 +565,72 @@ def main() -> None:
     _get_nlp()
     print("spaCy model ready.\n")
 
+    # Open (or bypass) the analysis cache
+    cache: Optional["AnalysisCache"] = None
+    if not args.no_cache:
+        try:
+            from analysis_cache import AnalysisCache  # noqa: PLC0415
+            cache = AnalysisCache(args.cache)
+            print(f"Analysis cache: {args.cache}\n")
+        except Exception as exc:
+            print(f"WARNING: could not open cache {args.cache!r}: {exc}", file=sys.stderr)
+    else:
+        print("Analysis cache: disabled (--no-cache)\n")
+
     sheets: dict[str, list[dict]] = {}
     first_download = True
 
-    # ---- Author sets --------------------------------------------------------
-    if not args.no_author:
-        for sheet_name, page_url in args.authors:
-            print(f"\n=== Fetching papers from author page: {page_url} ===")
-            author_papers = fetch_author_page(page_url)
-            print(f"Found {len(author_papers)} papers.\n")
+    try:
+        # ---- Author sets ----------------------------------------------------
+        if not args.no_author:
+            for sheet_name, page_url in args.authors:
+                print(f"\n=== Fetching papers from author page: {page_url} ===")
+                author_papers = fetch_author_page(page_url)
+                print(f"Found {len(author_papers)} papers.\n")
 
-            if author_papers:
-                print(f"=== Analysing {sheet_name} papers ({len(author_papers)}) ===")
-                rows = process_paper_set(sheet_name, author_papers, cache_dir, first_download=first_download)
-                sheets[sheet_name] = rows
-                first_download = False
+                if author_papers:
+                    print(f"=== Analysing {sheet_name} papers ({len(author_papers)}) ===")
+                    rows = process_paper_set(sheet_name, author_papers, cache_dir,
+                                             first_download=first_download, cache=cache)
+                    sheets[sheet_name] = rows
+                    first_download = False
 
-            time.sleep(_API_DELAY)
+                time.sleep(_API_DELAY)
 
-    # ---- Local PDF folder sets ----------------------------------------------
-    if not args.no_pdf_folder:
-        for sheet_name, folder_str in args.pdf_folders:
-            folder_path = Path(folder_str)
-            if not folder_path.is_dir():
-                print(
-                    f"  WARNING: PDF folder {folder_path!r} does not exist — skipping.",
-                    file=sys.stderr,
+        # ---- Local PDF folder sets ------------------------------------------
+        if not args.no_pdf_folder:
+            for sheet_name, folder_str in args.pdf_folders:
+                folder_path = Path(folder_str)
+                if not folder_path.is_dir():
+                    print(
+                        f"  WARNING: PDF folder {folder_path!r} does not exist — skipping.",
+                        file=sys.stderr,
+                    )
+                    continue
+                print(f"\n=== Analysing local PDFs: {folder_path}  →  sheet '{sheet_name}' ===")
+                rows = process_local_folder(sheet_name, folder_path, cache=cache)
+                if rows:
+                    sheets[sheet_name] = rows
+
+        # ---- Category set ---------------------------------------------------
+        if not args.no_category:
+            search_query = _build_category_query(args.category, args.category_before)
+            date_note = f" (before {args.category_before})" if args.category_before else ""
+            print(f"\n=== Fetching papers from category: {args.category}{date_note} (max {args.category_max}) ===")
+            cat_papers = fetch_arxiv_papers(search_query, max_results=args.category_max)
+            print(f"Found {len(cat_papers)} papers.\n")
+
+            if cat_papers:
+                print(f"=== Analysing {args.category} papers ({len(cat_papers)}) ===")
+                rows = process_paper_set(
+                    args.category, cat_papers, cache_dir,
+                    first_download=first_download, cache=cache,
                 )
-                continue
-            print(f"\n=== Analysing local PDFs: {folder_path}  →  sheet '{sheet_name}' ===")
-            rows = process_local_folder(sheet_name, folder_path)
-            if rows:
-                sheets[sheet_name] = rows
+                sheets[args.category] = rows
 
-    # ---- Category set -------------------------------------------------------
-    if not args.no_category:
-        search_query = _build_category_query(args.category, args.category_before)
-        date_note = f" (before {args.category_before})" if args.category_before else ""
-        print(f"\n=== Fetching papers from category: {args.category}{date_note} (max {args.category_max}) ===")
-        cat_papers = fetch_arxiv_papers(search_query, max_results=args.category_max)
-        print(f"Found {len(cat_papers)} papers.\n")
-
-        if cat_papers:
-            print(f"=== Analysing {args.category} papers ({len(cat_papers)}) ===")
-            rows = process_paper_set(
-                args.category, cat_papers, cache_dir, first_download=first_download
-            )
-            sheets[args.category] = rows
+    finally:
+        if cache is not None:
+            cache.close()
 
     # ---- Write output -------------------------------------------------------
     if not sheets:

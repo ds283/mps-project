@@ -268,12 +268,16 @@ def _run_analysis_with_cache(
     pdf_path: Path,
     arxiv_id: Optional[str],
     cache: Optional["AnalysisCache"],
+    llama_server_url: Optional[str] = None,
 ) -> dict:
     """Run language analysis on *pdf_path*, consulting *cache* when available.
 
     Returns the same metrics dict as analyse_paper_from_text().  On a cache
     hit, prints "(cached)" and skips reprocessing.  Falls back to direct
     analysis if text extraction fails or the cache raises an unexpected error.
+
+    When *llama_server_url* is provided, NLL metrics are computed and stored
+    in the llm_metrics cache table alongside the lexical metrics.
     """
     if cache is not None:
         try:
@@ -281,9 +285,28 @@ def _run_analysis_with_cache(
             text_hash = sha256(raw_text.encode()).hexdigest()
             cached = cache.get_metrics(text_hash)
             if cached is not None:
+                # Cache hit for lexical metrics — but NLL may not have been
+                # computed yet (e.g. previous run had no llama-server URL).
+                if llama_server_url is not None and cached.get("mean_nll") is None:
+                    nll_cached = cache.get_nll(text_hash)
+                    if nll_cached is None or nll_cached.get("mean_nll") is None:
+                        # Compute NLL now and store it.
+                        from language_analysis_core import compute_nll, strip_math_lines, split_document  # noqa: PLC0415
+                        _core, _, _appendices = split_document(raw_text)
+                        content_text = (_core + "\n\n" + _appendices) if _appendices else _core
+                        clean_content = strip_math_lines(content_text)
+                        mean_nll, nll_cv = compute_nll(clean_content, llama_server_url)
+                        nll_data = {"mean_nll": mean_nll, "nll_cv": nll_cv}
+                        cache.store_nll(text_hash, nll_data=nll_data)
+                        cached["mean_nll"] = mean_nll
+                        cached["nll_cv"] = nll_cv
+                    else:
+                        cached["mean_nll"] = nll_cached.get("mean_nll")
+                        cached["nll_cv"] = nll_cached.get("nll_cv")
                 print("(cached)", end=" ", flush=True)
                 return cached
-            metrics = analyse_paper_from_text(raw_text, page_count=page_count)
+            metrics = analyse_paper_from_text(raw_text, page_count=page_count,
+                                              llama_server_url=llama_server_url)
             if not metrics.get("error"):
                 cache.store_metrics(
                     text_hash,
@@ -292,11 +315,15 @@ def _run_analysis_with_cache(
                     arxiv_id=arxiv_id,
                     pymupdf_version=get_pymupdf_version(),
                 )
+                if llama_server_url is not None:
+                    nll_data = {"mean_nll": metrics.get("mean_nll"),
+                                "nll_cv": metrics.get("nll_cv")}
+                    cache.store_nll(text_hash, nll_data=nll_data)
             return metrics
         except Exception as exc:
             print(f"(cache error: {exc}) ", end="", file=sys.stderr)
             # Fall through to direct analysis below
-    return analyse_paper(pdf_path)
+    return analyse_paper(pdf_path, llama_server_url=llama_server_url)
 
 
 def process_paper_set(
@@ -305,11 +332,13 @@ def process_paper_set(
     cache_dir: Path,
     first_download: bool,
     cache: Optional["AnalysisCache"] = None,
+    llama_server_url: Optional[str] = None,
 ) -> list[dict]:
     """Download PDFs and run analysis for each paper in *papers*.
 
     Returns a list of result dicts (one per paper, metadata merged in).
     Pass *cache* to skip reprocessing PDFs whose text hash is already stored.
+    Pass *llama_server_url* to compute and store NLL metrics.
     """
     rows = []
     total = len(papers)
@@ -337,6 +366,8 @@ def process_paper_set(
                     "mtld": None,
                     "burstiness": None,
                     "sentence_cv": None,
+                    "mean_nll": None,
+                    "nll_cv": None,
                     "mattr_flag": "unknown",
                     "mtld_flag": "unknown",
                     "burstiness_flag": "unknown",
@@ -346,7 +377,8 @@ def process_paper_set(
             )
         else:
             print(f"    Analysing …", end=" ", flush=True)
-            metrics = _run_analysis_with_cache(pdf_path, arxiv_id, cache)
+            metrics = _run_analysis_with_cache(pdf_path, arxiv_id, cache,
+                                               llama_server_url=llama_server_url)
             row.update(metrics)
             if metrics.get("error"):
                 print(f"ERROR: {metrics['error']}")
@@ -356,9 +388,12 @@ def process_paper_set(
                     for k in ("mattr", "mtld", "burstiness", "sentence_cv")
                 )
                 if all_numeric:
+                    nll_str = (f"  NLL={metrics['mean_nll']:.3f}"
+                               if metrics.get("mean_nll") is not None else "")
                     print(
                         f"MATTR={metrics['mattr']:.3f}  MTLD={metrics['mtld']:.1f}  "
                         f"B={metrics['burstiness']:.3f}  CV={metrics['sentence_cv']:.3f}"
+                        f"{nll_str}"
                     )
                 else:
                     print("done (some metrics None)")
@@ -377,12 +412,14 @@ def process_local_folder(
     label: str,
     folder_path: Path,
     cache: Optional["AnalysisCache"] = None,
+    llama_server_url: Optional[str] = None,
 ) -> list[dict]:
     """Run analysis on every PDF in folder_path.
 
     Returns rows in the same format as process_paper_set, using the PDF
     filename stem as the arxiv_id/title placeholder (no download needed).
     Pass *cache* to skip reprocessing PDFs whose text hash is already stored.
+    Pass *llama_server_url* to compute and store NLL metrics.
     """
     pdfs = sorted(folder_path.glob("*.pdf"))
     rows = []
@@ -401,7 +438,8 @@ def process_local_folder(
             "published": "",
         }
         print(f"    Analysing …", end=" ", flush=True)
-        metrics = _run_analysis_with_cache(pdf_path, arxiv_id=None, cache=cache)
+        metrics = _run_analysis_with_cache(pdf_path, arxiv_id=None, cache=cache,
+                                           llama_server_url=llama_server_url)
         row = meta | metrics
         if metrics.get("error"):
             print(f"ERROR: {metrics['error']}")
@@ -411,9 +449,12 @@ def process_local_folder(
                 for k in ("mattr", "mtld", "burstiness", "sentence_cv")
             )
             if all_numeric:
+                nll_str = (f"  NLL={metrics['mean_nll']:.3f}"
+                           if metrics.get("mean_nll") is not None else "")
                 print(
                     f"MATTR={metrics['mattr']:.3f}  MTLD={metrics['mtld']:.1f}  "
                     f"B={metrics['burstiness']:.3f}  CV={metrics['sentence_cv']:.3f}"
+                    f"{nll_str}"
                 )
             else:
                 print("done (some metrics None)")
@@ -437,6 +478,8 @@ COLUMNS = [
     "mtld",
     "burstiness",
     "sentence_cv",
+    "mean_nll",
+    "nll_cv",
     "mattr_flag",
     "mtld_flag",
     "burstiness_flag",
@@ -549,6 +592,14 @@ def main() -> None:
         dest="no_cache",
         help="Bypass the cache entirely; always recompute metrics from PDFs",
     )
+    parser.add_argument(
+        "--llama-server-url",
+        default=None,
+        dest="llama_server_url",
+        metavar="URL",
+        help="Base URL of a running llama-server instance for NLL computation "
+             "(e.g. http://localhost:8080).  If omitted, NLL metrics are skipped.",
+    )
     args = parser.parse_args()
 
     if not args.authors:
@@ -564,6 +615,12 @@ def main() -> None:
     print("Loading spaCy model …", flush=True)
     _get_nlp()
     print("spaCy model ready.\n")
+
+    llama_server_url: Optional[str] = args.llama_server_url
+    if llama_server_url:
+        print(f"NLL computation: llama-server at {llama_server_url}\n")
+    else:
+        print("NLL computation: disabled (pass --llama-server-url to enable)\n")
 
     # Open (or bypass) the analysis cache
     cache: Optional["AnalysisCache"] = None
@@ -591,7 +648,8 @@ def main() -> None:
                 if author_papers:
                     print(f"=== Analysing {sheet_name} papers ({len(author_papers)}) ===")
                     rows = process_paper_set(sheet_name, author_papers, cache_dir,
-                                             first_download=first_download, cache=cache)
+                                             first_download=first_download, cache=cache,
+                                             llama_server_url=llama_server_url)
                     sheets[sheet_name] = rows
                     first_download = False
 
@@ -608,7 +666,8 @@ def main() -> None:
                     )
                     continue
                 print(f"\n=== Analysing local PDFs: {folder_path}  →  sheet '{sheet_name}' ===")
-                rows = process_local_folder(sheet_name, folder_path, cache=cache)
+                rows = process_local_folder(sheet_name, folder_path, cache=cache,
+                                            llama_server_url=llama_server_url)
                 if rows:
                     sheets[sheet_name] = rows
 
@@ -625,6 +684,7 @@ def main() -> None:
                 rows = process_paper_set(
                     args.category, cat_papers, cache_dir,
                     first_download=first_download, cache=cache,
+                    llama_server_url=llama_server_url,
                 )
                 sheets[args.category] = rows
 

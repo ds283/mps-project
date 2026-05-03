@@ -33,9 +33,10 @@ PIPELINE_VERSION  — integer; increment when any metric computation changes.
                     Cache entries store this value; stale entries must be
                     evicted manually (delete the .sqlite file or --no-cache).
 
-NLL_ENABLED       — False until Ollama exposes logprob computation.  When True,
-                    mean_nll / nll_cv become available in llm_metrics cache rows
-                    and the 4-D "full" feature set becomes usable for Mahalanobis.
+NLL_ENABLED       — True when a llama-server URL is supplied to
+                    analyse_paper_from_text().  mean_nll / nll_cv are then
+                    available in the returned dict and in llm_metrics cache rows,
+                    enabling the 4-D "full" feature set for Mahalanobis.
 
 spaCy dependency
 ----------------
@@ -48,13 +49,14 @@ from __future__ import annotations
 import re
 
 import numpy as np
+import requests
 
 # ---------------------------------------------------------------------------
 # Version constants — see module docstring for semantics
 # ---------------------------------------------------------------------------
 
-PIPELINE_VERSION = 1
-NLL_ENABLED = False
+PIPELINE_VERSION = 2
+NLL_ENABLED = True
 
 # ---------------------------------------------------------------------------
 # Classification thresholds (mirrors app/shared/llm_thresholds.py)
@@ -85,6 +87,79 @@ SENT_CV_STRONG_LOW = 0.35
 SENT_CV_NOTE_LOW = 0.55
 SENT_CV_NOTE_HIGH = 0.85
 SENT_CV_STRONG_HIGH = 1.10
+
+# ---------------------------------------------------------------------------
+# NLL scoring constants (mirrors app/tasks/language_analysis.py)
+# ---------------------------------------------------------------------------
+
+# Words per NLL scoring chunk.  At 1.4 tokens/word this gives ~840 tokens,
+# which is 4.2× the minimum threshold (good cold-start dilution) and yields
+# ~13 chunks for a typical 8 000-word paper (good nll_cv statistical power).
+_NLL_CHUNK_WORDS = 600
+
+# Tail-chunk exclusion threshold.  The final chunk is often shorter than
+# _NLL_CHUNK_WORDS; below ~200 tokens the cold-start effect dominates.
+_NLL_MIN_TOKENS = 200
+
+
+def compute_chunk_nll(chunk_text: str, base_url: str) -> float | None:
+    """Compute mean per-token NLL for *chunk_text* via llama-server /score.
+
+    Returns mean NLL in nats, or None if the chunk is too short or an error
+    occurs.  Mirrors _compute_chunk_nll() in app/tasks/language_analysis.py.
+    """
+    try:
+        tok_resp = requests.post(
+            f"{base_url}/tokenize",
+            json={"content": chunk_text},
+            timeout=30,
+        )
+        tok_resp.raise_for_status()
+        num_tokens = len(tok_resp.json().get("tokens", []))
+        if num_tokens <= _NLL_MIN_TOKENS:
+            return None
+
+        score_resp = requests.post(
+            f"{base_url}/score",
+            json={"content": chunk_text},
+            timeout=120,
+        )
+        score_resp.raise_for_status()
+        score = score_resp.json().get("score")
+        if score is None:
+            return None
+
+        return -float(score) / num_tokens
+    except Exception as exc:
+        print(f"  NLL chunk scoring failed: {exc}", flush=True)
+        return None
+
+
+def compute_nll(text: str, base_url: str) -> tuple[float | None, float | None]:
+    """Compute mean NLL and its CV over fixed-size scoring chunks of *text*.
+
+    Splits *text* into word-based chunks of _NLL_CHUNK_WORDS words each.
+    Tail chunks with ≤ _NLL_MIN_TOKENS tokens are excluded.  Returns
+    (mean_nll, nll_cv); both None when no qualifying chunks are found.
+
+    Mirrors _compute_nll() in app/tasks/language_analysis.py.
+    """
+    words = text.split()
+    chunk_nll_values: list[float] = []
+
+    for i in range(0, len(words), _NLL_CHUNK_WORDS):
+        chunk = " ".join(words[i : i + _NLL_CHUNK_WORDS])
+        nll = compute_chunk_nll(chunk, base_url)
+        if nll is not None:
+            chunk_nll_values.append(nll)
+
+    if not chunk_nll_values:
+        return None, None
+
+    arr = np.array(chunk_nll_values, dtype=float)
+    mean_nll = float(arr.mean())
+    nll_cv = float(arr.std(ddof=1) / mean_nll) if len(arr) >= 2 and mean_nll != 0.0 else None
+    return mean_nll, nll_cv
 
 
 def classify_mattr(value: float | None) -> str:
@@ -697,7 +772,11 @@ def count_patterns(text: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def analyse_paper_from_text(raw_text: str, page_count: int = 0) -> dict:
+def analyse_paper_from_text(
+    raw_text: str,
+    page_count: int = 0,
+    llama_server_url: str | None = None,
+) -> dict:
     """Run the complete language analysis pipeline on already-extracted text.
 
     Equivalent to analyse_paper() but accepts raw text directly, allowing
@@ -707,7 +786,12 @@ def analyse_paper_from_text(raw_text: str, page_count: int = 0) -> dict:
     *page_count* should be provided by the caller when known from a prior
     extract_pdf_text() call; pass 0 if unavailable.
 
-    Returns the same dict as analyse_paper().
+    *llama_server_url* should be the base URL of a running llama-server
+    instance (e.g. "http://localhost:8080").  When provided, mean_nll and
+    nll_cv are computed via /tokenize and /score and included in the result.
+    When None (default), both are set to None and NLL is skipped.
+
+    Returns the same dict as analyse_paper() plus mean_nll and nll_cv.
 
     Used by: arxiv_control_analysis.py (cache-aware code path)
     """
@@ -735,19 +819,27 @@ def analyse_paper_from_text(raw_text: str, page_count: int = 0) -> dict:
         result["sentence_cv"] = sentence_cv
         result["sentence_cv_flag"] = classify_sentence_cv(sentence_cv)
 
+        if llama_server_url is not None:
+            mean_nll, nll_cv = compute_nll(clean_content, llama_server_url)
+        else:
+            mean_nll, nll_cv = None, None
+        result["mean_nll"] = mean_nll
+        result["nll_cv"] = nll_cv
+
     except Exception as exc:
         result["error"] = f"{type(exc).__name__}: {exc}"
 
     return result
 
 
-def analyse_paper(pdf_path) -> dict:
+def analyse_paper(pdf_path, llama_server_url: str | None = None) -> dict:
     """Run the complete language analysis pipeline on *pdf_path*.
 
     Returns a dict with keys:
         page_count, word_count,
         mattr, mtld, burstiness, sentence_cv,
         mattr_flag, mtld_flag, burstiness_flag, sentence_cv_flag,
+        mean_nll, nll_cv,
         error   (None on success, otherwise an error string)
 
     This is the minimal pipeline used by the batch arXiv runner.  The
@@ -762,4 +854,4 @@ def analyse_paper(pdf_path) -> dict:
         raw_text, page_count = extract_pdf_text(str(pdf_path))
     except Exception as exc:
         return {"error": f"{type(exc).__name__}: {exc}"}
-    return analyse_paper_from_text(raw_text, page_count=page_count)
+    return analyse_paper_from_text(raw_text, page_count=page_count, llama_server_url=llama_server_url)

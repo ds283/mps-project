@@ -186,6 +186,31 @@ Do not use datetime.datetime.utcnow(), which is deprecated. Prefer datetime.date
 - `Text()` (and `UnicodeText()`, `MediumText()`, etc.) columns must be declared with `collation="utf8_bin"`. Without an explicit collation the column inherits the MySQL server default (currently `latin1`), which cannot store non-Latin Unicode content. Example: `db.Column(db.Text(collation="utf8_bin"))`.
 - Alembic migrations must specify `collation='utf8_bin'` on every `sa.Column` of type `String`, `Text`, or similar. Do not rely on the server default.
 
+### MongoDB scraped-text cache and SubmissionRecord deletion
+
+The language-analysis pipeline caches extracted document text in MongoDB, keyed by `submission_record_id`
+(see `app/shared/scraped_text_store.py`). This cache must be explicitly cleaned up whenever a
+`SubmissionRecord` is deleted — MongoDB has no foreign-key constraints and will silently accumulate
+orphaned documents otherwise.
+
+`delete_scraped_text(record_id: int)` in `app/shared/scraped_text_store.py` is the designated cleanup
+function. It is safe to call unconditionally: it is a no-op when no cached document exists, and it logs a
+warning (rather than raising) when MongoDB is not configured.
+
+**ORM-path deletes** (single-object `db.session.delete()` or ORM cascade) fire the
+`_SubmissionRecord_delete_handler` `before_delete` event in `app/models/submissions.py`. The call to
+`delete_scraped_text` belongs there so that all ORM-path deletes are covered automatically.
+
+**Bulk SQL deletes** (`.delete()` on a Query) bypass ORM events entirely. Before issuing any bulk delete
+against `SubmissionRecord`, collect the affected IDs first and call `delete_scraped_text` for each:
+
+```python
+record_ids = [r.id for r in db.session.query(SubmissionRecord.id).filter_by(...)]
+db.session.query(SubmissionRecord).filter_by(...).delete()
+for rid in record_ids:
+    delete_scraped_text(rid)
+```
+
 ### AJAX row formatters for Datatables
 
 All elements should be rendered using Jinja2 templates, not simply injected as raw strings. For efficiency,

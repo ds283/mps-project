@@ -2788,6 +2788,10 @@ def _SubmissionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
+    from ..shared.scraped_text_store import delete_scraped_text
+
+    delete_scraped_text(target.id)
+
 
 class SubmissionAttachmentRole(db.Model):
     """

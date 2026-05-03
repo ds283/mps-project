@@ -2713,10 +2713,18 @@ def regenerate_period_records(id):
     while len(records) > 0:
         c = records.pop(0)
 
-        # remove any attached SubmissionRecords
-        db.session.query(SubmissionRecord).filter_by(
-            period_id=c.id, retired=False
-        ).delete()
+        # Collect IDs before bulk delete — bulk SQL bypasses ORM events so we
+        # must clean up the MongoDB scraped-text cache manually.
+        from app.shared.scraped_text_store import delete_scraped_text
+
+        record_ids = [
+            r.id
+            for r in db.session.query(SubmissionRecord.id).filter_by(period_id=c.id, retired=False)
+        ]
+        db.session.query(SubmissionRecord).filter_by(period_id=c.id, retired=False).delete()
+        for rid in record_ids:
+            delete_scraped_text(rid)
+
         db.session.delete(c)
 
     try:

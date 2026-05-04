@@ -928,6 +928,7 @@ def _ai_concern_flag(
     sentence_cv: float | None,
     calibrations: list | None,
     mean_nll: float | None = None,
+    nll_cv: float | None = None,
     llm_model_name: str | None = None,
     llm_context_window: int | None = None,
 ) -> dict:
@@ -937,9 +938,10 @@ def _ai_concern_flag(
 
     For each calibration:
       "lexical" (3D) — uses (MATTR, MTLD, sentence_cv) if all are available.
-      "full"    (4D) — uses (MATTR, MTLD, sentence_cv, mean_nll) if all are
-                       available and the calibration's LLM model/context window
+      "full"    (5D) — uses (MATTR, MTLD, sentence_cv, mean_nll, nll_cv) if all
+                       are available and the calibration's LLM model/context window
                        matches (llm_model_name, llm_context_window).
+                       Legacy 4D "full" calibrations use only the first 4 features.
 
     Bonferroni correction: per-test alpha = 0.05/K (medium) and 0.01/K (high),
     where K is the number of calibrations actually evaluated.  The flag fires
@@ -972,11 +974,14 @@ def _ai_concern_flag(
                 continue
             applicable.append((cal, [mattr, mtld, sentence_cv]))
         elif cal.feature_set == "full":
-            if any(v is None for v in [mattr, mtld, sentence_cv, mean_nll]):
-                continue
             if not cal.is_llm_matched(llm_model_name, llm_context_window):
                 continue
-            applicable.append((cal, [mattr, mtld, sentence_cv, mean_nll]))
+            # Slice to cal.n_features so legacy 4D calibrations only require mean_nll.
+            full_features = [mattr, mtld, sentence_cv, mean_nll, nll_cv]
+            features = full_features[: cal.n_features]
+            if any(v is None for v in features):
+                continue
+            applicable.append((cal, features))
 
     K = len(applicable)
     if K == 0:
@@ -1012,6 +1017,7 @@ def _ai_concern_flag(
 
         cal_results.append({
             "feature_set": cal.feature_set,
+            "n_features": cal.n_features,
             "llm_model_name": cal.llm_model_name,
             "llm_context_window": cal.llm_context_window,
             "sigma": sigma,
@@ -2828,6 +2834,7 @@ def register_language_analysis_tasks(celery):
             metrics.get("sentence_cv"),
             _calibrations,
             mean_nll=mean_nll,
+            nll_cv=metrics.get("nll_cv"),
             llm_model_name=model,
             llm_context_window=context_size,
         )
@@ -3194,6 +3201,7 @@ def register_language_analysis_tasks(celery):
             metrics.get("sentence_cv"),
             calibrations,
             mean_nll=metrics.get("mean_nll"),
+            nll_cv=metrics.get("nll_cv"),
             llm_model_name=record.llm_model_name,
             llm_context_window=record.llm_context_size,
         )

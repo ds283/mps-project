@@ -30,15 +30,15 @@ for the --calibration-file flag and its Calibrations sheet schema.
 Calibrations sheet columns
   cal_id, tenant_id, feature_set, llm_model_name, llm_context_window
   n_samples, calibrated_at, years (semicolon-joined), pclass_ids (semicolon-joined)
-  feature_0 … feature_3    — human-readable feature labels ("MATTR", "MTLD",
-                              "sentence_cv", "mean_nll"); empty for unused slots
-  mu_0 … mu_3              — mean vector components; NaN for unused slots
-  sigma_inv_0_0 … sigma_inv_3_3  — inverse covariance matrix (row-major);
+  feature_0 … feature_4    — human-readable feature labels ("MATTR", "MTLD",
+                              "sentence_cv", "mean_nll", "nll_cv"); empty for unused slots
+  mu_0 … mu_4              — mean vector components; NaN for unused slots
+  sigma_inv_0_0 … sigma_inv_4_4  — inverse covariance matrix (row-major);
                                     NaN for unused (i, j) slots
 
 Feature ordering contract (must be validated by the consuming script):
   lexical (3-D): [MATTR, MTLD, sentence_cv]
-  full    (4-D): [MATTR, MTLD, sentence_cv, mean_nll]
+  full    (5-D): [MATTR, MTLD, sentence_cv, mean_nll, nll_cv]
 
 The CSV export (export_ai_dashboard_csv) remains single-sheet and does not
 include calibration parameters.
@@ -404,7 +404,7 @@ def _build_calibrations_sheet(tenant_ids: List[int]):
 
     _FEATURE_NAMES = {
         "lexical": ["MATTR", "MTLD", "sentence_cv"],
-        "full": ["MATTR", "MTLD", "sentence_cv", "mean_nll"],
+        "full": ["MATTR", "MTLD", "sentence_cv", "mean_nll", "nll_cv"],
     }
 
     rows = []
@@ -426,23 +426,23 @@ def _build_calibrations_sheet(tenant_ids: List[int]):
             "pclass_ids": ";".join(str(p) for p in cal.included_pclass_ids_data),
         }
 
-        for i in range(4):
+        for i in range(5):
             row[f"feature_{i}"] = feature_names[i] if i < n else ""
 
-        for i in range(4):
+        for i in range(5):
             row[f"mu_{i}"] = float(mu[i]) if i < n else np.nan
 
-        for i in range(4):
-            for j in range(4):
+        for i in range(5):
+            for j in range(5):
                 row[f"sigma_inv_{i}_{j}"] = float(sigma_inv[i][j]) if (i < n and j < n) else np.nan
 
         rows.append(row)
 
     identity_cols = ["cal_id", "tenant_id", "feature_set", "llm_model_name", "llm_context_window"]
     meta_cols = ["n_samples", "calibrated_at", "years", "pclass_ids"]
-    feature_cols = [f"feature_{i}" for i in range(4)]
-    mu_cols = [f"mu_{i}" for i in range(4)]
-    sigma_cols = [f"sigma_inv_{i}_{j}" for i in range(4) for j in range(4)]
+    feature_cols = [f"feature_{i}" for i in range(5)]
+    mu_cols = [f"mu_{i}" for i in range(5)]
+    sigma_cols = [f"sigma_inv_{i}_{j}" for i in range(5) for j in range(5)]
     all_cols = identity_cols + meta_cols + feature_cols + mu_cols + sigma_cols
 
     return pd.DataFrame(rows, columns=all_cols)

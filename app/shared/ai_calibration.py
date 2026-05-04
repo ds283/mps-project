@@ -22,9 +22,7 @@ This module provides:
 Feature sets
 ------------
   "lexical"  — 3D: (MATTR, MTLD, sentence_cv)
-  "full"     — 4D: (MATTR, MTLD, sentence_cv, mean_nll)
-               nll_cv is stored in submission metrics for display but is not
-               a Mahalanobis feature dimension.
+  "full"     — 5D: (MATTR, MTLD, sentence_cv, mean_nll, nll_cv)
 
 The squared Mahalanobis distance D² = (x - μ)ᵀ Σ⁻¹ (x - μ) follows a
 chi²(df) distribution under the null hypothesis that the submission was drawn
@@ -69,8 +67,8 @@ def compute_calibration(
     feature_set controls which metrics are extracted:
 
       "lexical"  — (MATTR, MTLD, sentence_cv) triples  [default]
-      "full"     — (MATTR, MTLD, sentence_cv, mean_nll) 4-tuples
-                   Records missing mean_nll are skipped.
+      "full"     — (MATTR, MTLD, sentence_cv, mean_nll, nll_cv) 5-tuples
+                   Records missing either mean_nll or nll_cv are skipped.
 
     Returns a dict::
 
@@ -122,9 +120,10 @@ def compute_calibration(
 
         if feature_set == "full":
             mean_nll = metrics.get("mean_nll")
-            if mean_nll is None:
+            nll_cv = metrics.get("nll_cv")
+            if mean_nll is None or nll_cv is None:
                 continue
-            rows.append((float(mattr), float(mtld), float(sentence_cv), float(mean_nll)))
+            rows.append((float(mattr), float(mtld), float(sentence_cv), float(mean_nll), float(nll_cv)))
         else:
             rows.append((float(mattr), float(mtld), float(sentence_cv)))
 

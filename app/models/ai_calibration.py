@@ -36,7 +36,7 @@ class TenantAICalibration(db.Model):
     llm_context_window = db.Column(db.Integer, nullable=True)
 
     # Feature space: "lexical" (3D: MATTR, MTLD, sentence_cv)
-    #                "full"    (4D: + mean_nll)
+    #                "full"    (5D: + mean_nll, nll_cv)
     feature_set = db.Column(db.String(32, collation="utf8_bin"), nullable=False, default="lexical")
 
     # Mahalanobis parameters stored as JSON; dimensions implied by feature_set
@@ -68,7 +68,7 @@ class TenantAICalibration(db.Model):
 
     @property
     def n_features(self) -> int:
-        return {"lexical": 3, "full": 4}.get(self.feature_set, 3)
+        return len(self.mu_data)
 
     @property
     def included_years_data(self) -> list:

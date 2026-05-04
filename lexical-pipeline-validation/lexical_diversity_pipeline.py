@@ -353,8 +353,10 @@ def load_production_calibration(
 
     Returns (mu, sigma_inv) as numpy arrays for use with mahal_dist_production().
     Feature order for lexical (3-D): [MATTR, MTLD, sentence_cv]
-                   for full    (4-D): [MATTR, MTLD, sentence_cv, mean_nll]
+                   for full    (5-D): [MATTR, MTLD, sentence_cv, mean_nll, nll_cv]
     Note: the student export uses the column name 'CV' for sentence_cv.
+    Legacy 4-D "full" exports (produced before the 5D upgrade) are also supported;
+    dimensionality is inferred from the number of non-empty feature_i label columns.
     """
     df = pd.read_excel(cal_file, sheet_name="Calibrations")
 
@@ -378,8 +380,15 @@ def load_production_calibration(
         )
 
     row = candidates.iloc[0]
-    n = 3 if cal_type == "lexical" else 4
-    expected_labels = ["MATTR", "MTLD", "sentence_cv"] + (["mean_nll"] if n == 4 else [])
+    # Infer dimensionality from stored feature labels (handles legacy 4D and new 5D exports).
+    if cal_type == "lexical":
+        n = 3
+    else:
+        n = sum(1 for i in range(5) if str(row.get(f"feature_{i}", "")).strip())
+        if n == 0:
+            n = 4  # fallback for very old exports that lack feature_i columns
+    _full_labels = ["MATTR", "MTLD", "sentence_cv", "mean_nll", "nll_cv"]
+    expected_labels = ["MATTR", "MTLD", "sentence_cv"] if cal_type == "lexical" else _full_labels[:n]
 
     for i, exp in enumerate(expected_labels):
         got = str(row.get(f"feature_{i}", ""))

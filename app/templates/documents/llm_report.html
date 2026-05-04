@@ -297,7 +297,7 @@
                                     <tr class="small">
                                         <td class="align-middle" style="width:35%">
                                             {% if cr.feature_set == 'full' %}
-                                                <span class="badge bg-primary-subtle text-primary-emphasis me-1">Full (4D)</span>
+                                                <span class="badge bg-primary-subtle text-primary-emphasis me-1">Full ({{ cr.n_features }}D)</span>
                                             {% else %}
                                                 <span class="badge bg-secondary-subtle text-secondary-emphasis me-1">Lexical (3D)</span>
                                             {% endif %}
@@ -461,7 +461,7 @@
                                 {% endif %}
                                 {% if blk == 'footer' %}
                                     <div class="small text-body-secondary" style="font-size:12px;">
-                                        {% if metrics_data.mean_nll is none %}Pending{% else %}&mdash;{% endif %}
+                                        {% if metrics_data.mean_nll is none %}Pending{% else %}Used in calibration{% endif %}
                                     </div>
                                 {% endif %}
                             {% endcall %}
@@ -478,7 +478,7 @@
                                 {% endif %}
                                 {% if blk == 'footer' %}
                                     <div class="small text-body-secondary" style="font-size:12px;">
-                                        {% if metrics_data.mean_nll is none %}Pending{% else %}&mdash;{% endif %}
+                                        {% if metrics_data.mean_nll is none %}Pending{% else %}Used in calibration{% endif %}
                                     </div>
                                 {% endif %}
                             {% endcall %}

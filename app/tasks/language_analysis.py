@@ -837,30 +837,89 @@ def _count_patterns(text: str) -> dict:
     }
 
 
-def _compute_chunk_nll(chunk_text: str, ollama_url: str, model: str) -> float | None:
-    # Ollama does not currently support logprob computation via the
-    # /v1/completions endpoint (echo=True, logprobs=1, max_tokens=0).
-    # NLL calculation is disabled until Ollama gains this capability.
-    # To re-enable: restore the requests.post() call that was removed here.
-    return None
+# ---------------------------------------------------------------------------
+# NLL scoring constants.
+#
+# _NLL_CHUNK_WORDS controls the size of scoring chunks passed to /score.
+# Chosen to give ~13 chunks for a typical 8 000-word report (good statistical
+# power for nll_cv) while keeping per-chunk cold-start contamination to ~2-3 %
+# (~840 tokens at 1.4 tok/word, vs. ~20-30 cold-start tokens per chunk).
+#
+# _NLL_MIN_TOKENS is a tail-chunk filter: the final chunk of any document is
+# shorter than _NLL_CHUNK_WORDS and may be very short.  Below ~200 tokens the
+# cold-start tokens represent >10 % of the chunk and the per-chunk mean NLL
+# becomes unreliable.  Normal (non-tail) chunks at ~840 tokens are 4.2× above
+# this threshold and are always kept.
+# ---------------------------------------------------------------------------
+
+_NLL_CHUNK_WORDS = 600
+_NLL_MIN_TOKENS = 200
 
 
-def _aggregate_nll(chunk_nlls: list) -> dict | None:
+def _compute_chunk_nll(chunk_text: str, base_url: str) -> float | None:
     """
-    Aggregate per-chunk NLL values.
+    Compute the mean per-token NLL for *chunk_text* using llama-server's
+    /tokenize and /score endpoints.
 
-    Returns {"mean_nll": float, "nll_cv": float} when ≥2 valid values are
-    present, otherwise None.  nll_cv (coefficient of variation) is
-    informational only — stored for display but not used as a Mahalanobis
-    feature dimension.
+    Returns mean NLL (in nats) if the chunk has more than _NLL_MIN_TOKENS
+    tokens, otherwise None (tail-chunk exclusion).
     """
-    valid = [v for v in chunk_nlls if v is not None]
-    if len(valid) < 2:
+    try:
+        tok_resp = requests.post(
+            f"{base_url}/tokenize",
+            json={"content": chunk_text},
+            timeout=30,
+        )
+        tok_resp.raise_for_status()
+        num_tokens = len(tok_resp.json().get("tokens", []))
+        if num_tokens <= _NLL_MIN_TOKENS:
+            return None
+
+        score_resp = requests.post(
+            f"{base_url}/score",
+            json={"content": chunk_text},
+            timeout=120,
+        )
+        score_resp.raise_for_status()
+        score = score_resp.json().get("score")
+        if score is None:
+            return None
+
+        # score is the sum of per-token log-probabilities (negative number);
+        # dividing by num_tokens gives the mean NLL per token, which is
+        # roughly independent of chunk length.
+        return -float(score) / num_tokens
+    except Exception as exc:
+        current_app.logger.warning(f"language_analysis: NLL chunk scoring failed: {exc}")
         return None
-    arr = np.array(valid, dtype=float)
+
+
+def _compute_nll(text: str, base_url: str) -> tuple[float | None, float | None]:
+    """
+    Compute mean NLL and its coefficient of variation over fixed-size scoring
+    chunks of *text*.
+
+    The text is split into word-based chunks of _NLL_CHUNK_WORDS words each.
+    Chunks with ≤ _NLL_MIN_TOKENS tokens (typically only the final tail chunk)
+    are excluded.  Returns (mean_nll, nll_cv); both None if no qualifying
+    chunks are found.
+    """
+    words = text.split()
+    chunk_nll_values: list[float] = []
+
+    for i in range(0, len(words), _NLL_CHUNK_WORDS):
+        chunk = " ".join(words[i : i + _NLL_CHUNK_WORDS])
+        nll = _compute_chunk_nll(chunk, base_url)
+        if nll is not None:
+            chunk_nll_values.append(nll)
+
+    if not chunk_nll_values:
+        return None, None
+
+    arr = np.array(chunk_nll_values, dtype=float)
     mean_nll = float(arr.mean())
-    nll_cv = float(arr.std(ddof=1) / mean_nll) if mean_nll != 0.0 else 0.0
-    return {"mean_nll": mean_nll, "nll_cv": nll_cv}
+    nll_cv = float(arr.std(ddof=1) / mean_nll) if len(arr) >= 2 and mean_nll != 0.0 else None
+    return mean_nll, nll_cv
 
 
 def _ai_concern_flag(
@@ -1009,8 +1068,8 @@ _MAP_PASS_OVERHEAD_TOKENS = 800
 #   full system prompt (~1 200) + full response (~2 000) + safety margin.
 _SYNTHESIS_OVERHEAD_TOKENS = 3500
 
-# Minimum num_ctx to request for the synthesis pass even when OLLAMA_CONTEXT_SIZE
-# is set to a smaller value, to give the evidence summary enough room.
+# Minimum context window the synthesis pass requires.  llama-server must be
+# started with --ctx-size ≥ this value (and ≥ LLAMA_SERVER_CTX_SIZE).
 _SYNTHESIS_MIN_CTX = 8192
 
 # Overhead tokens for the dedicated metadata extraction call:
@@ -1415,23 +1474,20 @@ def _validate_feedback_response(data: dict) -> bool:
 
 
 def _call_llm(
-    client,
-    model: str,
+    base_url: str,
     system_prompt: str,
     user_prompt: str,
     schema: dict,
-    options: dict | None = None,
     validate_fn=None,
     label: str = "llm",
 ) -> tuple[dict | None, str, Exception | None]:
     """
-    Submit a prompt to the Ollama LLM with the standard retry logic.
+    Submit a prompt to llama-server via the OpenAI-compatible
+    /v1/chat/completions endpoint with JSON-schema constrained generation.
 
     Returns (parsed_result, last_accumulated_text, last_exception).
     parsed_result is None if all attempts failed.
     """
-    import ollama
-
     accumulated = ""
     last_exc: Exception | None = None
     parsed_result: dict | None = None
@@ -1439,22 +1495,45 @@ def _call_llm(
     for attempt in range(_LLM_RETRY_ATTEMPTS):
         accumulated = ""
         try:
-            kwargs: dict = dict(
-                model=model,
-                prompt=user_prompt,
-                system=system_prompt,
-                format=schema,
+            resp = requests.post(
+                f"{base_url}/v1/chat/completions",
+                json={
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "response",
+                            "schema": schema,
+                        },
+                    },
+                    "stream": True,
+                    "n_predict": -1,
+                    "temperature": 0.0,
+                },
                 stream=True,
+                timeout=(30, 3600),
             )
-            if options:
-                kwargs["options"] = options
+            resp.raise_for_status()
 
-            stream = client.generate(**kwargs)
-            for chunk in stream:
-                if hasattr(chunk, "response"):
-                    accumulated += chunk.response
-                elif isinstance(chunk, dict):
-                    accumulated += chunk.get("response", "")
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                line_str = line.decode() if isinstance(line, bytes) else line
+                if not line_str.startswith("data: "):
+                    continue
+                payload = line_str[6:]
+                if payload.strip() == "[DONE]":
+                    break
+                chunk_data = json.loads(payload)
+                delta_content = (
+                    chunk_data.get("choices", [{}])[0]
+                    .get("delta", {})
+                    .get("content", "")
+                )
+                accumulated += delta_content
 
             parsed = json.loads(accumulated)
             if validate_fn is not None and not validate_fn(parsed):
@@ -1465,9 +1544,9 @@ def _call_llm(
             last_exc = None
             break
 
-        except ollama.ResponseError as exc:
+        except requests.HTTPError as exc:
             last_exc = exc
-            status = getattr(exc, "status_code", 0)
+            status = exc.response.status_code if exc.response is not None else 0
             if 400 <= status < 500:
                 current_app.logger.error(f"{label}: permanent HTTP {status} error: {exc}")
                 break
@@ -2339,8 +2418,8 @@ def register_language_analysis_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
     def submit_to_llm(self, record_id: int):
         """
-        Stage 3 (llm_tasks queue): submit the extracted report text to an Ollama
-        LLM for grade-band assessment.
+        Stage 3 (llm_tasks queue): submit the extracted report text to the LLM
+        for grade-band assessment.
 
         Short documents that fit within the context window are submitted in a
         single pass (unchanged behaviour).  Longer documents use a two-phase
@@ -2406,13 +2485,12 @@ def register_language_analysis_tasks(celery):
         if _appendices:
             clean_text = clean_text + "\n\n" + _strip_math_lines(_appendices)
 
-        context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 4096)
-        base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
-        model: str = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
-
-        import ollama
-
-        client = ollama.Client(host=base_url)
+        context_size: int = current_app.config.get("LLAMA_SERVER_CTX_SIZE",
+                              current_app.config.get("OLLAMA_CONTEXT_SIZE", 12288))
+        base_url: str = current_app.config.get("LLAMA_SERVER_URL",
+                         current_app.config.get("OLLAMA_BASE_URL", "http://localhost:8080"))
+        model: str = current_app.config.get("LLAMA_SERVER_MODEL",
+                      current_app.config.get("OLLAMA_MODEL", "llama3.1:70b"))
 
         # Release the DB connection back to the pool before the long-running LLM call.
         # The connection can sit idle for 5-10+ minutes during LLM inference, which
@@ -2430,12 +2508,10 @@ def register_language_analysis_tasks(celery):
         if rubric_snap is None:
             candidate_text = _extract_metadata_regions(clean_text)
             meta_parsed, _, meta_exc = _call_llm(
-                client,
-                model,
+                base_url,
                 _build_metadata_system_prompt(),
                 _build_metadata_user_prompt(candidate_text),
                 _LLM_METADATA_SCHEMA,
-                options={"num_ctx": context_size},
                 label=f"submit_to_llm/metadata-only (record #{record_id})",
             )
             data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
@@ -2499,18 +2575,14 @@ def register_language_analysis_tasks(celery):
             _system_prompt = _build_system_prompt(was_truncated, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
             parsed_result, accumulated, last_exc = _call_llm(
-                client,
-                model,
+                base_url,
                 _system_prompt,
                 _build_user_prompt(document_text),
                 llm_response_schema,
-                options={"num_ctx": context_size},
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/single-pass (record #{record_id})",
             )
-            # One NLL call for the whole document; nll_cv cannot be computed
-            # from a single value and stays None.
-            single_pass_mean_nll = _compute_chunk_nll(clean_text, base_url, model)
+            single_pass_mean_nll, single_pass_nll_cv = _compute_nll(clean_text, base_url)
 
         else:
             # ----------------------------------------------------------------
@@ -2533,12 +2605,10 @@ def register_language_analysis_tasks(celery):
             if metadata_result is None:
                 candidate_text = _extract_metadata_regions(clean_text)
                 meta_parsed, _, meta_exc = _call_llm(
-                    client,
-                    model,
+                    base_url,
                     _build_metadata_system_prompt(),
                     _build_metadata_user_prompt(candidate_text),
                     _LLM_METADATA_SCHEMA,
-                    options={"num_ctx": context_size},
                     label=f"submit_to_llm/metadata (record #{record_id})",
                 )
                 if meta_parsed is not None:
@@ -2577,7 +2647,7 @@ def register_language_analysis_tasks(celery):
             chunk_state = data.get("_llm_chunks", {})
 
             # Reset persisted state if chunk topology changed between retries
-            # (e.g. OLLAMA_CONTEXT_SIZE was adjusted by an administrator).
+            # (e.g. LLAMA_SERVER_CTX_SIZE was adjusted by an administrator).
             if chunk_state.get("total_chunks") != total_chunks:
                 chunk_state = {
                     "total_chunks": total_chunks,
@@ -2596,12 +2666,10 @@ def register_language_analysis_tasks(celery):
                     continue  # already persisted on a previous Celery attempt
 
                 chunk_parsed, accumulated, last_exc = _call_llm(
-                    client,
-                    model,
+                    base_url,
                     _build_chunk_system_prompt(idx, total_chunks, rubric_snap),
                     _build_chunk_user_prompt(chunk_text, idx, total_chunks),
                     _LLM_CHUNK_SCHEMA,
-                    options={"num_ctx": context_size},
                     label=f"submit_to_llm/chunk {idx + 1}/{total_chunks} (record #{record_id})",
                 )
 
@@ -2610,9 +2678,6 @@ def register_language_analysis_tasks(celery):
                     chunk_failure_reason = f"chunk {idx + 1}/{total_chunks} failed: {last_exc}"
                     break
 
-                # Compute NLL alongside evidence extraction; non-fatal if None.
-                chunk_nll = _compute_chunk_nll(chunk_text, base_url, model)
-
                 chunk_results[str(idx)] = chunk_parsed
                 completed_chunks.add(idx)
                 chunk_state = {
@@ -2620,7 +2685,6 @@ def register_language_analysis_tasks(celery):
                     "chunk_word_budget": chunk_word_budget,
                     "completed": list(completed_chunks),
                     "results": chunk_results,
-                    "nll_per_chunk": {**chunk_state.get("nll_per_chunk", {}), str(idx): chunk_nll},
                 }
                 data["_llm_chunks"] = chunk_state
                 record = db.session.get(SubmissionRecord, record_id)
@@ -2671,12 +2735,6 @@ def register_language_analysis_tasks(celery):
                     raise self.retry()
                 return
 
-            # -- Aggregate NLL across chunks before synthesis ---------------
-            raw_nlls = [chunk_state.get("nll_per_chunk", {}).get(str(i)) for i in range(total_chunks)]
-            nll_agg = _aggregate_nll(raw_nlls)
-            chunked_mean_nll = nll_agg["mean_nll"] if nll_agg else None
-            chunked_nll_cv = nll_agg["nll_cv"] if nll_agg else None
-
             # -- Step 3: synthesis (reduce phase) -------------------------
             merged = _merge_chunk_evidence(chunk_results, all_criterion_codes)
 
@@ -2692,20 +2750,22 @@ def register_language_analysis_tasks(celery):
             }
 
             evidence_text = _build_synthesis_evidence_text(merged, total_chunks, rubric_snap)
-            synthesis_ctx = max(context_size, _SYNTHESIS_MIN_CTX)
 
             _system_prompt = _build_system_prompt(False, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
             parsed_result, accumulated, last_exc = _call_llm(
-                client,
-                model,
+                base_url,
                 _system_prompt,
                 _build_synthesis_user_prompt(evidence_text),
                 llm_response_schema,
-                options={"num_ctx": synthesis_ctx},
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/synthesis (record #{record_id})",
             )
+
+            # NLL is computed over the whole document after synthesis (fast;
+            # no LLM inference involved).  This is independent of assessment
+            # chunking so it is always consistent.
+            chunked_mean_nll, chunked_nll_cv = _compute_nll(clean_text, base_url)
 
             # Overwrite synthesis metadata fields with dedicated extraction result
             # (the synthesis LLM copies them from the evidence text, but the
@@ -2836,8 +2896,8 @@ def register_language_analysis_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
     def submit_to_llm_feedback(self, record_id: int):
         """
-        Stage 4 (llm_tasks queue): submit the extracted report text to an Ollama
-        LLM for formative feedback generation (positive feedback and improvement
+        Stage 4 (llm_tasks queue): submit the extracted report text to the LLM
+        for formative feedback generation (positive feedback and improvement
         suggestions).  Runs after submit_to_llm in the chain; both tasks read from
         the shared MongoDB scraped-text cache without redundant downloads.
 
@@ -2892,13 +2952,10 @@ def register_language_analysis_tasks(celery):
             else clean_core
         )
 
-        context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 4096)
-        base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
-        model: str = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
-
-        import ollama
-
-        client = ollama.Client(host=base_url)
+        context_size: int = current_app.config.get("LLAMA_SERVER_CTX_SIZE",
+                              current_app.config.get("OLLAMA_CONTEXT_SIZE", 12288))
+        base_url: str = current_app.config.get("LLAMA_SERVER_URL",
+                         current_app.config.get("OLLAMA_BASE_URL", "http://localhost:8080"))
 
         # Release the DB connection before the long-running LLM call (same rationale
         # as submit_to_llm).  The record will be reloaded before the final write.
@@ -2938,12 +2995,10 @@ def register_language_analysis_tasks(celery):
 
         for chunk_idx, chunk_text in enumerate(chunk_texts):
             chunk_parsed, _, chunk_exc = _call_llm(
-                client,
-                model,
+                base_url,
                 _build_feedback_system_prompt(False),
                 _build_feedback_user_prompt(chunk_text),
                 _LLM_FEEDBACK_RESPONSE_SCHEMA,
-                options={"num_ctx": context_size},
                 validate_fn=_validate_feedback_response,
                 label=(
                     f"submit_to_llm_feedback/chunk {chunk_idx + 1}/{len(chunk_texts)} "

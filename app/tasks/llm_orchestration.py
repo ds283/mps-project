@@ -1035,7 +1035,8 @@ def register_llm_orchestration_tasks(celery):
         list via RPOPLPUSH; the inflight list is the source of truth for
         in-flight count (sum of LLEN across all active jobs' inflight lists).
         """
-        batch_size: int = current_app.config.get("OLLAMA_BATCH_SIZE", 1)
+        batch_size: int = current_app.config.get("LLAMA_SERVER_BATCH_SIZE",
+                             current_app.config.get("OLLAMA_BATCH_SIZE", 1))
 
         # ------- load active jobs -------
         try:

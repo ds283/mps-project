@@ -1537,7 +1537,7 @@ def _call_llm(
                 delta_content = (
                     chunk_data.get("choices", [{}])[0]
                     .get("delta", {})
-                    .get("content", "")
+                    .get("content") or ""
                 )
                 accumulated += delta_content
 

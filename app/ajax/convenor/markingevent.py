@@ -409,13 +409,6 @@ _submitter_report_signoff = """
 """
 
 # language=jinja2
-# Feedback is now tracked on ConflationReport, not SubmitterReport.
-# This column is a placeholder until feedback generation is implemented in the next ticket.
-_submitter_report_feedback = """
-<span class="badge bg-secondary text-muted">Via conflation</span>
-"""
-
-# language=jinja2
 _submitter_report_risk_factors = """
 {% set rec = report.record %}
 {% if rec is not none %}
@@ -434,7 +427,7 @@ _submitter_report_risk_factors = """
                     </span>
                 {% endif %}
             {% endfor %}
-            {% if rf.has_unresolved %}
+            {% if rf.has_unresolved and not event_is_closed %}
                 <a href="{{ url_for('convenor.resolve_risk_factors',
                            record_id=rec.id,
                            url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
@@ -445,6 +438,15 @@ _submitter_report_risk_factors = """
             {% endif %}
         {% else %}
             <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> No risk factors</span>
+        {% endif %}
+
+        {# ── LLM analysis failure warning ── #}
+        {% if rec.llm_analysis_failed %}
+            <span class="badge bg-danger mt-1"
+                  data-bs-toggle="tooltip"
+                  title="{{ rec.llm_failure_reason or 'An error occurred during LLM analysis.' }}">
+                <i class="fas fa-exclamation-circle fa-fw"></i> LLM analysis failed
+            </span>
         {% endif %}
 
         {# ── Language metrics summary (shown when analysis is complete) ── #}
@@ -820,7 +822,6 @@ def submitter_report_data(reports):
     reports_tmpl = env.from_string(_submitter_report_reports)
     grade_tmpl = env.from_string(_submitter_report_grade)
     signoff_tmpl = env.from_string(_submitter_report_signoff)
-    feedback_tmpl = env.from_string(_submitter_report_feedback)
     risk_factors_tmpl = env.from_string(_submitter_report_risk_factors)
     actions_tmpl = env.from_string(_submitter_report_actions)
 
@@ -838,6 +839,11 @@ def submitter_report_data(reports):
         "csrf_token": generate_csrf,
     }
 
+    event_is_closed = (
+        reports[0].workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED
+        if reports else False
+    )
+
     return [
         {
             "student": render_template(student_tmpl, report=report),
@@ -845,8 +851,7 @@ def submitter_report_data(reports):
             "reports": render_template(reports_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
-            "feedback": render_template(feedback_tmpl, report=report),
-            "risk_factors": render_template(risk_factors_tmpl, report=report),
+            "risk_factors": render_template(risk_factors_tmpl, report=report, event_is_closed=event_is_closed),
             "actions": render_template(actions_tmpl, report=report, **state_ctx),
         }
         for report in reports

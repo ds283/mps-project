@@ -2314,6 +2314,8 @@ def llm_report(record_id):
         text="LLM Report",
     )
 
+    is_retired = record.owner.retired if record.owner is not None else False
+
     # Admin-only actions: can clear results or clear and re-run
     can_admin = current_user.has_role("root") or current_user.has_role("admin")
 
@@ -2338,6 +2340,7 @@ def llm_report(record_id):
         rf_summary=rf_summary,
         rf_items=rf_items,
         resolve_url=resolve_url,
+        is_retired=is_retired,
         can_admin=can_admin,
         gauge_div=gauge_div,
         gauge_script=gauge_script,

@@ -1255,6 +1255,12 @@ def resolve_risk_factors(record_id):
     )
     text = request.args.get("text", "Back")
 
+    is_retired = record.owner.retired if record.owner is not None else False
+
+    if is_retired and request.method == "POST":
+        flash("Risk factors are locked for retired students and cannot be modified.", "warning")
+        return redirect(url)
+
     FormClass = build_resolve_risk_factors_form()
     form = FormClass(request.form)
 
@@ -1298,6 +1304,7 @@ def resolve_risk_factors(record_id):
         period=period,
         pclass=pclass,
         display_items=display_items,
+        is_retired=is_retired,
         url=url,
         text=text,
         form=form,

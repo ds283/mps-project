@@ -2,6 +2,7 @@
 
 {% from "icon_block.html" import icon_block %}
 {% from "bokeh.html" import import_bokeh %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% block scripts %}
     {{ super() }}
@@ -77,7 +78,7 @@
     {% else %}
 
         {# ── TOP: Grade band + summary ── #}
-        <div class="card border-primary mb-3">
+        <div class="card mb-3" style="border-left: 3px solid var(--db-purple-200);">
             <div class="card-body">
                 <div class="row g-3 align-items-start">
                     <div class="col-md-auto">
@@ -87,9 +88,9 @@
                                 <div class="small text-body-secondary mt-1">Recommended grade band</div>
                             </div>
                         {% elif record.llm_analysis_failed %}
-                            <span class="badge bg-danger">LLM failed</span>
+                            <span class="badge bg-danger-subtle text-danger-emphasis">LLM failed</span>
                         {% else %}
-                            <span class="badge bg-secondary">Grade band unavailable</span>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">Grade band unavailable</span>
                         {% endif %}
                     </div>
                     <div class="col">
@@ -97,8 +98,13 @@
                             <p class="mb-1">{{ llm_result['report_summary'] }}</p>
                         {% endif %}
                         {% if llm_result.get('preface_found') and llm_result.get('preface_precis') %}
-                            <div class="mt-2 small border-start border-3 border-secondary ps-3 text-body-secondary">
-                                <strong>Personal contribution / preface detected:</strong>
+                            <div class="mt-2 small ps-3"
+                                 style="border-left: 2px solid var(--db-purple-200);
+                                        background-color: var(--db-purple-50);
+                                        color: var(--db-purple-800);
+                                        border-radius: 0 0.375rem 0.375rem 0;">
+                                <strong style="color: var(--db-purple-900);">Personal contribution / preface
+                                    detected:</strong>
                                 {{ llm_result['preface_precis'] }}
                             </div>
                         {% endif %}
@@ -109,33 +115,42 @@
 
         {# ── RISK FACTORS ── #}
         {% if rf_summary.has_any_present %}
-            <div class="card mb-3 {% if rf_summary.has_unresolved %}border-danger{% else %}border-success{% endif %}">
-                <div class="card-header {% if rf_summary.has_unresolved %}bg-danger text-white{% else %}bg-success text-white{% endif %}">
+            <div class="card mb-3 {% if rf_summary.has_unresolved and not is_retired %}border-danger-subtle{% else %}border-success-subtle{% endif %}">
+                <div class="card-header {% if rf_summary.has_unresolved and not is_retired %}bg-danger-subtle text-danger-emphasis{% else %}bg-success-subtle text-success-emphasis{% endif %}">
                     <i class="fas fa-shield-alt fa-fw me-1"></i>
                     <strong>Risk factors</strong>
                     {% if rf_summary.has_unresolved %}
-                        <span class="badge bg-light text-danger ms-2">{{ rf_summary.unresolved_count }} unresolved</span>
+                        <span class="badge bg-danger-subtle text-danger-emphasis ms-2">{{ rf_summary.unresolved_count }} unresolved</span>
                     {% else %}
-                        <span class="badge bg-light text-success ms-2">All resolved</span>
+                        <span class="badge bg-success-subtle text-success-emphasis ms-2">All resolved</span>
+                    {% endif %}
+                    {% if is_retired %}
+                        <span class="badge bg-secondary ms-2">
+                            <i class="fas fa-lock fa-fw"></i> Frozen
+                        </span>
                     {% endif %}
                 </div>
                 <div class="card-body py-2">
                     <div class="d-flex flex-wrap gap-2 mb-2">
                         {% for factor in rf_summary.factors %}
                             {% if factor.resolved %}
-                                <span class="badge bg-success" data-bs-toggle="tooltip"
+                                <span class="badge bg-success-subtle text-success-emphasis" data-bs-toggle="tooltip"
                                       title="Resolved{% if factor.resolved_by_name %} by {{ factor.resolved_by_name }}{% endif %}">
                         <i class="fas fa-check-circle fa-fw"></i> {{ factor.label }}
                     </span>
                             {% else %}
-                                <span class="badge bg-danger">
+                                <span class="badge bg-danger-subtle text-danger-emphasis">
                         <i class="fas fa-exclamation-triangle fa-fw"></i> {{ factor.label }}
                     </span>
                             {% endif %}
                         {% endfor %}
                     </div>
-                    {% if rf_summary.has_unresolved %}
-                        <a href="{{ resolve_url }}" class="btn btn-sm btn-danger">
+                    {% if is_retired %}
+                        <a href="{{ resolve_url }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-eye fa-fw me-1"></i> View risk factor audit
+                        </a>
+                    {% elif rf_summary.has_unresolved %}
+                        <a href="{{ resolve_url }}" class="btn btn-sm btn-outline-danger">
                             <i class="fas fa-gavel fa-fw me-1"></i> Review &amp; resolve risk factors
                         </a>
                     {% else %}
@@ -156,112 +171,321 @@
                 </div>
                 <div class="card-body pb-2">
 
-                    {# Turnitin #}
-                    {% if record.turnitin_score is not none %}
-                        <h6 class="text-body-secondary small text-uppercase mb-2">Turnitin similarity</h6>
-                        <div class="row g-2 mb-3">
-                            <div class="col-auto">
-                                {% set ts = record.turnitin_score %}
-                                {% if ts == 0 %}
-                                    <span class="fw-bold text-success fs-5">{{ ts }}%</span>
-                                    <span class="badge bg-success ms-1">No match</span>
-                                {% elif ts < 25 %}
-                                    <span class="fw-bold text-primary fs-5">{{ ts }}%</span>
-                                    <span class="badge bg-primary ms-1">Low</span>
-                                {% elif ts < 50 %}
-                                    <span class="fw-bold fs-5" style="color:#ffc107">{{ ts }}%</span>
-                                    <span class="badge bg-warning text-dark ms-1">Medium</span>
-                                {% elif ts < 75 %}
-                                    <span class="fw-bold fs-5" style="color:#fd7e14">{{ ts }}%</span>
-                                    <span class="badge bg-warning text-dark ms-1">High</span>
-                                {% else %}
-                                    <span class="fw-bold text-danger fs-5">{{ ts }}%</span>
-                                    <span class="badge bg-danger ms-1">Very high</span>
-                                {% endif %}
-                            </div>
-                            {% set rf_turnitin = rf_items | selectattr('key', 'equalto', 'turnitin') | first | default(none) %}
-                            {% if rf_turnitin %}
-                                <div class="col">
-                                    {% if rf_turnitin.resolved %}
-                                        <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> Resolved</span>
-                                        {% if rf_turnitin.resolved_by_name %}
-                                            <span class="small text-body-secondary ms-1">by {{ rf_turnitin.resolved_by_name }}</span>
-                                        {% endif %}
-                                        {% if rf_turnitin.annotation %}
-                                            <div class="small text-body-secondary fst-italic mt-1">{{ rf_turnitin.annotation }}</div>
-                                        {% endif %}
+                    {# ── AI CONCERN + TURNITIN — sibling dashboard_tiles ── #}
+                    {% set concern = metrics_data.ai_concern %}
+                    {% set cal_results = metrics_data.calibration_results %}
+                    {% set bonferroni_k = metrics_data.bonferroni_k %}
+                    {% set alpha_medium = metrics_data.bonferroni_alpha_medium %}
+                    {% set alpha_high = metrics_data.bonferroni_alpha_high %}
+
+                    <div class="row row-cols-1 row-cols-md-2 g-2 mb-3">
+                        <div class="col">
+                            {% call(blk) dashboard_tile("AI Concern", title_icon="shield-alt",
+                                    icon_state=(true if concern == 'low' else (false if concern == 'high' else none)),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if concern == 'high' %}
+                                        <span class="badge bg-danger-subtle text-danger-emphasis fs-5 px-3 py-2">&bull; High concern</span>
+                                    {% elif concern == 'medium' %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis fs-5 px-3 py-2">&bull; Medium concern</span>
+                                    {% elif concern == 'low' %}
+                                        <span class="badge bg-success-subtle text-success-emphasis fs-5 px-3 py-2">&bull; Low concern</span>
                                     {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle fa-fw"></i> Requires attention</span>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    {# AI compliance statement #}
-                    {% if llm_result.get('genai_statement_found') %}
-                        <h6 class="text-body-secondary small text-uppercase mb-2">AI compliance statement</h6>
-                        <div class="alert alert-warning py-2 small mb-3">
-                            <i class="fas fa-file-signature fa-fw me-1"></i>
-                            <strong>Statement detected:</strong>
-                            {{ llm_result.get('genai_statement', '') }}
-                        </div>
-                        {% set rf_ai_comp = rf_items | selectattr('key', 'equalto', 'ai_compliance') | first | default(none) %}
-                        {% if rf_ai_comp %}
-                            {% if rf_ai_comp.resolved %}
-                                <div class="mb-3 small">
-                                    <span class="badge bg-success"><i
-                                            class="fas fa-check-circle fa-fw"></i> Reviewed</span>
-                                    {% if rf_ai_comp.resolved_by_name %}
-                                        <span class="text-body-secondary ms-1">by {{ rf_ai_comp.resolved_by_name }}</span>{% endif %}
-                                    {% if rf_ai_comp.annotation %}
-                                        <div class="text-body-secondary fst-italic mt-1">{{ rf_ai_comp.annotation }}</div>{% endif %}
-                                </div>
-                            {% else %}
-                                <div class="mb-3 small">
-                                    <span class="badge bg-warning text-dark"><i
-                                            class="fas fa-exclamation-triangle fa-fw"></i> Awaiting review</span>
-                                </div>
-                            {% endif %}
-                        {% endif %}
-                    {% endif %}
-
-                    {# MATTR / MTLD / Burstiness gauge visualizations #}
-                    <h6 class="text-body-secondary small text-uppercase mb-2">Lexical diversity metrics</h6>
-                    {% if gauge_div is defined and gauge_div is not none %}
-                        <div class="mb-3">{{ gauge_div|safe }}</div>
-                        <div class="d-flex flex-wrap gap-3 small mb-3">
-                            {% for key, label, fmt in [('mattr', 'MATTR', '%.3f'), ('mtld', 'MTLD', '%.1f'), ('burstiness', 'Burstiness (B)', '%.3f'), ('sentence_cv', 'CV', '%.3f')] %}
-                                {% set m = metrics_data[key] %}
-                                {% if m.value is not none %}
-                                    <span>
-                                        <span class="text-body-secondary">{{ label }}:</span>
-                                        <strong class="ms-1">{{ fmt|format(m.value) }}</strong>
-                                        <span class="badge bg-{{ m.flag_severity }} ms-1">{{ m.flag_label }}</span>
-                                    </span>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('burstiness', 'Burstiness'), ('sentence_cv', 'CV')] %}
-                            {% set m = metrics_data[key] %}
-                            {% if m.value is not none %}
-                                <div class="mb-2">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="small fw-semibold">{{ label }}</span>
-                                        <span class="small">
-                                            {{ "%.3f"|format(m.value) }}
-                                            <span class="text-body-secondary">(threshold: {{ "%.3f"|format(m.threshold) }})</span>
-                                            <span class="badge bg-{{ m.flag_severity }} ms-1 small">{{ m.flag_label }}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis fs-5 px-3 py-2"
+                                              data-bs-toggle="tooltip"
+                                              title="The AI concern system has not yet been calibrated for this tenant.">
+                                            Not calibrated
                                         </span>
-                                    </div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if cal_results and cal_results | length > 0 %}
+                                        {% set cr0 = cal_results[0] %}
+                                        <div class="small text-body-secondary" style="font-size:10px;">
+                                            &sigma;&nbsp;=&nbsp;<strong>{{ "%.2f"|format(cr0.sigma) }}</strong>
+                                            &ensp;p&nbsp;=&nbsp;<strong>
+                                            {% if cr0.p_value >= 0.001 %}{{ "%.3f"|format(cr0.p_value) }}
+                                                {% elif cr0.p_value >= 0.0001 %}{{ "%.2e"|format(cr0.p_value) }}
+                                            {% else %}&lt;0.0001{% endif %}
+                                        </strong>
+                                        </div>
+                                    {% elif metrics_data.mahalanobis_sigma is not none %}
+                                        <div class="small text-body-secondary" style="font-size:10px;">
+                                            &sigma;&nbsp;=&nbsp;<strong>{{ "%.2f"|format(metrics_data.mahalanobis_sigma) }}</strong>
+                                            {% if metrics_data.mahalanobis_pvalue is not none %}
+                                                &ensp;p&nbsp;=&nbsp;<strong>
+                                                {% if metrics_data.mahalanobis_pvalue >= 0.001 %}
+                                                    {{ "%.3f"|format(metrics_data.mahalanobis_pvalue) }}
+                                                    {% elif metrics_data.mahalanobis_pvalue >= 0.0001 %}{{ "%.2e"|format(metrics_data.mahalanobis_pvalue) }}
+                                                {% else %}&lt;0.0001{% endif %}
+                                            </strong>
+                                            {% endif %}
+                                        </div>
+                                    {% elif concern == 'uncalibrated' or concern is none %}
+                                        <div class="small text-body-secondary fst-italic" style="font-size:10px;">Not
+                                            calibrated
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        {% if record.turnitin_score is not none %}
+                            {% set ts = record.turnitin_score %}
+                            <div class="col">
+                                {% call(blk) dashboard_tile("Turnitin Similarity", title_icon="percentage",
+                                        icon_state=(true if ts == 0 else (false if ts >= 75 else none)),
+                                        bg="light") %}
+                                    {% if blk == 'body' %}
+                                        {% if ts == 0 %}
+                                            <span class="fw-bold fs-5"
+                                                  style="color: var(--bs-success-text-emphasis)">{{ ts }}%</span>
+                                            <span class="badge bg-success-subtle text-success-emphasis ms-1">No match</span>
+                                        {% elif ts < 25 %}
+                                            <span class="fw-bold fs-5"
+                                                  style="color: var(--bs-primary-text-emphasis)">{{ ts }}%</span>
+                                            <span class="badge bg-primary-subtle text-primary-emphasis ms-1">Low</span>
+                                        {% elif ts < 50 %}
+                                            <span class="fw-bold fs-5"
+                                                  style="color: var(--bs-warning-text-emphasis)">{{ ts }}%</span>
+                                            <span class="badge bg-warning-subtle text-warning-emphasis ms-1">Medium</span>
+                                        {% elif ts < 75 %}
+                                            <span class="fw-bold fs-5" style="color: var(--bs-orange)">{{ ts }}%</span>
+                                            <span class="badge bg-warning-subtle text-warning-emphasis ms-1">High</span>
+                                        {% else %}
+                                            <span class="fw-bold fs-5"
+                                                  style="color: var(--bs-danger-text-emphasis)">{{ ts }}%</span>
+                                            <span class="badge bg-danger-subtle text-danger-emphasis ms-1">Very high</span>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if blk == 'footer' %}
+                                        {% set rf_turnitin = rf_items | selectattr('key', 'equalto', 'turnitin') | first | default(none) %}
+                                        {% if rf_turnitin %}
+                                            {% if rf_turnitin.resolved %}
+                                                <div class="small" style="font-size:10px;">
+                                                    <span class="badge bg-success-subtle text-success-emphasis"><i
+                                                            class="fas fa-check-circle fa-fw"></i> Resolved</span>
+                                                    {% if rf_turnitin.resolved_by_name %}
+                                                        <span class="text-body-secondary">by {{ rf_turnitin.resolved_by_name }}</span>
+                                                    {% endif %}
+                                                </div>
+                                                {% if rf_turnitin.annotation %}
+                                                    <div class="small text-body-secondary fst-italic mt-1"
+                                                         style="font-size:10px;">{{ rf_turnitin.annotation }}</div>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-danger-subtle text-danger-emphasis"
+                                                      style="font-size:10px;"><i
+                                                        class="fas fa-exclamation-triangle fa-fw"></i> Requires attention</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endcall %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# ── CALIBRATION DETAIL (multi-model records) ── #}
+                    {% if cal_results and cal_results | length > 0 %}
+                        <div class="mb-3">
+                            <div class="text-uppercase text-body-secondary mb-1"
+                                 style="font-size:11px; letter-spacing:0.05em;">
+                                Calibration detail
+                            </div>
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                {% for cr in cal_results %}
+                                    <tr class="small">
+                                        <td class="align-middle" style="width:35%">
+                                            {% if cr.feature_set == 'full' %}
+                                                <span class="badge bg-primary-subtle text-primary-emphasis me-1">Full (4D)</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis me-1">Lexical (3D)</span>
+                                            {% endif %}
+                                            {% if cr.llm_model_name %}
+                                                <span class="font-monospace text-body-secondary"
+                                                      style="font-size:0.8em">{{ cr.llm_model_name }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle">
+                                            &sigma;&nbsp;=&nbsp;<strong>{{ "%.2f"|format(cr.sigma) }}</strong>
+                                        </td>
+                                        <td class="align-middle">
+                                            p&nbsp;=&nbsp;<strong>
+                                            {% if cr.p_value >= 0.001 %}
+                                                {{ "%.3f"|format(cr.p_value) }}
+                                            {% elif cr.p_value >= 0.0001 %}
+                                                {{ "%.2e"|format(cr.p_value) }}
+                                            {% else %}
+                                                &lt;0.0001
+                                            {% endif %}
+                                        </strong>
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if cr.concern == 'high' %}
+                                                <span class="badge bg-danger-subtle text-danger-emphasis">&bull; High</span>
+                                            {% elif cr.concern == 'medium' %}
+                                                <span class="badge bg-warning-subtle text-warning-emphasis">&bull; Medium</span>
+                                            {% else %}
+                                                <span class="badge bg-success-subtle text-success-emphasis">&bull; Low</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if bonferroni_k and alpha_medium %}
+                                <div class="small text-body-secondary mt-1">
+                                    Corrected &alpha;: {{ "%.4f"|format(alpha_medium) }} per test
+                                    (Bonferroni, K&nbsp;=&nbsp;{{ bonferroni_k }})
                                 </div>
                             {% endif %}
-                        {% endfor %}
+                        </div>
                     {% endif %}
+
+                    {# ── SUPPORTING LEXICAL METRICS ── #}
+                    <h6 class="text-body-secondary small text-uppercase mt-3 mb-2">Supporting lexical metrics</h6>
+                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-2 mb-3">
+                        <div class="col">
+                            {% call(blk) dashboard_tile("MATTR", title_icon="font",
+                                    icon_state=(none if metrics_data.mattr.value is none else (true if metrics_data.mattr.flag == 'ok' else (false if metrics_data.mattr.flag == 'strong' else none))),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.mattr.value is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ "%.3f"|format(metrics_data.mattr.value) }}</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.mattr.flag == 'strong' %}
+                                        <span class="text-danger-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.mattr.flag_label }}</span>
+                                    {% elif metrics_data.mattr.flag == 'note' %}
+                                        <span class="text-warning-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.mattr.flag_label }}</span>
+                                    {% else %}
+                                        <span class="text-success-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.mattr.flag_label or '—' }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col">
+                            {% call(blk) dashboard_tile("MTLD", title_icon="font",
+                                    icon_state=(none if metrics_data.mtld.value is none else (true if metrics_data.mtld.flag == 'ok' else (false if metrics_data.mtld.flag == 'strong' else none))),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.mtld.value is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ "%.1f"|format(metrics_data.mtld.value) }}</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.mtld.flag == 'strong' %}
+                                        <span class="text-danger-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.mtld.flag_label }}</span>
+                                    {% elif metrics_data.mtld.flag == 'note' %}
+                                        <span class="text-warning-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.mtld.flag_label }}</span>
+                                    {% else %}
+                                        <span class="text-success-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.mtld.flag_label or '—' }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col">
+                            {% call(blk) dashboard_tile("Burstiness (B)", title_icon="chart-bar",
+                                    icon_state=(none if metrics_data.burstiness.value is none else (true if metrics_data.burstiness.flag == 'ok' else (false if metrics_data.burstiness.flag == 'strong' else none))),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.burstiness.value is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ "%.3f"|format(metrics_data.burstiness.value) }}</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.burstiness.flag == 'strong' %}
+                                        <span class="text-danger-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.burstiness.flag_label }}</span>
+                                    {% elif metrics_data.burstiness.flag == 'note' %}
+                                        <span class="text-warning-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.burstiness.flag_label }}</span>
+                                    {% else %}
+                                        <span class="text-success-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.burstiness.flag_label or '—' }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col">
+                            {% call(blk) dashboard_tile("Sentence CV", title_icon="ruler-horizontal",
+                                    icon_state=(none if metrics_data.sentence_cv.value is none else (true if metrics_data.sentence_cv.flag == 'ok' else (false if metrics_data.sentence_cv.flag == 'strong' else none))),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.sentence_cv.value is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ "%.3f"|format(metrics_data.sentence_cv.value) }}</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.sentence_cv.flag == 'strong' %}
+                                        <span class="text-danger-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.sentence_cv.flag_label }}</span>
+                                    {% elif metrics_data.sentence_cv.flag == 'note' %}
+                                        <span class="text-warning-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.sentence_cv.flag_label }}</span>
+                                    {% else %}
+                                        <span class="text-success-emphasis"
+                                              style="font-size:12px;">{{ metrics_data.sentence_cv.flag_label or '—' }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col"{% if metrics_data.mean_nll is none %} style="opacity:0.5"{% endif %}>
+                            {% call(blk) dashboard_tile("Mean NLL", title_icon="brain", icon_state=none, bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.mean_nll is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ "%.3f"|format(metrics_data.mean_nll) }}</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    <div class="small text-body-secondary" style="font-size:12px;">
+                                        {% if metrics_data.mean_nll is none %}Pending{% else %}&mdash;{% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col"{% if metrics_data.mean_nll is none %} style="opacity:0.5"{% endif %}>
+                            {% call(blk) dashboard_tile("NLL CV", title_icon="brain", icon_state=none, bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.nll_cv is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ "%.2f"|format(metrics_data.nll_cv) }}</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    <div class="small text-body-secondary" style="font-size:12px;">
+                                        {% if metrics_data.mean_nll is none %}Pending{% else %}&mdash;{% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                    </div>
 
                     {# AI-indicator patterns #}
-                    {# (moved here, before predictability section) #}
                     {% if metrics_data.hedging_count is not none or metrics_data.filler_count is not none or metrics_data.em_dash_count is not none %}
                         <div class="row g-3 mt-1 mb-1">
                             {% if metrics_data.hedging_count is not none %}
@@ -285,125 +509,148 @@
                         </div>
                     {% endif %}
 
-                    {# ── PREDICTABILITY METRICS (shown only when NLL data available) ── #}
-                    {% if metrics_data.mean_nll is not none %}
-                        <h6 class="text-body-secondary small text-uppercase mt-3 mb-2">Predictability metrics</h6>
-                        <div class="small text-body-secondary mb-2">
-                            {% if metrics_data.llm_model_name %}
-                                <i class="fas fa-robot fa-fw me-1"></i>
-                                Model: <strong class="text-body">{{ metrics_data.llm_model_name }}</strong>
-                                {% if metrics_data.llm_context_size %}
-                                    &middot; Context: <strong class="text-body">{{ "{:,}".format(metrics_data.llm_context_size) }}</strong> tokens
-                                {% endif %}
-                            {% endif %}
+                    {# AI compliance statement #}
+                    {% if llm_result.get('genai_statement_found') %}
+                        <h6 class="text-body-secondary small text-uppercase mt-3 mb-2">AI compliance statement</h6>
+                        <div class="alert alert-warning py-2 small mb-3">
+                            <i class="fas fa-file-signature fa-fw me-1"></i>
+                            <strong>Statement detected:</strong>
+                            {{ llm_result.get('genai_statement', '') }}
                         </div>
-                        {% if nll_gauge_div is defined and nll_gauge_div is not none %}
-                            <div class="mb-2">{{ nll_gauge_div|safe }}</div>
-                        {% else %}
-                            <div class="mb-2 small">
-                                <span class="text-body-secondary">Mean NLL:</span>
-                                <strong class="ms-1">{{ "%.3f"|format(metrics_data.mean_nll) }}</strong>
-                            </div>
-                        {% endif %}
-                        {% if metrics_data.nll_cv is not none %}
-                            <div class="small mb-2">
-                                <span class="text-body-secondary">NLL variability (CV):</span>
-                                <strong class="ms-1">{{ "%.2f"|format(metrics_data.nll_cv) }}</strong>
-                                {% if metrics_data.nll_cv < 0.2 %}
-                                    <span class="text-body-secondary ms-2">&mdash; low variability, consistent with AI-generated text</span>
-                                {% elif metrics_data.nll_cv < 0.4 %}
-                                    <span class="text-body-secondary ms-2">&mdash; moderate variability</span>
-                                {% else %}
-                                    <span class="text-body-secondary ms-2">&mdash; high variability, consistent with human writing</span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    {% endif %}
-
-                    {# ── AI CONCERN ASSESSMENT ── #}
-                    <h6 class="text-body-secondary small text-uppercase mt-3 mb-2">AI concern assessment</h6>
-                    {% set concern = metrics_data.ai_concern %}
-                    {% set cal_results = metrics_data.calibration_results %}
-                    {% set bonferroni_k = metrics_data.bonferroni_k %}
-                    {% set alpha_medium = metrics_data.bonferroni_alpha_medium %}
-                    {% set alpha_high = metrics_data.bonferroni_alpha_high %}
-
-                    {% if cal_results and cal_results | length > 0 %}
-                        <div class="border rounded mb-3">
-                            <table class="table table-sm mb-0">
-                                <tbody>
-                                    {% for cr in cal_results %}
-                                        <tr class="small">
-                                            <td class="align-middle" style="width:35%">
-                                                {% if cr.feature_set == 'full' %}
-                                                    <span class="badge bg-primary me-1">Full (4D)</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary me-1">Lexical (3D)</span>
-                                                {% endif %}
-                                                {% if cr.llm_model_name %}
-                                                    <span class="font-monospace text-body-secondary" style="font-size:0.8em">{{ cr.llm_model_name }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="align-middle">
-                                                &sigma;&nbsp;=&nbsp;<strong>{{ "%.2f"|format(cr.sigma) }}</strong>
-                                            </td>
-                                            <td class="align-middle">
-                                                p&nbsp;=&nbsp;<strong>
-                                                    {% if cr.p_value >= 0.001 %}
-                                                        {{ "%.3f"|format(cr.p_value) }}
-                                                    {% elif cr.p_value >= 0.0001 %}
-                                                        {{ "%.2e"|format(cr.p_value) }}
-                                                    {% else %}
-                                                        &lt;0.0001
-                                                    {% endif %}
-                                                </strong>
-                                            </td>
-                                            <td class="align-middle">
-                                                {% if cr.concern == 'high' %}
-                                                    <span class="badge bg-danger">&bull; High</span>
-                                                {% elif cr.concern == 'medium' %}
-                                                    <span class="badge bg-warning text-dark">&bull; Medium</span>
-                                                {% else %}
-                                                    <span class="badge bg-success">&bull; Low</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            {% if bonferroni_k and alpha_medium %}
-                                <div class="border-top px-3 py-2 small text-body-secondary">
-                                    Corrected &alpha;: {{ "%.4f"|format(alpha_medium) }} per test
-                                    (Bonferroni, K&nbsp;=&nbsp;{{ bonferroni_k }})
+                        {% set rf_ai_comp = rf_items | selectattr('key', 'equalto', 'ai_compliance') | first | default(none) %}
+                        {% if rf_ai_comp %}
+                            {% if rf_ai_comp.resolved %}
+                                <div class="mb-3 small">
+                                    <span class="badge bg-success-subtle text-success-emphasis"><i
+                                            class="fas fa-check-circle fa-fw"></i> Reviewed</span>
+                                    {% if rf_ai_comp.resolved_by_name %}
+                                        <span class="text-body-secondary ms-1">by {{ rf_ai_comp.resolved_by_name }}</span>{% endif %}
+                                    {% if rf_ai_comp.annotation %}
+                                        <div class="text-body-secondary fst-italic mt-1">{{ rf_ai_comp.annotation }}</div>{% endif %}
+                                </div>
+                            {% else %}
+                                <div class="mb-3 small">
+                                    <span class="badge bg-warning-subtle text-warning-emphasis"><i
+                                            class="fas fa-exclamation-triangle fa-fw"></i> Awaiting review</span>
                                 </div>
                             {% endif %}
-                        </div>
-                    {% elif concern == 'uncalibrated' or concern is none %}
-                        <div class="small text-body-secondary fst-italic mb-2">
-                            <span class="badge bg-secondary me-1">Not calibrated</span>
-                            AI concern classification requires calibration data. Contact an administrator.
-                        </div>
+                        {% endif %}
                     {% endif %}
 
-                    {# Overall concern badge #}
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                        <span class="small text-body-secondary">Overall:</span>
-                        {% if concern == 'high' %}
-                            <span class="badge bg-danger fs-6 px-3 py-2">&bull; High concern</span>
-                        {% elif concern == 'medium' %}
-                            <span class="badge bg-warning text-dark fs-6 px-3 py-2">&bull; Medium concern</span>
-                        {% elif concern == 'low' %}
-                            <span class="badge bg-success fs-6 px-3 py-2">&bull; Low concern</span>
-                        {% else %}
-                            <span class="badge bg-secondary fs-6 px-3 py-2"
-                                  data-bs-toggle="tooltip"
-                                  title="The AI concern system has not yet been calibrated for this tenant.">
-                                Not calibrated
-                            </span>
+                </div>
+            </div>
+
+            {# ── DOCUMENT METRICS ── #}
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <i class="fas fa-file-alt fa-fw me-1"></i> <strong>Document metrics</strong>
+                </div>
+                <div class="card-body">
+
+                    {# Document length gauge — only rendered when limits are configured for this project #}
+                    {% if length_gauge_div is defined and length_gauge_div is not none %}
+                        <h6 class="text-body-secondary small text-uppercase mb-2">Document length</h6>
+                        <div class="mb-3">{{ length_gauge_div|safe }}</div>
+                        {% set rf_len = rf_items | selectattr('key', 'equalto', 'document_length') | first | default(none) %}
+                        {% if rf_len and rf_len.present %}
+                            <div class="mb-3">
+                                {% if rf_len.resolved %}
+                                    <span class="badge bg-success-subtle text-success-emphasis small">
+                            <i class="fas fa-check-circle fa-fw"></i> Length reviewed
+                        </span>
+                                    {% if rf_len.resolved_by_name %}
+                                        <span class="small text-body-secondary ms-1">by {{ rf_len.resolved_by_name }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis small">
+                            <i class="fas fa-exclamation-triangle fa-fw"></i> Limit exceeded
+                        </span>
+                                {% endif %}
+                            </div>
                         {% endif %}
+                        <hr class="my-2">
+                    {% endif %}
+
+                    {# References / Figures / Tables as dashboard_tiles #}
+                    <div class="row row-cols-1 row-cols-sm-3 g-2 mb-3">
+                        <div class="col">
+                            {% call(blk) dashboard_tile("References", title_icon="book",
+                                    icon_state=(none if metrics_data.reference_count is none else (false if metrics_data.uncited_refs else true)),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.reference_count is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ metrics_data.reference_count }}</div>
+                                        <div class="small text-body-secondary">detected</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.uncited_refs %}
+                                        <div class="text-danger-emphasis" style="font-size:10px;">
+                                            {{ metrics_data.uncited_refs | length }} possibly uncited:
+                                            {{ metrics_data.uncited_refs | join(', ') }}
+                                        </div>
+                                    {% elif metrics_data.reference_count is not none %}
+                                        <div class="text-success-emphasis" style="font-size:10px;">None flagged</div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col">
+                            {% call(blk) dashboard_tile("Figures", title_icon="image",
+                                    icon_state=(none if metrics_data.figure_count is none else (false if metrics_data.unreferenced_figures else true)),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.figure_count is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ metrics_data.figure_count }}</div>
+                                        <div class="small text-body-secondary">detected</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.unreferenced_figures %}
+                                        <div class="text-danger-emphasis" style="font-size:10px;">
+                                            {{ metrics_data.unreferenced_figures | length }} possibly unreferenced:
+                                            {{ metrics_data.unreferenced_figures | join(', ') }}
+                                        </div>
+                                    {% elif metrics_data.figure_count is not none %}
+                                        <div class="text-success-emphasis" style="font-size:10px;">None flagged</div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
+                        <div class="col">
+                            {% call(blk) dashboard_tile("Tables", title_icon="table",
+                                    icon_state=(none if metrics_data.table_count is none else (false if metrics_data.unreferenced_tables else true)),
+                                    bg="light") %}
+                                {% if blk == 'body' %}
+                                    {% if metrics_data.table_count is not none %}
+                                        <div class="fw-bold"
+                                             style="font-size:15px;">{{ metrics_data.table_count }}</div>
+                                        <div class="small text-body-secondary">detected</div>
+                                    {% else %}
+                                        <div class="text-body-secondary">&mdash;</div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if blk == 'footer' %}
+                                    {% if metrics_data.unreferenced_tables %}
+                                        <div class="text-danger-emphasis" style="font-size:10px;">
+                                            {{ metrics_data.unreferenced_tables | length }} possibly unreferenced:
+                                            {{ metrics_data.unreferenced_tables | join(', ') }}
+                                        </div>
+                                    {% elif metrics_data.table_count is not none %}
+                                        <div class="text-success-emphasis" style="font-size:10px;">None flagged</div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endcall %}
+                        </div>
                     </div>
 
-                    {# Word count #}
+                    {# Word count — moved from AI use metrics #}
                     {% if metrics_data.measured_word_count is not none %}
                         <h6 class="text-body-secondary small text-uppercase mt-3 mb-2">Word count</h6>
                         <div class="row g-2 small mb-1">
@@ -445,96 +692,18 @@
                         {% if rf_wcd and rf_wcd.present %}
                             <div class="mt-1">
                                 {% if rf_wcd.resolved %}
-                                    <span class="badge bg-success small"><i class="fas fa-check-circle fa-fw"></i> Discrepancy reviewed</span>
+                                    <span class="badge bg-success-subtle text-success-emphasis small"><i
+                                            class="fas fa-check-circle fa-fw"></i> Discrepancy reviewed</span>
                                     {% if rf_wcd.resolved_by_name %}
                                         <span class="small text-body-secondary ms-1">by {{ rf_wcd.resolved_by_name }}</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-warning text-dark small"><i
+                                    <span class="badge bg-warning-subtle text-warning-emphasis small"><i
                                             class="fas fa-exclamation-triangle fa-fw"></i> Discrepancy requires review</span>
                                 {% endif %}
                             </div>
                         {% endif %}
                     {% endif %}
-
-                </div>
-            </div>
-
-            {# ── DOCUMENT METRICS ── #}
-            <div class="card mb-3">
-                <div class="card-header bg-light">
-                    <i class="fas fa-file-alt fa-fw me-1"></i> <strong>Document metrics</strong>
-                </div>
-                <div class="card-body">
-
-                    {# Document length gauge — only rendered when limits are configured for this project #}
-                    {% if length_gauge_div is defined and length_gauge_div is not none %}
-                        <h6 class="text-body-secondary small text-uppercase mb-2">Document length</h6>
-                        <div class="mb-3">{{ length_gauge_div|safe }}</div>
-                        {% set rf_len = rf_items | selectattr('key', 'equalto', 'document_length') | first | default(none) %}
-                        {% if rf_len and rf_len.present %}
-                            <div class="mb-3">
-                                {% if rf_len.resolved %}
-                                    <span class="badge bg-success small">
-                            <i class="fas fa-check-circle fa-fw"></i> Length reviewed
-                        </span>
-                                    {% if rf_len.resolved_by_name %}
-                                        <span class="small text-body-secondary ms-1">by {{ rf_len.resolved_by_name }}</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="badge bg-danger small">
-                            <i class="fas fa-exclamation-triangle fa-fw"></i> Limit exceeded
-                        </span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                        <hr class="my-2">
-                    {% endif %}
-
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="small text-body-secondary text-uppercase mb-1">References</div>
-                            {% if metrics_data.reference_count is not none %}
-                                <div><strong>{{ metrics_data.reference_count }}</strong> detected</div>
-                                {% if metrics_data.uncited_refs %}
-                                    <div class="text-danger small mt-1">
-                                        {{ metrics_data.uncited_refs | length }} possibly uncited:
-                                        {{ metrics_data.uncited_refs | join(', ') }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-body-secondary small">—</span>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small text-body-secondary text-uppercase mb-1">Figures</div>
-                            {% if metrics_data.figure_count is not none %}
-                                <div><strong>{{ metrics_data.figure_count }}</strong> detected</div>
-                                {% if metrics_data.unreferenced_figures %}
-                                    <div class="text-danger small mt-1">
-                                        {{ metrics_data.unreferenced_figures | length }} possibly unreferenced:
-                                        {{ metrics_data.unreferenced_figures | join(', ') }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-body-secondary small">—</span>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small text-body-secondary text-uppercase mb-1">Tables</div>
-                            {% if metrics_data.table_count is not none %}
-                                <div><strong>{{ metrics_data.table_count }}</strong> detected</div>
-                                {% if metrics_data.unreferenced_tables %}
-                                    <div class="text-danger small mt-1">
-                                        {{ metrics_data.unreferenced_tables | length }} possibly unreferenced:
-                                        {{ metrics_data.unreferenced_tables | join(', ') }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-body-secondary small">—</span>
-                            {% endif %}
-                        </div>
-                    </div>
 
                     {# LLM provenance and pipeline timings #}
                     {% set t = metrics_data.timings %}
@@ -588,44 +757,48 @@
             <div class="card mb-3">
                 <div class="card-header bg-light">
                     <i class="fas fa-balance-scale fa-fw me-1"></i> <strong>Grade band reasoning</strong>
+                    <span class="badge badge-ai-generated ms-2 fw-normal small">AI-generated</span>
                 </div>
                 <div class="card-body">
                     {% if llm_result.get('overall_reasoning') %}
                         <p class="small mb-3">{{ llm_result['overall_reasoning'] }}</p>
                     {% endif %}
                     {% for band_name, band_data in llm_result.get('bands', {}).items() %}
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="fw-semibold small">{{ band_name }}</span>
-                                {% if band_data.get('band_assessment') %}
-                                    <span class="badge bg-secondary small">{{ band_data['band_assessment'] }}</span>
-                                {% endif %}
-                            </div>
-                            {% if band_data.get('criteria') %}
-                                <table class="table table-sm table-borderless small mb-0">
-                                    <tbody>
-                                    {% for code, crit in band_data['criteria'].items() %}
-                                        <tr>
-                                            <td class="text-body-secondary pe-2" style="width:5%">{{ code }}</td>
-                                            <td style="width:50%">{{ criterion_map.get(code, {}).get('text', code) }}</td>
-                                            <td style="width:20%">
-                                                {% set a = crit.get('assessment', '') %}
-                                                {% if a == 'Strong evidence' %}
-                                                    <span class="badge bg-success small">{{ a }}</span>
-                                                {% elif a == 'Partial evidence' %}
-                                                    <span class="badge bg-warning text-dark small">{{ a }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary small">{{ a or '—' }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-body-secondary small"
-                                                style="width:25%">{{ crit.get('commentary', '') }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
+                        {% if not loop.first %}
+                            <div class="mt-2"></div>{% endif %}
+                        <div class="d-flex align-items-baseline gap-3 py-2 px-3 mb-2 rounded-1"
+                             style="background-color: var(--bs-tertiary-bg);">
+                            <span class="text-body-secondary fw-semibold text-uppercase"
+                                  style="font-size:11px; letter-spacing:0.05em; white-space:nowrap;">{{ band_name }}</span>
+                            {% if band_data.get('band_assessment') %}
+                                <span class="fw-bold small">{{ band_data['band_assessment'] }}</span>
                             {% endif %}
                         </div>
+                        {% if band_data.get('criteria') %}
+                            <table class="table table-sm table-borderless small mb-0">
+                                <tbody>
+                                {% for code, crit in band_data['criteria'].items() %}
+                                    <tr>
+                                        <td class="text-body-secondary pe-2" style="width:5%">{{ code }}</td>
+                                        <td style="width:50%">
+                                            {% set _cm = criterion_map.get(code) %}{{ _cm.get('text', code) if _cm is mapping else (_cm or code) }}</td>
+                                        <td style="width:20%">
+                                            {% set a = crit.get('assessment', '') %}
+                                            {% if a == 'Strong evidence' %}
+                                                <span class="badge bg-success-subtle text-success-emphasis small">{{ a }}</span>
+                                            {% elif a == 'Partial evidence' %}
+                                                <span class="badge bg-warning-subtle text-warning-emphasis small">{{ a }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis small">{{ a or '—' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-body-secondary small"
+                                            style="width:25%">{{ crit.get('commentary', '') }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endif %}
                     {% endfor %}
                     {% if llm_result.get('caveats') %}
                         <div class="small text-body-secondary border-top pt-2 mt-2 fst-italic">{{ llm_result['caveats'] }}</div>
@@ -640,7 +813,7 @@
                 <div class="card-header bg-light">
                     <i class="fas fa-comment-dots fa-fw me-1"></i>
                     <strong>Feedback suggestions</strong>
-                    <span class="badge bg-secondary ms-2 small fw-normal">AI-generated — for guidance only</span>
+                    <span class="badge badge-ai-generated ms-2 fw-normal small">AI-generated — for guidance only</span>
                 </div>
                 <div class="card-body">
                     {% if record.llm_feedback_failed %}
@@ -649,22 +822,28 @@
                             Feedback generation failed: {{ record.llm_feedback_failure_reason or "Unknown error" }}
                         </div>
                     {% else %}
-                        {% if llm_feedback.get('positive_feedback') %}
-                            <h6 class="text-success small text-uppercase">What was done well</h6>
-                            <ul class="small mb-3">
-                                {% for item in llm_feedback['positive_feedback'] %}
-                                    <li>{{ item }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                        {% if llm_feedback.get('improvements') %}
-                            <h6 class="text-primary small text-uppercase">Suggestions for improvement</h6>
-                            <ul class="small mb-0">
-                                {% for item in llm_feedback['improvements'] %}
-                                    <li>{{ item }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {% if llm_feedback.get('positive_feedback') %}
+                                    <h6 class="text-success small text-uppercase">What was done well</h6>
+                                    <ul class="small mb-0">
+                                        {% for item in llm_feedback['positive_feedback'] %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if llm_feedback.get('improvements') %}
+                                    <h6 class="text-primary small text-uppercase">Suggestions for improvement</h6>
+                                    <ul class="small mb-0">
+                                        {% for item in llm_feedback['improvements'] %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
                     {% endif %}
                 </div>
             </div>

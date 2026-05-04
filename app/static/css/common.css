@@ -1,45 +1,84 @@
 :root {
-  /* Dashboard blue (AI Risk) */
-  --db-blue-50:  #EAF2FB;
-  --db-blue-100: #C3DBEF;
-  --db-blue-200: #9DC4E4;
-  --db-blue-400: #4A8DBF;
-  --db-blue-600: #2A6090;
-  --db-blue-800: #173D5E;
+    /* Dashboard blue (AI Risk) */
+    --db-blue-50: #EAF2FB;
+    --db-blue-100: #C3DBEF;
+    --db-blue-200: #9DC4E4;
+    --db-blue-400: #4A8DBF;
+    --db-blue-600: #2A6090;
+    --db-blue-800: #173D5E;
 
-  /* Dashboard green (Marking) */
-  --db-green-50:  #EAF4E8;
-  --db-green-100: #C2DFB8;
-  --db-green-200: #94C487;
-  --db-green-400: #4C9A5C;
-  --db-green-600: #2D6B3E;
-  --db-green-800: #1A4225;
+    /* Dashboard green (Marking) */
+    --db-green-50: #EAF4E8;
+    --db-green-100: #C2DFB8;
+    --db-green-200: #94C487;
+    --db-green-400: #4C9A5C;
+    --db-green-600: #2D6B3E;
+    --db-green-800: #1A4225;
+
+    /* Dashboard purple (AI-generated content provenance) */
+    --db-purple-50: #EEEDFE;
+    --db-purple-100: #CECBF6;
+    --db-purple-200: #AFA9EC;
+    --db-purple-400: #7F77DD;
+    --db-purple-600: #534AB7;
+    --db-purple-800: #3C3489;
+    --db-purple-900: #26215C;
 }
 
-.btn-db-blue  { background-color: var(--db-blue-400);  color: #fff; border-color: var(--db-blue-600); }
-.btn-db-green { background-color: var(--db-green-400); color: #fff; border-color: var(--db-green-600); }
-.btn-db-blue:hover  { background-color: var(--db-blue-600);  border-color: var(--db-blue-800); color: #fff; }
-.btn-db-green:hover { background-color: var(--db-green-600); border-color: var(--db-green-800); color: #fff; }
+.badge-ai-generated {
+    background-color: var(--db-purple-50);
+    color: var(--db-purple-600);
+}
+
+.btn-db-blue {
+    background-color: var(--db-blue-400);
+    color: #fff;
+    border-color: var(--db-blue-600);
+}
+
+.btn-db-green {
+    background-color: var(--db-green-400);
+    color: #fff;
+    border-color: var(--db-green-600);
+}
+
+.btn-db-blue:hover {
+    background-color: var(--db-blue-600);
+    border-color: var(--db-blue-800);
+    color: #fff;
+}
+
+.btn-db-green:hover {
+    background-color: var(--db-green-600);
+    border-color: var(--db-green-800);
+    color: #fff;
+}
 
 .pipeline-panel-header {
-  background-color: var(--db-blue-50);
-  border-bottom: 1px solid var(--db-blue-200);
-  color: var(--db-blue-800);
+    background-color: var(--db-blue-50);
+    border-bottom: 1px solid var(--db-blue-200);
+    color: var(--db-blue-800);
 }
-.pipeline-progress-fill { background-color: var(--db-blue-400); }
+
+.pipeline-progress-fill {
+    background-color: var(--db-blue-400);
+}
+
 .year-section-header {
-  background-color: var(--db-blue-100);
-  color: var(--db-blue-800);
-  border-bottom: 1px solid var(--db-blue-200);
+    background-color: var(--db-blue-100);
+    color: var(--db-blue-800);
+    border-bottom: 1px solid var(--db-blue-200);
 }
+
 .cycle-summary-header {
-  background-color: var(--db-blue-50);
-  border-color: var(--db-blue-200);
-  color: var(--db-blue-800);
+    background-color: var(--db-blue-50);
+    border-color: var(--db-blue-200);
+    color: var(--db-blue-800);
 }
+
 .marking-page-header {
-  background-color: var(--db-green-50);
-  border-bottom: 1px solid var(--db-green-200);
+    background-color: var(--db-green-50);
+    border-bottom: 1px solid var(--db-green-200);
 }
 
 html {
@@ -47,10 +86,10 @@ html {
 }
 
 .btn-group-xs > .btn, .btn-xs {
-  padding: .25rem .4rem;
-  font-size: .875rem;
-  line-height: .85;
-  border-radius: .2rem;
+    padding: .25rem .4rem;
+    font-size: .875rem;
+    line-height: .85;
+    border-radius: .2rem;
 }
 
 p.copyright {
@@ -140,19 +179,19 @@ p.copyright {
 }
 
 .large-warning-triangle {
-  display: inline;
-  font-size: .95em;
-  margin-top: 2.33em;
-  margin-bottom: 2.33em;
-  margin-left: 0;
-  margin-right: 0.18em;
-  font-weight: bold;
+    display: inline;
+    font-size: .95em;
+    margin-top: 2.33em;
+    margin-bottom: 2.33em;
+    margin-left: 0;
+    margin-right: 0.18em;
+    font-weight: bold;
 }
 
 .overview-dashboard-settings {
-  display: inline;
-  font-size: .95em;
-  font-weight: bold;
+    display: inline;
+    font-size: .95em;
+    font-weight: bold;
 }
 
 .campaign-page-title {
@@ -373,20 +412,20 @@ p.copyright {
 
 /* add back form classes removed in Bootstrap 5 as a quick hack to get form layouts working again */
 .form-group {
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .form-inline .form-control {
-  display: inline-block;
-  width: auto;
-  vertical-align: middle;
+    display: inline-block;
+    width: auto;
+    vertical-align: middle;
 }
 
 .form-row {
-  display: flex;
-  flex-wrap: wrap;
-  margin-right: -5px;
-  margin-left: -5px;
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -5px;
+    margin-left: -5px;
 }
 
 .popover {
@@ -396,11 +435,11 @@ p.copyright {
 
 /* disable link change on hover */
 .text-nohover-light {
-    color: rgba(var(--bs-light-rgb))!important;
+    color: rgba(var(--bs-light-rgb)) !important;
 }
 
 .text-nohover-dark {
-    color: rgba(var(--bs-dark-rgb))!important;
+    color: rgba(var(--bs-dark-rgb)) !important;
 }
 
 @media all and (min-width: 992px) {
@@ -435,27 +474,27 @@ p.copyright {
 .convenor-projects-megamenu ul li:before {
     font-family: 'FontAwesome';
     content: '\f0b1';
-    margin:0 5px 0 -15px;
+    margin: 0 5px 0 -15px;
     color: #2960B6FF;
 }
 
 .convenor-admin-megamenu ul li:before {
     font-family: 'FontAwesome';
     content: '\f054';
-    margin:0 5px 0 -15px;
+    margin: 0 5px 0 -15px;
     color: #555555FF;
 }
 
 .faculty-megamenu ul li:before {
     font-family: 'FontAwesome';
     content: '\f054';
-    margin:0 5px 0 -15px;
+    margin: 0 5px 0 -15px;
     color: #555555FF;
 }
 
 /* increase offcanvas height to 50% globally */
-.offcanvas{
-     width:66% !important;
+.offcanvas {
+    width: 66% !important;
 }
 
 /*!* disable default DataTable processing indicator; needed when using bootstrap_spinner() *!*/

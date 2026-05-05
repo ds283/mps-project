@@ -12,6 +12,7 @@ import hashlib
 import json
 import re
 import time
+import traceback
 import unicodedata
 
 import requests
@@ -1393,18 +1394,24 @@ def _call_llm(
                 if not line:
                     continue
                 line_str = line.decode() if isinstance(line, bytes) else line
-                if not line_str.startswith("data: "):
+                if not isinstance(line_str, str) or not line_str.startswith("data: "):
                     continue
                 payload = line_str[6:]
                 if payload.strip() == "[DONE]":
                     break
-                chunk_data = json.loads(payload)
-                delta_content = (
-                    chunk_data.get("choices", [{}])[0]
-                    .get("delta", {})
-                    .get("content") or ""
-                )
-                accumulated += delta_content
+                try:
+                    chunk_data = json.loads(payload)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if not isinstance(chunk_data, dict):
+                    continue
+                # Guard against null/empty choices (e.g. Ollama usage-only final chunk).
+                choices = chunk_data.get("choices") or [{}]
+                first_choice = choices[0] if choices and isinstance(choices[0], dict) else {}
+                delta = first_choice.get("delta") or {}
+                content = delta.get("content") if isinstance(delta, dict) else None
+                if isinstance(content, str):
+                    accumulated += content
 
             parsed = json.loads(accumulated)
             if validate_fn is not None and not validate_fn(parsed):
@@ -1443,7 +1450,11 @@ def _call_llm(
         except Exception as exc:
             last_exc = exc
             current_app.logger.warning(
-                f"{label}: transient error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
+                f"{label}: transient [{type(exc).__name__}] error on attempt {attempt + 1} "
+                f"(~{est_input_tokens} est. input tokens): {exc}"
+            )
+            current_app.logger.warning(
+                f"{label}: traceback (attempt {attempt + 1}):\n{traceback.format_exc()}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)

@@ -211,6 +211,21 @@ for rid in record_ids:
     delete_scraped_text(rid)
 ```
 
+**Report field changes** — the scraped-text cache must also be invalidated whenever `SubmissionRecord.report`
+is voided or replaced on a record that already exists:
+
+- **Voiding** (`record.report_id = None`): call `delete_scraped_text(record.id)` immediately after the
+  assignment. There is no pipeline task that will repopulate the cache, so failing to clear it leaves
+  stale text in MongoDB indefinitely.
+- **Replacing** (`record.report_id = new_asset_id`): call `delete_scraped_text(record.id)` before the
+  assignment. The subsequent `download_and_extract` pipeline task will repopulate the cache via an upsert,
+  but clearing first makes the intent explicit and avoids a brief window of stale data.
+
+Note: `upload_submitter_report` (`app/documents/views.py`) guards against uploads when a report already
+exists, so `report_id` always goes `None → asset_id` there and no stale cache entry can exist.
+Only `perform_delete_submitter_report` (void) and `_finalize_report_attachment` in `app/tasks/canvas.py`
+(Canvas pull, which can replace) require explicit cache invalidation.
+
 ### AJAX row formatters for Datatables
 
 All elements should be rendered using Jinja2 templates, not simply injected as raw strings. For efficiency,

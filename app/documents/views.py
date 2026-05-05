@@ -72,6 +72,7 @@ from ..models import (
 from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
+from ..shared.scraped_text_store import delete_scraped_text
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
@@ -506,6 +507,7 @@ def perform_delete_submitter_report(sid):
 
         record.report.expiry = expiry_date
         record.report_id = None
+        delete_scraped_text(record.id)
 
         # remove processed report if it has been generated
         if record.processed_report is not None:

@@ -34,6 +34,7 @@ from ..models import (
     User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.scraped_text_store import delete_scraped_text
 from ..shared.utils import get_main_config
 from ..shared.workflow_logging import log_db_commit
 from .thumbnails import dispatch_thumbnail_task
@@ -109,7 +110,8 @@ def _finalize_report_attachment(data, rid, user_id, endpoint=None):
         current_app.logger.error(msg)
         raise Exception(msg)
 
-    # attach this asset as the uploaded report
+    # attach this asset as the uploaded report; clear any stale scraped-text cache first
+    delete_scraped_text(record.id)
     record.report_id = asset.id
 
     # uploading user has access

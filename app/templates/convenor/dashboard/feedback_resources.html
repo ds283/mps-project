@@ -143,7 +143,7 @@
 
             {# Recipes table #}
             <div class="card border-secondary mt-3 mb-3">
-                <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+                <div class="card-header bg-primary-subtle text-secondary-emphasis d-flex flex-row justify-content-between align-items-center">
                     <span><i class="fas fa-book fa-fw me-1"></i> Feedback recipes</span>
                     <a href="{{ url_for('convenor.add_feedback_recipe', pclass_id=pclass.id,
                                        url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
@@ -168,7 +168,7 @@
 
             {# Templates table #}
             <div class="card border-secondary mt-3 mb-3">
-                <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+                <div class="card-header bg-primary-subtle text-secondary-emphasis d-flex flex-row justify-content-between align-items-center">
                     <span><i class="fas fa-file-code fa-fw me-1"></i> Feedback templates</span>
                     <a href="{{ url_for('convenor.add_feedback_template', pclass_id=pclass.id,
                                        url=url_for('convenor.feedback_resources', pclass_id=pclass.id),
@@ -193,7 +193,7 @@
 
             {# Assets table #}
             <div class="card border-secondary mt-3 mb-3">
-                <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+                <div class="card-header bg-primary-subtle text-secondary-emphasis d-flex flex-row justify-content-between align-items-center">
                     <span><i class="fas fa-images fa-fw me-1"></i> Feedback assets</span>
                     <a href="{{ url_for('convenor.add_feedback_asset', pclass_id=pclass.id,
                                        url=url_for('convenor.feedback_resources', pclass_id=pclass.id),

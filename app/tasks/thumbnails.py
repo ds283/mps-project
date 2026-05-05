@@ -74,8 +74,11 @@ def register_thumbnail_tasks(celery):
             raise self.retry()
 
         if asset is None:
+            if self.request.retries < 5:
+                raise self.retry(countdown=10)
             current_app.logger.warning(
-                f"force_regenerate_thumbnails: {asset_type} id #{asset_id} not found; skipping"
+                f"force_regenerate_thumbnails: {asset_type} id #{asset_id} not found "
+                f"after {self.request.retries} retries; skipping"
             )
             self.update_state(state="FINISHED")
             return
@@ -138,8 +141,11 @@ def register_thumbnail_tasks(celery):
             raise self.retry()
 
         if asset is None:
+            if self.request.retries < 5:
+                raise self.retry(countdown=10)
             current_app.logger.warning(
-                f"generate_thumbnails: {asset_type} id #{asset_id} not found; skipping"
+                f"generate_thumbnails: {asset_type} id #{asset_id} not found "
+                f"after {self.request.retries} retries; skipping"
             )
             self.update_state(state="FINISHED")
             return

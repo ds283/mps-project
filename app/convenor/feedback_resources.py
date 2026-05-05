@@ -141,7 +141,7 @@ def add_feedback_asset(pclass_id):
     text = request.args.get("text", "Feedback resources")
 
     form = UploadFeedbackAssetForm(request.form)
-    form.label.validators.append(make_unique_feedback_asset_label_in_pclass(pclass_id))
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_asset_label_in_pclass(pclass_id)]
 
     if form.validate_on_submit():
         if "attachment" not in request.files or request.files["attachment"].filename == "":
@@ -232,9 +232,9 @@ def edit_feedback_asset(asset_id):
     text = request.args.get("text", "Feedback resources")
 
     form = EditFeedbackAssetForm(obj=feedback_asset)
-    form.label.validators.append(
+    form.label.validators = list(form.label.validators) + [
         make_unique_feedback_asset_label_in_pclass(pclass.id, label=feedback_asset.label)
-    )
+    ]
 
     if form.validate_on_submit():
         try:
@@ -352,7 +352,7 @@ def add_feedback_template(pclass_id):
     text = request.args.get("text", "Feedback resources")
 
     form = AddFeedbackTemplateForm()
-    form.label.validators.append(make_unique_feedback_template_label_in_pclass(pclass_id))
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_template_label_in_pclass(pclass_id)]
 
     if form.validate_on_submit():
         tag_list = create_new_template_tags(form)
@@ -409,9 +409,9 @@ def edit_feedback_template(template_id):
     text = request.args.get("text", "Feedback resources")
 
     form = EditFeedbackTemplateForm(obj=template)
-    form.label.validators.append(
+    form.label.validators = list(form.label.validators) + [
         make_unique_feedback_template_label_in_pclass(pclass.id, label=template.label)
-    )
+    ]
 
     if request.method == "GET":
         # pre-populate tags from existing assignments
@@ -505,7 +505,7 @@ def add_feedback_recipe(pclass_id):
 
     AddFeedbackRecipeForm, _ = FeedbackRecipeFormFactory(pclass)
     form = AddFeedbackRecipeForm()
-    form.label.validators.append(make_unique_feedback_recipe_label_in_pclass(pclass_id))
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_recipe_label_in_pclass(pclass_id)]
 
     if form.validate_on_submit():
         now = datetime.now()
@@ -559,9 +559,9 @@ def edit_feedback_recipe(recipe_id):
 
     _, EditFeedbackRecipeForm = FeedbackRecipeFormFactory(pclass)
     form = EditFeedbackRecipeForm(obj=recipe)
-    form.label.validators.append(
+    form.label.validators = list(form.label.validators) + [
         make_unique_feedback_recipe_label_in_pclass(pclass.id, label=recipe.label)
-    )
+    ]
 
     if form.validate_on_submit():
         try:

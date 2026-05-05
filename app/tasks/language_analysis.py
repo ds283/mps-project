@@ -1062,18 +1062,6 @@ _LLM_RETRY_DELAY = 5  # seconds
 
 _TOKENS_PER_WORD = 1.4
 
-# Overhead tokens for the full single-pass assessment call:
-#   system prompt (~1 200) + structured response with 26 criteria (~2 000).
-_SINGLE_PASS_OVERHEAD_TOKENS = 3200
-
-# Overhead tokens for each map-phase (evidence extraction) chunk call:
-#   small system prompt (~400) + evidence array response (~400).
-_MAP_PASS_OVERHEAD_TOKENS = 800
-
-# Overhead tokens for the synthesis (reduce) pass:
-#   full system prompt (~1 200) + full response (~2 000) + safety margin.
-_SYNTHESIS_OVERHEAD_TOKENS = 3500
-
 # Minimum context window the synthesis pass requires.  llama-server must be
 # started with --ctx-size ≥ this value (and ≥ LLAMA_SERVER_CTX_SIZE).
 _SYNTHESIS_MIN_CTX = 8192
@@ -2533,8 +2521,12 @@ def register_language_analysis_tasks(celery):
         )
         llm_response_schema = _make_llm_response_schema(rubric_snap)
 
+        _grading_prompt = _build_system_prompt(False, rubric_snap)
+        _grading_prompt_tokens = int(len(_grading_prompt.split()) * _TOKENS_PER_WORD)
+        _single_pass_response_tokens = 2200
+        _single_pass_overhead = _grading_prompt_tokens + _single_pass_response_tokens
         single_pass_word_budget = max(
-            int((context_size - _SINGLE_PASS_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 0
+            int((context_size - _single_pass_overhead) / _TOKENS_PER_WORD * 0.90), 0
         )
         doc_words = len(clean_text.split())
 
@@ -2597,8 +2589,12 @@ def register_language_analysis_tasks(celery):
             # ----------------------------------------------------------------
             # Chunked map-reduce path: document exceeds single-pass budget.
             # ----------------------------------------------------------------
+            _sample_chunk_prompt = _build_chunk_system_prompt(0, 1, rubric_snap)
+            _chunk_prompt_tokens = int(len(_sample_chunk_prompt.split()) * _TOKENS_PER_WORD)
+            _map_response_tokens = 600
+            _map_overhead = _chunk_prompt_tokens + _map_response_tokens
             chunk_word_budget = max(
-                int((context_size - _MAP_PASS_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 500
+                int((context_size - _map_overhead) / _TOKENS_PER_WORD * 0.90), 500
             )
             chunks = _build_chunks(clean_text, chunk_word_budget)
             total_chunks = len(chunks)
@@ -2967,7 +2963,7 @@ def register_language_analysis_tasks(celery):
         _t_feedback = time.monotonic()
 
         feedback_word_budget = max(
-            int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 500
+            int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD * 0.90), 500
         )
         full_words = len(clean_full.split())
         core_words = len(clean_core.split())

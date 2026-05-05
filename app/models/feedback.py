@@ -89,7 +89,7 @@ class FeedbackTemplate(db.Model, EditingMetadataMixin):
 
     # unique label
     label = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
     )
 
     # description
@@ -159,7 +159,7 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
 
     # unique label
     label = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
     )
 
     # primary template

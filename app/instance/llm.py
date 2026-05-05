@@ -10,26 +10,18 @@
 
 import os
 
-# Base URL for the llama-server REST API (default llama-server port is 8080).
-# Falls back to the old OLLAMA_BASE_URL env var for backward compatibility.
-LLAMA_SERVER_URL = os.environ.get("LLAMA_SERVER_URL", os.environ.get("OLLAMA_BASE_URL", "http://localhost:8080"))
+# Base URL for the Ollama REST API
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
-# Model name stored for metadata and calibration matching.  With llama-server
-# the model is embedded in the running process; this string is used only for
-# provenance logging and TenantAICalibration.llm_model_name lookups.
-# Falls back to OLLAMA_MODEL for backward compatibility.
-# LLAMA_SERVER_MODEL = os.environ.get("LLAMA_SERVER_MODEL", os.environ.get("OLLAMA_MODEL", "llama3.1:8b"))
-# LLAMA_SERVER_MODEL = os.environ.get("LLAMA_SERVER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5:32b"))
-LLAMA_SERVER_MODEL = os.environ.get("LLAMA_SERVER_MODEL", os.environ.get("OLLAMA_MODEL", "llama3.1:70b"))
+# Model identifier to use for language analysis LLM submission
+# OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
+# OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:32b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:70b")
 
-# Context window size (tokens) that llama-server was started with
-# (--ctx-size flag).  Used for word-budget calculations only; the server must
-# be launched with at least this value.  12288 has been confirmed to work
-# reliably on the current hardware.
-# Falls back to OLLAMA_CONTEXT_SIZE for backward compatibility.
-LLAMA_SERVER_CTX_SIZE = int(os.environ.get("LLAMA_SERVER_CTX_SIZE", os.environ.get("OLLAMA_CONTEXT_SIZE", "12288")))
+# Context window size (tokens) for the Ollama model.
+# 12288 has been confirmed to work reliably on the current hardware.
+OLLAMA_CONTEXT_SIZE = int(os.environ.get("OLLAMA_CONTEXT_SIZE", "12288"))
 
 # Batch size for submission of reports to the LLM pipeline for appraisal.
 # For running on a desktop-scale Mac Studio, we can probably only process 1 at once.
-# Falls back to OLLAMA_BATCH_SIZE for backward compatibility.
-LLAMA_SERVER_BATCH_SIZE = int(os.environ.get("LLAMA_SERVER_BATCH_SIZE", os.environ.get("OLLAMA_BATCH_SIZE", "1")))
+OLLAMA_BATCH_SIZE = int(os.environ.get("OLLAMA_BATCH_SIZE", "1"))

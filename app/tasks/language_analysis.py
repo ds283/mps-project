@@ -2508,6 +2508,10 @@ def register_language_analysis_tasks(celery):
         errors: list = data.get("errors", [])
         _t_llm = time.monotonic()
 
+        # NLL is independent of rubric presence — compute once here so both
+        # the no-rubric and grading paths can use the result without duplication.
+        mean_nll, nll_cv = _compute_nll(clean_text, base_url)
+
         # ----------------------------------------------------------------
         # No-rubric path: run metadata extraction only, skip grading.
         # ----------------------------------------------------------------
@@ -2520,7 +2524,6 @@ def register_language_analysis_tasks(celery):
                 _LLM_METADATA_SCHEMA,
                 label=f"submit_to_llm/metadata-only (record #{record_id})",
             )
-            data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
             data["grading_skipped"] = True
             if meta_parsed is not None:
                 data["_llm_metadata"] = meta_parsed
@@ -2529,12 +2532,50 @@ def register_language_analysis_tasks(celery):
                     f"language_analysis.submit_to_llm: metadata-only extraction failed "
                     f"for record #{record_id}: {meta_exc}"
                 )
+
+            # Store NLL metrics and re-evaluate AI concern with NLL features.
+            metrics = data.get("metrics", {})
+            metrics["mean_nll"] = mean_nll
+            metrics["nll_cv"] = nll_cv
+            data["metrics"] = metrics
+            data["llm_meta"] = {"model": model, "context_size": context_size, "num_chunks": 0}
+            data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
+
+            try:
+                _pclass = record.period.config.project_class if record.period and record.period.config else None
+                _tenant = _pclass.tenant if _pclass else None
+                _calibrations = list(_tenant.ai_calibrations) if _tenant else []
+            except Exception:
+                _calibrations = []
+
+            _ai_result = _ai_concern_flag(
+                metrics.get("mattr"),
+                metrics.get("mtld"),
+                metrics.get("sentence_cv"),
+                _calibrations,
+                mean_nll=mean_nll,
+                nll_cv=nll_cv,
+                llm_model_name=model,
+                llm_context_window=context_size,
+            )
+            _flags = data.get("flags", {})
+            _flags["ai_concern"] = _ai_result["concern"]
+            _flags["mahalanobis_sigma"] = _ai_result["sigma"]
+            _flags["mahalanobis_pvalue"] = _ai_result["p_value"]
+            _flags["calibration_results"] = _ai_result.get("calibration_results", [])
+            _flags["bonferroni_k"] = _ai_result.get("bonferroni_k", 0)
+            _flags["bonferroni_alpha_medium"] = _ai_result.get("bonferroni_alpha_medium")
+            _flags["bonferroni_alpha_high"] = _ai_result.get("bonferroni_alpha_high")
+            data["flags"] = _flags
+
             data["errors"] = errors
             record = db.session.get(SubmissionRecord, record_id)
             if record is None:
                 raise Exception(
                     f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (no-rubric)"
                 )
+            record.llm_model_name = model
+            record.llm_context_size = context_size
             record.set_language_analysis_data(data)
             try:
                 db.session.commit()
@@ -2567,12 +2608,6 @@ def register_language_analysis_tasks(celery):
         prompt_hash_val: str | None = None
         num_chunks = 1  # updated to actual chunk count on the chunked path
 
-        # NLL accumulators — populated by whichever path runs below.
-        single_pass_mean_nll: float | None = None
-        single_pass_nll_cv: float | None = None
-        chunked_mean_nll: float | None = None
-        chunked_nll_cv: float | None = None
-
         if doc_words <= single_pass_word_budget:
             # ----------------------------------------------------------------
             # Single-pass path: document fits within the context window.
@@ -2588,7 +2623,6 @@ def register_language_analysis_tasks(celery):
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/single-pass (record #{record_id})",
             )
-            single_pass_mean_nll, single_pass_nll_cv = _compute_nll(clean_text, base_url)
 
         else:
             # ----------------------------------------------------------------
@@ -2768,11 +2802,6 @@ def register_language_analysis_tasks(celery):
                 label=f"submit_to_llm/synthesis (record #{record_id})",
             )
 
-            # NLL is computed over the whole document after synthesis (fast;
-            # no LLM inference involved).  This is independent of assessment
-            # chunking so it is always consistent.
-            chunked_mean_nll, chunked_nll_cv = _compute_nll(clean_text, base_url)
-
             # Overwrite synthesis metadata fields with dedicated extraction result
             # (the synthesis LLM copies them from the evidence text, but the
             # dedicated call is the authoritative source).
@@ -2802,9 +2831,7 @@ def register_language_analysis_tasks(celery):
             "num_chunks": num_chunks,
         }
 
-        # Merge NLL values into metrics now that they are available.
-        mean_nll = single_pass_mean_nll if doc_words <= single_pass_word_budget else chunked_mean_nll
-        nll_cv = single_pass_nll_cv if doc_words <= single_pass_word_budget else chunked_nll_cv
+        # Merge NLL values (computed before the grading paths) into metrics.
         metrics = data.get("metrics", {})
         metrics["mean_nll"] = mean_nll
         metrics["nll_cv"] = nll_cv  # informational; not a Mahalanobis feature

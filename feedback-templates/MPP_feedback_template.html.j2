@@ -1,0 +1,227 @@
+{%- macro format_feedback(label, report) %}
+    {# report is a MarkingReport instance #}
+    {% set positive = report.feedback_positive %}
+    {% set improvement = report.feedback_improvement %}
+    {% if positive is none %}{% set positive = "" %}{% endif %}
+    {% if improvement is none %}{% set improvement = "" %}{% endif %}
+    {% if positive|length > 0 or improvement|length > 0 %}
+        <div class="mt2">
+            <div class="p1 pl1 pr1 bg-light-yellow pt12">
+                <strong>Feedback from {{ label }}</strong>
+            </div>
+            <div class="mt1">
+                {% if positive|length > 0 %}
+                    <div class="text-medium pt12">What was done well in the project?</div>
+                    <div class="pt11 justify">{{ positive|safe }}</div>
+                {% endif %}
+                {% if improvement|length > 0 %}
+                    <div class="text-medium pt12">Things to consider for next time</div>
+                    <div class="pt11 justify">{{ improvement|safe }}</div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% endmacro -%}
+<!DOCTYPE html>
+<html>
+<style>
+    @page {
+        size: A4;
+        margin: 2cm;
+    }
+
+    .justify {
+        text-align: justify;
+    }
+
+    .pt11 {
+        font-size: 11pt;
+    }
+
+    .pt12 {
+        font-size: 12pt;
+    }
+
+    .pt13 {
+        font-size: 13pt;
+    }
+
+    .pt16 {
+        font-size: 16pt;
+    }
+
+    .text-semibold {
+        font-weight: 600;
+    }
+
+    .text-medium {
+        font-weight: 500;
+    }
+
+    .centre {
+        text-align: center;
+    }
+
+    .img-100px {
+        width: 100px;
+        max-width: 100%;
+    }
+
+    .bg-light-green {
+        background-color: #b8d5b9;
+    }
+
+    .bg-light-blue {
+        background-color: #bcd0ef;
+    }
+
+    .bg-light-yellow {
+        background-color: #f1e4b9;
+    }
+
+    .pt1 {
+        padding-top: 1ex;
+    }
+
+    .pt2 {
+        padding-top: 2ex;
+    }
+
+    .pt3 {
+        padding-top: 3ex;
+    }
+
+    .pb1 {
+        padding-bottom: 1ex;
+    }
+
+    .pb2 {
+        padding-bottom: 2ex;
+    }
+
+    .pb3 {
+        padding-bottom: 3ex;
+    }
+
+    .p1 {
+        padding-top: 1ex;
+        padding-bottom: 1ex;
+    }
+
+    .p2 {
+        padding-top: 2ex;
+        padding-bottom: 2ex;
+    }
+
+    .p3 {
+        padding-top: 3ex;
+        padding-bottom: 3ex;
+    }
+
+    .pl1 {
+        padding-left: 1ex;
+    }
+
+    .pr1 {
+        padding-right: 1ex;
+    }
+
+    .mt1 {
+        margin-top: 1ex;
+    }
+
+    .mt2 {
+        margin-top: 2ex;
+    }
+
+    .mt3 {
+        margin-top: 3ex;
+    }
+
+    .mb1 {
+        margin-bottom: 1ex;
+    }
+
+    .mb2 {
+        margin-bottom: 2ex;
+    }
+
+    .mb3 {
+        margin-bottom: 3ex;
+    }
+
+    .m1 {
+        margin-top: 1ex;
+        margin-bottom: 1ex;
+    }
+
+    .m2 {
+        margin-top: 2ex;
+        margin-bottom: 2ex;
+    }
+
+    .m3 {
+        margin-top: 3ex;
+        margin-bottom: 3ex;
+    }
+</style>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>{{ pclass.name }} feedback for {{ student_user.name }}</title>
+</head>
+<body>
+<div class="container">
+    <div class="mb3">
+        <div class="centre"><img class="img-100px" src="{{ UoS_logo }}"/></div>
+    </div>
+    <div class="m3">
+        <div class="pt16 centre">{{ pclass.name }} feedback</div>
+    </div>
+    <div class="m2">
+        <span class="p1 pt11"><strong>{{ student_user.name }}</strong></span>
+        {# expect the conflation_report to contain a single target "report" #}
+        {# this should contain the conflated report #}
+        {% if 'report' in conflation_report %}
+            <span class="p1 pt13"><strong>{{ conflation_report['report']|round(precision=0) }}%</strong></span>
+        {% endif %}
+        {% if "supervisor" in workflow_data %}
+            {% set supervisor_workflow = workflow_data["supervisor"] %}
+            {% set grade = supervisor_workflow["grade"] %}
+            {% set num_reports = supervisor_workflow["reports"]|length %}
+            <div class="mt3">
+                {% if num_reports > 1 %}
+                    <div class="pt13 p2 text-semibold bg-light-blue centre">Supervision team</div>
+                    <div class="mt1 pt11">
+                        Combined supervision grade: {{ grade|round(precision=0) }}%
+                    </div>
+                {% else %}
+                    <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Supervision reports</div>
+                    <div class="mt1 pt11">Supervision grade: {{ grade|round(precision=0) }}%</div>
+                {% endif %}
+            </div>
+            {% for report in supervisor_workflow["reports"] %}
+                {% set role = report.role %}
+                {% set supervisor_user = role.user %}
+                {{ format_feedback(supervisor_user.name, report) }}
+            {% endfor %}
+        {% endif %}
+        {% if "examiner" in workflow_data %}
+            {% set examiner_workflow = workflow_data["examiner"] %}
+            {% set grade = examiner_workflow["grade"] %}
+            {% set num_reports = examiner_workflow["reports"]|length %}
+            <div class="mt-3">
+                {% if num_reports > 1 %}
+                    <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Examiners&rsquo; reports</div>
+                    <div class="mt1 pt11">Combined examiners&rsquo; grade: {{ grade|round(precision=0) }}%</div>
+                {% else %}
+                    <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Examiner&rsquo;s report</div>
+                    <div class="mt1 pt11">Examiner&rsquo;s grade: {{ grade|round(precision=0) }}%</div>
+                {% endif %}
+            </div>
+            {% for report in examiner_workflow["reports"] %}
+                {{ format_feedback('Examiner #' + loop.index|string, report) }}
+            {% endfor %}
+        {% endif %}
+    </div>
+</body>
+</html>

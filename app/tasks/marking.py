@@ -933,6 +933,15 @@ def register_marking_tasks(celery):
             loader=jinja2.DictLoader({"template": template_body})
         )
 
+        # add basic data
+        template_env.globals["student_user"] = student
+        template_env.globals["sd"] = sd
+        template_env.globals["pclass"] = pclass
+        template_env.globals["config"] = config
+        template_env.globals["period"] = period
+        template_env.globals["event"] = event
+        template_env.globals["record"] = record
+
         # add markdown filter to template environment
         template_env.filters["markdown"] = markdown_filter
 

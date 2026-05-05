@@ -21,7 +21,7 @@ docker-nginx
 docker-web-app
 docker-celery-worker
 fix-latin1.py
-FYP_feedback_template.html.j2
+feedback-templates/FYP_feedback_template.html.j2
 instance
 logs
 memory-bank

@@ -709,40 +709,45 @@
                     {% set t = metrics_data.timings %}
                     {% if metrics_data.llm_model_name is not none or t.extraction_s is not none or t.llm_grade_s is not none %}
                         <hr class="my-2">
+                        {# Row 1: model provenance #}
+                        {% if metrics_data.llm_model_name is not none or metrics_data.llm_context_size is not none or metrics_data.llm_num_chunks is not none %}
+                            <div class="d-flex flex-wrap gap-3 small text-body-secondary mb-1">
+                                {% if metrics_data.llm_model_name is not none %}
+                                    <span><i class="fas fa-robot fa-fw"></i> Model: <strong
+                                            class="text-body">{{ metrics_data.llm_model_name }}</strong></span>
+                                {% endif %}
+                                {% if metrics_data.llm_context_size is not none %}
+                                    <span><i class="fas fa-window-maximize fa-fw"></i> Context: <strong
+                                            class="text-body">{{ "{:,}".format(metrics_data.llm_context_size) }}</strong> tokens</span>
+                                {% endif %}
+                                {% if metrics_data.llm_num_chunks is not none %}
+                                    <span><i class="fas fa-layer-group fa-fw"></i> Chunks: <strong
+                                            class="text-body">{{ metrics_data.llm_num_chunks }}</strong></span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {# Row 2: pipeline timings #}
                         <div class="d-flex flex-wrap gap-3 small text-body-secondary">
-                            {% if metrics_data.llm_model_name is not none %}
-                                <span><i class="fas fa-robot fa-fw"></i> Model: <strong
-                                        class="text-body">{{ metrics_data.llm_model_name }}</strong></span>
-                            {% endif %}
-                            {% if metrics_data.llm_context_size is not none %}
-                                <span><i class="fas fa-window-maximize fa-fw"></i> Context: <strong
-                                        class="text-body">{{ "{:,}".format(metrics_data.llm_context_size) }}</strong> tokens</span>
-                            {% endif %}
-                            {% if metrics_data.llm_num_chunks is not none %}
-                                <span><i class="fas fa-layer-group fa-fw"></i> Chunks: <strong
-                                        class="text-body">{{ metrics_data.llm_num_chunks }}</strong></span>
-                            {% endif %}
                             {% if t.extraction_s is not none %}
-                                <span><i
-                                        class="fas fa-file-export fa-fw"></i> Extraction: {{ "%.1f"|format(t.extraction_s) }}s</span>
+                                <span><i class="fas fa-file-export fa-fw"></i> Extraction: {{ "%.1f"|format(t.extraction_s) }}s</span>
                             {% endif %}
                             {% if t.counting_s is not none %}
-                                <span><i
-                                        class="fas fa-calculator fa-fw"></i> Statistics: {{ "%.1f"|format(t.counting_s) }}s</span>
+                                <span><i class="fas fa-calculator fa-fw"></i> Statistics: {{ "%.1f"|format(t.counting_s) }}s</span>
                             {% endif %}
                             {% if t.ai_metrics_s is not none %}
                                 <span><i class="fas fa-brain fa-fw"></i> AI metrics: {{ "%.1f"|format(t.ai_metrics_s) }}s</span>
                             {% endif %}
+                            {% if t.nll_s is not none %}
+                                <span><i class="fas fa-brain fa-fw"></i> NLL scoring: {{ "%.1f"|format(t.nll_s) }}s</span>
+                            {% endif %}
                             {% if t.llm_grade_s is not none %}
-                                <span><i
-                                        class="fas fa-star fa-fw"></i> Grade band LLM: {{ "%.1f"|format(t.llm_grade_s) }}s</span>
+                                <span><i class="fas fa-star fa-fw"></i> Grading LLM: {{ "%.1f"|format(t.llm_grade_s) }}s</span>
                             {% endif %}
                             {% if t.llm_feedback_s is not none %}
-                                <span><i
-                                        class="fas fa-comment fa-fw"></i> Feedback LLM: {{ "%.1f"|format(t.llm_feedback_s) }}s</span>
+                                <span><i class="fas fa-comment fa-fw"></i> Feedback LLM: {{ "%.1f"|format(t.llm_feedback_s) }}s</span>
                             {% endif %}
                             {% if record.report_redaction_count is not none %}
-                                <span><i class="fas fa-eraser fa-fw"></i> Name redactions: <strong
+                                <span><i class="fas fa-eraser fa-fw"></i> Redactions: <strong
                                         class="text-body">{{ record.report_redaction_count }}</strong></span>
                             {% endif %}
                         </div>

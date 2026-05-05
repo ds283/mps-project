@@ -2384,6 +2384,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 "extraction_s": timings.get("extraction_s"),
                 "counting_s": timings.get("counting_s"),
                 "ai_metrics_s": timings.get("ai_metrics_s"),
+                "nll_s": timings.get("nll_s"),
                 "llm_grade_s": timings.get("llm_s"),
                 "llm_feedback_s": timings.get("llm_feedback_s"),
             },

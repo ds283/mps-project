@@ -1177,28 +1177,6 @@ Your response must be a JSON object with the following fields:
 - "caveats": any limitations, uncertainties, or criteria that could not be assessed from
   text alone (e.g. typesetting quality, visual presentation).
 
-- "stated_word_count_found": true if the document contains an explicit word count stated
-  by the student (typically near a label such as "Word count:", "Total word count:", or
-  similar); false otherwise.
-
-- "stated_word_count": the integer value of the student's stated word count if
-  stated_word_count_found is true, otherwise null.
-
-- "genai_statement_found": true if the document contains any statement about the student's
-  use (or non-use) of generative AI tools; false otherwise. The statement may appear
-  anywhere in the document under any heading.
-
-- "genai_statement": if genai_statement_found is true, copy the verbatim text of the AI
-  use statement (or its first sentence if very long). Empty string if not found.
-
-- "preface_found": true if the document contains a "Preface" section (or equivalently
-  named section, e.g. "Acknowledgements and Contribution", "Personal Statement") that
-  includes a description of the student's personal contribution to the project work.
-  false otherwise.
-
-- "preface_precis": if preface_found is true, provide a 1-3 sentence précis of the
-  student's personal contribution statement. Empty string if not found.
-
 ## Criteria checklist — use the numeric code (e.g. "1.1") as the key for each criterion
 
 {criteria_checklist}
@@ -1261,12 +1239,6 @@ _REQUIRED_JSON_KEYS = {
     "overall_reasoning",
     "bands",
     "caveats",
-    "stated_word_count_found",
-    "stated_word_count",
-    "genai_statement_found",
-    "genai_statement",
-    "preface_found",
-    "preface_precis",
 }
 
 
@@ -1329,31 +1301,23 @@ def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
     }
 
 
-# JSON Schema passed to the Ollama structured-output API (format= parameter).
-# This enforces the response structure at the token-sampling level, independently
-# of the natural-language instructions in the system prompt.
+# JSON Schema for the llama-server /v1/chat/completions grading call.
+# Schema is converted to a GBNF grammar by llama-server for constrained generation.
+#
+# Grading fields only — metadata (word count, GenAI statement, preface) is extracted
+# by a separate dedicated _LLM_METADATA_SCHEMA call and merged into the result dict
+# after the grading call completes.
 #
 # Top-level structure:
-#   report_summary         — 1-2 paragraph narrative description of the report content
-#   classification         — recommended grade band (enum-constrained to rubric bands)
-#   overall_reasoning      — one paragraph justifying the recommended band
-#   bands                  — fixed-key object, one property per rubric band, each
-#                            containing a band_assessment summary and a 'criteria' object.
-#                            'bands' as an object enforces that all band names are
-#                            present exactly once (object keys are unique and required).
-#                            'criteria' is also modelled as a fixed-key object keyed by
-#                            short numeric codes ("1.1", "1.2", …) rather than the full
-#                            criterion text.  Long criterion strings as grammar property-
-#                            name literals trigger a SIGSEGV in the llama.cpp GBNF
-#                            generator; short codes are safe.  The code→text mapping is
-#                            stored in criterion_map.
-#   caveats                — free-text limitations or caveats
-#   stated_word_count_found — whether the document states an explicit word count
-#   stated_word_count      — the stated integer count, or null
-#   genai_statement_found  — whether a generative-AI use statement is present
-#   genai_statement        — verbatim AI use statement, or empty string
-#   preface_found          — whether a preface / personal contribution section exists
-#   preface_precis         — 1-3 sentence précis of the contribution statement, or ""
+#   report_summary   — 1-2 paragraph narrative description of the report content
+#   classification   — recommended grade band (enum-constrained to rubric bands)
+#   overall_reasoning — one paragraph justifying the recommended band
+#   bands            — fixed-key object, one property per rubric band, each containing
+#                      a band_assessment summary and a 'criteria' object.
+#                      'criteria' is keyed by short numeric codes ("1.1", "1.2", …)
+#                      rather than full criterion text — long property-name literals
+#                      trigger a SIGSEGV in the llama.cpp GBNF generator.
+#   caveats          — free-text limitations or caveats
 
 
 def _make_llm_response_schema(rubric) -> dict:
@@ -1376,12 +1340,6 @@ def _make_llm_response_schema(rubric) -> dict:
                 "required": [band["band"] for band in prompt_bands],
             },
             "caveats": {"type": "string"},
-            "stated_word_count_found": {"type": "boolean"},
-            "stated_word_count": {"type": ["integer", "null"]},
-            "genai_statement_found": {"type": "boolean"},
-            "genai_statement": {"type": "string"},
-            "preface_found": {"type": "boolean"},
-            "preface_precis": {"type": "string"},
         },
         "required": [
             "report_summary",
@@ -1389,12 +1347,6 @@ def _make_llm_response_schema(rubric) -> dict:
             "overall_reasoning",
             "bands",
             "caveats",
-            "stated_word_count_found",
-            "stated_word_count",
-            "genai_statement_found",
-            "genai_statement",
-            "preface_found",
-            "preface_precis",
         ],
     }
 
@@ -1486,14 +1438,19 @@ def _call_llm(
     schema: dict,
     validate_fn=None,
     label: str = "llm",
-) -> tuple[dict | None, str, Exception | None]:
+) -> tuple[dict | None, str, Exception | None, int]:
     """
     Submit a prompt to llama-server via the OpenAI-compatible
     /v1/chat/completions endpoint with JSON-schema constrained generation.
 
-    Returns (parsed_result, last_accumulated_text, last_exception).
+    Returns (parsed_result, last_accumulated_text, last_exception, est_input_tokens).
     parsed_result is None if all attempts failed.
+    est_input_tokens is a rough estimate of the input prompt size in tokens,
+    useful for diagnosing context-window failures.
     """
+    est_input_tokens = int(
+        (len(system_prompt.split()) + len(user_prompt.split())) * _TOKENS_PER_WORD
+    )
     accumulated = ""
     last_exc: Exception | None = None
     parsed_result: dict | None = None
@@ -1554,10 +1511,12 @@ def _call_llm(
             last_exc = exc
             status = exc.response.status_code if exc.response is not None else 0
             if 400 <= status < 500:
-                current_app.logger.error(f"{label}: permanent HTTP {status} error: {exc}")
+                current_app.logger.error(
+                    f"{label}: permanent HTTP {status} error (~{est_input_tokens} est. input tokens): {exc}"
+                )
                 break
             current_app.logger.warning(
-                f"{label}: transient HTTP error on attempt {attempt + 1}: {exc}"
+                f"{label}: transient HTTP error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
@@ -1568,7 +1527,7 @@ def _call_llm(
         except (json.JSONDecodeError, ValueError) as exc:
             last_exc = exc
             current_app.logger.warning(
-                f"{label}: JSON parse failure on attempt {attempt + 1}: {exc}"
+                f"{label}: JSON parse failure on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
@@ -1576,12 +1535,12 @@ def _call_llm(
         except Exception as exc:
             last_exc = exc
             current_app.logger.warning(
-                f"{label}: transient error on attempt {attempt + 1}: {exc}"
+                f"{label}: transient error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
 
-    return parsed_result, accumulated, last_exc
+    return parsed_result, accumulated, last_exc, est_input_tokens
 
 
 # ---------------------------------------------------------------------------
@@ -1779,27 +1738,8 @@ _LLM_CHUNK_SCHEMA = {
                 "required": ["criterion_code", "excerpt", "observation", "polarity"],
             },
         },
-        "metadata_hits": {
-            "type": "object",
-            "properties": {
-                "stated_word_count_found": {"type": "boolean"},
-                "stated_word_count": {"type": ["integer", "null"]},
-                "genai_statement_found": {"type": "boolean"},
-                "genai_statement": {"type": "string"},
-                "preface_found": {"type": "boolean"},
-                "preface_precis": {"type": "string"},
-            },
-            "required": [
-                "stated_word_count_found",
-                "stated_word_count",
-                "genai_statement_found",
-                "genai_statement",
-                "preface_found",
-                "preface_precis",
-            ],
-        },
     },
-    "required": ["evidence", "metadata_hits"],
+    "required": ["evidence"],
 }
 
 
@@ -1823,11 +1763,6 @@ For each passage that is relevant to any of the criteria listed below, record on
 
 If no genuine evidence exists for a criterion in this chunk, do not record an entry for it. An empty evidence array is correct when the chunk contains no relevant passages.
 
-Also check metadata_hits for:
-  - A stated word count (e.g. "Word count: 12,345")
-  - A statement about generative AI use or non-use
-  - A preface or personal contribution statement
-
 ## Criteria
 
 {criterion_list}"""
@@ -1848,7 +1783,7 @@ _LLM_METADATA_SCHEMA = {
     "type": "object",
     "properties": {
         "stated_word_count_found": {"type": "boolean"},
-        "stated_word_count": {"type": ["integer", "null"]},
+        "stated_word_count": {"type": "integer"},
         "genai_statement_found": {"type": "boolean"},
         "genai_statement": {"type": "string"},
         "preface_found": {"type": "boolean"},
@@ -1876,7 +1811,7 @@ Your task is to identify and extract the following items, if present in the prov
 
 3. **Preface / personal contribution statement**: A section (typically headed "Preface", "Personal Statement", "Declaration of Contribution", or similar) describing the student's personal contribution to the project work. Provide a 1–3 sentence précis of what the student claims they personally did.
 
-Record items not found as: stated_word_count_found = false, stated_word_count = null, genai_statement_found = false, genai_statement = "", preface_found = false, preface_precis = ""."""
+Record items not found as: stated_word_count_found = false, stated_word_count = 0, genai_statement_found = false, genai_statement = "", preface_found = false, preface_precis = ""."""
 
 
 def _build_metadata_user_prompt(candidate_text: str) -> str:
@@ -2074,8 +2009,6 @@ def _build_synthesis_user_prompt(evidence_text: str) -> str:
         "a criterion with 6 supporting and 0 undermining passages deserves 'Strong evidence', "
         "not 'Partial evidence'.\n\n"
         "For criteria with no evidence entries, use 'Not evident' with low confidence.\n\n"
-        "For the metadata fields (stated_word_count, genai_statement, preface), copy the values "
-        "recorded in the 'Document metadata' section verbatim into your response.\n\n"
         f"{evidence_text}"
     )
 
@@ -2506,18 +2439,21 @@ def register_language_analysis_tasks(celery):
         db.session.close()
 
         errors: list = data.get("errors", [])
-        _t_llm = time.monotonic()
 
         # NLL is independent of rubric presence — compute once here so both
         # the no-rubric and grading paths can use the result without duplication.
+        _t_nll = time.monotonic()
         mean_nll, nll_cv = _compute_nll(clean_text, base_url)
+        data.setdefault("timings", {})["nll_s"] = round(time.monotonic() - _t_nll, 1)
+
+        _t_llm = time.monotonic()
 
         # ----------------------------------------------------------------
         # No-rubric path: run metadata extraction only, skip grading.
         # ----------------------------------------------------------------
         if rubric_snap is None:
             candidate_text = _extract_metadata_regions(clean_text)
-            meta_parsed, _, meta_exc = _call_llm(
+            meta_parsed, _, meta_exc, _ = _call_llm(
                 base_url,
                 _build_metadata_system_prompt(),
                 _build_metadata_user_prompt(candidate_text),
@@ -2607,15 +2543,35 @@ def register_language_analysis_tasks(celery):
         parsed_result: dict | None = None
         prompt_hash_val: str | None = None
         num_chunks = 1  # updated to actual chunk count on the chunked path
+        est_tok: int = 0
 
         if doc_words <= single_pass_word_budget:
             # ----------------------------------------------------------------
             # Single-pass path: document fits within the context window.
             # ----------------------------------------------------------------
+            # Step 1: dedicated metadata extraction (same as chunked path step 1).
+            candidate_text = _extract_metadata_regions(clean_text)
+            metadata_result: dict | None = None
+            meta_parsed, _, meta_exc, _ = _call_llm(
+                base_url,
+                _build_metadata_system_prompt(),
+                _build_metadata_user_prompt(candidate_text),
+                _LLM_METADATA_SCHEMA,
+                label=f"submit_to_llm/metadata (record #{record_id})",
+            )
+            if meta_parsed is not None:
+                metadata_result = meta_parsed
+            else:
+                current_app.logger.warning(
+                    f"language_analysis.submit_to_llm: metadata extraction failed "
+                    f"for record #{record_id}: {meta_exc}"
+                )
+
+            # Step 2: grading call (grading fields only).
             document_text, was_truncated = _truncate_text(clean_text)
             _system_prompt = _build_system_prompt(was_truncated, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
-            parsed_result, accumulated, last_exc = _call_llm(
+            parsed_result, accumulated, last_exc, est_tok = _call_llm(
                 base_url,
                 _system_prompt,
                 _build_user_prompt(document_text),
@@ -2623,6 +2579,19 @@ def register_language_analysis_tasks(celery):
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/single-pass (record #{record_id})",
             )
+
+            # Merge metadata into the grading result so downstream code and
+            # templates can access all fields from a single dict.
+            if parsed_result is not None and metadata_result is not None:
+                for field in (
+                    "stated_word_count_found",
+                    "stated_word_count",
+                    "genai_statement_found",
+                    "genai_statement",
+                    "preface_found",
+                    "preface_precis",
+                ):
+                    parsed_result[field] = metadata_result.get(field)
 
         else:
             # ----------------------------------------------------------------
@@ -2644,7 +2613,7 @@ def register_language_analysis_tasks(celery):
             metadata_result: dict | None = data.get("_llm_metadata")
             if metadata_result is None:
                 candidate_text = _extract_metadata_regions(clean_text)
-                meta_parsed, _, meta_exc = _call_llm(
+                meta_parsed, _, meta_exc, _ = _call_llm(
                     base_url,
                     _build_metadata_system_prompt(),
                     _build_metadata_user_prompt(candidate_text),
@@ -2705,7 +2674,7 @@ def register_language_analysis_tasks(celery):
                 if idx in completed_chunks:
                     continue  # already persisted on a previous Celery attempt
 
-                chunk_parsed, accumulated, last_exc = _call_llm(
+                chunk_parsed, accumulated, last_exc, est_tok = _call_llm(
                     base_url,
                     _build_chunk_system_prompt(idx, total_chunks, rubric_snap),
                     _build_chunk_user_prompt(chunk_text, idx, total_chunks),
@@ -2715,7 +2684,7 @@ def register_language_analysis_tasks(celery):
 
                 if chunk_parsed is None:
                     chunk_failed = True
-                    chunk_failure_reason = f"chunk {idx + 1}/{total_chunks} failed: {last_exc}"
+                    chunk_failure_reason = f"chunk {idx + 1}/{total_chunks} failed (~{est_tok} est. input tokens): {last_exc}"
                     break
 
                 chunk_results[str(idx)] = chunk_parsed
@@ -2793,7 +2762,7 @@ def register_language_analysis_tasks(celery):
 
             _system_prompt = _build_system_prompt(False, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
-            parsed_result, accumulated, last_exc = _call_llm(
+            parsed_result, accumulated, last_exc, est_tok = _call_llm(
                 base_url,
                 _system_prompt,
                 _build_synthesis_user_prompt(evidence_text),
@@ -2802,9 +2771,8 @@ def register_language_analysis_tasks(celery):
                 label=f"submit_to_llm/synthesis (record #{record_id})",
             )
 
-            # Overwrite synthesis metadata fields with dedicated extraction result
-            # (the synthesis LLM copies them from the evidence text, but the
-            # dedicated call is the authoritative source).
+            # Inject metadata from the dedicated extraction call into the synthesis
+            # result; the grading schema no longer includes these fields.
             if parsed_result is not None:
                 for field in (
                     "stated_word_count_found",
@@ -2814,8 +2782,7 @@ def register_language_analysis_tasks(celery):
                     "preface_found",
                     "preface_precis",
                 ):
-                    if field in metadata_result:
-                        parsed_result[field] = metadata_result[field]
+                    parsed_result[field] = metadata_result.get(field)
 
         # ----------------------------------------------------------------
         # Common outcome handling (single-pass and chunked-synthesis paths).
@@ -2897,7 +2864,9 @@ def register_language_analysis_tasks(celery):
             data.pop("_llm_chunks", None)
             data.pop("_llm_metadata", None)
         else:
-            failure_reason = str(last_exc) if last_exc else "Unknown error"
+            failure_reason = (
+                f"{last_exc} (~{est_tok} est. input tokens)" if last_exc else "Unknown error"
+            )
             record.llm_analysis_failed = True
             record.llm_failure_reason = failure_reason
             data["llm_raw_response"] = accumulated
@@ -3026,9 +2995,10 @@ def register_language_analysis_tasks(celery):
 
         feedback_results: list[dict] = []
         last_exc: Exception | None = None
+        est_tok: int = 0
 
         for chunk_idx, chunk_text in enumerate(chunk_texts):
-            chunk_parsed, _, chunk_exc = _call_llm(
+            chunk_parsed, _, chunk_exc, est_tok = _call_llm(
                 base_url,
                 _build_feedback_system_prompt(False),
                 _build_feedback_user_prompt(chunk_text),
@@ -3074,7 +3044,9 @@ def register_language_analysis_tasks(celery):
             record.llm_feedback_failed = False
             record.llm_feedback_failure_reason = None
         else:
-            failure_reason = str(last_exc) if last_exc else "Unknown error"
+            failure_reason = (
+                f"{last_exc} (~{est_tok} est. input tokens)" if last_exc else "Unknown error"
+            )
             record.llm_feedback_failed = True
             record.llm_feedback_failure_reason = failure_reason
             errors.append(

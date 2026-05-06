@@ -24,15 +24,15 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block formtitle %}
-    {% if template %}
-        {{ title }}: <strong>{{ template.label }}</strong>
+    {% if fb_template %}
+        {{ title }}: <strong>{{ fb_template.label }}</strong>
     {% else %}
         {{ title }}
     {% endif %}
 {% endblock %}
 
 {% block header %}
-    {% if not template and url is not none and text is not none %}
+    {% if not fb_template and url is not none and text is not none %}
         <div class="mb-3 d-flex align-items-center">
             <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> {{ text }}
@@ -42,8 +42,8 @@
 {% endblock %}
 
 {% block form_content %}
-    {% if template %}
-        <form action="{{ url_for('convenor.edit_feedback_template', template_id=template.id, url=url, text=text) }}"
+    {% if fb_template %}
+        <form action="{{ url_for('convenor.edit_feedback_template', template_id=fb_template.id, url=url, text=text) }}"
               method="POST" name="feedback_template_form">
     {% else %}
         <form action="{{ url_for('convenor.add_feedback_template', pclass_id=pclass.id, url=url, text=text) }}"
@@ -74,7 +74,7 @@
 {% endblock %}
 
 {% block footer %}
-    {% if template and url is not none and text is not none %}
+    {% if fb_template and url is not none and text is not none %}
         <div class="mt-2 mb-3 text-center">
             <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> {{ text }}

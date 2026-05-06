@@ -10,14 +10,13 @@
 
 from datetime import datetime
 
-from flask import flash, redirect, request, url_for, current_app
+from flask import current_app, flash, redirect, request, url_for
 from flask_login import current_user
 from flask_security import roles_accepted
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 import app.shared.cloud_object_store.bucket_types as buckets
-
 from app.convenor import convenor
 
 from ..admin.utilities import create_new_template_tags
@@ -32,24 +31,22 @@ from ..models import (
 from ..models.assets import ThumbnailAsset
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.context.global_context import render_template_context
-from ..tasks.thumbnails import dispatch_thumbnail_task
-from ..shared.utils import redirect_url
-from ..shared.validators import validate_is_convenor
-from ..shared.workflow_logging import log_db_commit
-
-from .feedback_resources_forms import (
-    EditFeedbackAssetForm,
-    EditFeedbackTemplateForm,
-    FeedbackRecipeFormFactory,
-    UploadFeedbackAssetForm,
-    AddFeedbackTemplateForm,
-)
 from ..shared.forms.wtf_validators import (
     make_unique_feedback_asset_label_in_pclass,
     make_unique_feedback_recipe_label_in_pclass,
     make_unique_feedback_template_label_in_pclass,
 )
-
+from ..shared.utils import redirect_url
+from ..shared.validators import validate_is_convenor
+from ..shared.workflow_logging import log_db_commit
+from ..tasks.thumbnails import dispatch_thumbnail_task
+from .feedback_resources_forms import (
+    AddFeedbackTemplateForm,
+    EditFeedbackAssetForm,
+    EditFeedbackTemplateForm,
+    FeedbackRecipeFormFactory,
+    UploadFeedbackAssetForm,
+)
 
 # ---------------------------------------------------------------------------
 # Main dashboard
@@ -137,14 +134,21 @@ def add_feedback_asset(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass_id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass_id)
+    )
     text = request.args.get("text", "Feedback resources")
 
     form = UploadFeedbackAssetForm(request.form)
-    form.label.validators = list(form.label.validators) + [make_unique_feedback_asset_label_in_pclass(pclass_id)]
+    form.label.validators = list(form.label.validators) + [
+        make_unique_feedback_asset_label_in_pclass(pclass_id)
+    ]
 
     if form.validate_on_submit():
-        if "attachment" not in request.files or request.files["attachment"].filename == "":
+        if (
+            "attachment" not in request.files
+            or request.files["attachment"].filename == ""
+        ):
             flash("Please select a file to upload.", "error")
         else:
             attachment_file = request.files["attachment"]
@@ -175,7 +179,10 @@ def add_feedback_asset(pclass_id):
                 db.session.flush()
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash("Could not upload asset due to a database error. Please contact a system administrator.", "error")
+                flash(
+                    "Could not upload asset due to a database error. Please contact a system administrator.",
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return redirect(url)
 
@@ -202,11 +209,16 @@ def add_feedback_asset(pclass_id):
                 )
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash("Could not save feedback asset due to a database error. Please contact a system administrator.", "error")
+                flash(
+                    "Could not save feedback asset due to a database error. Please contact a system administrator.",
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return redirect(url)
 
-            flash(f'Feedback asset "{form.label.data}" was successfully uploaded.', "info")
+            flash(
+                f'Feedback asset "{form.label.data}" was successfully uploaded.', "info"
+            )
             return redirect(url)
 
     return render_template_context(
@@ -228,12 +240,16 @@ def edit_feedback_asset(asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
+    )
     text = request.args.get("text", "Feedback resources")
 
     form = EditFeedbackAssetForm(obj=feedback_asset)
     form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_asset_label_in_pclass(pclass.id, label=feedback_asset.label)
+        make_unique_feedback_asset_label_in_pclass(
+            pclass.id, label=feedback_asset.label
+        )
     ]
 
     if form.validate_on_submit():
@@ -251,7 +267,10 @@ def edit_feedback_asset(asset_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save changes due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             return redirect(url)
 
@@ -279,7 +298,9 @@ def delete_feedback_asset(asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
+    )
 
     submitted_asset: SubmittedAsset = feedback_asset.asset
     label = feedback_asset.label
@@ -330,7 +351,10 @@ def delete_feedback_asset(asset_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not delete feedback asset due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete feedback asset due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -348,17 +372,21 @@ def add_feedback_template(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass_id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass_id)
+    )
     text = request.args.get("text", "Feedback resources")
 
     form = AddFeedbackTemplateForm()
-    form.label.validators = list(form.label.validators) + [make_unique_feedback_template_label_in_pclass(pclass_id)]
+    form.label.validators = list(form.label.validators) + [
+        make_unique_feedback_template_label_in_pclass(pclass_id)
+    ]
 
     if form.validate_on_submit():
         tag_list = create_new_template_tags(form)
 
         now = datetime.now()
-        template = FeedbackTemplate(
+        fb_template = FeedbackTemplate(
             pclass_id=pclass_id,
             label=form.label.data,
             description=form.description.data,
@@ -368,10 +396,10 @@ def add_feedback_template(pclass_id):
             last_edit_id=current_user.id,
             last_edit_timestamp=now,
         )
-        template.tags = tag_list
+        fb_template.tags = tag_list
 
         try:
-            db.session.add(template)
+            db.session.add(fb_template)
             log_db_commit(
                 f"Added feedback template '{form.label.data}' to project class {pclass.name}",
                 user=current_user,
@@ -379,7 +407,10 @@ def add_feedback_template(pclass_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save feedback template due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save feedback template due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             return redirect(url)
 
@@ -388,7 +419,7 @@ def add_feedback_template(pclass_id):
     return render_template_context(
         "convenor/feedback/feedback_template.html",
         form=form,
-        template=None,
+        fb_template=None,
         pclass=pclass,
         title="Add feedback template",
         url=url,
@@ -399,43 +430,50 @@ def add_feedback_template(pclass_id):
 @convenor.route("/edit_feedback_template/<int:template_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_feedback_template(template_id):
-    template: FeedbackTemplate = FeedbackTemplate.query.get_or_404(template_id)
-    pclass: ProjectClass = template.pclass
+    fb_template: FeedbackTemplate = FeedbackTemplate.query.get_or_404(template_id)
+    pclass: ProjectClass = fb_template.pclass
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
+    )
     text = request.args.get("text", "Feedback resources")
 
-    form = EditFeedbackTemplateForm(obj=template)
+    form = EditFeedbackTemplateForm(obj=fb_template)
     form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_template_label_in_pclass(pclass.id, label=template.label)
+        make_unique_feedback_template_label_in_pclass(
+            pclass.id, label=fb_template.label
+        )
     ]
 
     if request.method == "GET":
         # pre-populate tags from existing assignments
-        form.tags.data = (list(template.tags.all()), [])
+        form.tags.data = (list(fb_template.tags.all()), [])
 
     if form.validate_on_submit():
         tag_list = create_new_template_tags(form)
 
         try:
-            template.label = form.label.data
-            template.description = form.description.data
-            template.template_body = form.template_body.data
-            template.tags = tag_list
-            template.last_edit_id = current_user.id
-            template.last_edit_timestamp = datetime.now()
+            fb_template.label = form.label.data
+            fb_template.description = form.description.data
+            fb_template.template_body = form.template_body.data
+            fb_template.tags = tag_list
+            fb_template.last_edit_id = current_user.id
+            fb_template.last_edit_timestamp = datetime.now()
 
             log_db_commit(
-                f"Edited feedback template '{template.label}' in project class {pclass.name}",
+                f"Edited feedback template '{fb_template.label}' in project class {pclass.name}",
                 user=current_user,
                 project_classes=pclass,
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save changes due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             return redirect(url)
 
@@ -444,7 +482,7 @@ def edit_feedback_template(template_id):
     return render_template_context(
         "convenor/feedback/feedback_template.html",
         form=form,
-        template=template,
+        fb_template=fb_template,
         pclass=pclass,
         title="Edit feedback template",
         url=url,
@@ -461,7 +499,9 @@ def delete_feedback_template(template_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
+    )
     label = template.label
 
     # guard: refuse if referenced by any recipe
@@ -482,7 +522,10 @@ def delete_feedback_template(template_id):
         )
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not delete feedback template due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete feedback template due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -500,19 +543,25 @@ def add_feedback_recipe(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass_id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass_id)
+    )
     text = request.args.get("text", "Feedback resources")
 
     AddFeedbackRecipeForm, _ = FeedbackRecipeFormFactory(pclass)
     form = AddFeedbackRecipeForm()
-    form.label.validators = list(form.label.validators) + [make_unique_feedback_recipe_label_in_pclass(pclass_id)]
+    form.label.validators = list(form.label.validators) + [
+        make_unique_feedback_recipe_label_in_pclass(pclass_id)
+    ]
 
     if form.validate_on_submit():
         now = datetime.now()
         recipe = FeedbackRecipe(
             pclass_id=pclass_id,
             label=form.label.data,
-            template_id=form.template.data.id if form.template.data is not None else None,
+            template_id=form.template.data.id
+            if form.template.data is not None
+            else None,
             creator_id=current_user.id,
             creation_timestamp=now,
             last_edit_id=current_user.id,
@@ -528,7 +577,10 @@ def add_feedback_recipe(pclass_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save feedback recipe due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save feedback recipe due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             return redirect(url)
 
@@ -554,7 +606,9 @@ def edit_feedback_recipe(recipe_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
+    )
     text = request.args.get("text", "Feedback resources")
 
     _, EditFeedbackRecipeForm = FeedbackRecipeFormFactory(pclass)
@@ -566,7 +620,9 @@ def edit_feedback_recipe(recipe_id):
     if form.validate_on_submit():
         try:
             recipe.label = form.label.data
-            recipe.template_id = form.template.data.id if form.template.data is not None else None
+            recipe.template_id = (
+                form.template.data.id if form.template.data is not None else None
+            )
             recipe.last_edit_id = current_user.id
             recipe.last_edit_timestamp = datetime.now()
 
@@ -577,7 +633,10 @@ def edit_feedback_recipe(recipe_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save changes due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             return redirect(url)
 
@@ -606,7 +665,9 @@ def delete_feedback_recipe(recipe_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
+    )
     label = recipe.label
 
     try:
@@ -618,7 +679,10 @@ def delete_feedback_recipe(recipe_id):
         )
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not delete feedback recipe due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete feedback recipe due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -633,11 +697,15 @@ def add_recipe_asset(recipe_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id))
+    url = request.args.get(
+        "url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id)
+    )
     text = request.args.get("text", "Edit recipe")
 
     already_attached_ids = {a.id for a in recipe.asset_list.all()}
-    available = [a for a in pclass.feedback_assets.all() if a.id not in already_attached_ids]
+    available = [
+        a for a in pclass.feedback_assets.all() if a.id not in already_attached_ids
+    ]
 
     return render_template_context(
         "convenor/feedback/add_recipe_asset.html",
@@ -658,7 +726,9 @@ def attach_recipe_asset(recipe_id, asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id))
+    url = request.args.get(
+        "url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id)
+    )
 
     asset: FeedbackAsset = FeedbackAsset.query.get_or_404(asset_id)
     if asset.pclass_id != pclass.id:
@@ -677,7 +747,10 @@ def attach_recipe_asset(recipe_id, asset_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not attach asset due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not attach asset due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -692,7 +765,9 @@ def remove_recipe_asset(recipe_id, asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id))
+    url = request.args.get(
+        "url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id)
+    )
 
     asset: FeedbackAsset = FeedbackAsset.query.filter_by(id=asset_id).first()
     if asset is not None:
@@ -707,7 +782,10 @@ def remove_recipe_asset(recipe_id, asset_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not remove asset due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not remove asset due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)

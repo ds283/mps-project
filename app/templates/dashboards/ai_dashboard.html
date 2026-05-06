@@ -341,7 +341,8 @@
                             <span style="opacity:0.6; font-size:0.85em">(hist.)</span>
                         </span>
                     {% endif %}
-                    <span class="badge ms-auto" style="background-color: var(--db-blue-100); color: var(--db-blue-800);">{{ active_jobs|length }} job
+                    <span class="badge ms-auto"
+                          style="background-color: var(--db-blue-100); color: var(--db-blue-800);">{{ active_jobs|length }} job
                         {%- if active_jobs|length != 1 -%}s{%- endif -%}</span>
                     {% if is_root or is_admin %}
                         {% if pipeline_paused %}
@@ -374,7 +375,9 @@
                                 <th>Status</th>
                                 <th class="text-end">Progress</th>
                                 <th class="text-end">Done</th>
-                                <th class="text-end">Failed</th>
+                                <th class="text-end"
+                                    title="Celery pipeline task crashes">Crashed
+                                </th>
                                 <th class="text-end">Total</th>
                                 <th>Submitted</th>
                                 <th>Dispatched</th>
@@ -416,7 +419,8 @@
                                     <td class="text-end text-success fw-semibold"
                                         data-cell="completed">{{ job.completed_count }}</td>
                                     <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-body-secondary{% endif %}"
-                                        data-cell="failed">{{ job.failed_count }}</td>
+                                        data-cell="failed"
+                                        title="Pipeline task crashes (unhandled exceptions in the Celery chain)">{{ job.failed_count }}</td>
                                     <td class="text-end text-body-secondary">{{ job.total_count }}</td>
                                     <td class="text-body-secondary small">
                                         {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}

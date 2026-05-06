@@ -978,7 +978,7 @@ _LLM_RETRY_DELAY = 5  # seconds
 # estimates to avoid exceeding the context window.
 # ---------------------------------------------------------------------------
 
-_TOKENS_PER_WORD = 1.4
+_TOKENS_PER_WORD = 1.6  # conservative for technical academic prose (equations, code, citations)
 
 # Minimum context window the synthesis pass requires.  Ollama must be
 # configured with num_ctx ≥ this value (and ≥ OLLAMA_CONTEXT_SIZE).
@@ -2445,14 +2445,17 @@ def register_language_analysis_tasks(celery):
             for band_idx, band in enumerate(rubric_snap._bands, start=1)
             for crit_idx in range(1, len(band["criteria"]) + 1)
         )
+        n_criteria = sum(len(band["criteria"]) for band in rubric_snap._bands)
         llm_response_schema = _make_llm_response_schema(rubric_snap)
 
         _grading_prompt = _build_system_prompt(False, rubric_snap)
         _grading_prompt_tokens = int(len(_grading_prompt.split()) * _TOKENS_PER_WORD)
-        _single_pass_response_tokens = 2200
+        # Per criterion: ~130 tokens (assessment enum + ~80-word commentary + confidence enum).
+        # Fixed overhead: ~700 tokens (summary, classification, overall_reasoning, caveats, JSON framing).
+        _single_pass_response_tokens = max(2200, 700 + n_criteria * 130)
         _single_pass_overhead = _grading_prompt_tokens + _single_pass_response_tokens
         single_pass_word_budget = max(
-            int((context_size - _single_pass_overhead) / _TOKENS_PER_WORD * 0.90), 0
+            int((context_size - _single_pass_overhead) / _TOKENS_PER_WORD * 0.85), 0
         )
         doc_words = len(clean_text.split())
 
@@ -2521,10 +2524,12 @@ def register_language_analysis_tasks(celery):
             # ----------------------------------------------------------------
             _sample_chunk_prompt = _build_chunk_system_prompt(0, 1, rubric_snap)
             _chunk_prompt_tokens = int(len(_sample_chunk_prompt.split()) * _TOKENS_PER_WORD)
-            _map_response_tokens = 600
+            # Per criterion: up to _MAX_EVIDENCE_PER_CRITERION entries × ~150 tokens, but not
+            # every criterion has evidence in every chunk — use 1.5 entries/criterion on average.
+            _map_response_tokens = max(600, 200 + n_criteria * 150)
             _map_overhead = _chunk_prompt_tokens + _map_response_tokens
             chunk_word_budget = max(
-                int((context_size - _map_overhead) / _TOKENS_PER_WORD * 0.90), 500
+                int((context_size - _map_overhead) / _TOKENS_PER_WORD * 0.85), 500
             )
             chunks = _build_chunks(clean_text, chunk_word_budget)
             total_chunks = len(chunks)

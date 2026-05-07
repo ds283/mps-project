@@ -23,6 +23,14 @@
     --db-purple-600: #534AB7;
     --db-purple-800: #3C3489;
     --db-purple-900: #26215C;
+
+    /* Dashboard orange (Similarity) */
+    --db-orange-50:  #FEF3E8;
+    --db-orange-100: #FCDDB8;
+    --db-orange-200: #F9C080;
+    --db-orange-400: #F08030;
+    --db-orange-600: #C05810;
+    --db-orange-800: #7A3200;
 }
 
 .badge-ai-generated {
@@ -51,6 +59,18 @@
 .btn-db-green:hover {
     background-color: var(--db-green-600);
     border-color: var(--db-green-800);
+    color: #fff;
+}
+
+.btn-db-orange {
+    background-color: var(--db-orange-400);
+    color: #fff;
+    border-color: var(--db-orange-600);
+}
+
+.btn-db-orange:hover {
+    background-color: var(--db-orange-600);
+    border-color: var(--db-orange-800);
     color: #fff;
 }
 

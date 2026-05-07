@@ -1,0 +1,408 @@
+{% extends "base_app.html" %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+
+{% block title %}Similarity Dashboard{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+    <script>
+        // Poll active similarity jobs: update progress cells in-place and reload
+        // when a job reaches a terminal state or new jobs appear.
+        (function () {
+            var _watchedJobIds = {{ active_jobs | map(attribute='uuid') | list | tojson }};
+            var _initialActiveCount = {{ active_jobs | length }};
+
+            function fmtRate(elapsedSeconds, done) {
+                if (!elapsedSeconds || done <= 0) return '—';
+                var rate = elapsedSeconds / done;
+                var r_min = Math.floor(rate / 60);
+                var r_sec = Math.round(rate % 60);
+                return (r_min > 0 ? r_min + 'm ' : '') + r_sec + 's';
+            }
+
+            function updateJobRow(uuid, job) {
+                var row = document.querySelector('tr[data-job-uuid="' + uuid + '"]');
+                if (!row) return;
+                var total = job.total || 0;
+                var done = (job.completed || 0) + (job.failed || 0);
+                var pct = total > 0 ? Math.min(100, Math.floor(done * 100 / total)) : 0;
+                var bar = row.querySelector('[data-cell="progress-bar"]');
+                if (bar) { bar.style.width = pct + '%'; bar.setAttribute('aria-valuenow', pct); }
+                var pctLabel = row.querySelector('[data-cell="progress-pct"]');
+                if (pctLabel) pctLabel.textContent = pct + '%';
+                var compCell = row.querySelector('[data-cell="completed"]');
+                if (compCell) compCell.textContent = job.completed || 0;
+                var failCell = row.querySelector('[data-cell="failed"]');
+                if (failCell) {
+                    failCell.textContent = job.failed || 0;
+                    if ((job.failed || 0) > 0) {
+                        failCell.classList.remove('text-body-secondary');
+                        failCell.classList.add('text-danger', 'fw-semibold');
+                    }
+                }
+                var rateCell = row.querySelector('[data-cell="rate"]');
+                if (rateCell) rateCell.textContent = fmtRate(job.elapsed_seconds, done);
+            }
+
+            function pollJobs() {
+                var url = '{{ url_for("dashboards.active_similarity_jobs_status") }}';
+                if (_watchedJobIds.length > 0) { url += '?ids=' + _watchedJobIds.join(','); }
+                fetch(url)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.just_finished) { window.location.reload(); return; }
+                        if (_initialActiveCount === 0 && data.active_count > 0) { window.location.reload(); return; }
+                        if (data.jobs) {
+                            Object.keys(data.jobs).forEach(function (uuid) { updateJobRow(uuid, data.jobs[uuid]); });
+                        }
+                    })
+                    .catch(function () { /* ignore transient network errors */ });
+            }
+
+            setInterval(pollJobs, 60000);
+        })();
+
+        // DataTables initialisation
+        $(document).ready(function () {
+            $SCRIPT_ROOT = {{ request.script_root | tojson | safe }};
+
+            {% set ajax_url = url_for('dashboards.similarity_concerns_ajax',
+                                      tenant_id=selected_tenant.id,
+                                      pclass_id=selected_pclass_ids,
+                                      year=selected_years,
+                                      status=status_filter,
+                                      chunk_type=selected_chunk_type) %}
+
+            $('#similarity-concerns-table').DataTable({
+                responsive: true,
+                bAutoWidth: false,
+                colReorder: true,
+                dom: 'lftipr',
+                stateSave: false,
+                serverSide: true,
+                processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + {{ ajax_url | tojson | safe }},
+                    type: 'POST',
+                    data: function (args) { return {"args": JSON.stringify(args)}; }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'student_a', orderable: false, searchable: true},
+                    {data: 'student_b', orderable: false, searchable: true},
+                    {data: 'chunk_type', orderable: false, searchable: false},
+                    {data: 'cosine', orderable: true, searchable: false},
+                    {data: 'turnitin', orderable: false, searchable: false},
+                    {data: 'year_gap', orderable: false, searchable: false},
+                    {data: 'status', orderable: false, searchable: false},
+                    {data: 'actions', orderable: false, searchable: false}
+                ],
+                order: [[3, 'desc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% macro export_buttons(xlsx_url, csv_url, outline=true) %}
+    <div class="btn-group btn-group-xs" role="group">
+        <a href="{{ xlsx_url }}"
+           class="btn {{ 'btn-outline-secondary' if outline else 'btn-secondary' }}"
+           data-bs-toggle="tooltip" title="Export as Excel workbook">
+            <i class="fas fa-file-excel me-1"></i>Excel
+        </a>
+        <a href="{{ csv_url }}"
+           class="btn {{ 'btn-outline-secondary' if outline else 'btn-secondary' }}"
+           data-bs-toggle="tooltip" title="Export as CSV">
+            <i class="fas fa-file-csv me-1"></i>CSV
+        </a>
+    </div>
+{% endmacro %}
+
+{% block bodyblock %}
+    <div class="container-fluid px-0 mt-4 mb-5">
+
+        {# ---- page header ---- #}
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 px-3">
+            <div>
+                <h2 class="mb-0 fw-semibold">
+                    <i class="fas fa-search me-2" style="color: var(--db-orange-600);"></i>Similarity Dashboard
+                </h2>
+                <p class="text-body-secondary small mb-0">Cross-cohort section-level similarity detection</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ request.url }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-sync-alt me-1"></i>Reload
+                </a>
+                <a href="{{ url_for('dashboards.overview') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Dashboards
+                </a>
+                {% if can_launch %}
+                    <a href="{{ url_for('dashboards.launch_similarity_rebuild_global') }}"
+                       class="btn btn-sm btn-db-orange"
+                       onclick="return confirm('Launch a global similarity rebuild across all indexed submissions?')">
+                        <i class="fas fa-play me-1"></i>Rebuild all
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- active jobs panel ---- #}
+        {% if active_jobs %}
+            <div class="card mb-4 mx-3" style="border-color: var(--db-orange-200);">
+                <div class="card-header d-flex align-items-center gap-2 flex-wrap"
+                     style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200); color: var(--db-orange-800);">
+                    <i class="fas fa-tasks fa-fw"></i>
+                    <strong>Active similarity rebuild jobs</strong>
+                    {% if avg_seconds_per_record is not none %}
+                        {% set avg_min = (avg_seconds_per_record // 60)|int %}
+                        {% set avg_sec = (avg_seconds_per_record % 60)|round|int %}
+                        <span class="text-body-secondary small">
+                            Avg {% if avg_min > 0 %}{{ avg_min }}m {% endif %}{{ avg_sec }}s / record
+                            <span style="opacity:0.6; font-size:0.85em">(hist.)</span>
+                        </span>
+                    {% endif %}
+                    <span class="badge ms-auto"
+                          style="background-color: var(--db-orange-100); color: var(--db-orange-800);">{{ active_jobs|length }} job{%- if active_jobs|length != 1 -%}s{%- endif -%}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th class="text-end">Progress</th>
+                                <th class="text-end">Done</th>
+                                <th class="text-end">Failed</th>
+                                <th class="text-end">Total</th>
+                                <th>Submitted</th>
+                                <th>Dispatched</th>
+                                <th class="text-end">Avg</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for job in active_jobs %}
+                                <tr data-job-uuid="{{ job.uuid }}">
+                                    <td>{{ job.description or job.scope_label }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+                                    </td>
+                                    <td class="text-end" style="min-width:120px">
+                                        <div class="progress" style="height:8px; min-width:80px">
+                                            <div class="progress-bar"
+                                                 data-cell="progress-bar"
+                                                 role="progressbar"
+                                                 style="width:{{ job.progress_pct }}%; background-color: var(--db-orange-400);"
+                                                 aria-valuenow="{{ job.progress_pct }}"
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small class="text-body-secondary" data-cell="progress-pct">{{ job.progress_pct }}%</small>
+                                    </td>
+                                    <td class="text-end text-success fw-semibold" data-cell="completed">{{ job.completed_count }}</td>
+                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-body-secondary{% endif %}"
+                                        data-cell="failed">{{ job.failed_count }}</td>
+                                    <td class="text-end text-body-secondary">{{ job.total_count }}</td>
+                                    <td class="text-body-secondary small">
+                                        {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-body-secondary small">
+                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end text-body-secondary small" data-cell="rate">
+                                        {% set done = job.completed_count + job.failed_count %}
+                                        {% if job.elapsed_seconds and done > 0 %}
+                                            {% set rate = job.elapsed_seconds / done %}
+                                            {% set r_min = (rate // 60)|int %}
+                                            {% set r_sec = (rate % 60)|round|int %}
+                                            {% if r_min > 0 %}{{ r_min }}m {% endif %}{{ r_sec }}s
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if job.is_active and (is_root or is_admin or job.owner_id == current_user.id) %}
+                                            <a href="{{ url_for('dashboards.cancel_similarity_job', uuid=job.uuid) }}"
+                                               class="btn btn-xs btn-outline-danger py-0 px-1"
+                                               title="Cancel this job"
+                                               onclick="return confirm('Cancel this job? Queued records will be discarded.')">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# ---- summary stat cards ---- #}
+        <div class="row row-cols-2 row-cols-md-4 g-3 mb-4 px-3">
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm" style="background-color: var(--db-orange-50);">
+                    <div class="card-body text-center">
+                        <div class="fs-2 fw-bold" style="color: var(--db-orange-800);">{{ summary.n_open }}</div>
+                        <div class="small text-muted">Open concerns</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="fs-2 fw-bold text-success">{{ summary.n_resolved }}</div>
+                        <div class="small text-muted">Resolved</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="fs-2 fw-bold text-body-secondary">{{ summary.n_indexed }}</div>
+                        <div class="small text-muted">Indexed reports</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="fs-2 fw-bold text-body-secondary">{{ summary.n_pairs_formatted }}</div>
+                        <div class="small text-muted">Total concern pairs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ---- filter controls ---- #}
+        <div class="card border-0 shadow-sm mb-4 mx-3">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('dashboards.similarity_dashboard') }}" class="row g-3 align-items-end">
+
+                    {% if accessible_tenants|length > 1 %}
+                        <div class="col-auto">
+                            <label class="form-label small fw-semibold mb-1">Tenant</label>
+                            <select name="tenant_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                                {% for tenant in accessible_tenants %}
+                                    <option value="{{ tenant.id }}"
+                                            {% if tenant.id == selected_tenant.id %}selected{% endif %}>
+                                        {{ tenant.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% else %}
+                        <input type="hidden" name="tenant_id" value="{{ selected_tenant.id }}">
+                    {% endif %}
+
+                    {% if accessible_pclasses %}
+                        <div class="col-auto">
+                            <label class="form-label small fw-semibold mb-1">Project classes</label>
+                            <select name="pclass_id" multiple class="form-select form-select-sm"
+                                    style="min-width:180px; height: auto; max-height:120px">
+                                {% for pclass in accessible_pclasses %}
+                                    <option value="{{ pclass.id }}"
+                                            {% if pclass.id in selected_pclass_ids %}selected{% endif %}>
+                                        {{ pclass.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" style="font-size:0.7em">Ctrl/Cmd+click to select multiple</div>
+                        </div>
+                    {% endif %}
+
+                    {% if accessible_cycles %}
+                        <div class="col-auto">
+                            <label class="form-label small fw-semibold mb-1">Academic cycles</label>
+                            <select name="year" multiple class="form-select form-select-sm"
+                                    style="min-width:140px; height: auto; max-height:120px">
+                                {% for year in accessible_cycles %}
+                                    <option value="{{ year }}"
+                                            {% if year in selected_years %}selected{% endif %}>
+                                        {{ year }}/{{ year + 1 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" style="font-size:0.7em">Ctrl/Cmd+click to select multiple</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="col-auto">
+                        <label class="form-label small fw-semibold mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                            <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+                        </select>
+                    </div>
+
+                    <div class="col-auto">
+                        <label class="form-label small fw-semibold mb-1">Section type</label>
+                        <select name="chunk_type" class="form-select form-select-sm">
+                            <option value="" {% if not selected_chunk_type %}selected{% endif %}>All sections</option>
+                            {% for ct in chunk_types %}
+                                <option value="{{ ct }}"
+                                        {% if ct == selected_chunk_type %}selected{% endif %}>
+                                    {{ ct | replace('_', ' ') | title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-sm btn-db-orange">
+                            <i class="fas fa-filter me-1"></i>Apply
+                        </button>
+                        <a href="{{ url_for('dashboards.similarity_dashboard', tenant_id=selected_tenant.id) }}"
+                           class="btn btn-sm btn-outline-secondary ms-1">
+                            <i class="fas fa-times me-1"></i>Reset
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        {# ---- concern table ---- #}
+        <div class="card border-0 shadow-sm mx-3">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2"
+                 style="background-color: var(--db-orange-100); border-bottom-color: var(--db-orange-200); color: var(--db-orange-800);">
+                <span class="fw-semibold">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Similarity concerns
+                    <span class="badge ms-2" style="background-color: var(--db-orange-200); color: var(--db-orange-800);">
+                        {{ status_filter | title }}
+                    </span>
+                    {% if selected_chunk_type %}
+                        <span class="badge ms-1" style="background-color: var(--db-orange-100); color: var(--db-orange-800);">
+                            {{ selected_chunk_type | replace('_', ' ') | title }}
+                        </span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <table id="similarity-concerns-table"
+                       class="table table-sm table-hover mb-0 align-middle"
+                       style="width:100%">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Student A</th>
+                        <th>Student B</th>
+                        <th>Section</th>
+                        <th class="text-end">Cosine sim.</th>
+                        <th>Turnitin overlap</th>
+                        <th>Year gap</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

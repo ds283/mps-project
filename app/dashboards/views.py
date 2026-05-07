@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import json
 from collections import OrderedDict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -17,9 +18,11 @@ from scipy.stats import gaussian_kde
 from bokeh.embed import components
 from bokeh.models import ColumnDataSource, HoverTool, NumeralTickFormatter
 from bokeh.plotting import figure
-from flask import current_app, flash, redirect, request, url_for
+from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_security import current_user, login_required, roles_accepted
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
 
 from ..database import db
 from ..models import (
@@ -41,9 +44,11 @@ from ..models.markingevent import (
     SubmitterReport,
     SubmitterReportWorkflowStates,
 )
+from ..models.similarity import SimilarityConcern, SimilarityOrchestrationJob
 from ..models.students import StudentData
 from ..models.users import User as UserModel
 from ..shared.context.global_context import render_template_context
+from ..shared.scraped_text_store import get_similarity_chunks
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
@@ -62,7 +67,9 @@ from ..tasks.llm_orchestration import (
     launch_period_pipeline,
     set_pipeline_paused,
 )
-from .forms import MarkingExportForm
+from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD, CHUNK_TYPES
+from ..tools import ServerSideSQLHandler
+from .forms import MarkingExportForm, ResolveSimilarityConcernForm
 from . import dashboards
 
 # ---------------------------------------------------------------------------
@@ -891,6 +898,7 @@ def overview():
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_AI")
         or current_user.has_role("data_dashboard_marking")
+        or current_user.has_role("data_dashboard_similarity")
         or (
             current_user.has_role("faculty")
             and current_user.faculty_data is not None
@@ -902,11 +910,13 @@ def overview():
 
     summary = _dashboard_summary_for_user()
     marking_summary = _marking_summary_for_user()
+    similarity_summary = _similarity_dashboard_summary() if _can_access_similarity_dashboard() else None
 
     return render_template_context(
         "dashboards/overview.html",
         summary=summary,
         marking_summary=marking_summary,
+        similarity_summary=similarity_summary,
     )
 
 
@@ -2360,3 +2370,705 @@ def export_marking_excel(event_id: int):
         "success",
     )
     return redirect(url_for("dashboards.marking_register", event_id=event_id))
+
+
+# ===========================================================================
+# Similarity Dashboard
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Access-control helpers
+# ---------------------------------------------------------------------------
+
+
+def _can_access_similarity_dashboard() -> bool:
+    """Return True if the current user may view the similarity dashboard."""
+    return (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_similarity")
+        or (
+            current_user.has_role("faculty")
+            and current_user.faculty_data is not None
+            and current_user.faculty_data.is_convenor
+        )
+    )
+
+
+def _can_launch_similarity_rebuild() -> bool:
+    """
+    Return True if the current user may trigger similarity rebuild tasks.
+    data_dashboard_similarity and convenors are read-only — cannot launch.
+    """
+    return current_user.has_role("root") or current_user.has_role("admin")
+
+
+def _base_concern_query(
+    tenant_id: Optional[int] = None,
+    pclass_ids: Optional[List[int]] = None,
+    years: Optional[List[int]] = None,
+    status_filter: str = "open",
+    chunk_type: Optional[str] = None,
+):
+    """
+    Return a SQLAlchemy query for SimilarityConcern rows visible to the current
+    user under the given filters. Does NOT apply ordering or pagination.
+
+    Access control: convenors see concerns where at least one of record_a or
+    record_b belongs to a pclass they convene. root/admin/data_dashboard_similarity
+    see all concerns (scoped by tenant/pclass/year filters only).
+    """
+    q = db.session.query(SimilarityConcern)
+
+    # ---- access control -------------------------------------------------------
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_similarity")
+    ):
+        # Faculty convenors: concern visible if either record is in their pclass
+        if current_user.has_role("faculty") and current_user.faculty_data is not None:
+            convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
+            if not convenor_pclass_ids:
+                return q.filter(db.false())
+
+            RecordA = aliased(SubmissionRecord)
+            RecordB = aliased(SubmissionRecord)
+            PeriodA = aliased(SubmissionPeriodRecord)
+            PeriodB = aliased(SubmissionPeriodRecord)
+            ConfigA = aliased(ProjectClassConfig)
+            ConfigB = aliased(ProjectClassConfig)
+
+            record_a_in_scope = (
+                db.session.query(RecordA.id)
+                .join(PeriodA, PeriodA.id == RecordA.period_id)
+                .join(ConfigA, ConfigA.id == PeriodA.config_id)
+                .filter(
+                    RecordA.id == SimilarityConcern.record_a_id,
+                    ConfigA.pclass_id.in_(convenor_pclass_ids),
+                )
+                .correlate(SimilarityConcern)
+                .exists()
+            )
+            record_b_in_scope = (
+                db.session.query(RecordB.id)
+                .join(PeriodB, PeriodB.id == RecordB.period_id)
+                .join(ConfigB, ConfigB.id == PeriodB.config_id)
+                .filter(
+                    RecordB.id == SimilarityConcern.record_b_id,
+                    ConfigB.pclass_id.in_(convenor_pclass_ids),
+                )
+                .correlate(SimilarityConcern)
+                .exists()
+            )
+            q = q.filter(db.or_(record_a_in_scope, record_b_in_scope))
+        else:
+            return q.filter(db.false())
+
+    # ---- pclass scope filter ---------------------------------------------------
+    # Apply when explicit pclass_ids are given (e.g. from filter form).
+    # Scopes on record_a's pclass; cross-pclass pairs appear under the lower-ID side.
+    if pclass_ids:
+        PeriodScope = aliased(SubmissionPeriodRecord)
+        ConfigScope = aliased(ProjectClassConfig)
+        scope_subq = (
+            db.session.query(SubmissionRecord.id)
+            .join(PeriodScope, PeriodScope.id == SubmissionRecord.period_id)
+            .join(ConfigScope, ConfigScope.id == PeriodScope.config_id)
+            .filter(
+                SubmissionRecord.id == SimilarityConcern.record_a_id,
+                ConfigScope.pclass_id.in_(pclass_ids),
+            )
+            .correlate(SimilarityConcern)
+            .exists()
+        )
+        q = q.filter(scope_subq)
+
+    # ---- year filter -----------------------------------------------------------
+    if years:
+        PeriodYear = aliased(SubmissionPeriodRecord)
+        ConfigYear = aliased(ProjectClassConfig)
+        year_subq = (
+            db.session.query(SubmissionRecord.id)
+            .join(PeriodYear, PeriodYear.id == SubmissionRecord.period_id)
+            .join(ConfigYear, ConfigYear.id == PeriodYear.config_id)
+            .filter(
+                SubmissionRecord.id == SimilarityConcern.record_a_id,
+                ConfigYear.year.in_(years),
+            )
+            .correlate(SimilarityConcern)
+            .exists()
+        )
+        q = q.filter(year_subq)
+
+    # ---- status filter ---------------------------------------------------------
+    if status_filter == "open":
+        q = q.filter(SimilarityConcern.reviewed == db.false())
+    elif status_filter == "resolved":
+        q = q.filter(SimilarityConcern.reviewed == db.true())
+    # "all" → no filter
+
+    # ---- chunk type filter -----------------------------------------------------
+    if chunk_type:
+        q = q.filter(SimilarityConcern.chunk_type == chunk_type)
+
+    return q
+
+
+def _similarity_dashboard_summary() -> Dict:
+    """Return concern counts for the overview card and similarity dashboard header."""
+    n_open = _base_concern_query(status_filter="open").count()
+    n_resolved = _base_concern_query(status_filter="resolved").count()
+    n_pairs = _base_concern_query(status_filter="all").count()
+    n_indexed = (
+        db.session.query(SubmissionRecord)
+        .filter(SubmissionRecord.language_analysis_complete == db.true())
+        .count()
+    )
+    return {
+        "n_open": n_open,
+        "n_resolved": n_resolved,
+        "n_indexed": n_indexed,
+        "n_pairs": n_pairs,
+        "n_pairs_formatted": f"{n_pairs:,}",
+    }
+
+
+def _recompute_similarity_flag(record_id: int) -> None:
+    """
+    Clear the similarity_flagged risk factor on a SubmissionRecord when no
+    open (unreviewed) SimilarityConcern rows reference it as either side.
+    Called after every concern resolution save.
+    """
+    open_count = (
+        db.session.query(SimilarityConcern.id)
+        .filter(
+            db.or_(
+                SimilarityConcern.record_a_id == record_id,
+                SimilarityConcern.record_b_id == record_id,
+            ),
+            SimilarityConcern.reviewed == db.false(),
+        )
+        .count()
+    )
+    record = db.session.get(SubmissionRecord, record_id)
+    if record is None:
+        return
+    rf = record.risk_factors_data or {}
+    sim = rf.get(SubmissionRecord.RISK_SIMILARITY_FLAGGED)
+    if open_count == 0 and sim is not None and sim.get("present", False):
+        sim["resolved"] = True
+        sim["resolved_by_id"] = current_user.id
+        sim["resolved_at"] = datetime.now().isoformat()
+        rf[SubmissionRecord.RISK_SIMILARITY_FLAGGED] = sim
+        record.risk_factors = json.dumps(rf)
+
+
+# ---------------------------------------------------------------------------
+# Main dashboard view
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/similarity")
+@login_required
+def similarity_dashboard():
+    """Similarity dashboard shell. Concern table is populated by AJAX."""
+    if not _can_access_similarity_dashboard():
+        flash("You do not have permission to access the Similarity Dashboard.", "error")
+        return redirect(url_for("home.homepage"))
+
+    # ---- resolve accessible tenants ----------------------------------------
+    accessible_tenants = _get_accessible_tenants()
+    if not accessible_tenants:
+        flash("No tenants are accessible with your current role.", "info")
+        return redirect(url_for("dashboards.overview"))
+
+    # ---- tenant filter ------------------------------------------------------
+    if len(accessible_tenants) == 1:
+        selected_tenant_id = accessible_tenants[0].id
+    else:
+        try:
+            selected_tenant_id = int(
+                request.args.get("tenant_id", accessible_tenants[0].id)
+            )
+        except (ValueError, TypeError):
+            selected_tenant_id = accessible_tenants[0].id
+
+    accessible_tenant_ids = {t.id for t in accessible_tenants}
+    if selected_tenant_id not in accessible_tenant_ids:
+        selected_tenant_id = accessible_tenants[0].id
+
+    selected_tenant = next(
+        (t for t in accessible_tenants if t.id == selected_tenant_id), None
+    )
+
+    # ---- accessible project classes ----------------------------------------
+    accessible_pclasses = _get_accessible_pclasses(selected_tenant_id)
+    all_pclass_ids = [p.id for p in accessible_pclasses]
+
+    # ---- pclass filter --------------------------------------------------------
+    raw_pclass_ids = request.args.getlist("pclass_id")
+    if raw_pclass_ids:
+        try:
+            selected_pclass_ids = [
+                int(x) for x in raw_pclass_ids if int(x) in all_pclass_ids
+            ]
+        except (ValueError, TypeError):
+            selected_pclass_ids = all_pclass_ids
+    else:
+        selected_pclass_ids = all_pclass_ids
+
+    if not selected_pclass_ids:
+        selected_pclass_ids = all_pclass_ids
+
+    # ---- cycle (year) filter ------------------------------------------------
+    accessible_cycles = _get_accessible_cycles(selected_pclass_ids)
+    raw_years = request.args.getlist("year")
+    if raw_years:
+        try:
+            selected_years = [int(y) for y in raw_years if int(y) in accessible_cycles]
+        except (ValueError, TypeError):
+            selected_years = accessible_cycles
+    else:
+        selected_years = accessible_cycles
+
+    if not selected_years:
+        selected_years = accessible_cycles
+
+    # ---- status filter -------------------------------------------------------
+    status_filter = request.args.get("status", "open")
+    if status_filter not in ("open", "resolved", "all"):
+        status_filter = "open"
+
+    # ---- chunk type filter ---------------------------------------------------
+    selected_chunk_type = request.args.get("chunk_type", "")
+    if selected_chunk_type not in CHUNK_TYPES:
+        selected_chunk_type = ""
+
+    # ---- active similarity jobs ---------------------------------------------
+    active_jobs: List[SimilarityOrchestrationJob] = (
+        db.session.query(SimilarityOrchestrationJob)
+        .filter(SimilarityOrchestrationJob.status.in_(SimilarityOrchestrationJob.ACTIVE_STATUSES))
+        .order_by(SimilarityOrchestrationJob.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    # ---- rolling average: seconds per record across recent completed jobs ---
+    recent_completed: List[SimilarityOrchestrationJob] = (
+        db.session.query(SimilarityOrchestrationJob)
+        .filter(
+            SimilarityOrchestrationJob.status == SimilarityOrchestrationJob.STATUS_COMPLETE,
+            SimilarityOrchestrationJob.started_at.isnot(None),
+            SimilarityOrchestrationJob.finished_at.isnot(None),
+            SimilarityOrchestrationJob.total_count > 0,
+        )
+        .order_by(SimilarityOrchestrationJob.finished_at.desc())
+        .limit(20)
+        .all()
+    )
+    _total_seconds = sum(
+        (j.finished_at - j.started_at).total_seconds() for j in recent_completed
+    )
+    _total_records = sum(
+        (j.completed_count or 0) + (j.failed_count or 0) for j in recent_completed
+    )
+    avg_seconds_per_record: Optional[float] = (
+        _total_seconds / _total_records if _total_records > 0 else None
+    )
+
+    # ---- summary stat cards -------------------------------------------------
+    summary = _similarity_dashboard_summary()
+
+    return render_template_context(
+        "dashboards/similarity_dashboard.html",
+        accessible_tenants=accessible_tenants,
+        selected_tenant=selected_tenant,
+        accessible_pclasses=accessible_pclasses,
+        selected_pclass_ids=selected_pclass_ids,
+        accessible_cycles=accessible_cycles,
+        selected_years=selected_years,
+        status_filter=status_filter,
+        selected_chunk_type=selected_chunk_type,
+        chunk_types=CHUNK_TYPES,
+        summary=summary,
+        active_jobs=active_jobs,
+        avg_seconds_per_record=avg_seconds_per_record,
+        can_launch=_can_launch_similarity_rebuild(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# DataTables AJAX endpoint
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/similarity/concerns_ajax", methods=["POST"])
+@login_required
+def similarity_concerns_ajax():
+    """DataTables server-side endpoint for the similarity concern table."""
+    if not _can_access_similarity_dashboard():
+        return jsonify({"error": "Permission denied"}), 403
+
+    # Read filter params from request.args (baked into the AJAX URL at render time)
+    try:
+        tenant_id = int(request.args.get("tenant_id", 0)) or None
+    except (ValueError, TypeError):
+        tenant_id = None
+
+    raw_pclass_ids = request.args.getlist("pclass_id")
+    try:
+        pclass_ids = [int(x) for x in raw_pclass_ids if x]
+    except (ValueError, TypeError):
+        pclass_ids = []
+
+    raw_years = request.args.getlist("year")
+    try:
+        years = [int(y) for y in raw_years if y]
+    except (ValueError, TypeError):
+        years = []
+
+    status_filter = request.args.get("status", "open")
+    if status_filter not in ("open", "resolved", "all"):
+        status_filter = "open"
+
+    chunk_type = request.args.get("chunk_type", "")
+    if chunk_type not in CHUNK_TYPES:
+        chunk_type = ""
+
+    base_query = _base_concern_query(
+        tenant_id=tenant_id,
+        pclass_ids=pclass_ids or None,
+        years=years or None,
+        status_filter=status_filter,
+        chunk_type=chunk_type or None,
+    )
+
+    # Add joins for student name search on both sides.
+    # Chain: SimilarityConcern → SubmissionRecord → SubmittingStudent → StudentData → User
+    RecordAJ = aliased(SubmissionRecord)
+    RecordBJ = aliased(SubmissionRecord)
+    OwnerA = aliased(SubmittingStudent)
+    OwnerB = aliased(SubmittingStudent)
+    StudentA = aliased(StudentData)
+    StudentB = aliased(StudentData)
+    UserA = aliased(UserModel)
+    UserB = aliased(UserModel)
+
+    base_query = (
+        base_query
+        .join(RecordAJ, RecordAJ.id == SimilarityConcern.record_a_id)
+        .join(OwnerA, OwnerA.id == RecordAJ.owner_id)
+        .join(StudentA, StudentA.id == OwnerA.student_id)
+        .join(UserA, UserA.id == StudentA.id)
+        .join(RecordBJ, RecordBJ.id == SimilarityConcern.record_b_id)
+        .join(OwnerB, OwnerB.id == RecordBJ.owner_id)
+        .join(StudentB, StudentB.id == OwnerB.student_id)
+        .join(UserB, UserB.id == StudentB.id)
+    )
+
+    columns = {
+        "student_a": {
+            "search": func.concat(UserA.last_name, " ", UserA.first_name),
+            "search_collation": "utf8_general_ci",
+        },
+        "student_b": {
+            "search": func.concat(UserB.last_name, " ", UserB.first_name),
+            "search_collation": "utf8_general_ci",
+        },
+        "chunk_type": {},
+        "cosine": {"order": SimilarityConcern.transformer_cosine},
+        "turnitin": {},
+        "year_gap": {},
+        "status": {},
+        "actions": {},
+    }
+
+    from ..ajax.dashboards.similarity import similarity_concern_data
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(similarity_concern_data)
+
+
+# ---------------------------------------------------------------------------
+# Concern detail and resolution
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/similarity/concern/<int:concern_id>")
+@login_required
+def similarity_concern_detail(concern_id: int):
+    """Detail view for a single SimilarityConcern."""
+    if not _can_access_similarity_dashboard():
+        flash("You do not have permission to access the Similarity Dashboard.", "error")
+        return redirect(url_for("home.homepage"))
+
+    # Access-control check: reuse the base query for the current user
+    concern = (
+        _base_concern_query(status_filter="all")
+        .filter(SimilarityConcern.id == concern_id)
+        .first_or_404()
+    )
+
+    # Load chunk texts from MongoDB
+    chunks_a = get_similarity_chunks(concern.record_a_id) or {}
+    chunks_b = get_similarity_chunks(concern.record_b_id) or {}
+    chunk_text_a = chunks_a.get("sections", {}).get(concern.chunk_type, {}).get("text")
+    chunk_text_b = chunks_b.get("sections", {}).get(concern.chunk_type, {}).get("text")
+
+    form = ResolveSimilarityConcernForm()
+
+    return render_template_context(
+        "dashboards/similarity_concern_detail.html",
+        concern=concern,
+        concern_chunks={"a": chunk_text_a, "b": chunk_text_b},
+        chunk_thresholds=CHUNK_SIMILARITY_THRESHOLD,
+        form=form,
+    )
+
+
+@dashboards.route("/similarity/concern/<int:concern_id>/resolve", methods=["POST"])
+@login_required
+def resolve_similarity_concern(concern_id: int):
+    """POST: resolve a SimilarityConcern with a reviewer decision."""
+    if not _can_access_similarity_dashboard():
+        flash("You do not have permission to access the Similarity Dashboard.", "error")
+        return redirect(url_for("home.homepage"))
+
+    # data_dashboard_similarity role is read-only
+    if current_user.has_role("data_dashboard_similarity") and not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("faculty")
+    ):
+        flash("Your role has read-only access and cannot resolve concerns.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    concern = (
+        _base_concern_query(status_filter="all")
+        .filter(SimilarityConcern.id == concern_id)
+        .first_or_404()
+    )
+
+    form = ResolveSimilarityConcernForm()
+    if not form.validate_on_submit():
+        flash("Invalid submission. Please select a resolution.", "error")
+        return redirect(url_for("dashboards.similarity_concern_detail", concern_id=concern_id))
+
+    concern.reviewed = True
+    concern.reviewed_by_id = current_user.id
+    concern.reviewed_at = datetime.now()
+    concern.resolution = form.resolution.data
+    note = (form.resolution_note.data or "").strip()
+    concern.resolution_note = note or None
+
+    # Recompute risk flags for both records (clears flag if no open concerns remain)
+    _recompute_similarity_flag(concern.record_a_id)
+    _recompute_similarity_flag(concern.record_b_id)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("resolve_similarity_concern: SQLAlchemyError", exc_info=exc)
+        flash("Could not save the resolution — please try again.", "error")
+        return redirect(url_for("dashboards.similarity_concern_detail", concern_id=concern_id))
+
+    flash("Concern resolved successfully.", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+# ---------------------------------------------------------------------------
+# Similarity rebuild launch routes
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/similarity/launch_global")
+@roles_accepted("admin", "root")
+def launch_similarity_rebuild_global():
+    """Trigger a global similarity rebuild (admin/root only)."""
+    task_id = register_task(
+        "Similarity rebuild: global",
+        owner=current_user,
+        description="Global similarity rebuild across all indexed submissions",
+    )
+    if task_id is None:
+        flash("Could not register rebuild task. Please try again.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks["app.tasks.similarity_analysis.launch_similarity_rebuild"]
+    task.apply_async(
+        args=(task_id, current_user.id),
+        kwargs={"scope": SimilarityOrchestrationJob.SCOPE_GLOBAL},
+        task_id=task_id,
+    )
+    flash("Global similarity rebuild queued.", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+@dashboards.route("/similarity/launch_cycle/<int:year>")
+@roles_accepted("admin", "root")
+def launch_similarity_rebuild_cycle(year: int):
+    """Trigger a similarity rebuild for a single academic cycle (admin/root only)."""
+    record_ids = _record_ids_for_cycle(year)
+    if not record_ids:
+        flash(f"No indexed submissions found for the {year}–{year+1} cycle.", "info")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    task_id = register_task(
+        f"Similarity rebuild: {year}–{year+1}",
+        owner=current_user,
+        description=f"Similarity rebuild for academic cycle {year}–{year+1}",
+    )
+    if task_id is None:
+        flash("Could not register rebuild task. Please try again.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks["app.tasks.similarity_analysis.launch_similarity_rebuild"]
+    task.apply_async(
+        args=(task_id, current_user.id),
+        kwargs={
+            "record_ids": record_ids,
+            "scope": SimilarityOrchestrationJob.SCOPE_CYCLE,
+        },
+        task_id=task_id,
+    )
+    flash(f"Similarity rebuild for {year}–{year+1} queued ({len(record_ids)} records).", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+@dashboards.route("/similarity/launch_period/<int:period_id>")
+@roles_accepted("faculty", "admin", "root")
+def launch_similarity_rebuild_period(period_id: int):
+    """Trigger a similarity rebuild for a single submission period."""
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+
+    if not _can_launch_similarity_rebuild():
+        # Convenors cannot launch — only admin/root
+        flash("You do not have permission to launch similarity rebuild tasks.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    record_ids = _record_ids_for_period(period_id)
+    if not record_ids:
+        flash("No indexed submissions found for this period.", "info")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    label = period.config.abbreviation + ": " + (period.name or f"Period {period.submission_period}")
+    task_id = register_task(
+        f"Similarity rebuild: {label}",
+        owner=current_user,
+        description=f"Similarity rebuild for period '{label}'",
+    )
+    if task_id is None:
+        flash("Could not register rebuild task. Please try again.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks["app.tasks.similarity_analysis.launch_similarity_rebuild"]
+    task.apply_async(
+        args=(task_id, current_user.id),
+        kwargs={
+            "record_ids": record_ids,
+            "scope": SimilarityOrchestrationJob.SCOPE_PERIOD,
+            "scope_id": period_id,
+        },
+        task_id=task_id,
+    )
+    flash(f"Similarity rebuild for '{label}' queued ({len(record_ids)} records).", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+# ---------------------------------------------------------------------------
+# Job status polling and cancellation
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/similarity/active_jobs_status")
+@login_required
+def active_similarity_jobs_status():
+    """JSON endpoint for the similarity job auto-reload poller."""
+    raw_ids = request.args.get("ids", "")
+    watched_uuids = [uid.strip() for uid in raw_ids.split(",") if uid.strip()]
+
+    now = datetime.now()
+    jobs_data: Dict[str, dict] = {}
+
+    if watched_uuids:
+        finished_count = (
+            db.session.query(SimilarityOrchestrationJob)
+            .filter(
+                SimilarityOrchestrationJob.uuid.in_(watched_uuids),
+                SimilarityOrchestrationJob.status.in_(
+                    [SimilarityOrchestrationJob.STATUS_COMPLETE, SimilarityOrchestrationJob.STATUS_FAILED]
+                ),
+            )
+            .count()
+        )
+        active_watched = (
+            db.session.query(SimilarityOrchestrationJob)
+            .filter(
+                SimilarityOrchestrationJob.uuid.in_(watched_uuids),
+                SimilarityOrchestrationJob.status.in_(SimilarityOrchestrationJob.ACTIVE_STATUSES),
+            )
+            .all()
+        )
+        for job in active_watched:
+            elapsed = (
+                (now - job.started_at).total_seconds() if job.started_at is not None else None
+            )
+            jobs_data[job.uuid] = {
+                "completed": job.completed_count or 0,
+                "failed": job.failed_count or 0,
+                "total": job.total_count or 0,
+                "elapsed_seconds": elapsed,
+            }
+    else:
+        finished_count = 0
+
+    active_count = (
+        db.session.query(SimilarityOrchestrationJob)
+        .filter(SimilarityOrchestrationJob.status.in_(SimilarityOrchestrationJob.ACTIVE_STATUSES))
+        .count()
+    )
+
+    return jsonify(
+        {"just_finished": finished_count > 0, "active_count": active_count, "jobs": jobs_data}
+    )
+
+
+@dashboards.route("/similarity/cancel_job/<uuid>")
+@roles_accepted("faculty", "admin", "root")
+def cancel_similarity_job(uuid: str):
+    """Cancel a single SimilarityOrchestrationJob (owner or root/admin only)."""
+    job: SimilarityOrchestrationJob = (
+        db.session.query(SimilarityOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (job.owner_id is not None and job.owner_id == current_user.id)
+    ):
+        flash("You do not have permission to cancel this job.", "error")
+        return redirect(redirect_url())
+    if not job.is_active:
+        flash("This job has already finished.", "info")
+        return redirect(redirect_url())
+
+    job.mark_failed()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("cancel_similarity_job: SQLAlchemyError", exc_info=exc)
+        flash("Could not cancel the job — please try again.", "error")
+        return redirect(redirect_url())
+
+    flash(
+        "Job cancelled. Queued records have been discarded; "
+        "any in-flight records will complete harmlessly.",
+        "success",
+    )
+    return redirect(redirect_url())

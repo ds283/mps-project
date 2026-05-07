@@ -50,6 +50,7 @@ from ..models.markingevent import (
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
+from ..models.similarity import SimilarityConcern
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
@@ -1298,6 +1299,23 @@ def resolve_risk_factors(record_id):
     # Prepare display items (all logic in Python, template is purely presentational)
     display_items = record.risk_factor_display_items()
 
+    # Collect open similarity concerns for the similarity_flagged risk factor card
+    sim_factor = (record.risk_factors_data or {}).get(SubmissionRecord.RISK_SIMILARITY_FLAGGED, {})
+    similarity_open_concerns = []
+    if sim_factor.get("present", False):
+        similarity_open_concerns = (
+            db.session.query(SimilarityConcern)
+            .filter(
+                db.or_(
+                    SimilarityConcern.record_a_id == record.id,
+                    SimilarityConcern.record_b_id == record.id,
+                ),
+                SimilarityConcern.reviewed == db.false(),
+            )
+            .order_by(SimilarityConcern.transformer_cosine.desc())
+            .all()
+        )
+
     return render_template_context(
         "convenor/markingevent/resolve_risk_factors.html",
         record=record,
@@ -1308,6 +1326,8 @@ def resolve_risk_factors(record_id):
         url=url,
         text=text,
         form=form,
+        sim_factor=sim_factor,
+        similarity_open_concerns=similarity_open_concerns,
     )
 
 

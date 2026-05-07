@@ -1,0 +1,141 @@
+{#
+  _similarity_risk_factor_card.html
+  ─────────────────────────────────
+  Partial included by resolve_risk_factors when a similarity_flagged risk factor
+  is present. Lists open concerns and links to the similarity dashboard for review.
+  The flag clears automatically via _recompute_similarity_flag() once all concerns
+  are resolved — no checkbox resolution is offered here.
+
+  Expected context variables:
+    open_concerns   list[SimilarityConcern]  — open unreviewed concerns for this record
+    record          SubmissionRecord         — the record being resolved
+    risk_data       dict                     — similarity_flagged entry from risk_factors_data
+#}
+
+{% set is_resolved = risk_data.get('resolved', False) %}
+
+<div class="card mb-4" style="border-color: var(--db-orange-200);">
+
+    <div class="card-header d-flex align-items-center justify-content-between py-2"
+         style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200);">
+        <span class="fw-semibold" style="color: var(--db-orange-800);">
+            <i class="fas fa-search me-2"></i>Similarity concern
+        </span>
+        {% if is_resolved %}
+            <span class="badge bg-success-subtle text-success-emphasis">Resolved</span>
+        {% else %}
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">Unresolved</span>
+        {% endif %}
+    </div>
+
+    <div class="card-body">
+
+        {% if open_concerns %}
+            <p class="small mb-3">
+                This submission is involved in
+                <strong>{{ open_concerns | length }}
+                    open similarity concern{{ 's' if open_concerns | length != 1 else '' }}</strong>.
+                Each concern must be reviewed and resolved in the
+                <a href="{{ url_for('dashboards.similarity_dashboard') }}">Similarity Dashboard</a>
+                before this flag will clear.
+            </p>
+
+            <table class="table table-sm table-hover mb-3 align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>Other student</th>
+                    <th>Section</th>
+                    <th class="text-end">Cosine sim.</th>
+                    <th>Turnitin (student)</th>
+                    <th>Year gap</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for concern in open_concerns %}
+                    {% if concern.record_a_id == record.id %}
+                        {% set other = concern.record_b %}
+                    {% else %}
+                        {% set other = concern.record_a %}
+                    {% endif %}
+                    {% set other_student = other.owner %}
+
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ other_student.student.user.name }}</div>
+                            <div class="text-body-secondary" style="font-size:0.8em;">
+                                {{ other_student.student.exam_number_label }}
+                                &middot;
+                                {{ other.period.config.project_class.abbreviation }}
+                                {{ other.period.config.year }}/{{ other.period.config.year + 1 }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  style="background-color: var(--db-orange-100); color: var(--db-orange-800); font-weight:500;">
+                                {{ concern.chunk_type | replace('_', ' ') }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if concern.transformer_cosine is not none %}
+                                {% if concern.transformer_cosine >= 0.88 %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
+                                {% elif concern.transformer_cosine >= 0.78 %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-body-secondary">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if concern.record_a_id == record.id %}
+                                {% set this_overlap  = concern.record_a.turnitin_student_overlap %}
+                                {% set other_overlap = concern.record_b.turnitin_student_overlap %}
+                            {% else %}
+                                {% set this_overlap  = concern.record_b.turnitin_student_overlap %}
+                                {% set other_overlap = concern.record_a.turnitin_student_overlap %}
+                            {% endif %}
+                            <span class="{{ 'text-danger fw-semibold' if this_overlap is not none and this_overlap >= 20 else 'text-body-secondary' }}">
+                                This: {% if this_overlap is not none %}{{ this_overlap }}%{% else %}—{% endif %}
+                            </span>
+                            &middot;
+                            <span class="{{ 'text-danger fw-semibold' if other_overlap is not none and other_overlap >= 20 else 'text-body-secondary' }}">
+                                Other: {% if other_overlap is not none %}{{ other_overlap }}%{% else %}—{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% set gap = (record.period.config.year - other.period.config.year) | abs %}
+                            <span class="badge {{ 'bg-warning-subtle text-warning-emphasis' if gap == 1 else 'bg-secondary-subtle text-secondary-emphasis' }}">
+                                {{ gap }} year{{ 's' if gap != 1 else '' }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('dashboards.similarity_concern_detail', concern_id=concern.id) }}#review"
+                               class="btn btn-xs btn-db-orange">
+                                Review <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+        {% else %}
+            <p class="small text-success mb-3">
+                <i class="fas fa-check-circle me-1"></i>
+                All associated similarity concerns have been resolved.
+                This flag will clear on the next page load.
+            </p>
+        {% endif %}
+
+        <div class="alert alert-warning mb-0 py-2 small" role="alert"
+             style="background-color: var(--db-orange-50); border-color: var(--db-orange-200); color: var(--db-orange-800);">
+            <i class="fas fa-info-circle me-1"></i>
+            This risk factor cannot be resolved here directly. It will clear automatically
+            once all concerns listed above have been reviewed in the Similarity Dashboard.
+        </div>
+
+    </div>
+</div>

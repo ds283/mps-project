@@ -126,6 +126,36 @@
             {% endcall %}
             {% endif %}
 
+            {# ---- Similarity Dashboard card ---- #}
+            {% if similarity_summary is not none and (is_root or is_admin or is_data_dashboard_similarity or is_convenor) %}
+            {% call(slot) dashboard_card(
+                icon_class="fas fa-search fa-2x",
+                icon_bg_style="background-color: var(--db-orange-50);",
+                title="Similarity Dashboard",
+                description="Cross-cohort section-level plagiarism detection. Similarity concerns, Turnitin overlap, and reviewer workflow across all cohorts.",
+                open_url=url_for('dashboards.similarity_dashboard'),
+                open_label="Open dashboard",
+                open_btn_class="btn-db-orange"
+            ) %}
+                {% if slot == 'badges' %}
+                    {% if similarity_summary.n_open > 0 %}
+                        <span class="badge bg-danger-subtle text-danger-emphasis">
+                            <i class="fas fa-exclamation-triangle me-1"></i>{{ similarity_summary.n_open }} open concern{{ 's' if similarity_summary.n_open != 1 else '' }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-success-subtle text-success-emphasis">
+                            <i class="fas fa-check-circle me-1"></i>No open concerns
+                        </span>
+                    {% endif %}
+                    {% if similarity_summary.n_indexed > 0 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-database me-1"></i>{{ similarity_summary.n_indexed }} indexed
+                        </span>
+                    {% endif %}
+                {% endif %}
+            {% endcall %}
+            {% endif %}
+
         </div>
 
     </div>

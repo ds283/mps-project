@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from wtforms import RadioField, TextAreaField
+from wtforms.validators import DataRequired
 from flask_security.forms import Form
 
 
@@ -19,3 +21,18 @@ class MarkingExportForm(Form):
     """
 
     pass
+
+
+class ResolveSimilarityConcernForm(Form):
+    """
+    Form for the similarity concern resolution POST.
+    Provides CSRF protection via {{ form.hidden_tag() }} and carries the
+    resolution radio choice and optional annotation note.
+    """
+
+    resolution = RadioField(
+        "Resolution",
+        choices=[("cleared", "Clear"), ("referred", "Refer to convenor"), ("escalated", "Escalate")],
+        validators=[DataRequired()],
+    )
+    resolution_note = TextAreaField("Note")

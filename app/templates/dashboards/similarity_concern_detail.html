@@ -1,0 +1,305 @@
+{% extends "base_app.html" %}
+
+{% block title %}Similarity Concern — {{ concern.chunk_type | replace('_', ' ') | title }}{% endblock %}
+
+{% block bodyblock %}
+    {% set record_a = concern.record_a %}
+    {% set record_b = concern.record_b %}
+    {% set student_a = record_a.owner %}
+    {% set student_b = record_b.owner %}
+
+    <div class="container-fluid mt-4 mb-5">
+
+        {# ---- page header ---- #}
+        <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+            <div>
+                <h2 class="mb-0 fw-semibold">
+                    <i class="fas fa-search me-2" style="color: var(--db-orange-600);"></i>Similarity concern
+                    <span class="ms-2 fs-5 fw-normal text-body-secondary">
+                        {{ concern.chunk_type | replace('_', ' ') }} section
+                    </span>
+                </h2>
+                <p class="text-body-secondary small mb-0 mt-1">
+                    {{ student_a.student.user.name }}
+                    ({{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }})
+                    &middot; {{ student_b.student.user.name }}
+                    ({{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }})
+                </p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('dashboards.similarity_dashboard') }}"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to dashboard
+                </a>
+            </div>
+        </div>
+
+        {# ---- score summary cards ---- #}
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm text-center py-3">
+                    <div class="text-body-secondary small mb-1">Cosine similarity</div>
+                    {% if concern.transformer_cosine is not none %}
+                        {% if concern.transformer_cosine >= 0.88 %}
+                            <div class="fw-semibold fs-4 text-danger">{{ "%.3f" | format(concern.transformer_cosine) }}</div>
+                        {% elif concern.transformer_cosine >= 0.78 %}
+                            <div class="fw-semibold fs-4" style="color: #b45309;">{{ "%.3f" | format(concern.transformer_cosine) }}</div>
+                        {% else %}
+                            <div class="fw-semibold fs-4 text-body-secondary">{{ "%.3f" | format(concern.transformer_cosine) }}</div>
+                        {% endif %}
+                        {% if concern.chunk_type in chunk_thresholds %}
+                            <div class="text-body-secondary" style="font-size:0.75em;">
+                                threshold: {{ chunk_thresholds[concern.chunk_type] }}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="fw-semibold fs-4 text-body-secondary">—</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm text-center py-3">
+                    <div class="text-body-secondary small mb-1">MinHash Jaccard</div>
+                    <div class="fw-semibold fs-4" style="color: var(--db-orange-600);">
+                        {% if concern.minhash_jaccard is not none %}
+                            {{ "%.3f" | format(concern.minhash_jaccard) }}
+                        {% else %}—{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm text-center py-3">
+                    <div class="text-body-secondary small mb-1">Section</div>
+                    <div class="mt-1">
+                        <span class="badge fs-6"
+                              style="background-color: var(--db-orange-100); color: var(--db-orange-800); font-weight:500;">
+                            {{ concern.chunk_type | replace('_', ' ') }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm text-center py-3">
+                    <div class="text-body-secondary small mb-1">Year gap</div>
+                    {% set gap = (record_a.period.config.year - record_b.period.config.year) | abs %}
+                    <div class="fw-semibold fs-4 text-body-secondary">{{ gap }} year{{ 's' if gap != 1 else '' }}</div>
+                    <div class="text-body-secondary" style="font-size:0.75em;">
+                        {{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }}
+                        vs
+                        {{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ---- side-by-side student panels ---- #}
+        <div class="row g-3 mb-4">
+
+            {# ---- Student A panel ---- #}
+            <div class="col-md-6">
+                <div class="card h-100" style="border-color: var(--db-orange-200);">
+                    <div class="card-header py-2"
+                         style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200);">
+                        <div class="fw-semibold" style="color: var(--db-orange-800);">
+                            {{ student_a.student.user.name }}
+                        </div>
+                        <div class="text-body-secondary small">
+                            {{ student_a.student.exam_number_label }}
+                            &middot; {{ record_a.period.config.project_class.name }}
+                            &middot; {{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }}
+                        </div>
+                    </div>
+                    <div class="card-body">
+
+                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                           style="letter-spacing:0.04em; font-size:0.7em;">Turnitin</p>
+                        <div class="row g-2 mb-3">
+                            {% for label, val in [
+                                ('Overall',     record_a.turnitin_score),
+                                ('Student',     record_a.turnitin_student_overlap),
+                                ('Web',         record_a.turnitin_web_overlap),
+                                ('Publication', record_a.turnitin_publication_overlap)
+                            ] %}
+                                <div class="col-3 text-center">
+                                    <div class="bg-light rounded p-1">
+                                        {% if val is not none %}
+                                            <div class="fw-semibold {% if val >= 20 and loop.index <= 2 %}text-danger{% else %}text-body-secondary{% endif %}">
+                                                {{ val }}%
+                                            </div>
+                                        {% else %}
+                                            <div class="text-body-secondary">—</div>
+                                        {% endif %}
+                                        <div class="text-body-secondary" style="font-size:0.7em;">{{ label }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                           style="letter-spacing:0.04em; font-size:0.7em;">
+                            {{ concern.chunk_type | replace('_', ' ') | title }} section
+                        </p>
+                        {% if concern_chunks and concern_chunks.a %}
+                            <div class="border rounded p-3 bg-light"
+                                 style="font-size:0.85em; line-height:1.65; max-height:300px; overflow-y:auto; white-space:pre-wrap;">{{ concern_chunks.a | e }}</div>
+                        {% else %}
+                            <p class="text-body-secondary fst-italic small">Section text not available.</p>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+
+            {# ---- Student B panel ---- #}
+            <div class="col-md-6">
+                <div class="card h-100" style="border-color: var(--db-orange-200);">
+                    <div class="card-header py-2"
+                         style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200);">
+                        <div class="fw-semibold" style="color: var(--db-orange-800);">
+                            {{ student_b.student.user.name }}
+                        </div>
+                        <div class="text-body-secondary small">
+                            {{ student_b.student.exam_number_label }}
+                            &middot; {{ record_b.period.config.project_class.name }}
+                            &middot; {{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }}
+                        </div>
+                    </div>
+                    <div class="card-body">
+
+                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                           style="letter-spacing:0.04em; font-size:0.7em;">Turnitin</p>
+                        <div class="row g-2 mb-3">
+                            {% for label, val in [
+                                ('Overall',     record_b.turnitin_score),
+                                ('Student',     record_b.turnitin_student_overlap),
+                                ('Web',         record_b.turnitin_web_overlap),
+                                ('Publication', record_b.turnitin_publication_overlap)
+                            ] %}
+                                <div class="col-3 text-center">
+                                    <div class="bg-light rounded p-1">
+                                        {% if val is not none %}
+                                            <div class="fw-semibold {% if val >= 20 and loop.index <= 2 %}text-danger{% else %}text-body-secondary{% endif %}">
+                                                {{ val }}%
+                                            </div>
+                                        {% else %}
+                                            <div class="text-body-secondary">—</div>
+                                        {% endif %}
+                                        <div class="text-body-secondary" style="font-size:0.7em;">{{ label }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                           style="letter-spacing:0.04em; font-size:0.7em;">
+                            {{ concern.chunk_type | replace('_', ' ') | title }} section
+                        </p>
+                        {% if concern_chunks and concern_chunks.b %}
+                            <div class="border rounded p-3 bg-light"
+                                 style="font-size:0.85em; line-height:1.65; max-height:300px; overflow-y:auto; white-space:pre-wrap;">{{ concern_chunks.b | e }}</div>
+                        {% else %}
+                            <p class="text-body-secondary fst-italic small">Section text not available.</p>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+
+        </div>{# row #}
+
+        {# ---- review history (if previously reviewed) ---- #}
+        {% if concern.reviewed %}
+            <div class="card mb-4 border-success">
+                <div class="card-header bg-success-subtle text-success-emphasis py-2">
+                    <i class="fas fa-history me-1"></i>Previous resolution
+                </div>
+                <div class="card-body small">
+                    <strong>Decision:</strong>
+                    <span class="badge {% if concern.resolution == 'cleared' %}bg-success-subtle text-success-emphasis{% elif concern.resolution == 'escalated' %}bg-danger-subtle text-danger-emphasis{% else %}bg-info-subtle text-info-emphasis{% endif %} ms-1">
+                        {{ concern.resolution | title if concern.resolution else '—' }}
+                    </span>
+                    &middot;
+                    <strong>By:</strong> {{ concern.reviewed_by.name if concern.reviewed_by else '—' }}
+                    &middot;
+                    <strong>At:</strong> {{ concern.reviewed_at.strftime('%d %b %Y %H:%M') if concern.reviewed_at else '—' }}
+                    {% if concern.resolution_note %}
+                        <div class="mt-2 text-body-secondary fst-italic">{{ concern.resolution_note }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {# ---- review / resolution form ---- #}
+        <div class="card" id="review" style="border-color: var(--db-orange-200);">
+            <div class="card-header py-2"
+                 style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200); color: var(--db-orange-800);">
+                <i class="fas fa-gavel me-1"></i>
+                <strong>Resolution</strong>
+            </div>
+            <div class="card-body">
+                <form method="POST"
+                      action="{{ url_for('dashboards.resolve_similarity_concern', concern_id=concern.id) }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Decision</label>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="resolution"
+                                       id="res-cleared" value="cleared"
+                                       {% if concern.resolution == 'cleared' %}checked{% endif %}>
+                                <label class="form-check-label" for="res-cleared">
+                                    <span class="badge bg-success-subtle text-success-emphasis">
+                                        <i class="fas fa-check me-1"></i>Clear — not a concern
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="resolution"
+                                       id="res-referred" value="referred"
+                                       {% if concern.resolution == 'referred' %}checked{% endif %}>
+                                <label class="form-check-label" for="res-referred">
+                                    <span class="badge bg-info-subtle text-info-emphasis">
+                                        <i class="fas fa-share me-1"></i>Refer to convenor
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="resolution"
+                                       id="res-escalated" value="escalated"
+                                       {% if concern.resolution == 'escalated' %}checked{% endif %}>
+                                <label class="form-check-label" for="res-escalated">
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Escalate to academic integrity
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small" for="resolution_note">
+                            Annotation
+                            <span class="fw-normal text-body-secondary fst-italic">
+                                (optional — explain your review decision or action taken)
+                            </span>
+                        </label>
+                        <textarea class="form-control form-control-sm" id="resolution_note"
+                                  name="resolution_note" rows="3"
+                                  placeholder="Describe the review outcome or action taken…">{{ concern.resolution_note or '' }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-sm btn-db-orange">
+                            <i class="fas fa-save me-1"></i>Save resolution
+                        </button>
+                        <a href="{{ url_for('dashboards.similarity_dashboard') }}"
+                           class="btn btn-sm btn-outline-secondary">Cancel</a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

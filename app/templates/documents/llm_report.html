@@ -1,21 +1,10 @@
 {% extends "base_app.html" %}
 
 {% from "icon_block.html" import icon_block %}
-{% from "bokeh.html" import import_bokeh %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_bokeh() }}
-    {% if gauge_script is defined and gauge_script is not none %}
-        {{ gauge_script|safe }}
-    {% endif %}
-    {% if nll_gauge_script is defined and nll_gauge_script is not none %}
-        {{ nll_gauge_script|safe }}
-    {% endif %}
-    {% if length_gauge_script is defined and length_gauge_script is not none %}
-        {{ length_gauge_script|safe }}
-    {% endif %}
 {% endblock %}
 
 {% block title %}LLM Analysis Report – {{ record.owner.student.user.name if record.owner else "Unknown" }}{% endblock %}
@@ -547,24 +536,75 @@
                 </div>
                 <div class="card-body">
 
-                    {# Document length gauge — only rendered when limits are configured for this project #}
-                    {% if length_gauge_div is defined and length_gauge_div is not none %}
-                        <h6 class="text-body-secondary small text-uppercase mb-2">Document length</h6>
-                        <div class="mb-3">{{ length_gauge_div|safe }}</div>
+                    {# Document length — shown when word or page limits are configured for this project #}
+                    {% set _wl_enabled = period.config.effective_word_limit_enabled and period.config.effective_word_limit %}
+                    {% set _pl_enabled = period.config.effective_page_limit_enabled and period.config.effective_page_limit %}
+                    {% if _wl_enabled or _pl_enabled %}
+                        {% set _wc = la_metrics.get('word_count') %}
+                        {% set _pc = la_metrics.get('page_count') %}
                         {% set rf_len = rf_items | selectattr('key', 'equalto', 'document_length') | first | default(none) %}
+                        <h6 class="text-body-secondary small text-uppercase mb-2">Document length</h6>
+                        <div class="row row-cols-1 row-cols-sm-2 g-2 mb-2">
+                            {% if _wl_enabled %}
+                                {% set _wlimit = period.config.effective_word_limit %}
+                                {% call(blk) dashboard_tile("Words", title_icon="align-left",
+                                        icon_state=(none if _wc is none else (true if _wc <= _wlimit else false)), bg="light") %}
+                                    {% if blk == 'body' %}
+                                        {% if _wc is not none %}
+                                            <div class="fw-bold" style="font-size:15px;">{{ "{:,}".format(_wc | int) }}</div>
+                                            <div class="small text-body-secondary">limit {{ "{:,}".format(_wlimit) }}</div>
+                                        {% else %}
+                                            <div class="text-body-secondary">&mdash;</div>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if blk == 'footer' %}
+                                        {% if _wc is not none %}
+                                            {% if _wc <= _wlimit %}
+                                                <span class="text-success-emphasis" style="font-size:12px;">Within limit</span>
+                                            {% else %}
+                                                <span class="text-danger-emphasis" style="font-size:12px;">+{{ "{:,}".format((_wc - _wlimit) | int) }} over</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endcall %}
+                            {% endif %}
+                            {% if _pl_enabled %}
+                                {% set _plimit = period.config.effective_page_limit %}
+                                {% call(blk) dashboard_tile("Pages", title_icon="file-alt",
+                                        icon_state=(none if _pc is none else (true if _pc <= _plimit else false)), bg="light") %}
+                                    {% if blk == 'body' %}
+                                        {% if _pc is not none %}
+                                            <div class="fw-bold" style="font-size:15px;">{{ "%.1f"|format(_pc) }}</div>
+                                            <div class="small text-body-secondary">limit {{ _plimit }}</div>
+                                        {% else %}
+                                            <div class="text-body-secondary">&mdash;</div>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if blk == 'footer' %}
+                                        {% if _pc is not none %}
+                                            {% if _pc <= _plimit %}
+                                                <span class="text-success-emphasis" style="font-size:12px;">Within limit</span>
+                                            {% else %}
+                                                <span class="text-danger-emphasis" style="font-size:12px;">+{{ "%.1f"|format(_pc - _plimit) }} over</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endcall %}
+                            {% endif %}
+                        </div>
                         {% if rf_len and rf_len.present %}
-                            <div class="mb-3">
+                            <div class="mb-2">
                                 {% if rf_len.resolved %}
                                     <span class="badge bg-success-subtle text-success-emphasis small">
-                            <i class="fas fa-check-circle fa-fw"></i> Length reviewed
-                        </span>
+                                        <i class="fas fa-check-circle fa-fw"></i> Length reviewed
+                                    </span>
                                     {% if rf_len.resolved_by_name %}
                                         <span class="small text-body-secondary ms-1">by {{ rf_len.resolved_by_name }}</span>
                                     {% endif %}
                                 {% else %}
                                     <span class="badge bg-danger-subtle text-danger-emphasis small">
-                            <i class="fas fa-exclamation-triangle fa-fw"></i> Limit exceeded
-                        </span>
+                                        <i class="fas fa-exclamation-triangle fa-fw"></i> Limit exceeded
+                                    </span>
                                 {% endif %}
                             </div>
                         {% endif %}

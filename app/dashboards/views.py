@@ -316,6 +316,7 @@ def _can_access_marking_dashboard() -> bool:
     return (
         current_user.has_role("root")
         or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_marking")
         or (
             current_user.has_role("faculty")
             and current_user.faculty_data is not None
@@ -347,7 +348,11 @@ def _get_accessible_pclasses_for_marking(
     if tenant_id is not None:
         q = q.filter(ProjectClass.tenant_id == tenant_id)
 
-    if current_user.has_role("root") or current_user.has_role("admin"):
+    if (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_marking")
+    ):
         return q.order_by(ProjectClass.name).all()
 
     if current_user.has_role("faculty") and current_user.faculty_data is not None:
@@ -395,7 +400,11 @@ def _get_accessible_marking_events(
     if year is not None:
         q = q.filter(ProjectClassConfig.year == year)
 
-    if current_user.has_role("root") or current_user.has_role("admin"):
+    if (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_marking")
+    ):
         pass
     elif current_user.has_role("faculty") and current_user.faculty_data is not None:
         convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
@@ -437,7 +446,11 @@ def _get_accessible_years_for_marking(
     if pclass_id is not None:
         q = q.filter(ProjectClass.id == pclass_id)
 
-    if current_user.has_role("root") or current_user.has_role("admin"):
+    if (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_marking")
+    ):
         pass
     elif current_user.has_role("faculty") and current_user.faculty_data is not None:
         convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
@@ -877,6 +890,7 @@ def overview():
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_AI")
+        or current_user.has_role("data_dashboard_marking")
         or (
             current_user.has_role("faculty")
             and current_user.faculty_data is not None

@@ -58,6 +58,7 @@
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
 
             {# ---- AI Data Dashboard card ---- #}
+            {% if is_root or is_admin or is_data_dashboard_AI or is_convenor %}
             {% call(slot) dashboard_card(
                 icon_class="fas fa-robot fa-2x text-primary",
                 icon_bg_style="background-color: var(--db-blue-50);",
@@ -96,8 +97,10 @@
                     {% endif %}
                 {% endif %}
             {% endcall %}
+            {% endif %}
 
             {# ---- Marking Dashboard card ---- #}
+            {% if is_root or is_admin or is_data_dashboard_marking or is_convenor %}
             {% call(slot) dashboard_card(
                 icon_class="fas fa-clipboard-check fa-2x text-success",
                 icon_bg_style="background-color: var(--db-green-50);",
@@ -121,6 +124,7 @@
                     {% endif %}
                 {% endif %}
             {% endcall %}
+            {% endif %}
 
         </div>
 

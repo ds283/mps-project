@@ -458,6 +458,13 @@ _REQUIRED_ROLES: List[Dict] = [
         "analysis pipeline tasks.",
         "colour": "#5a6fd6",
     },
+    {
+        "name": "data_dashboard_marking",
+        "description": "Read-only access to the marking dashboard for all project classes and cycles "
+        "belonging to the user's tenants. Does not grant permission to modify "
+        "marking events or workflows.",
+        "colour": "#2d8a4e",
+    },
 ]
 
 

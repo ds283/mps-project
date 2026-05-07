@@ -967,6 +967,7 @@ def register_marking_tasks(celery):
                 reports.append(
                     {
                         "name": mr.role.user.name if mr.role and mr.role.user else None,
+                        "role": mr.role,
                         "grade": float(mr.grade) if mr.grade is not None else None,
                         "report": mr.report,
                         "feedback_positive": mr.feedback_positive,

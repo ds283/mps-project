@@ -32,7 +32,7 @@
 {% endblock %}
 
 {% block header %}
-    {% if not fb_template and url is not none and text is not none %}
+    {% if url is not none and text is not none %}
         <div class="mb-3 d-flex align-items-center">
             <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> {{ text }}
@@ -71,14 +71,4 @@
 {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
 </form>
-{% endblock %}
-
-{% block footer %}
-    {% if fb_template and url is not none and text is not none %}
-        <div class="mt-2 mb-3 text-center">
-            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> {{ text }}
-            </a>
-        </div>
-    {% endif %}
 {% endblock %}

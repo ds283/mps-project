@@ -5,6 +5,16 @@
 
 {% block formtitle %}{{ title }}: <strong>{{ feedback_asset.label }}</strong>{% endblock %}
 
+{% block header %}
+    {% if url is not none and text is not none %}
+        <div class="d-flex align-items-center">
+            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
+
 {% block form_content %}
     <form action="{{ url_for('convenor.edit_feedback_asset', asset_id=feedback_asset.id, url=url, text=text) }}"
           method="POST" name="edit_feedback_asset_form">
@@ -16,14 +26,4 @@
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
-{% endblock %}
-
-{% block footer %}
-    {% if url is not none and text is not none %}
-        <div class="mt-2 mb-3 text-center">
-            <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> {{ text }}
-            </a>
-        </div>
-    {% endif %}
 {% endblock %}

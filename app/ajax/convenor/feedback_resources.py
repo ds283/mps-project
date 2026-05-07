@@ -8,13 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, current_app, request
-from jinja2 import Template, Environment
+from flask import current_app, render_template, request
+from jinja2 import Environment, Template
 
 from ...database import db
-from ...models import FeedbackAsset, FeedbackTemplate, FeedbackRecipe, ProjectClass
+from ...models import FeedbackAsset, FeedbackRecipe, FeedbackTemplate, ProjectClass
 from ...tools.ServerSideProcessing import ServerSideSQLHandler
-
 
 # language=jinja2
 _asset_label = """
@@ -66,14 +65,14 @@ _asset_description = """
 # language=jinja2
 _asset_menu = """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_feedback_asset', asset_id=fa.id, url=return_url, text=return_text) }}">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_feedback_asset', asset_id=fa.id, url=return_url, text=return_text) }}">
             <i class="fas fa-edit fa-fw"></i> Edit
         </a>
-        <a class="dropdown-item text-danger" href="{{ url_for('convenor.delete_feedback_asset', asset_id=fa.id, url=return_url, text=return_text) }}">
+        <a class="dropdown-item text-danger d-flex gap-2" href="{{ url_for('convenor.delete_feedback_asset', asset_id=fa.id, url=return_url, text=return_text) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
@@ -127,14 +126,14 @@ _template_description_tags = """
 # language=jinja2
 _template_menu = """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_feedback_template', template_id=ft.id, url=return_url, text=return_text) }}">
+    <div class="dropdown-menu dropdwn-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_feedback_template', template_id=ft.id, url=return_url, text=return_text) }}">
             <i class="fas fa-edit fa-fw"></i> Edit
         </a>
-        <a class="dropdown-item text-danger" href="{{ url_for('convenor.delete_feedback_template', template_id=ft.id, url=return_url, text=return_text) }}">
+        <a class="dropdown-item text-danger d-flex gap-2" href="{{ url_for('convenor.delete_feedback_template', template_id=ft.id, url=return_url, text=return_text) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
@@ -186,14 +185,14 @@ _recipe_assets = """
 # language=jinja2
 _recipe_menu = """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_feedback_recipe', recipe_id=fr.id, url=return_url, text=return_text) }}">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_feedback_recipe', recipe_id=fr.id, url=return_url, text=return_text) }}">
             <i class="fas fa-edit fa-fw"></i> Edit
         </a>
-        <a class="dropdown-item text-danger" href="{{ url_for('convenor.delete_feedback_recipe', recipe_id=fr.id, url=return_url, text=return_text) }}">
+        <a class="dropdown-item text-danger d-flex gap-2" href="{{ url_for('convenor.delete_feedback_recipe', recipe_id=fr.id, url=return_url, text=return_text) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
@@ -207,7 +206,9 @@ def _build_templ(src: str) -> Template:
 
 
 def feedback_assets_data(pclass: ProjectClass):
-    base_query = db.session.query(FeedbackAsset).filter(FeedbackAsset.pclass_id == pclass.id)
+    base_query = db.session.query(FeedbackAsset).filter(
+        FeedbackAsset.pclass_id == pclass.id
+    )
 
     label_col = {
         "search": FeedbackAsset.label,
@@ -246,7 +247,12 @@ def feedback_assets_data(pclass: ProjectClass):
                     "label": render_template(label_templ, fa=fa),
                     "metadata": render_template(metadata_templ, fa=fa),
                     "description": render_template(description_templ, fa=fa),
-                    "menu": render_template(menu_templ, fa=fa, return_url=return_url, return_text=return_text),
+                    "menu": render_template(
+                        menu_templ,
+                        fa=fa,
+                        return_url=return_url,
+                        return_text=return_text,
+                    ),
                 }
                 for fa in rows
             ]
@@ -255,7 +261,9 @@ def feedback_assets_data(pclass: ProjectClass):
 
 
 def feedback_templates_data(pclass: ProjectClass):
-    base_query = db.session.query(FeedbackTemplate).filter(FeedbackTemplate.pclass_id == pclass.id)
+    base_query = db.session.query(FeedbackTemplate).filter(
+        FeedbackTemplate.pclass_id == pclass.id
+    )
 
     label_col = {
         "search": FeedbackTemplate.label,
@@ -294,7 +302,12 @@ def feedback_templates_data(pclass: ProjectClass):
                     "label": render_template(label_templ, ft=ft),
                     "metadata": render_template(metadata_templ, ft=ft),
                     "description_tags": render_template(desc_tags_templ, ft=ft),
-                    "menu": render_template(menu_templ, ft=ft, return_url=return_url, return_text=return_text),
+                    "menu": render_template(
+                        menu_templ,
+                        ft=ft,
+                        return_url=return_url,
+                        return_text=return_text,
+                    ),
                 }
                 for ft in rows
             ]
@@ -303,7 +316,9 @@ def feedback_templates_data(pclass: ProjectClass):
 
 
 def feedback_recipes_data(pclass: ProjectClass):
-    base_query = db.session.query(FeedbackRecipe).filter(FeedbackRecipe.pclass_id == pclass.id)
+    base_query = db.session.query(FeedbackRecipe).filter(
+        FeedbackRecipe.pclass_id == pclass.id
+    )
 
     label_col = {
         "search": FeedbackRecipe.label,
@@ -338,7 +353,12 @@ def feedback_recipes_data(pclass: ProjectClass):
                     "label": render_template(label_templ, fr=fr),
                     "metadata": render_template(metadata_templ, fr=fr),
                     "assets": render_template(assets_templ, fr=fr),
-                    "menu": render_template(menu_templ, fr=fr, return_url=return_url, return_text=return_text),
+                    "menu": render_template(
+                        menu_templ,
+                        fr=fr,
+                        return_url=return_url,
+                        return_text=return_text,
+                    ),
                 }
                 for fr in rows
             ]

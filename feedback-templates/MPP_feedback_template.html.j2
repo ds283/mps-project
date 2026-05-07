@@ -200,9 +200,7 @@
                 {% endif %}
             </div>
             {% for report in supervisor_workflow["reports"] %}
-                {% set role = report.role %}
-                {% set supervisor_user = role.user %}
-                {{ format_feedback(supervisor_user.name, report) }}
+                {{ format_feedback(report.name, report) }}
             {% endfor %}
         {% endif %}
         {% if "examiner" in workflow_data %}

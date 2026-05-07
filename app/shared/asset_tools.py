@@ -126,10 +126,10 @@ class AssetCloudAdapter:
         self._key = getattr(self._asset, self._key_attr)
 
         # size refers to the size of the asset before compression and encryption
-        self._size = getattr(self._asset, self._size_attr)
+        self._size = getattr(self._asset, self._size_attr) if self._size_attr is not None else None
 
-        self._encryption = getattr(self._asset, self._encryption_attr)
-        self._compressed = getattr(self._asset, self._compressed_attr)
+        self._encryption = getattr(self._asset, self._encryption_attr) if self._encryption_attr is not None else None
+        self._compressed = getattr(self._asset, self._compressed_attr) if self._compressed_attr is not None else None
         self._nonce = None
 
         if hasattr(self._asset, "bucket"):

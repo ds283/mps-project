@@ -569,22 +569,35 @@ def _conflation_report_editable(cr: ConflationReport) -> bool:
 def _delete_feedback_for_cr(cr: ConflationReport, audit_suffix: str = "") -> None:
     """
     Delete all FeedbackReport records (and their GeneratedAssets + physical files) attached to cr.
-    Removes rows from both association tables with an intermediate flush so FK constraints are
-    satisfied before the FeedbackReport rows themselves are deleted.
+    Uses direct SQL DELETEs on both association tables so that missing rows (e.g. when a
+    FeedbackReport was never linked to submission_record_to_feedback_report) do not raise
+    StaleDataError.  Flushes after the association DELETEs so FK constraints are satisfied
+    before the FeedbackReport rows themselves are deleted.
     Clears cr.recipe, cr.feedback_celery_id, and cr.feedback_generation_failed.
     Caller is responsible for db.session.commit() / rollback.
     """
     import app.shared.cloud_object_store.bucket_types as buckets
+    from sqlalchemy import delete as sa_delete
+
+    from ..models.associations import submission_record_to_feedback_report
+    from ..models.markingevent import conflation_report_to_feedback_report
     from ..shared.asset_tools import AssetCloudAdapter
 
-    sr: SubmissionRecord = cr.submission_record
     reports = cr.feedback_reports.all()
+    report_ids = [r.id for r in reports]
 
-    for report in reports:
-        cr.feedback_reports.remove(report)
-        sr.feedback_reports.remove(report)
-    # Flush now so the association-table rows are deleted before the FeedbackReport rows,
-    # avoiding FK constraint violations caused by lazy="dynamic" autoflush ordering.
+    if report_ids:
+        db.session.execute(
+            sa_delete(conflation_report_to_feedback_report).where(
+                conflation_report_to_feedback_report.c.feedback_report_id.in_(report_ids)
+            )
+        )
+        db.session.execute(
+            sa_delete(submission_record_to_feedback_report).where(
+                submission_record_to_feedback_report.c.report_id.in_(report_ids)
+            )
+        )
+    # Flush the association-table DELETEs before removing the FeedbackReport rows.
     db.session.flush()
 
     bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS", {})
@@ -614,6 +627,8 @@ def _delete_feedback_for_cr(cr: ConflationReport, audit_suffix: str = "") -> Non
                             thumbnail,
                             thumbnails_store,
                             audit_data=f"_delete_feedback_for_cr thumbnail{audit_suffix}",
+                            encryption_attr=None,
+                            compressed_attr=None,
                         ).delete()
                     except FileNotFoundError:
                         pass

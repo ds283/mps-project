@@ -465,6 +465,13 @@ _REQUIRED_ROLES: List[Dict] = [
         "marking events or workflows.",
         "colour": "#2d8a4e",
     },
+    {
+        "name": "data_dashboard_similarity",
+        "description": "Read-only access to the similarity dashboard for all project classes and cycles "
+        "belonging to the user's tenants. Does not grant permission to launch "
+        "similarity rebuild tasks.",
+        "colour": "#c05810",
+    },
 ]
 
 

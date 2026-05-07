@@ -19,6 +19,7 @@ from app.database import db
 from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
     ensure_config_rubrics,
+    ensure_roles,
     initial_populate_database,
     populate_CATS_limits,
 )
@@ -71,7 +72,7 @@ with app.app_context():
         db.session.commit()
         populate_CATS_limits(app, initdb_module)
 
-    ensure_config_rubrics(app)
+    ensure_roles(app)
     reconcile_background_tasks(app)
 
 

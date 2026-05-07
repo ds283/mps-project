@@ -28,7 +28,10 @@
                 var done = (job.completed || 0) + (job.failed || 0);
                 var pct = total > 0 ? Math.min(100, Math.floor(done * 100 / total)) : 0;
                 var bar = row.querySelector('[data-cell="progress-bar"]');
-                if (bar) { bar.style.width = pct + '%'; bar.setAttribute('aria-valuenow', pct); }
+                if (bar) {
+                    bar.style.width = pct + '%';
+                    bar.setAttribute('aria-valuenow', pct);
+                }
                 var pctLabel = row.querySelector('[data-cell="progress-pct"]');
                 if (pctLabel) pctLabel.textContent = pct + '%';
                 var compCell = row.querySelector('[data-cell="completed"]');
@@ -47,17 +50,30 @@
 
             function pollJobs() {
                 var url = '{{ url_for("dashboards.active_jobs_status") }}';
-                if (_watchedJobIds.length > 0) { url += '?ids=' + _watchedJobIds.join(','); }
+                if (_watchedJobIds.length > 0) {
+                    url += '?ids=' + _watchedJobIds.join(',');
+                }
                 fetch(url)
-                    .then(function (r) { return r.json(); })
+                    .then(function (r) {
+                        return r.json();
+                    })
                     .then(function (data) {
-                        if (data.just_finished) { window.location.reload(); return; }
-                        if (_initialActiveCount === 0 && data.active_count > 0) { window.location.reload(); return; }
+                        if (data.just_finished) {
+                            window.location.reload();
+                            return;
+                        }
+                        if (_initialActiveCount === 0 && data.active_count > 0) {
+                            window.location.reload();
+                            return;
+                        }
                         if (data.jobs) {
-                            Object.keys(data.jobs).forEach(function (uuid) { updateJobRow(uuid, data.jobs[uuid]); });
+                            Object.keys(data.jobs).forEach(function (uuid) {
+                                updateJobRow(uuid, data.jobs[uuid]);
+                            });
                         }
                     })
-                    .catch(function () { /* ignore transient network errors */ });
+                    .catch(function () { /* ignore transient network errors */
+                    });
             }
 
             setInterval(pollJobs, 60000);
@@ -86,7 +102,9 @@
                 ajax: {
                     url: $SCRIPT_ROOT + {{ ajax_url | tojson | safe }},
                     type: 'POST',
-                    data: function (args) { return {"args": JSON.stringify(args)}; }
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
                 },
                 "fnDrawCallback": function () {
                     $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
@@ -193,7 +211,8 @@
         {# ---- filter controls ---- #}
         <div class="card border-0 shadow-sm mb-4 mx-3">
             <div class="card-body">
-                <form method="GET" action="{{ url_for('dashboards.similarity_dashboard') }}" class="row g-3 align-items-end">
+                <form method="GET" action="{{ url_for('dashboards.similarity_dashboard') }}"
+                      class="row g-3 align-items-end">
 
                     {% if accessible_tenants|length > 1 %}
                         <div class="col-auto">
@@ -247,7 +266,8 @@
                         <label class="form-label small fw-semibold mb-1">Status</label>
                         <select name="status" class="form-select form-select-sm">
                             <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
-                            <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                            <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved
+                            </option>
                             <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
                         </select>
                     </div>
@@ -285,17 +305,19 @@
                  style="background-color: var(--db-orange-100); border-bottom-color: var(--db-orange-200); color: var(--db-orange-800);">
                 <span class="fw-semibold">
                     <i class="fas fa-exclamation-triangle me-1"></i>Similarity concerns
-                    <span class="badge ms-2" style="background-color: var(--db-orange-200); color: var(--db-orange-800);">
+                    <span class="badge ms-2"
+                          style="background-color: var(--db-orange-200); color: var(--db-orange-800);">
                         {{ status_filter | title }}
                     </span>
                     {% if selected_chunk_type %}
-                        <span class="badge ms-1" style="background-color: var(--db-orange-100); color: var(--db-orange-800);">
+                        <span class="badge ms-1"
+                              style="background-color: var(--db-orange-100); color: var(--db-orange-800);">
                             {{ selected_chunk_type | replace('_', ' ') | title }}
                         </span>
                     {% endif %}
                 </span>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body">
                 <table id="similarity-concerns-table"
                        class="table table-sm table-hover mb-0 align-middle"
                        style="width:100%">

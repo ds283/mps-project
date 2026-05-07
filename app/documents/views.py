@@ -665,17 +665,18 @@ def upload_submitter_report(sid):
                     "info",
                 )
 
-            # set up asynchronous task to process this report
-            celery = current_app.extensions["celery"]
+                from ..tasks.llm_orchestration import enqueue_single_record
 
-            process = celery.tasks["app.tasks.process_report.process"]
-            finalize = celery.tasks["app.tasks.process_report.finalize"]
-            error = celery.tasks["app.tasks.process_report.error"]
-
-            work = chain(process.si(record.id), finalize.si(record.id)).on_error(
-                error.si(record.id, current_user.id)
-            )
-            work.apply_async()
+                try:
+                    enqueue_single_record(record.id, user=current_user, clear_existing=True)
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    flash(
+                        "A database error was encountered while initiating language analysis. "
+                        "Please contact an administrator.",
+                        "error",
+                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
             return redirect(
                 url_for("documents.submitter_documents", sid=sid, url=url, text=text)

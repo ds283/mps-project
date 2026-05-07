@@ -1392,6 +1392,38 @@ def _clear_error_flags_for_records(record_ids: List[int]) -> int:
     return count
 
 
+def _collect_chunking_error_record_ids() -> List[int]:
+    """Return IDs of all SubmissionRecords with llm_chunking_failed=True."""
+    return [
+        row[0]
+        for row in db.session.query(SubmissionRecord.id)
+        .filter(SubmissionRecord.report_id.isnot(None))
+        .filter(SubmissionRecord.llm_chunking_failed.is_(True))
+        .all()
+    ]
+
+
+def _clear_chunking_error_flags_for_records(record_ids: List[int]) -> int:
+    """
+    Clear LLM chunking-error flags and reset similarity_complete=False on the
+    given SubmissionRecord IDs.  Returns the number of rows updated.  Does NOT commit.
+    """
+    if not record_ids:
+        return 0
+    return (
+        db.session.query(SubmissionRecord)
+        .filter(SubmissionRecord.id.in_(record_ids))
+        .update(
+            {
+                SubmissionRecord.llm_chunking_failed: False,
+                SubmissionRecord.llm_chunking_failure_reason: None,
+                SubmissionRecord.similarity_complete: False,
+            },
+            synchronize_session="fetch",
+        )
+    )
+
+
 @dashboards.route("/ai/clear_errors_period/<int:period_id>")
 @roles_accepted("faculty", "admin", "root")
 def clear_errors_period(period_id: int):
@@ -2958,6 +2990,66 @@ def launch_similarity_rebuild_period(period_id: int):
         flash("No reports are currently missing analysis results for this period.", "info")
     else:
         flash(f"Queued {job.total_count} report(s) for analysis.", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+@dashboards.route("/similarity/clear_chunking_errors")
+@roles_accepted("admin", "root")
+def clear_chunking_errors_global():
+    """Clear LLM chunking-error flags globally (no resubmit)."""
+    record_ids = _collect_chunking_error_record_ids()
+    if not record_ids:
+        flash("No records with chunking error flags were found.", "info")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    count = _clear_chunking_error_flags_for_records(record_ids)
+    try:
+        log_db_commit(f"Cleared LLM chunking error flags on {count} record(s) globally (no resubmit)")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while clearing chunking error flags.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    flash(f"Cleared chunking error flags on {count} record(s). Use 'Run missing' to requeue.", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+@dashboards.route("/similarity/resubmit_chunking_errors")
+@roles_accepted("admin", "root")
+def resubmit_chunking_errors_global():
+    """Clear LLM chunking-error flags globally and resubmit for similarity analysis."""
+    record_ids = _collect_chunking_error_record_ids()
+    if not record_ids:
+        flash("No records with chunking error flags were found.", "info")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    count = _clear_chunking_error_flags_for_records(record_ids)
+    # Commit the flag clearing before launching the pipeline so that
+    # launch_similarity_only_pipeline() sees the now-eligible records.
+    try:
+        log_db_commit(f"Cleared LLM chunking error flags on {count} record(s) prior to resubmit")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while clearing chunking error flags.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    try:
+        job = launch_similarity_only_pipeline(user=current_user)
+    except Exception as exc:
+        flash(f"Cleared error flags on {count} record(s) but failed to launch similarity pipeline.", "error")
+        current_app.logger.exception("resubmit_chunking_errors_global: pipeline launch failed", exc_info=exc)
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    if job is None:
+        flash(
+            f"Cleared chunking error flags on {count} record(s), but no eligible records were found for similarity analysis.",
+            "info",
+        )
+    else:
+        flash(
+            f"Cleared chunking error flags on {count} record(s) and queued {job.total_count} report(s) for similarity analysis.",
+            "success",
+        )
     return redirect(url_for("dashboards.similarity_dashboard"))
 
 

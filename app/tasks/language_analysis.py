@@ -9,16 +9,11 @@
 #
 
 import hashlib
-import json
 import re
 import time
-import traceback
 import unicodedata
 
-import requests
-
 import numpy as np
-from billiard.exceptions import SoftTimeLimitExceeded
 from celery import chord, group as cgroup, states
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,7 +22,9 @@ from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, TaskRecord, Tenant
 from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.ai_calibration import mahalanobis_distance
+from ..shared.llm_services import _call_llm, _truncate_text, _TOKENS_PER_WORD
 from ..shared.scraped_text_store import get_scraped_text, store_scraped_text
+from ..shared.text_utils import _APPENDIX_HEADING, _split_document, _strip_math_lines
 from ..task_queue import progress_update
 from ..shared.llm_thresholds import (
     classify_burstiness,
@@ -265,12 +262,6 @@ def _extract_docx_text(path: str) -> tuple[str, int]:
 # Statistical analysis helpers.
 # ---------------------------------------------------------------------------
 
-# Patterns used to detect the start of the bibliography / reference section.
-_BIBLIO_HEADING = re.compile(
-    r"^\s*(references|bibliography|works\s+cited)\s*$",
-    re.IGNORECASE | re.MULTILINE,
-)
-
 # Caption line pattern (figure or table captions, used to exclude word count).
 # Handles simple (Figure 1), chapter-relative (Figure 3.1), and appendix (Figure A.1)
 # numbering styles.
@@ -305,20 +296,6 @@ _NUMBERED_ENTRY = re.compile(r"^\s*(\[\d{1,3}\]|\d{1,3}\.)\s+[A-Z]", re.MULTILIN
 # Numbered citation in main text: [N] or [N, M, ...]
 _NUMBERED_CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 
-# Appendix section heading.  Matches "Appendix", "Appendix A", "APPENDIX B",
-# "Appendix A: Title", "Appendix B — Extra Data", etc. on their own line.
-#
-# Design notes:
-#   (?im)          — inline IGNORECASE + MULTILINE flags
-#   (?-i:[A-Z])    — uppercase letter only (IGNORECASE disabled for this group)
-#                    so "Appendix a" or "appendix contents" do NOT match
-#   [ \t]+         — space/tab only (not \s) so the optional group cannot
-#                    span a newline and consume the next line
-#   (?:[:\t \-\.].*)?  — optional subtitle text following the letter label
-_APPENDIX_HEADING = re.compile(
-    r"(?im)^\s*appendix(?:[ \t]+(?-i:[A-Z])(?:[:\t \-\.].*)?)?$"
-)
-
 # Author-year reference entry signals.
 # A year in parentheses is the minimal marker of an author-year bibliography entry.
 _REF_YEAR = re.compile(r"\(\d{4}[a-z]?\)")
@@ -328,164 +305,11 @@ _ARXIV_ID = re.compile(r"\barXiv:\d{4}\.\d{4,5}\b", re.IGNORECASE)
 _DOI = re.compile(r"\bdoi:\s*10\.\d{4,}", re.IGNORECASE)
 
 
-def _split_text(text: str) -> tuple[str, str]:
-    """
-    Split *text* into (main_text, biblio_text) at the bibliography heading.
-    If no heading is found, returns (text, "").
-
-    Uses the *last* match of _BIBLIO_HEADING rather than the first.  Reports
-    commonly include a table of contents where "References" appears on its own
-    line (e.g. "5\nReferences\n8") well before the actual reference list.
-    The genuine bibliography is always the final occurrence of the heading.
-    """
-    matches = list(_BIBLIO_HEADING.finditer(text))
-    if matches:
-        match = matches[-1]
-        return text[: match.start()], text[match.start() :]
-    return text, ""
-
-
-# Minimum fraction of pre_core that must precede an appendix heading for it
-# to be treated as a genuine section heading rather than a TOC entry or an
-# early cross-reference such as "see Appendix A for details".
-_MIN_APPENDIX_FRACTION = 0.25
-
-
-def _split_document(raw_text: str) -> tuple[str, str, str]:
-    """
-    Split raw extracted text into three named regions::
-
-        (_core, _references, _appendices)
-
-    Any region may be an empty string if not detected.  The function is the
-    single authoritative entry point for all document splitting; downstream
-    code should call this instead of ``_split_text`` directly.
-
-    Algorithm
-    ---------
-    Step 1.  Locate the last bibliography heading → pre_core, pre_biblio
-             (via ``_split_text``).
-
-    Step 2a. Search *pre_biblio* for an appendix heading (type B report:
-             core → references → appendices).  If found::
-
-               _core        = pre_core
-               _references  = pre_biblio up to appendix heading
-               _appendices  = pre_biblio from appendix heading onwards
-
-    Step 2b. Otherwise search *pre_core* for an appendix heading (type A
-             report: core → appendices → references).  The heading must
-             appear after ``_MIN_APPENDIX_FRACTION`` of pre_core to exclude
-             TOC entries and early cross-references.  The first qualifying
-             match marks the start of the appendix section::
-
-               _core        = pre_core up to appendix heading
-               _references  = pre_biblio
-               _appendices  = pre_core from appendix heading onwards
-
-    Step 2c. No appendix heading found anywhere::
-
-               _core        = pre_core
-               _references  = pre_biblio
-               _appendices  = ""
-    """
-    pre_core, pre_biblio = _split_text(raw_text)
-
-    # Step 2a — type B: appendix follows reference list
-    app_match = _APPENDIX_HEADING.search(pre_biblio)
-    if app_match:
-        return (
-            pre_core,
-            pre_biblio[: app_match.start()],
-            pre_biblio[app_match.start() :],
-        )
-
-    # Step 2b — type A: appendix precedes reference list
-    min_pos = int(len(pre_core) * _MIN_APPENDIX_FRACTION)
-    for match in _APPENDIX_HEADING.finditer(pre_core):
-        if match.start() > min_pos:
-            return (
-                pre_core[: match.start()],
-                pre_biblio,
-                pre_core[match.start() :],
-            )
-
-    # Step 2c — no appendices detected
-    return pre_core, pre_biblio, ""
-
-
-# ---------------------------------------------------------------------------
-# Pattern used to decide whether a line contains English prose.
-# See _strip_math_lines() for the full rationale.
-# ---------------------------------------------------------------------------
-
-_ENGLISH_WORD = re.compile(r"[a-zA-Z]{5,}")
-
 # Code-listing detection used to exclude source-code sentences from sentence CV.
 _CODE_CHARS = frozenset("=()[]{}#")
 _CODE_CHAR_RATIO_THRESHOLD = 0.04   # >4 % of chars are code punctuation
 _UNDERSCORE_TOKEN_THRESHOLD = 0.15  # >15 % of whitespace-split tokens contain '_'
 
-
-def _strip_math_lines(text: str) -> str:
-    """
-    Remove lines that consist predominantly of mathematical notation produced
-    by PDF text extraction of LaTeX-typeset equations.
-
-    Such extraction scatters formula content across many short lines that are
-    meaningless as English text — e.g. ``d4q``, ``(2π)4``, ``D0D1``,
-    ``→I2(p) =``, lone integers, Greek-letter fragments.  Retaining them
-    inflates word counts and distorts lexical-richness metrics (MATTR, MTLD).
-
-    ## Detection strategy
-
-    A line is *kept* if and only if it contains at least one run of **five or
-    more consecutive ASCII letters**.  Such a run reliably indicates either an
-    English content word or a recognisable section heading.
-
-    Threshold rationale — alternatives evaluated and rejected:
-
-    * ``[a-zA-Z]{2,}`` (≥ 2 letters): false positives for 2-letter math
-      variable names (``Dk``, ``Di``, ``dq``, ``ki``) and 3-letter function
-      abbreviations (``Res``, ``lim``, ``sin``, ``det``).  A digit inside a
-      token (e.g. ``d3q``) *does* break the run and so is correctly filtered,
-      but purely alphabetic 2–4-character tokens are not.
-
-    * ``≥ 2 tokens of [a-zA-Z]{3,}``: correctly rejects variable names, but
-      strips single-word headings such as "Introduction" and "Conclusion"
-      because they contain only one matching token.
-
-    * Vowel-gated tokens (≥ 3 letters containing ≥ 1 vowel): ``Res``,
-      ``sin``, ``lim``, ``det`` all contain vowels and would pass — same
-      false positives as the ``{2,}`` approach.
-
-    With ``{5,}``:
-    * Math tokens ``d3q``, ``D0D1``, ``dq0``, ``Dk``, ``Res``, ``lim`` →
-      correctly filtered.
-    * Section headings ``Introduction``, ``Conclusion``, ``Results``,
-      ``Cauchy`` → correctly kept.
-    * Prose lines → kept (always contain at least one 5+ letter word).
-
-    The only theoretical false negative is a line whose every word is 1–4
-    characters long (e.g. "We do it.").  Such lines are rare as standalone
-    lines in scientific prose and, even if removed, do not materially affect
-    word count or lexical richness scores.
-
-    ## Scope of application
-
-    This function should be applied to *main_text* only (after bibliography
-    splitting) to produce a *clean_main_text* used for word count and
-    MATTR/MTLD computation.  The unstripped text is left intact for burstiness
-    analysis (spaCy already filters to alphabetic tokens internally), pattern
-    matching (searches for English phrases), figure/table cross-reference
-    detection, and LLM submission where the prose context surrounding equations
-    is preserved even after stripping the equation fragments themselves.
-    """
-    kept = []
-    for line in text.splitlines():
-        if not line.strip() or _ENGLISH_WORD.search(line):
-            kept.append(line)
-    return "\n".join(kept)
 
 
 _MIN_CODE_BLOCK_LINES = 3  # runs shorter than this are kept (false-positive protection)
@@ -962,23 +786,9 @@ def _ai_concern_flag(
 # ---------------------------------------------------------------------------
 
 
-_TRUNCATION_MARKER = "\n\n[... middle section omitted due to length ...]\n\n"
-_MAX_WORDS_BEFORE_TRUNCATION = 12000
-_TRUNCATION_HEAD_WORDS = 6000
-_TRUNCATION_TAIL_WORDS = 6000
-
-_LLM_RETRY_ATTEMPTS = 3
-_LLM_RETRY_DELAY = 5  # seconds
-
 # ---------------------------------------------------------------------------
 # Context-window-aware chunking constants.
-#
-# Token estimates use 1.4 tokens/word — a conservative BPE approximation
-# for academic English prose.  All overhead figures are generous upper-bound
-# estimates to avoid exceeding the context window.
 # ---------------------------------------------------------------------------
-
-_TOKENS_PER_WORD = 1.6  # conservative for technical academic prose (equations, code, citations)
 
 # Minimum context window the synthesis pass requires.  Ollama must be
 # configured with num_ctx ≥ this value (and ≥ OLLAMA_CONTEXT_SIZE).
@@ -999,20 +809,6 @@ _MAX_EVIDENCE_PER_CRITERION = 3
 # Excerpt character limit applied when the synthesis evidence text would
 # otherwise overflow the synthesis context window.
 _MAX_EXCERPT_CHARS = 150
-
-
-def _truncate_text(text: str) -> tuple[str, bool]:
-    """
-    If *text* exceeds _MAX_WORDS_BEFORE_TRUNCATION words, return a truncated
-    version consisting of the first and last _TRUNCATION_{HEAD,TAIL}_WORDS words
-    separated by a marker.  Returns (text, was_truncated).
-    """
-    words = text.split()
-    if len(words) <= _MAX_WORDS_BEFORE_TRUNCATION:
-        return text, False
-    head = " ".join(words[:_TRUNCATION_HEAD_WORDS])
-    tail = " ".join(words[-_TRUNCATION_TAIL_WORDS:])
-    return head + _TRUNCATION_MARKER + tail, True
 
 
 def _build_system_prompt(truncated: bool, rubric) -> str:
@@ -1335,131 +1131,6 @@ def _validate_feedback_response(data: dict) -> bool:
 # ---------------------------------------------------------------------------
 # Shared LLM call helper.
 # ---------------------------------------------------------------------------
-
-
-def _call_llm(
-    base_url: str,
-    model: str,
-    system_prompt: str,
-    user_prompt: str,
-    schema: dict,
-    options: dict | None = None,
-    validate_fn=None,
-    label: str = "llm",
-) -> tuple[dict | None, str, Exception | None, int]:
-    """
-    Submit a prompt to Ollama via the OpenAI-compatible
-    /v1/chat/completions endpoint with JSON-schema constrained generation.
-
-    Returns (parsed_result, last_accumulated_text, last_exception, est_input_tokens).
-    parsed_result is None if all attempts failed.
-    est_input_tokens is a rough estimate of the input prompt size in tokens,
-    useful for diagnosing context-window failures.
-    """
-    est_input_tokens = int(
-        (len(system_prompt.split()) + len(user_prompt.split())) * _TOKENS_PER_WORD
-    )
-    accumulated = ""
-    last_exc: Exception | None = None
-    parsed_result: dict | None = None
-
-    for attempt in range(_LLM_RETRY_ATTEMPTS):
-        accumulated = ""
-        try:
-            resp = requests.post(
-                f"{base_url}/v1/chat/completions",
-                json={
-                    "model": model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "response_format": {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "response",
-                            "schema": schema,
-                        },
-                    },
-                    "stream": True,
-                    "temperature": 0.0,
-                    **({"options": options} if options else {}),
-                },
-                stream=True,
-                timeout=(30, 3600),
-            )
-            resp.raise_for_status()
-
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                line_str = line.decode() if isinstance(line, bytes) else line
-                if not isinstance(line_str, str) or not line_str.startswith("data: "):
-                    continue
-                payload = line_str[6:]
-                if payload.strip() == "[DONE]":
-                    break
-                try:
-                    chunk_data = json.loads(payload)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-                if not isinstance(chunk_data, dict):
-                    continue
-                # Guard against null/empty choices (e.g. Ollama usage-only final chunk).
-                choices = chunk_data.get("choices") or [{}]
-                first_choice = choices[0] if choices and isinstance(choices[0], dict) else {}
-                delta = first_choice.get("delta") or {}
-                content = delta.get("content") if isinstance(delta, dict) else None
-                if isinstance(content, str):
-                    accumulated += content
-
-            parsed = json.loads(accumulated)
-            if validate_fn is not None and not validate_fn(parsed):
-                raise ValueError(
-                    f"LLM response missing required keys; got: {list(parsed.keys())}"
-                )
-            parsed_result = parsed
-            last_exc = None
-            break
-
-        except requests.HTTPError as exc:
-            last_exc = exc
-            status = exc.response.status_code if exc.response is not None else 0
-            if 400 <= status < 500:
-                current_app.logger.error(
-                    f"{label}: permanent HTTP {status} error (~{est_input_tokens} est. input tokens): {exc}"
-                )
-                break
-            current_app.logger.warning(
-                f"{label}: transient HTTP error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
-            )
-            if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                time.sleep(_LLM_RETRY_DELAY)
-
-        except SoftTimeLimitExceeded:
-            raise  # must not be swallowed — propagate so the task fails cleanly
-
-        except (json.JSONDecodeError, ValueError) as exc:
-            last_exc = exc
-            current_app.logger.warning(
-                f"{label}: JSON parse failure on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
-            )
-            if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                time.sleep(_LLM_RETRY_DELAY)
-
-        except Exception as exc:
-            last_exc = exc
-            current_app.logger.warning(
-                f"{label}: transient [{type(exc).__name__}] error on attempt {attempt + 1} "
-                f"(~{est_input_tokens} est. input tokens): {exc}"
-            )
-            current_app.logger.warning(
-                f"{label}: traceback (attempt {attempt + 1}):\n{traceback.format_exc()}"
-            )
-            if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                time.sleep(_LLM_RETRY_DELAY)
-
-    return parsed_result, accumulated, last_exc, est_input_tokens
 
 
 # ---------------------------------------------------------------------------

@@ -148,3 +148,135 @@ def delete_scraped_text(record_id: int) -> bool:
 
     finally:
         client.close()
+
+
+def store_similarity_chunks(
+    record_id: int,
+    sections: dict,
+    model_name: str,
+    prompt_version: int,
+    heading_style: str,
+    top_level_heading_count: int,
+) -> bool:
+    """
+    Upsert chunk extraction results into the scraped-text Mongo document.
+
+    *sections* maps chunk_type → {"text": str, "present": bool}.
+    Writes under the key "similarity_chunks" in the existing document.
+    Creates the document if it does not yet exist.
+
+    Returns True on success, False if MongoDB is unconfigured or unavailable.
+    """
+    client, collection = _get_collection()
+    if collection is None:
+        current_app.logger.warning(
+            "scraped_text_store.store_similarity_chunks: MongoDB not configured — skipping"
+        )
+        return False
+
+    try:
+        now = datetime.now()
+        collection.update_one(
+            {"submission_record_id": record_id},
+            {
+                "$set": {
+                    "similarity_chunks": {
+                        "sections": sections,
+                        "extracted_at": now,
+                        "extraction_model": model_name,
+                        "chunk_prompt_version": prompt_version,
+                        "heading_style": heading_style,
+                        "top_level_heading_count": top_level_heading_count,
+                    }
+                },
+                "$setOnInsert": {
+                    "submission_record_id": record_id,
+                    "created_at": now,
+                },
+            },
+            upsert=True,
+        )
+        return True
+
+    except Exception as exc:
+        current_app.logger.warning(
+            f"scraped_text_store.store_similarity_chunks: failed for record #{record_id}: {exc}"
+        )
+        return False
+
+    finally:
+        client.close()
+
+
+def get_similarity_chunks(record_id: int) -> dict | None:
+    """
+    Retrieve the "similarity_chunks" subdocument for *record_id*.
+
+    Returns the full subdocument (including sections, extracted_at, extraction_model,
+    chunk_prompt_version, heading_style, top_level_heading_count, and optionally
+    minhash_signatures and minhash_computed_at), or None on cache miss or absent key.
+    """
+    client, collection = _get_collection()
+    if collection is None:
+        current_app.logger.warning(
+            "scraped_text_store.get_similarity_chunks: MongoDB not configured — cache miss"
+        )
+        return None
+
+    try:
+        doc = collection.find_one(
+            {"submission_record_id": record_id},
+            projection={"_id": False, "similarity_chunks": True},
+        )
+        if doc is None:
+            return None
+        return doc.get("similarity_chunks")
+
+    except Exception as exc:
+        current_app.logger.warning(
+            f"scraped_text_store.get_similarity_chunks: failed for record #{record_id}: {exc}"
+        )
+        return None
+
+    finally:
+        client.close()
+
+
+def store_minhash_signatures(record_id: int, signatures: dict) -> bool:
+    """
+    Upsert MinHash signatures into the "similarity_chunks" subdocument.
+
+    *signatures* maps chunk_type → list[int] (MinHash hashvalues).
+    Uses a targeted $set to avoid overwriting the rest of the subdocument.
+    Also writes "similarity_chunks.minhash_computed_at".
+
+    Returns True on success, False if MongoDB is unconfigured or unavailable.
+    """
+    client, collection = _get_collection()
+    if collection is None:
+        current_app.logger.warning(
+            "scraped_text_store.store_minhash_signatures: MongoDB not configured — skipping"
+        )
+        return False
+
+    try:
+        now = datetime.now()
+        collection.update_one(
+            {"submission_record_id": record_id},
+            {
+                "$set": {
+                    "similarity_chunks.minhash_signatures": signatures,
+                    "similarity_chunks.minhash_computed_at": now,
+                }
+            },
+        )
+        return True
+
+    except Exception as exc:
+        current_app.logger.warning(
+            f"scraped_text_store.store_minhash_signatures: failed for record #{record_id}: {exc}"
+        )
+        return False
+
+    finally:
+        client.close()

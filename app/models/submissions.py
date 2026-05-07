@@ -2132,6 +2132,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     RISK_AI_USE = "ai_use"
     RISK_DOCUMENT_LENGTH = "document_length"
     RISK_WORD_COUNT_DISCREPANCY = "word_count_discrepancy"
+    RISK_SIMILARITY_FLAGGED = "similarity_flagged"
 
     ALL_RISK_TYPES = [
         RISK_TURNITIN,
@@ -2139,6 +2140,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         RISK_AI_USE,
         RISK_DOCUMENT_LENGTH,
         RISK_WORD_COUNT_DISCREPANCY,
+        RISK_SIMILARITY_FLAGGED,
     ]
 
     @property
@@ -2209,6 +2211,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         RISK_AI_USE: "AI use metrics",
         RISK_DOCUMENT_LENGTH: "Document length",
         RISK_WORD_COUNT_DISCREPANCY: "Word count discrepancy",
+        RISK_SIMILARITY_FLAGGED: "Similarity concern",
     }
 
     def risk_factors_ui_summary(self) -> dict:
@@ -2684,6 +2687,28 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         else:
             discrepancy_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
         new_data[self.RISK_WORD_COUNT_DISCREPANCY] = discrepancy_factor
+
+        # --- SIMILARITY FLAGGED ---
+        from .similarity import SimilarityConcern
+
+        has_unresolved_concerns = (
+            db.session.query(SimilarityConcern.id)
+            .filter(
+                db.or_(
+                    SimilarityConcern.record_a_id == self.id,
+                    SimilarityConcern.record_b_id == self.id,
+                ),
+                SimilarityConcern.reviewed == False,  # noqa: E712
+            )
+            .first()
+            is not None
+        )
+        similarity_factor = {"present": has_unresolved_concerns}
+        if has_unresolved_concerns:
+            similarity_factor = _carry_resolution(self.RISK_SIMILARITY_FLAGGED, similarity_factor)
+        else:
+            similarity_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_SIMILARITY_FLAGGED] = similarity_factor
 
         self.set_risk_factors_data(new_data)
 

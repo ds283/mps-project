@@ -382,12 +382,15 @@ def _dispatch_global_coordinator() -> None:
 
 
 def _dispatch_analysis_chain(celery, job_uuid: str, record_id: int) -> None:
-    """Build and dispatch the full language-analysis chain for *record_id*."""
+    """Build and dispatch the full language-analysis + similarity chain for *record_id*."""
     t_extract = celery.tasks["app.tasks.language_analysis.download_and_extract"]
     t_stats = celery.tasks["app.tasks.language_analysis.compute_statistics"]
     t_llm = celery.tasks["app.tasks.language_analysis.submit_to_llm"]
     t_feedback = celery.tasks["app.tasks.language_analysis.submit_to_llm_feedback"]
     t_finalize = celery.tasks["app.tasks.language_analysis.finalize"]
+    t_extract_chunks = celery.tasks["app.tasks.similarity_analysis.extract_chunks"]
+    t_compute_minhash = celery.tasks["app.tasks.similarity_analysis.compute_minhash"]
+    t_run_similarity = celery.tasks["app.tasks.similarity_analysis.run_similarity_check"]
     t_done = celery.tasks["app.tasks.llm_orchestration.orchestration_record_done"]
     t_err = celery.tasks["app.tasks.llm_orchestration.orchestration_record_error"]
 
@@ -397,6 +400,9 @@ def _dispatch_analysis_chain(celery, job_uuid: str, record_id: int) -> None:
         t_llm.si(record_id).set(queue="llm_tasks"),
         t_feedback.si(record_id).set(queue="llm_tasks"),
         t_finalize.si(record_id).set(queue="default"),
+        t_extract_chunks.si(record_id).set(queue="llm_tasks"),
+        t_compute_minhash.si(record_id).set(queue="default"),
+        t_run_similarity.si(record_id).set(queue="default"),
         t_done.si(job_uuid, record_id).set(queue="default"),
     ).on_error(t_err.si(job_uuid, record_id).set(queue="default"))
 

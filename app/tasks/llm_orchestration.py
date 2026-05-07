@@ -439,6 +439,7 @@ def _collect_similarity_only_record_ids(period_ids: List[int]) -> List[int]:
             .filter(SubmissionRecord.report_id.isnot(None))
             .filter(SubmissionRecord.language_analysis_complete.is_(True))
             .filter(SubmissionRecord.similarity_complete.is_(False))
+            .filter(SubmissionRecord.llm_chunking_failed.isnot(True))
             .all()
         )
     ]

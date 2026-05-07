@@ -2693,10 +2693,12 @@ def register_language_analysis_tasks(celery):
     # -----------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30)
-    def finalize(self, record_id: int):
+    def finalize_language_step(self, record_id: int):
         """
-        Stage 5 (default queue): mark language analysis as complete, compute risk factors,
-        and trigger processed-report generation.
+        Stage 5 (default queue): mark language analysis as complete and reset any prior
+        chunking-failure state.  Risk factors are NOT computed here — they are computed
+        in finalize_risk_flags after the similarity scan has run, so that
+        risk_factors.similarity_flagged reflects fresh data.
         """
         try:
             record: SubmissionRecord = (
@@ -2704,16 +2706,55 @@ def register_language_analysis_tasks(celery):
             )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
-                "SQLAlchemyError in language_analysis.finalize", exc_info=exc
+                "SQLAlchemyError in language_analysis.finalize_language_step", exc_info=exc
             )
             raise self.retry()
 
         if record is None:
             raise Exception(
-                f"language_analysis.finalize: SubmissionRecord #{record_id} not found"
+                f"language_analysis.finalize_language_step: SubmissionRecord #{record_id} not found"
             )
 
         record.language_analysis_complete = True
+
+        # Clear any chunking-failure state from a previous attempt so a successful
+        # retry does not leave stale failure flags visible to reviewers.
+        record.llm_chunking_failed = False
+        record.llm_chunking_failure_reason = None
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception(
+                "SQLAlchemyError in language_analysis.finalize_language_step commit", exc_info=exc
+            )
+            raise self.retry()
+
+    # -----------------------------------------------------------------------
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def finalize_risk_flags(self, record_id: int):
+        """
+        Stage 9 (default queue): compute risk factors and trigger processed-report
+        generation.  Runs after run_similarity_check so that risk_factors.similarity_flagged
+        reflects the freshest SimilarityConcern data, and the processed-report template
+        can incorporate similarity results if desired.
+        """
+        try:
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
+        except SQLAlchemyError as exc:
+            current_app.logger.exception(
+                "SQLAlchemyError in language_analysis.finalize_risk_flags", exc_info=exc
+            )
+            raise self.retry()
+
+        if record is None:
+            raise Exception(
+                f"language_analysis.finalize_risk_flags: SubmissionRecord #{record_id} not found"
+            )
 
         # Compute/refresh risk factors using current analysis data and project configuration.
         try:
@@ -2722,7 +2763,7 @@ def register_language_analysis_tasks(celery):
         except Exception as exc:
             # Non-fatal: log and continue — analysis results are still available.
             current_app.logger.exception(
-                "Exception computing risk factors in language_analysis.finalize",
+                "Exception computing risk factors in language_analysis.finalize_risk_flags",
                 exc_info=exc,
             )
 
@@ -2738,11 +2779,12 @@ def register_language_analysis_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
-                "SQLAlchemyError in language_analysis.finalize commit", exc_info=exc
+                "SQLAlchemyError in language_analysis.finalize_risk_flags commit", exc_info=exc
             )
             raise self.retry()
 
-        # Trigger (re-)generation of the processed report now that LLM data is available.
+        # Trigger (re-)generation of the processed report now that both LLM and
+        # similarity data are available.
         if record.report is not None:
             _dispatch_process_report(record_id)
 

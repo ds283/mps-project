@@ -977,6 +977,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # human-readable reason for feedback LLM failure, for display to administrators
     llm_feedback_failure_reason = db.Column(db.Text(), default=None)
 
+    # did the LLM heading-classification step (extract_chunks) fail?
+    # Set when the Ollama heading-classification call returns None; cleared by
+    # _clear_record_state() and by finalize_language_step() so a successful retry
+    # resets the flag automatically.
+    llm_chunking_failed = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # human-readable reason for heading-classification failure, for display to administrators
+    llm_chunking_failure_reason = db.Column(db.Text(collation="utf8_bin"), default=None)
+
     # LLM pipeline provenance — captured at submission time so past runs can be
     # evaluated if a larger model or larger context window becomes available later.
     llm_model_name = db.Column(db.String(200, collation="utf8_bin"), nullable=True)
@@ -2133,6 +2142,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     RISK_DOCUMENT_LENGTH = "document_length"
     RISK_WORD_COUNT_DISCREPANCY = "word_count_discrepancy"
     RISK_SIMILARITY_FLAGGED = "similarity_flagged"
+    RISK_SIMILARITY_CHUNKING_FAILED = "similarity_chunking_failed"
 
     ALL_RISK_TYPES = [
         RISK_TURNITIN,
@@ -2141,6 +2151,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         RISK_DOCUMENT_LENGTH,
         RISK_WORD_COUNT_DISCREPANCY,
         RISK_SIMILARITY_FLAGGED,
+        RISK_SIMILARITY_CHUNKING_FAILED,
     ]
 
     @property
@@ -2212,6 +2223,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         RISK_DOCUMENT_LENGTH: "Document length",
         RISK_WORD_COUNT_DISCREPANCY: "Word count discrepancy",
         RISK_SIMILARITY_FLAGGED: "Similarity concern",
+        RISK_SIMILARITY_CHUNKING_FAILED: "Similarity analysis unavailable",
     }
 
     def risk_factors_ui_summary(self) -> dict:
@@ -2710,6 +2722,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             similarity_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
         new_data[self.RISK_SIMILARITY_FLAGGED] = similarity_factor
 
+        # --- SIMILARITY CHUNKING FAILED ---
+        chunking_failed = bool(self.llm_chunking_failed)
+        chunking_factor = {"present": chunking_failed}
+        if chunking_failed:
+            chunking_factor = _carry_resolution(self.RISK_SIMILARITY_CHUNKING_FAILED, chunking_factor)
+        else:
+            chunking_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_SIMILARITY_CHUNKING_FAILED] = chunking_factor
+
         self.set_risk_factors_data(new_data)
 
     @property
@@ -2815,8 +2836,16 @@ def _SubmissionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
     from ..shared.scraped_text_store import delete_scraped_text
+    from .similarity import SimilarityConcern
 
     delete_scraped_text(target.id)
+
+    db.session.query(SimilarityConcern).filter(
+        db.or_(
+            SimilarityConcern.record_a_id == target.id,
+            SimilarityConcern.record_b_id == target.id,
+        )
+    ).delete(synchronize_session="fetch")
 
 
 class SubmissionAttachmentRole(db.Model):

@@ -1,15 +1,14 @@
 {#
   _similarity_risk_factor_card.html
   ─────────────────────────────────
-  Partial included by resolve_risk_factors when a similarity_flagged risk factor
-  is present. Lists open concerns and links to the similarity dashboard for review.
-  The flag clears automatically via _recompute_similarity_flag() once all concerns
-  are resolved — no checkbox resolution is offered here.
+  Partial included by resolve_risk_factors when a similarity_flagged or
+  similarity_chunking_failed risk factor is present.
 
   Expected context variables:
-    open_concerns   list[SimilarityConcern]  — open unreviewed concerns for this record
-    record          SubmissionRecord         — the record being resolved
-    risk_data       dict                     — similarity_flagged entry from risk_factors_data
+    open_concerns     list[SimilarityConcern]  — open unreviewed concerns for this record
+    record            SubmissionRecord         — the record being resolved
+    risk_data         dict                     — similarity_flagged entry from risk_factors_data
+    chunking_factor   dict                     — similarity_chunking_failed entry (may be empty)
 #}
 
 {% set is_resolved = risk_data.get('resolved', False) %}
@@ -29,6 +28,21 @@
     </div>
 
     <div class="card-body">
+
+        {% if chunking_factor is defined and chunking_factor.get('present', False) %}
+            <div class="alert alert-warning d-flex align-items-start gap-2 mb-3 py-2 small" role="alert"
+                 style="background-color: var(--db-orange-50); border-color: var(--db-orange-200); color: var(--db-orange-800);">
+                <i class="fas fa-exclamation-triangle mt-1 flex-shrink-0"></i>
+                <div>
+                    <strong>Similarity chunking failed.</strong>
+                    The LLM heading classifier could not process this report, so no chunk-level
+                    similarity scores have been computed. Re-run the analysis pipeline to retry.
+                    {% if record.llm_chunking_failure_reason %}
+                        <div class="mt-1 text-body-secondary fst-italic">{{ record.llm_chunking_failure_reason }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
 
         {% if open_concerns %}
             <p class="small mb-3">

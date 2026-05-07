@@ -110,8 +110,8 @@
                 </div>
             {% endfor %}
 
-            {# ---- Similarity flagged risk factor (handled separately — no checkbox, auto-clears) ---- #}
-            {% if sim_factor and sim_factor.get('present', False) %}
+            {# ---- Similarity flagged / chunking-failed risk factors (handled separately — no checkbox) ---- #}
+            {% if (sim_factor and sim_factor.get('present', False)) or (chunking_factor and chunking_factor.get('present', False)) %}
                 {% set open_concerns = similarity_open_concerns %}
                 {% set risk_data = sim_factor %}
                 {% include "dashboards/_similarity_risk_factor_card.html" %}
@@ -127,7 +127,7 @@
 
     {% else %}
         {# Read-only audit view for retired students #}
-        {% if sim_factor and sim_factor.get('present', False) %}
+        {% if (sim_factor and sim_factor.get('present', False)) or (chunking_factor and chunking_factor.get('present', False)) %}
             {% set open_concerns = similarity_open_concerns %}
             {% set risk_data = sim_factor %}
             {% include "dashboards/_similarity_risk_factor_card.html" %}

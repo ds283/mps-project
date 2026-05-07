@@ -180,6 +180,8 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     record.llm_failure_reason = None
     record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
     record.llm_feedback_failure_reason = None
+    record.llm_chunking_failed = False
+    record.llm_chunking_failure_reason = None
     record.risk_factors = None
 
     if record.processed_report is not None:
@@ -387,10 +389,11 @@ def _dispatch_analysis_chain(celery, job_uuid: str, record_id: int) -> None:
     t_stats = celery.tasks["app.tasks.language_analysis.compute_statistics"]
     t_llm = celery.tasks["app.tasks.language_analysis.submit_to_llm"]
     t_feedback = celery.tasks["app.tasks.language_analysis.submit_to_llm_feedback"]
-    t_finalize = celery.tasks["app.tasks.language_analysis.finalize"]
+    t_finalize_language = celery.tasks["app.tasks.language_analysis.finalize_language_step"]
     t_extract_chunks = celery.tasks["app.tasks.similarity_analysis.extract_chunks"]
     t_compute_minhash = celery.tasks["app.tasks.similarity_analysis.compute_minhash"]
     t_run_similarity = celery.tasks["app.tasks.similarity_analysis.run_similarity_check"]
+    t_finalize_risk = celery.tasks["app.tasks.language_analysis.finalize_risk_flags"]
     t_done = celery.tasks["app.tasks.llm_orchestration.orchestration_record_done"]
     t_err = celery.tasks["app.tasks.llm_orchestration.orchestration_record_error"]
 
@@ -399,10 +402,11 @@ def _dispatch_analysis_chain(celery, job_uuid: str, record_id: int) -> None:
         t_stats.si(record_id).set(queue="default"),
         t_llm.si(record_id).set(queue="llm_tasks"),
         t_feedback.si(record_id).set(queue="llm_tasks"),
-        t_finalize.si(record_id).set(queue="default"),
+        t_finalize_language.si(record_id).set(queue="default"),
         t_extract_chunks.si(record_id).set(queue="llm_tasks"),
         t_compute_minhash.si(record_id).set(queue="default"),
         t_run_similarity.si(record_id).set(queue="default"),
+        t_finalize_risk.si(record_id).set(queue="default"),
         t_done.si(job_uuid, record_id).set(queue="default"),
     ).on_error(t_err.si(job_uuid, record_id).set(queue="default"))
 

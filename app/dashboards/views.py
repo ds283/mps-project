@@ -44,7 +44,7 @@ from ..models.markingevent import (
     SubmitterReport,
     SubmitterReportWorkflowStates,
 )
-from ..models.similarity import SimilarityConcern, SimilarityOrchestrationJob
+from ..models.similarity import SimilarityConcern
 from ..models.students import StudentData
 from ..models.users import User as UserModel
 from ..shared.context.global_context import render_template_context
@@ -2646,25 +2646,25 @@ def similarity_dashboard():
     if selected_chunk_type not in CHUNK_TYPES:
         selected_chunk_type = ""
 
-    # ---- active similarity jobs ---------------------------------------------
-    active_jobs: List[SimilarityOrchestrationJob] = (
-        db.session.query(SimilarityOrchestrationJob)
-        .filter(SimilarityOrchestrationJob.status.in_(SimilarityOrchestrationJob.ACTIVE_STATUSES))
-        .order_by(SimilarityOrchestrationJob.created_at.desc())
+    # ---- active jobs (shared with AI dashboard) -----------------------------
+    active_jobs: List[LLMOrchestrationJob] = (
+        db.session.query(LLMOrchestrationJob)
+        .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+        .order_by(LLMOrchestrationJob.created_at.desc())
         .limit(10)
         .all()
     )
 
     # ---- rolling average: seconds per record across recent completed jobs ---
-    recent_completed: List[SimilarityOrchestrationJob] = (
-        db.session.query(SimilarityOrchestrationJob)
+    recent_completed: List[LLMOrchestrationJob] = (
+        db.session.query(LLMOrchestrationJob)
         .filter(
-            SimilarityOrchestrationJob.status == SimilarityOrchestrationJob.STATUS_COMPLETE,
-            SimilarityOrchestrationJob.started_at.isnot(None),
-            SimilarityOrchestrationJob.finished_at.isnot(None),
-            SimilarityOrchestrationJob.total_count > 0,
+            LLMOrchestrationJob.status == LLMOrchestrationJob.STATUS_COMPLETE,
+            LLMOrchestrationJob.started_at.isnot(None),
+            LLMOrchestrationJob.finished_at.isnot(None),
+            LLMOrchestrationJob.total_count > 0,
         )
-        .order_by(SimilarityOrchestrationJob.finished_at.desc())
+        .order_by(LLMOrchestrationJob.finished_at.desc())
         .limit(20)
         .all()
     )
@@ -2880,171 +2880,79 @@ def resolve_similarity_concern(concern_id: int):
 
 
 # ---------------------------------------------------------------------------
-# Similarity rebuild launch routes
+# Similarity analysis launch routes (dispatches full chain via LLMOrchestrationJob)
 # ---------------------------------------------------------------------------
 
 
 @dashboards.route("/similarity/launch_global")
 @roles_accepted("admin", "root")
 def launch_similarity_rebuild_global():
-    """Trigger a global similarity rebuild (admin/root only)."""
-    task_id = register_task(
-        "Similarity rebuild: global",
-        owner=current_user,
-        description="Global similarity rebuild across all indexed submissions",
-    )
-    if task_id is None:
-        flash("Could not register rebuild task. Please try again.", "error")
+    """Trigger a global analysis run without clearing existing LLM results (admin/root only)."""
+    try:
+        job = launch_global_pipeline(clear_existing=False, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception("similarity launch_global error", exc_info=exc)
         return redirect(url_for("dashboards.similarity_dashboard"))
 
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.similarity_analysis.launch_similarity_rebuild"]
-    task.apply_async(
-        args=(task_id, current_user.id),
-        kwargs={"scope": SimilarityOrchestrationJob.SCOPE_GLOBAL},
-        task_id=task_id,
-    )
-    flash("Global similarity rebuild queued.", "success")
+    if job is None:
+        flash("No reports are currently missing analysis results.", "info")
+    else:
+        flash(f"Queued {job.total_count} report(s) for analysis.", "success")
     return redirect(url_for("dashboards.similarity_dashboard"))
 
 
 @dashboards.route("/similarity/launch_cycle/<int:year>")
 @roles_accepted("admin", "root")
 def launch_similarity_rebuild_cycle(year: int):
-    """Trigger a similarity rebuild for a single academic cycle (admin/root only)."""
-    record_ids = _record_ids_for_cycle(year)
-    if not record_ids:
-        flash(f"No indexed submissions found for the {year}–{year+1} cycle.", "info")
+    """Trigger an analysis run for a single academic cycle without clearing LLM results."""
+    try:
+        job = launch_cycle_pipeline(year=year, clear_existing=False, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception("similarity launch_cycle error", exc_info=exc)
         return redirect(url_for("dashboards.similarity_dashboard"))
 
-    task_id = register_task(
-        f"Similarity rebuild: {year}–{year+1}",
-        owner=current_user,
-        description=f"Similarity rebuild for academic cycle {year}–{year+1}",
-    )
-    if task_id is None:
-        flash("Could not register rebuild task. Please try again.", "error")
-        return redirect(url_for("dashboards.similarity_dashboard"))
-
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.similarity_analysis.launch_similarity_rebuild"]
-    task.apply_async(
-        args=(task_id, current_user.id),
-        kwargs={
-            "record_ids": record_ids,
-            "scope": SimilarityOrchestrationJob.SCOPE_CYCLE,
-        },
-        task_id=task_id,
-    )
-    flash(f"Similarity rebuild for {year}–{year+1} queued ({len(record_ids)} records).", "success")
+    if job is None:
+        flash(f"No reports are currently missing analysis results for the {year}–{year+1} cycle.", "info")
+    else:
+        flash(f"Queued {job.total_count} report(s) for the {year}–{year+1} cycle.", "success")
     return redirect(url_for("dashboards.similarity_dashboard"))
 
 
 @dashboards.route("/similarity/launch_period/<int:period_id>")
 @roles_accepted("faculty", "admin", "root")
 def launch_similarity_rebuild_period(period_id: int):
-    """Trigger a similarity rebuild for a single submission period."""
-    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
-
+    """Trigger an analysis run for a single submission period without clearing LLM results."""
     if not _can_launch_similarity_rebuild():
-        # Convenors cannot launch — only admin/root
-        flash("You do not have permission to launch similarity rebuild tasks.", "error")
+        flash("You do not have permission to launch analysis tasks.", "error")
         return redirect(url_for("dashboards.similarity_dashboard"))
 
-    record_ids = _record_ids_for_period(period_id)
-    if not record_ids:
-        flash("No indexed submissions found for this period.", "info")
+    try:
+        job = launch_period_pipeline(period_id=period_id, clear_existing=False, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception("similarity launch_period error", exc_info=exc)
         return redirect(url_for("dashboards.similarity_dashboard"))
 
-    label = period.config.abbreviation + ": " + (period.name or f"Period {period.submission_period}")
-    task_id = register_task(
-        f"Similarity rebuild: {label}",
-        owner=current_user,
-        description=f"Similarity rebuild for period '{label}'",
-    )
-    if task_id is None:
-        flash("Could not register rebuild task. Please try again.", "error")
-        return redirect(url_for("dashboards.similarity_dashboard"))
-
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.similarity_analysis.launch_similarity_rebuild"]
-    task.apply_async(
-        args=(task_id, current_user.id),
-        kwargs={
-            "record_ids": record_ids,
-            "scope": SimilarityOrchestrationJob.SCOPE_PERIOD,
-            "scope_id": period_id,
-        },
-        task_id=task_id,
-    )
-    flash(f"Similarity rebuild for '{label}' queued ({len(record_ids)} records).", "success")
+    if job is None:
+        flash("No reports are currently missing analysis results for this period.", "info")
+    else:
+        flash(f"Queued {job.total_count} report(s) for analysis.", "success")
     return redirect(url_for("dashboards.similarity_dashboard"))
 
 
 # ---------------------------------------------------------------------------
-# Job status polling and cancellation
+# Job cancellation (similarity dashboard — shares LLMOrchestrationJob model)
 # ---------------------------------------------------------------------------
-
-
-@dashboards.route("/similarity/active_jobs_status")
-@login_required
-def active_similarity_jobs_status():
-    """JSON endpoint for the similarity job auto-reload poller."""
-    raw_ids = request.args.get("ids", "")
-    watched_uuids = [uid.strip() for uid in raw_ids.split(",") if uid.strip()]
-
-    now = datetime.now()
-    jobs_data: Dict[str, dict] = {}
-
-    if watched_uuids:
-        finished_count = (
-            db.session.query(SimilarityOrchestrationJob)
-            .filter(
-                SimilarityOrchestrationJob.uuid.in_(watched_uuids),
-                SimilarityOrchestrationJob.status.in_(
-                    [SimilarityOrchestrationJob.STATUS_COMPLETE, SimilarityOrchestrationJob.STATUS_FAILED]
-                ),
-            )
-            .count()
-        )
-        active_watched = (
-            db.session.query(SimilarityOrchestrationJob)
-            .filter(
-                SimilarityOrchestrationJob.uuid.in_(watched_uuids),
-                SimilarityOrchestrationJob.status.in_(SimilarityOrchestrationJob.ACTIVE_STATUSES),
-            )
-            .all()
-        )
-        for job in active_watched:
-            elapsed = (
-                (now - job.started_at).total_seconds() if job.started_at is not None else None
-            )
-            jobs_data[job.uuid] = {
-                "completed": job.completed_count or 0,
-                "failed": job.failed_count or 0,
-                "total": job.total_count or 0,
-                "elapsed_seconds": elapsed,
-            }
-    else:
-        finished_count = 0
-
-    active_count = (
-        db.session.query(SimilarityOrchestrationJob)
-        .filter(SimilarityOrchestrationJob.status.in_(SimilarityOrchestrationJob.ACTIVE_STATUSES))
-        .count()
-    )
-
-    return jsonify(
-        {"just_finished": finished_count > 0, "active_count": active_count, "jobs": jobs_data}
-    )
 
 
 @dashboards.route("/similarity/cancel_job/<uuid>")
 @roles_accepted("faculty", "admin", "root")
 def cancel_similarity_job(uuid: str):
-    """Cancel a single SimilarityOrchestrationJob (owner or root/admin only)."""
-    job: SimilarityOrchestrationJob = (
-        db.session.query(SimilarityOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    """Cancel a single LLMOrchestrationJob from the similarity dashboard."""
+    job: LLMOrchestrationJob = (
+        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
     )
     if not (
         current_user.has_role("root")
@@ -3066,6 +2974,7 @@ def cancel_similarity_job(uuid: str):
         flash("Could not cancel the job — please try again.", "error")
         return redirect(redirect_url())
 
+    _cleanup_redis(job)
     flash(
         "Job cancelled. Queued records have been discarded; "
         "any in-flight records will complete harmlessly.",

@@ -1316,6 +1316,8 @@ def resolve_risk_factors(record_id):
             .all()
         )
 
+    chunking_factor = (record.risk_factors_data or {}).get(SubmissionRecord.RISK_SIMILARITY_CHUNKING_FAILED, {})
+
     return render_template_context(
         "convenor/markingevent/resolve_risk_factors.html",
         record=record,
@@ -1328,6 +1330,7 @@ def resolve_risk_factors(record_id):
         form=form,
         sim_factor=sim_factor,
         similarity_open_concerns=similarity_open_concerns,
+        chunking_factor=chunking_factor,
     )
 
 

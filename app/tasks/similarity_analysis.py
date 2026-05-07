@@ -8,10 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import json
+from datetime import datetime
 
-import redis as redis_lib
-from celery import chain
 from flask import current_app
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -21,11 +19,8 @@ from ..models import (
     ProjectClass,
     ProjectClassConfig,
     SimilarityConcern,
-    SimilarityOrchestrationJob,
     SubmissionPeriodRecord,
     SubmissionRecord,
-    TaskRecord,
-    User,
 )
 from ..shared.llm_services import _call_llm
 from ..shared.scraped_text_store import (
@@ -35,7 +30,6 @@ from ..shared.scraped_text_store import (
     store_similarity_chunks,
 )
 from ..shared.text_utils import _detect_top_level_sections, _split_document, _strip_math_lines
-from ..task_queue import progress_update
 
 # ---------------------------------------------------------------------------
 # Pipeline constants
@@ -137,28 +131,6 @@ def _build_heading_classification_schema(headings: list[str]) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Redis helper (reuses orchestration Redis)
-# ---------------------------------------------------------------------------
-
-
-def _get_redis() -> redis_lib.Redis:
-    url = current_app.config.get("ORCHESTRATION_REDIS_URL")
-    if not url:
-        raise RuntimeError("ORCHESTRATION_REDIS_URL is not set in the Flask configuration")
-    return redis_lib.Redis.from_url(url, decode_responses=False)
-
-
-def _cleanup_job_redis(job: SimilarityOrchestrationJob) -> None:
-    try:
-        r = _get_redis()
-        r.delete(job.redis_queue_key, job.redis_inflight_key)
-    except Exception as exc:
-        current_app.logger.warning(
-            f"similarity_analysis: could not clean up Redis keys for job {job.uuid}: {exc}"
-        )
-
-
-# ---------------------------------------------------------------------------
 # Task registration
 # ---------------------------------------------------------------------------
 
@@ -211,19 +183,28 @@ def register_similarity_analysis_tasks(celery):
             return
 
         # ------------------------------------------------------------------
-        # Idempotency check
+        # Idempotency check — also detects document re-uploads by comparing
+        # scraped_text.updated_at against similarity_chunks.extracted_at so
+        # that a new upload forces re-extraction even when the prompt version
+        # is unchanged.
         # ------------------------------------------------------------------
+        scraped = get_scraped_text(record_id)
         existing = get_similarity_chunks(record_id)
-        if existing is not None and existing.get("chunk_prompt_version") == CHUNK_EXTRACTION_PROMPT_VERSION:
+        scraped_updated_at = scraped.get("updated_at") if scraped else None
+        chunks_extracted_at = existing.get("extracted_at") if existing else None
+
+        if (
+            existing is not None
+            and existing.get("chunk_prompt_version") == CHUNK_EXTRACTION_PROMPT_VERSION
+            and scraped_updated_at is not None
+            and chunks_extracted_at is not None
+            and chunks_extracted_at >= scraped_updated_at
+        ):
             current_app.logger.info(
                 f"extract_chunks: SubmissionRecord #{record_id} already has current chunk extraction — skipping"
             )
             return
 
-        # ------------------------------------------------------------------
-        # Retrieve scraped text
-        # ------------------------------------------------------------------
-        scraped = get_scraped_text(record_id)
         if scraped is None:
             current_app.logger.warning(
                 f"extract_chunks: no scraped text in cache for SubmissionRecord #{record_id} — skipping"
@@ -291,6 +272,17 @@ def register_similarity_analysis_tasks(celery):
             store_similarity_chunks(
                 record_id, _empty_sections, model, CHUNK_EXTRACTION_PROMPT_VERSION, heading_style, len(top_level_sections)
             )
+            try:
+                rec = db.session.get(SubmissionRecord, record_id)
+                if rec is not None:
+                    rec.llm_chunking_failed = True
+                    rec.llm_chunking_failure_reason = "LLM heading classification returned no result"
+                    db.session.commit()
+            except SQLAlchemyError as exc:
+                db.session.rollback()
+                current_app.logger.warning(
+                    f"extract_chunks: could not set llm_chunking_failed for record #{record_id}: {exc}"
+                )
             return
 
         # ------------------------------------------------------------------
@@ -620,14 +612,25 @@ def register_similarity_analysis_tasks(celery):
                     )
 
         # ------------------------------------------------------------------
-        # Persist concerns
+        # Persist concerns: delete stale unreviewed rows first, then upsert
+        # new ones.  Reviewed concerns are preserved unconditionally.
+        # Both operations are in the same transaction so there is no window
+        # where this record has no concerns between the two steps.
+        # risk_factors for record_id itself are NOT updated here — finalize_risk_flags
+        # at the chain tail handles that after this task returns.
         # ------------------------------------------------------------------
         try:
-            concerned_record_ids: set[int] = set()
+            db.session.query(SimilarityConcern).filter(
+                db.or_(
+                    SimilarityConcern.record_a_id == record_id,
+                    SimilarityConcern.record_b_id == record_id,
+                ),
+                SimilarityConcern.reviewed == False,  # noqa: E712
+            ).delete(synchronize_session="fetch")
+
+            concerned_other_ids: set[int] = set()
 
             for concern_data in concerns_to_upsert:
-                from datetime import datetime
-
                 stmt = (
                     mysql_insert(SimilarityConcern.__table__)
                     .values(
@@ -646,15 +649,17 @@ def register_similarity_analysis_tasks(celery):
                     )
                 )
                 db.session.execute(stmt)
-                concerned_record_ids.add(concern_data["record_a_id"])
-                concerned_record_ids.add(concern_data["record_b_id"])
+                # Collect the OTHER record in each pair for risk-factor refresh
+                other_id = concern_data["record_b_id"] if concern_data["record_a_id"] == record_id else concern_data["record_a_id"]
+                concerned_other_ids.add(other_id)
 
-            # Update risk factors on all concerned records
-            for rid in concerned_record_ids:
+            # Refresh risk factors on partner records only; record_id is handled
+            # by finalize_risk_flags which runs after this task.
+            for rid in concerned_other_ids:
                 rec = db.session.get(SubmissionRecord, rid)
                 if rec is None:
                     continue
-                config = rec.owner.config if rec.owner else None
+                config = rec.period.config if rec.period else None
                 rec.compute_risk_factors(config)
 
             db.session.commit()
@@ -676,261 +681,8 @@ def register_similarity_analysis_tasks(celery):
             db.session.rollback()
             raise self.retry(exc=exc)
 
-    # -----------------------------------------------------------------------
-    # Internal coordinator callbacks
-    # -----------------------------------------------------------------------
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def _similarity_record_done(self, job_id: int, record_id: int):
-        """Callback: remove record from inflight, increment completed, re-queue coordinator."""
-        try:
-            job: SimilarityOrchestrationJob = db.session.get(SimilarityOrchestrationJob, job_id)
-            if job is None:
-                return
-
-            r = _get_redis()
-            r.lrem(job.redis_inflight_key, 0, str(record_id).encode())
-            job.increment_completed()
-
-            queue_len = r.llen(job.redis_queue_key)
-            inflight_len = r.llen(job.redis_inflight_key)
-
-            if queue_len == 0 and inflight_len == 0:
-                job.mark_complete()
-                _cleanup_job_redis(job)
-            else:
-                similarity_rebuild_coordinator.apply_async(args=[job_id], queue="default")
-
-            db.session.commit()
-
-        except SQLAlchemyError as exc:
-            db.session.rollback()
-            raise self.retry(exc=exc)
-        except Exception as exc:
-            current_app.logger.warning(
-                f"_similarity_record_done: unexpected error for job #{job_id} record #{record_id}: {exc}"
-            )
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def _similarity_record_error(self, job_id: int, record_id: int):
-        """Callback: remove record from inflight, increment failed, re-queue coordinator."""
-        try:
-            job: SimilarityOrchestrationJob = db.session.get(SimilarityOrchestrationJob, job_id)
-            if job is None:
-                return
-
-            r = _get_redis()
-            r.lrem(job.redis_inflight_key, 0, str(record_id).encode())
-            job.increment_failed()
-
-            queue_len = r.llen(job.redis_queue_key)
-            inflight_len = r.llen(job.redis_inflight_key)
-
-            if queue_len == 0 and inflight_len == 0:
-                job.mark_complete()
-                _cleanup_job_redis(job)
-            else:
-                similarity_rebuild_coordinator.apply_async(args=[job_id], queue="default")
-
-            db.session.commit()
-
-        except SQLAlchemyError as exc:
-            db.session.rollback()
-            raise self.retry(exc=exc)
-        except Exception as exc:
-            current_app.logger.warning(
-                f"_similarity_record_error: unexpected error for job #{job_id} record #{record_id}: {exc}"
-            )
-
-    # -----------------------------------------------------------------------
-    # Task 4: similarity_rebuild_coordinator  (default queue)
-    # -----------------------------------------------------------------------
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def similarity_rebuild_coordinator(self, job_id: int):
-        """
-        Per-job coordinator for standalone similarity rebuild.
-
-        Pops one record at a time from the Redis queue, dispatches the
-        appropriate sub-chain, and re-queues itself when the chain completes.
-        """
-        try:
-            job: SimilarityOrchestrationJob = db.session.get(SimilarityOrchestrationJob, job_id)
-        except SQLAlchemyError as exc:
-            raise self.retry(exc=exc)
-
-        if job is None:
-            current_app.logger.warning(
-                f"similarity_rebuild_coordinator: SimilarityOrchestrationJob #{job_id} not found"
-            )
-            return
-
-        if not job.is_active:
-            return
-
-        job.mark_started()
-        try:
-            db.session.commit()
-        except SQLAlchemyError as exc:
-            db.session.rollback()
-            raise self.retry(exc=exc)
-
-        try:
-            r = _get_redis()
-            raw = r.rpoplpush(job.redis_queue_key, job.redis_inflight_key)
-        except Exception as exc:
-            current_app.logger.warning(
-                f"similarity_rebuild_coordinator: Redis error for job #{job_id}: {exc}"
-            )
-            return
-
-        if raw is None:
-            # Queue empty; check if any records still in-flight
-            try:
-                inflight_len = _get_redis().llen(job.redis_inflight_key)
-            except Exception:
-                inflight_len = 0
-
-            if inflight_len == 0:
-                try:
-                    job.mark_complete()
-                    _cleanup_job_redis(job)
-                    db.session.commit()
-                except SQLAlchemyError as exc:
-                    db.session.rollback()
-                    raise self.retry(exc=exc)
-            return
-
-        try:
-            entry = json.loads(raw.decode() if isinstance(raw, bytes) else raw)
-        except (json.JSONDecodeError, ValueError) as exc:
-            current_app.logger.warning(
-                f"similarity_rebuild_coordinator: malformed queue entry for job #{job_id}: {exc}"
-            )
-            return
-
-        record_id: int = entry["record_id"]
-        compute_only: bool = entry.get("compute_only", False)
-
-        t_done = _similarity_record_done.si(job_id, record_id).set(queue="default")
-        t_err = _similarity_record_error.si(job_id, record_id).set(queue="default")
-
-        if compute_only:
-            work = chain(
-                compute_minhash.si(record_id).set(queue="default"),
-                run_similarity_check.si(record_id).set(queue="default"),
-                t_done,
-            ).on_error(t_err)
-        else:
-            work = chain(
-                extract_chunks.si(record_id).set(queue="llm_tasks"),
-                compute_minhash.si(record_id).set(queue="default"),
-                run_similarity_check.si(record_id).set(queue="default"),
-                t_done,
-            ).on_error(t_err)
-
-        work.apply_async()
-
-    # -----------------------------------------------------------------------
-    # Task 5: launch_similarity_rebuild  (default queue)
-    # -----------------------------------------------------------------------
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def launch_similarity_rebuild(
-        self,
-        task_id: str,
-        user_id: int,
-        record_ids: list | None = None,
-        scope: str = SimilarityOrchestrationJob.SCOPE_GLOBAL,
-        scope_id: int | None = None,
-    ):
-        """
-        Admin entry point for standalone similarity rebuild.
-
-        Classifies each record's current chunk/signature state, creates a
-        SimilarityOrchestrationJob, and dispatches the coordinator.
-        """
-        progress_update(task_id, TaskRecord.RUNNING, 5, "Initialising similarity rebuild…")
-
-        try:
-            user = db.session.get(User, user_id) if user_id else None
-        except Exception:
-            user = None
-
-        try:
-            if record_ids is None:
-                records = (
-                    db.session.query(SubmissionRecord)
-                    .filter(SubmissionRecord.language_analysis_complete == True)  # noqa: E712
-                    .all()
-                )
-                record_ids = [r.id for r in records]
-
-            progress_update(task_id, TaskRecord.RUNNING, 10, f"Found {len(record_ids)} eligible records")
-
-            # ------------------------------------------------------------------
-            # Classify each record
-            # ------------------------------------------------------------------
-            queue_entries: list[dict] = []
-            for rid in record_ids:
-                chunks = get_similarity_chunks(rid)
-                if chunks is None or chunks.get("chunk_prompt_version") != CHUNK_EXTRACTION_PROMPT_VERSION:
-                    queue_entries.append({"record_id": rid, "compute_only": False})
-                else:
-                    queue_entries.append({"record_id": rid, "compute_only": True})
-
-            if not queue_entries:
-                progress_update(task_id, TaskRecord.SUCCESS, 100, "No records to process", autocommit=True)
-                return
-
-            # ------------------------------------------------------------------
-            # Create SimilarityOrchestrationJob
-            # ------------------------------------------------------------------
-            job = SimilarityOrchestrationJob.build(
-                scope=scope,
-                scope_id=scope_id,
-                total_count=len(queue_entries),
-                rebuild_mode=True,
-                owner=user,
-                description=f"Similarity rebuild: {len(queue_entries)} records",
-            )
-            db.session.add(job)
-            db.session.flush()
-
-            # Push entries to Redis queue
-            r = _get_redis()
-            for entry in queue_entries:
-                r.lpush(job.redis_queue_key, json.dumps(entry).encode())
-
-            db.session.commit()
-
-            # ------------------------------------------------------------------
-            # Dispatch coordinator
-            # ------------------------------------------------------------------
-            similarity_rebuild_coordinator.apply_async(args=[job.id], queue="default")
-
-            progress_update(
-                task_id,
-                TaskRecord.SUCCESS,
-                100,
-                f"Similarity rebuild job #{job.id} dispatched for {len(queue_entries)} records",
-                autocommit=True,
-            )
-
-        except SQLAlchemyError as exc:
-            current_app.logger.exception(f"launch_similarity_rebuild: SQLAlchemyError: {exc}")
-            db.session.rollback()
-            progress_update(task_id, TaskRecord.FAILURE, 100, f"Database error: {exc}", autocommit=True)
-            raise self.retry(exc=exc)
-
-        except Exception as exc:
-            current_app.logger.exception(f"launch_similarity_rebuild: unexpected error: {exc}")
-            progress_update(task_id, TaskRecord.FAILURE, 100, f"Unexpected error: {exc}", autocommit=True)
-
     return (
         extract_chunks,
         compute_minhash,
         run_similarity_check,
-        similarity_rebuild_coordinator,
-        launch_similarity_rebuild,
     )

@@ -183,6 +183,12 @@
                     {% elif r.llm_analysis_failed %}
                         <span class="small text-danger">LLM failed</span>
                     {% endif %}
+                    {% if r.llm_chunking_failed %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis"
+                              title="Similarity chunking failed — re-run analysis to retry">
+                            <i class="fas fa-exclamation-triangle fa-fw"></i> Chunking failed
+                        </span>
+                    {% endif %}
                     {# Documents link #}
                     <a class="btn btn-xs btn-outline-secondary"
                        href="{{ url_for('documents.submitter_documents', sid=r.id, url=url_for('convenor.submitters', id=pclass.id), text='Submitters') }}">

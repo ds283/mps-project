@@ -46,7 +46,7 @@
             }
 
             function pollJobs() {
-                var url = '{{ url_for("dashboards.active_similarity_jobs_status") }}';
+                var url = '{{ url_for("dashboards.active_jobs_status") }}';
                 if (_watchedJobIds.length > 0) { url += '?ids=' + _watchedJobIds.join(','); }
                 fetch(url)
                     .then(function (r) { return r.json(); })
@@ -151,97 +151,8 @@
             </div>
         </div>
 
-        {# ---- active jobs panel ---- #}
-        {% if active_jobs %}
-            <div class="card mb-4 mx-3" style="border-color: var(--db-orange-200);">
-                <div class="card-header d-flex align-items-center gap-2 flex-wrap"
-                     style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200); color: var(--db-orange-800);">
-                    <i class="fas fa-tasks fa-fw"></i>
-                    <strong>Active similarity rebuild jobs</strong>
-                    {% if avg_seconds_per_record is not none %}
-                        {% set avg_min = (avg_seconds_per_record // 60)|int %}
-                        {% set avg_sec = (avg_seconds_per_record % 60)|round|int %}
-                        <span class="text-body-secondary small">
-                            Avg {% if avg_min > 0 %}{{ avg_min }}m {% endif %}{{ avg_sec }}s / record
-                            <span style="opacity:0.6; font-size:0.85em">(hist.)</span>
-                        </span>
-                    {% endif %}
-                    <span class="badge ms-auto"
-                          style="background-color: var(--db-orange-100); color: var(--db-orange-800);">{{ active_jobs|length }} job{%- if active_jobs|length != 1 -%}s{%- endif -%}</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Description</th>
-                                <th>Status</th>
-                                <th class="text-end">Progress</th>
-                                <th class="text-end">Done</th>
-                                <th class="text-end">Failed</th>
-                                <th class="text-end">Total</th>
-                                <th>Submitted</th>
-                                <th>Dispatched</th>
-                                <th class="text-end">Avg</th>
-                                <th></th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for job in active_jobs %}
-                                <tr data-job-uuid="{{ job.uuid }}">
-                                    <td>{{ job.description or job.scope_label }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ job.status_colour }}">{{ job.status_label }}</span>
-                                    </td>
-                                    <td class="text-end" style="min-width:120px">
-                                        <div class="progress" style="height:8px; min-width:80px">
-                                            <div class="progress-bar"
-                                                 data-cell="progress-bar"
-                                                 role="progressbar"
-                                                 style="width:{{ job.progress_pct }}%; background-color: var(--db-orange-400);"
-                                                 aria-valuenow="{{ job.progress_pct }}"
-                                                 aria-valuemin="0" aria-valuemax="100">
-                                            </div>
-                                        </div>
-                                        <small class="text-body-secondary" data-cell="progress-pct">{{ job.progress_pct }}%</small>
-                                    </td>
-                                    <td class="text-end text-success fw-semibold" data-cell="completed">{{ job.completed_count }}</td>
-                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-body-secondary{% endif %}"
-                                        data-cell="failed">{{ job.failed_count }}</td>
-                                    <td class="text-end text-body-secondary">{{ job.total_count }}</td>
-                                    <td class="text-body-secondary small">
-                                        {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
-                                    </td>
-                                    <td class="text-body-secondary small">
-                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
-                                    </td>
-                                    <td class="text-end text-body-secondary small" data-cell="rate">
-                                        {% set done = job.completed_count + job.failed_count %}
-                                        {% if job.elapsed_seconds and done > 0 %}
-                                            {% set rate = job.elapsed_seconds / done %}
-                                            {% set r_min = (rate // 60)|int %}
-                                            {% set r_sec = (rate % 60)|round|int %}
-                                            {% if r_min > 0 %}{{ r_min }}m {% endif %}{{ r_sec }}s
-                                        {% else %}—{% endif %}
-                                    </td>
-                                    <td class="text-end">
-                                        {% if job.is_active and (is_root or is_admin or job.owner_id == current_user.id) %}
-                                            <a href="{{ url_for('dashboards.cancel_similarity_job', uuid=job.uuid) }}"
-                                               class="btn btn-xs btn-outline-danger py-0 px-1"
-                                               title="Cancel this job"
-                                               onclick="return confirm('Cancel this job? Queued records will be discarded.')">
-                                                <i class="fas fa-times"></i>
-                                            </a>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
+        {# ---- active jobs panel (shared with AI dashboard) ---- #}
+        {% include "dashboards/_active_jobs_panel.html" %}
 
         {# ---- summary stat cards ---- #}
         <div class="row row-cols-2 row-cols-md-4 g-3 mb-4 px-3">

@@ -894,6 +894,21 @@
             </div>
         {% endif %}
 
+        {# ── CHUNKING FAILURE WARNING ── #}
+        {% if record.llm_chunking_failed %}
+            <div class="alert alert-warning d-flex align-items-start gap-2 mb-3 small" role="alert">
+                <i class="fas fa-exclamation-triangle mt-1 flex-shrink-0"></i>
+                <div>
+                    <strong>Similarity chunking failed.</strong>
+                    The LLM heading classifier could not process this report — no chunk-level
+                    similarity scores have been computed for it. Re-run the analysis pipeline to retry.
+                    {% if record.llm_chunking_failure_reason %}
+                        <div class="mt-1 text-body-secondary fst-italic">{{ record.llm_chunking_failure_reason }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
         {# ── ERRORS (admin only) ── #}
         {% if errors and can_admin %}
             <div class="card border-danger mb-3">

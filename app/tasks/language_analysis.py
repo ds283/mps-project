@@ -23,6 +23,12 @@ from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, S
 from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.ai_calibration import mahalanobis_distance
 from ..shared.llm_services import _call_llm, _truncate_text, _TOKENS_PER_WORD
+
+# Higher tokens-per-word estimate for student submission content: technical/academic text with
+# equations, DOIs, code snippets, and jargon tokenises at roughly 2.0 t/w rather than the 1.6
+# used for our own (plain-English) system prompts.  Used only in word-budget division so that
+# chunks are sized conservatively.
+_TOKENS_PER_WORD_CONTENT = 2.0
 from ..shared.scraped_text_store import get_scraped_text, store_scraped_text
 from ..shared.text_utils import _APPENDIX_HEADING, _split_document, _strip_math_lines
 from ..task_queue import progress_update
@@ -2126,7 +2132,7 @@ def register_language_analysis_tasks(celery):
         _single_pass_response_tokens = max(2200, 700 + n_criteria * 130)
         _single_pass_overhead = _grading_prompt_tokens + _single_pass_response_tokens
         single_pass_word_budget = max(
-            int((context_size - _single_pass_overhead) / _TOKENS_PER_WORD * 0.85), 0
+            int((context_size - _single_pass_overhead) / _TOKENS_PER_WORD_CONTENT * 0.85), 0
         )
         doc_words = len(clean_text.split())
 
@@ -2195,12 +2201,14 @@ def register_language_analysis_tasks(celery):
             # ----------------------------------------------------------------
             _sample_chunk_prompt = _build_chunk_system_prompt(0, 1, rubric_snap)
             _chunk_prompt_tokens = int(len(_sample_chunk_prompt.split()) * _TOKENS_PER_WORD)
-            # Per criterion: up to _MAX_EVIDENCE_PER_CRITERION entries × ~150 tokens, but not
-            # every criterion has evidence in every chunk — use 1.5 entries/criterion on average.
-            _map_response_tokens = max(600, 200 + n_criteria * 150)
+            # Per criterion: up to _MAX_EVIDENCE_PER_CRITERION entries.  Each entry carries a
+            # 2-sentence verbatim excerpt (~80 tokens) + observation (~30 tokens) + overhead,
+            # so ~220 tokens/criterion at the average 2-entry density is more realistic than the
+            # old 150.  The higher floor (1200) covers small rubrics safely.
+            _map_response_tokens = max(1200, 500 + n_criteria * 220)
             _map_overhead = _chunk_prompt_tokens + _map_response_tokens
             chunk_word_budget = max(
-                int((context_size - _map_overhead) / _TOKENS_PER_WORD * 0.85), 500
+                int((context_size - _map_overhead) / _TOKENS_PER_WORD_CONTENT * 0.85), 500
             )
             chunks = _build_chunks(clean_text, chunk_word_budget)
             total_chunks = len(chunks)
@@ -2574,7 +2582,7 @@ def register_language_analysis_tasks(celery):
         _t_feedback = time.monotonic()
 
         feedback_word_budget = max(
-            int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD * 0.90), 500
+            int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD_CONTENT * 0.90), 500
         )
         full_words = len(clean_full.split())
         core_words = len(clean_core.split())

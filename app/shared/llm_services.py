@@ -106,6 +106,8 @@ def _call_llm(
             )
             resp.raise_for_status()
 
+            finish_reason: str | None = None
+            usage: dict | None = None
             for line in resp.iter_lines():
                 if not line:
                     continue
@@ -128,6 +130,24 @@ def _call_llm(
                 content = delta.get("content") if isinstance(delta, dict) else None
                 if isinstance(content, str):
                     accumulated += content
+                fr = first_choice.get("finish_reason")
+                if fr is not None:
+                    finish_reason = fr
+                if chunk_data.get("usage"):
+                    usage = chunk_data["usage"]
+
+            if usage is not None:
+                current_app.logger.debug(
+                    f"{label}: token usage — prompt={usage.get('prompt_tokens')} "
+                    f"completion={usage.get('completion_tokens')} "
+                    f"total={usage.get('total_tokens')}"
+                )
+            if finish_reason == "length":
+                raise ValueError(
+                    f"output truncated by context window (finish_reason=length); "
+                    f"prompt_tokens={usage.get('prompt_tokens') if usage else 'unknown'} "
+                    f"completion_tokens={usage.get('completion_tokens') if usage else 'unknown'}"
+                )
 
             parsed = json.loads(accumulated)
             if validate_fn is not None and not validate_fn(parsed):

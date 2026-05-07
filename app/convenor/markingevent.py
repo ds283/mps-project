@@ -510,6 +510,7 @@ def marking_event_conflation_reports(event_id):
         in_progress_count=in_progress_count,
         stale_count=stale_count,
         propagate_form=ActionForm(),
+        delete_all_form=ActionForm(),
     )
 
 
@@ -563,6 +564,67 @@ def conflation_reports_ajax(event_id):
 def _conflation_report_editable(cr: ConflationReport) -> bool:
     """Return True if the ConflationReport can be edited (feedback not yet sent)."""
     return not cr.feedback_sent
+
+
+def _delete_feedback_for_cr(cr: ConflationReport, audit_suffix: str = "") -> None:
+    """
+    Delete all FeedbackReport records (and their GeneratedAssets + physical files) attached to cr.
+    Removes rows from both association tables with an intermediate flush so FK constraints are
+    satisfied before the FeedbackReport rows themselves are deleted.
+    Clears cr.recipe, cr.feedback_celery_id, and cr.feedback_generation_failed.
+    Caller is responsible for db.session.commit() / rollback.
+    """
+    import app.shared.cloud_object_store.bucket_types as buckets
+    from ..shared.asset_tools import AssetCloudAdapter
+
+    sr: SubmissionRecord = cr.submission_record
+    reports = cr.feedback_reports.all()
+
+    for report in reports:
+        cr.feedback_reports.remove(report)
+        sr.feedback_reports.remove(report)
+    # Flush now so the association-table rows are deleted before the FeedbackReport rows,
+    # avoiding FK constraint violations caused by lazy="dynamic" autoflush ordering.
+    db.session.flush()
+
+    bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS", {})
+    thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
+
+    for report in reports:
+        asset = report.asset
+        db.session.delete(report)
+        db.session.flush()  # ensure feedback_reports row is gone before GeneratedAsset DELETE
+
+        if asset is not None:
+            if asset.bucket in bucket_map:
+                try:
+                    AssetCloudAdapter(
+                        asset,
+                        bucket_map[asset.bucket],
+                        audit_data=f"_delete_feedback_for_cr{audit_suffix}",
+                    ).delete()
+                except FileNotFoundError:
+                    pass
+
+            for thumb_attr in ("small_thumbnail", "medium_thumbnail"):
+                thumbnail = getattr(asset, thumb_attr, None)
+                if thumbnail is not None and thumbnails_store is not None:
+                    try:
+                        AssetCloudAdapter(
+                            thumbnail,
+                            thumbnails_store,
+                            audit_data=f"_delete_feedback_for_cr thumbnail{audit_suffix}",
+                        ).delete()
+                    except FileNotFoundError:
+                        pass
+                    db.session.delete(thumbnail)
+                    setattr(asset, f"{thumb_attr}_id", None)
+
+            db.session.delete(asset)
+
+    cr.recipe = None
+    cr.feedback_celery_id = None
+    cr.feedback_generation_failed = False
 
 
 @convenor.route("/reconflate_conflation_report/<int:cr_id>", methods=["POST"])
@@ -695,34 +757,29 @@ def delete_conflation_report_feedback(cr_id):
         )
         return redirect(url)
 
-    reports = cr.feedback_reports.all()
-    if not reports:
+    if cr.feedback_reports.count() == 0:
         flash("No feedback reports to delete.", "info")
         return redirect(url)
 
+    student_name = cr.submission_record.owner.student.user.name
+
     try:
-        sr: SubmissionRecord = cr.submission_record
-        for report in reports:
-            cr.feedback_reports.remove(report)
-            sr.feedback_reports.remove(report)
-            db.session.delete(report)
-        cr.recipe = None
-        cr.feedback_celery_id = None
-        cr.feedback_generation_failed = False
+        _delete_feedback_for_cr(
+            cr, audit_suffix=f" (cr id #{cr.id})"
+        )
 
         # If no ConflationReport in this event now has any feedback, regress the event state
         all_crs = event.conflation_reports.all()
         any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
         if (
             not any_with_feedback
-            and event.workflow_state
-            == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+            and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
         ):
             event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
 
         log_db_commit(
-            f"Deleted feedback report(s) for student "
-            f"'{cr.submission_record.owner.student.user.name}' in event '{event.name}' ({pclass.name})",
+            f"Deleted feedback report(s) for student '{student_name}' "
+            f"in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
@@ -776,6 +833,10 @@ def regenerate_conflation_report_feedback(cr_id):
         recipe: FeedbackRecipe = form.recipe.data
 
         try:
+            if cr.feedback_reports.count() > 0:
+                _delete_feedback_for_cr(cr, audit_suffix=f" (cr id #{cr.id}, regenerate)")
+                db.session.flush()
+
             launch_feedback_job(
                 event=event,
                 recipe=recipe,
@@ -1089,6 +1150,155 @@ def push_marking_event_feedback(event_id):
         text=text,
         unsent_count=unsent_count,
         total_count=len(all_crs),
+    )
+
+
+@convenor.route(
+    "/delete_all_conflation_report_feedback/<int:event_id>", methods=["POST"]
+)
+@roles_accepted("faculty", "admin", "root", "convenor")
+def delete_all_conflation_report_feedback(event_id):
+    """
+    Delete all feedback reports (and their physical assets) for every unsent ConflationReport
+    in a MarkingEvent.  If no feedback remains the event regresses to READY_TO_GENERATE_FEEDBACK.
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event_id),
+    )
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    eligible_crs = [
+        cr
+        for cr in event.conflation_reports.all()
+        if _conflation_report_editable(cr) and cr.feedback_reports.count() > 0
+    ]
+
+    if not eligible_crs:
+        flash("No unsent feedback reports found to delete.", "info")
+        return redirect(url)
+
+    try:
+        for cr in eligible_crs:
+            _delete_feedback_for_cr(cr, audit_suffix=f" (batch delete, event id #{event_id})")
+
+        all_crs = event.conflation_reports.all()
+        any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
+        if (
+            not any_with_feedback
+            and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+        ):
+            event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
+
+        n = len(eligible_crs)
+        plural = "s" if n != 1 else ""
+        log_db_commit(
+            f"Batch-deleted feedback report{plural} for {n} student{plural} "
+            f"in event '{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Deleted feedback for {n} student{plural}.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception(
+            "SQLAlchemyError in delete_all_conflation_report_feedback", exc_info=e
+        )
+        flash("Could not delete feedback due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route(
+    "/regenerate_all_conflation_report_feedback/<int:event_id>", methods=["GET", "POST"]
+)
+@roles_accepted("faculty", "admin", "root", "convenor")
+def regenerate_all_conflation_report_feedback(event_id):
+    """
+    Delete all existing unsent feedback for a MarkingEvent, then launch a batch generation
+    job for all ConflationReports using a chosen FeedbackRecipe.
+    """
+    from ..models.feedback import FeedbackRecipe
+    from ..tasks.feedback_orchestration import launch_feedback_job
+
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event_id),
+    )
+    text = request.args.get("text", "Conflation reports")
+
+    all_crs = event.conflation_reports.all()
+    eligible_crs = [cr for cr in all_crs if _conflation_report_editable(cr)]
+    cr_count = len(eligible_crs)
+
+    form = GenerateFeedbackFormFactory(pclass.id)()
+
+    if form.validate_on_submit():
+        recipe: FeedbackRecipe = form.recipe.data
+
+        if not eligible_crs:
+            flash("No eligible students found for feedback regeneration.", "info")
+            return redirect(url)
+
+        try:
+            for cr in eligible_crs:
+                if cr.feedback_reports.count() > 0:
+                    _delete_feedback_for_cr(
+                        cr,
+                        audit_suffix=f" (batch regenerate, event id #{event_id})",
+                    )
+                    db.session.flush()
+
+            cr_ids = [cr.id for cr in eligible_crs]
+            launch_feedback_job(
+                event=event,
+                recipe=recipe,
+                cr_ids=cr_ids,
+                owner=current_user,
+                convenor_id=current_user.id,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "A database error occurred while queuing the regeneration job.", "error"
+            )
+            return redirect(url)
+
+        n = len(cr_ids)
+        plural = "s" if n != 1 else ""
+        flash(
+            f'Queued feedback regeneration for {n} student{plural} using recipe "{recipe.label}".',
+            "success",
+        )
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/feedback/generate_feedback_form.html",
+        event=event,
+        form=form,
+        url=url,
+        text=text,
+        title="Regenerate all feedback",
+        cr_count=cr_count,
+        fill_missing=False,
+        pending_count=cr_count,
     )
 
 

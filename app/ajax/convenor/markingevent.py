@@ -12,7 +12,10 @@ from flask import current_app, get_template_attribute, render_template
 from flask_wtf.csrf import generate_csrf
 from markupsafe import escape
 
-from ...models.markingevent import MarkingEventWorkflowStates, SubmitterReportWorkflowStates
+from ...models.markingevent import (
+    MarkingEventWorkflowStates,
+    SubmitterReportWorkflowStates,
+)
 from ...shared.forms.wtf_validators import SchemaValidationError, parse_schema
 
 # Convenience dict injected into every render_template call so Jinja2 templates can
@@ -1368,7 +1371,9 @@ _conflation_report_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {% set needs_divider = false %}
         {% if cr.is_stale and not cr.feedback_sent %}
+            {% set needs_divider = true %}
             <form method="POST"
                   action="{{ url_for('convenor.reconflate_conflation_report', cr_id=cr.id, url=url, text=text) }}"
                   style="display:contents">
@@ -1377,9 +1382,10 @@ _conflation_report_menu = """
                     <i class="fas fa-calculator fa-fw"></i> Reconflate&hellip;
                 </button>
             </form>
-            <div class="dropdown-divider"></div>
         {% endif %}
         {% if has_feedback and not cr.feedback_sent %}
+            {% if needs_divider %}<div class="dropdown-divider"></div>{% endif %}
+            {% set needs_divider = true %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.regenerate_conflation_report_feedback', cr_id=cr.id, url=url, text=text) }}">
                 <i class="fas fa-redo fa-fw"></i> Regenerate feedback&hellip;
@@ -1393,9 +1399,10 @@ _conflation_report_menu = """
                     <i class="fas fa-trash fa-fw"></i> Delete feedback&hellip;
                 </button>
             </form>
-            <div class="dropdown-divider"></div>
         {% endif %}
         {% if cr.feedback_emails.count() > 0 %}
+            {% if needs_divider %}<div class="dropdown-divider"></div>{% endif %}
+            {% set needs_divider = true %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.view_conflation_report_emails', cr_id=cr.id, url=url, text=text) }}">
                 <i class="fas fa-envelope fa-fw"></i> View emails&hellip;

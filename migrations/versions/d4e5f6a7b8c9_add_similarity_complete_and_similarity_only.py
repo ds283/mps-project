@@ -36,7 +36,7 @@ depends_on = None
 
 def upgrade():
     op.add_column(
-        "submission_record",
+        "submission_records",
         sa.Column(
             "similarity_complete",
             sa.Boolean(),
@@ -57,4 +57,4 @@ def upgrade():
 
 def downgrade():
     op.drop_column("llm_orchestration_job", "similarity_only")
-    op.drop_column("submission_record", "similarity_complete")
+    op.drop_column("submission_records", "similarity_complete")

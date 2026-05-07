@@ -662,6 +662,7 @@ def register_similarity_analysis_tasks(celery):
                 config = rec.period.config if rec.period else None
                 rec.compute_risk_factors(config)
 
+            current_record.similarity_complete = True
             db.session.commit()
 
             if concerns_to_upsert:

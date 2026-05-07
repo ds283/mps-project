@@ -74,6 +74,18 @@
     color: #fff;
 }
 
+.btn-outline-db-orange {
+    background-color: transparent;
+    color: var(--db-orange-600);
+    border-color: var(--db-orange-400);
+}
+
+.btn-outline-db-orange:hover {
+    background-color: var(--db-orange-50);
+    border-color: var(--db-orange-600);
+    color: var(--db-orange-800);
+}
+
 .pipeline-panel-header {
     background-color: var(--db-blue-50);
     border-bottom: 1px solid var(--db-blue-200);

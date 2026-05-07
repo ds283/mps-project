@@ -182,6 +182,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     record.llm_feedback_failure_reason = None
     record.llm_chunking_failed = False
     record.llm_chunking_failure_reason = None
+    record.similarity_complete = False
     record.risk_factors = None
 
     if record.processed_report is not None:
@@ -211,6 +212,7 @@ def _reset_record_flags_only(record: SubmissionRecord) -> None:
     """
     record.language_analysis_started = False
     record.language_analysis_complete = False
+    record.similarity_complete = False
 
 
 def _collect_error_record_ids(period_ids: List[int]) -> List[int]:
@@ -341,6 +343,7 @@ def _create_and_dispatch_job(
     user: Optional[User],
     description: str,
     log_message: str,
+    similarity_only: bool = False,
     **log_db_commit_kwargs,
 ) -> LLMOrchestrationJob:
     """
@@ -352,6 +355,7 @@ def _create_and_dispatch_job(
         scope_id=scope_id,
         total_count=len(record_ids),
         clear_existing=clear_existing,
+        similarity_only=similarity_only,
         owner=user,
         description=description,
     )
@@ -403,6 +407,58 @@ def _dispatch_analysis_chain(celery, job_uuid: str, record_id: int) -> None:
         t_llm.si(record_id).set(queue="llm_tasks"),
         t_feedback.si(record_id).set(queue="llm_tasks"),
         t_finalize_language.si(record_id).set(queue="default"),
+        t_extract_chunks.si(record_id).set(queue="llm_tasks"),
+        t_compute_minhash.si(record_id).set(queue="default"),
+        t_run_similarity.si(record_id).set(queue="default"),
+        t_finalize_risk.si(record_id).set(queue="default"),
+        t_done.si(job_uuid, record_id).set(queue="default"),
+    ).on_error(t_err.si(job_uuid, record_id).set(queue="default"))
+
+    work.apply_async()
+
+
+def _collect_similarity_only_record_ids(period_ids: List[int]) -> List[int]:
+    """
+    Return SubmissionRecord IDs from the given periods that have completed LLM
+    analysis but have not yet run the similarity pipeline.
+
+    Criteria:
+      - report_id IS NOT NULL  (there is a report to check)
+      - language_analysis_complete = True  (LLM steps are done)
+      - similarity_complete = False  (similarity has not run)
+
+    The caller should subsequently pass the result through
+    ``_filter_already_queued()`` to avoid double-queuing records that are
+    genuinely still in-flight in a Redis queue.
+    """
+    return [
+        row[0]
+        for row in (
+            db.session.query(SubmissionRecord.id)
+            .filter(SubmissionRecord.period_id.in_(period_ids))
+            .filter(SubmissionRecord.report_id.isnot(None))
+            .filter(SubmissionRecord.language_analysis_complete.is_(True))
+            .filter(SubmissionRecord.similarity_complete.is_(False))
+            .all()
+        )
+    ]
+
+
+def _dispatch_similarity_chain(celery, job_uuid: str, record_id: int) -> None:
+    """Build and dispatch the similarity-only sub-chain for *record_id*.
+
+    Skips the LLM pipeline steps (download/extract, statistics, LLM, feedback,
+    finalize_language).  The record must already have language_analysis_complete=True
+    so that extract_chunks does not bail out.
+    """
+    t_extract_chunks = celery.tasks["app.tasks.similarity_analysis.extract_chunks"]
+    t_compute_minhash = celery.tasks["app.tasks.similarity_analysis.compute_minhash"]
+    t_run_similarity = celery.tasks["app.tasks.similarity_analysis.run_similarity_check"]
+    t_finalize_risk = celery.tasks["app.tasks.language_analysis.finalize_risk_flags"]
+    t_done = celery.tasks["app.tasks.llm_orchestration.orchestration_record_done"]
+    t_err = celery.tasks["app.tasks.llm_orchestration.orchestration_record_error"]
+
+    work = chain(
         t_extract_chunks.si(record_id).set(queue="llm_tasks"),
         t_compute_minhash.si(record_id).set(queue="default"),
         t_run_similarity.si(record_id).set(queue="default"),
@@ -662,6 +718,40 @@ def launch_global_pipeline(
         user=user,
         description="Global: all project classes and cycles",
         log_message=f"Launched global LLM orchestration job ({len(record_ids)} records, clear={clear_existing})",
+    )
+
+
+def launch_similarity_only_pipeline(
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Create a bulk orchestration job covering every SubmissionRecord that has
+    completed LLM analysis but has not yet run the similarity pipeline.
+
+    Only the similarity sub-chain is dispatched for each record; the full LLM
+    pipeline steps are skipped.  Returns None if no eligible records exist.
+    """
+    period_ids = [row[0] for row in db.session.query(SubmissionPeriodRecord.id).all()]
+    if not period_ids:
+        return None
+
+    record_ids = _collect_similarity_only_record_ids(period_ids)
+    if not record_ids:
+        return None
+
+    record_ids = _filter_already_queued(record_ids, "launch_similarity_only_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_GLOBAL,
+        scope_id=None,
+        record_ids=record_ids,
+        clear_existing=False,
+        similarity_only=True,
+        user=user,
+        description="Global: similarity-only (LLM complete, similarity pending)",
+        log_message=f"Launched similarity-only orchestration job ({len(record_ids)} records)",
     )
 
 
@@ -1236,12 +1326,17 @@ def register_llm_orchestration_tasks(celery):
                 continue
 
             # ------- prepare record for (re-)submission -------
-            record.language_analysis_started = True
-            record.language_analysis_complete = False
-            record.llm_analysis_failed = False
-            record.llm_failure_reason = None
-            record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
-            record.llm_feedback_failure_reason = None
+            if job.similarity_only:
+                # Similarity-only job: preserve LLM analysis flags; only reset
+                # similarity_complete so the similarity chain runs from scratch.
+                record.similarity_complete = False
+            else:
+                record.language_analysis_started = True
+                record.language_analysis_complete = False
+                record.llm_analysis_failed = False
+                record.llm_failure_reason = None
+                record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
+                record.llm_feedback_failure_reason = None
 
             try:
                 db.session.commit()
@@ -1262,7 +1357,10 @@ def register_llm_orchestration_tasks(celery):
                 continue
 
             # ------- dispatch the analysis chain -------
-            _dispatch_analysis_chain(celery, job.uuid, record_id)
+            if job.similarity_only:
+                _dispatch_similarity_chain(celery, job.uuid, record_id)
+            else:
+                _dispatch_analysis_chain(celery, job.uuid, record_id)
             dispatched += 1
 
     # ------------------------------------------------------------------

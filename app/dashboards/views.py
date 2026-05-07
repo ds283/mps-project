@@ -65,6 +65,7 @@ from ..tasks.llm_orchestration import (
     launch_global_pipeline,
     launch_pclass_pipeline,
     launch_period_pipeline,
+    launch_similarity_only_pipeline,
     set_pipeline_paused,
 )
 from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD, CHUNK_TYPES
@@ -2882,6 +2883,24 @@ def resolve_similarity_concern(concern_id: int):
 # ---------------------------------------------------------------------------
 # Similarity analysis launch routes (dispatches full chain via LLMOrchestrationJob)
 # ---------------------------------------------------------------------------
+
+
+@dashboards.route("/similarity/launch_missing")
+@roles_accepted("admin", "root")
+def launch_similarity_rebuild_missing():
+    """Queue similarity analysis for records that completed LLM analysis but have not yet had similarity checked."""
+    try:
+        job = launch_similarity_only_pipeline(user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching the similarity pipeline.", "error")
+        current_app.logger.exception("similarity launch_missing error", exc_info=exc)
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    if job is None:
+        flash("No reports are currently missing similarity results.", "info")
+    else:
+        flash(f"Queued {job.total_count} report(s) for similarity analysis.", "success")
+    return redirect(url_for("dashboards.similarity_dashboard"))
 
 
 @dashboards.route("/similarity/launch_global")

@@ -160,6 +160,11 @@
                     <i class="fas fa-arrow-left me-1"></i>Dashboards
                 </a>
                 {% if can_launch %}
+                    <a href="{{ url_for('dashboards.launch_similarity_rebuild_missing') }}"
+                       class="btn btn-sm btn-outline-db-orange"
+                       onclick="return confirm('Queue similarity analysis for all reports that completed LLM analysis but have not yet had similarity checked?')">
+                        <i class="fas fa-search me-1"></i>Run missing
+                    </a>
                     <a href="{{ url_for('dashboards.launch_similarity_rebuild_global') }}"
                        class="btn btn-sm btn-db-orange"
                        onclick="return confirm('Launch a global similarity rebuild across all indexed submissions?')">

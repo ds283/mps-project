@@ -94,6 +94,11 @@ class LLMOrchestrationJob(db.Model):
     # Whether existing analysis results were cleared before re-submission.
     clear_existing = db.Column(db.Boolean(), nullable=False, default=False)
 
+    # When True, only the similarity sub-chain (extract_chunks → compute_minhash →
+    # run_similarity_check → finalize_risk_flags) is dispatched.  The full LLM
+    # pipeline steps are skipped.  Records must already have language_analysis_complete=True.
+    similarity_only = db.Column(db.Boolean(), nullable=False, default=False)
+
     # Whether this job is paused (no new records dispatched until resumed).
     # In-flight records continue to completion; only the round-robin dispatch
     # skips this job while paused is True.
@@ -118,6 +123,7 @@ class LLMOrchestrationJob(db.Model):
         scope_id: Optional[int],
         total_count: int,
         clear_existing: bool = False,
+        similarity_only: bool = False,
         owner=None,
         description: Optional[str] = None,
     ) -> "LLMOrchestrationJob":
@@ -130,6 +136,7 @@ class LLMOrchestrationJob(db.Model):
             scope_id=scope_id,
             total_count=total_count,
             clear_existing=clear_existing,
+            similarity_only=similarity_only,
             owner=owner,
             description=description,
             created_at=datetime.now(),

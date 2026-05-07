@@ -988,6 +988,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # human-readable reason for heading-classification failure, for display to administrators
     llm_chunking_failure_reason = db.Column(db.Text(collation="utf8_bin"), default=None)
 
+    # has the similarity-check pipeline (extract_chunks → compute_minhash → run_similarity_check)
+    # completed successfully for this record? Distinct from language_analysis_complete, which is
+    # set by finalize_language_step (step 5) *before* the similarity steps (steps 6–8) run.
+    # Used to identify records that need the similarity pipeline without re-running LLM analysis.
+    similarity_complete = db.Column(db.Boolean(), nullable=False, default=False)
+
     # LLM pipeline provenance — captured at submission time so past runs can be
     # evaluated if a larger model or larger context window becomes available later.
     llm_model_name = db.Column(db.String(200, collation="utf8_bin"), nullable=True)

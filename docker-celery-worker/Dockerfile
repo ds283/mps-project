@@ -18,12 +18,15 @@ RUN python3 -m venv ${VIRTUAL_ENV}
 
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 USER mpsproject
-RUN pip3 install -U pip setuptools wheel && pip3 install -U -r requirements.txt
+RUN pip3 install --no-cache-dir -U pip setuptools wheel && pip3 install --no-cache-dir -U -r requirements.txt
 
 # spaCy is installed in separate layers to benefit from Docker layer caching.
 # The model layer is kept separate so it only rebuilds when the model URL changes.
-RUN pip3 install spacy
-RUN pip3 install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip3 install --no-cache-dir spacy
+RUN pip3 install --no-cache-dir https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+
+RUN pip3 install --no-cache-dir datasketch sentence-transformers
 
 # note chmod of 774 is more permissive than we would like (would prefer files not to have x set
 # by default, but directories should), but this requires a separate application of chmod which increases

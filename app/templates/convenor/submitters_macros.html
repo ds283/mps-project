@@ -200,6 +200,37 @@
                         <small><i class="fas fa-chart-bar fa-fw"></i> LLM report</small>
                     </a>
                 </div>
+                {# SIMILARITY CONCERN STRIP — direct links to avoid dashboard detour #}
+                {% set inline_concerns = r.inline_similarity_concerns %}
+                {% if inline_concerns %}
+                    <div class="d-flex flex-column gap-1 mt-1">
+                        {% for concern in inline_concerns %}
+                            {% set other = concern.record_b if concern.record_a_id == r.id else concern.record_a %}
+                            <div class="d-flex flex-row flex-wrap align-items-center gap-2 px-2 py-1 rounded small"
+                                 style="background-color: var(--db-orange-50); border: 1px solid var(--db-orange-200);">
+                                <i class="fas fa-search fa-fw" style="color: var(--db-orange-600);"></i>
+                                <span class="fw-semibold">{{ other.owner.student.user.name }}</span>
+                                <span class="text-body-secondary">
+                                    {{ other.period.config.project_class.abbreviation }}
+                                    {{ "%d/%d" | format(other.period.config.year, other.period.config.year + 1) }}
+                                </span>
+                                <span class="badge"
+                                      style="background-color: var(--db-orange-100); color: var(--db-orange-800);">
+                                    {{ concern.chunk_type | replace('_', ' ') }}
+                                </span>
+                                {% if concern.transformer_cosine >= SIMILARITY_DANGER_COSINE %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
+                                {% endif %}
+                                <a href="{{ url_for('dashboards.similarity_concern_detail', concern_id=concern.id) }}#review"
+                                   class="btn btn-xs btn-db-orange ms-auto">
+                                    Review <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
                 {# Call-to-action for unresolved risk factors #}
                 {% if rf.has_unresolved %}
                     <div class="mt-1">

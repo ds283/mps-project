@@ -56,6 +56,7 @@ from .shared.context.global_context import (
     build_static_context_data,
     render_template_context,
 )
+from .shared.llm_thresholds import SIMILARITY_DANGER_COSINE
 from .shared.workflow_logging import log_db_commit
 from .task_queue import make_celery
 from .thirdparty.flask_bleach import Bleach
@@ -342,6 +343,10 @@ def create_app():
 
     # cache static context data needed for rendering templates
     static_ctx = build_static_context_data(app)
+
+    # register as Jinja2 environment global so it is visible inside macros
+    # obtained via get_template_attribute() (which run in isolated scope)
+    app.jinja_env.globals["SIMILARITY_DANGER_COSINE"] = SIMILARITY_DANGER_COSINE
 
     @security.login_context_processor
     def login_context_processor():

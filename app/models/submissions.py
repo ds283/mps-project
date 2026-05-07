@@ -27,6 +27,8 @@ from ..shared.llm_thresholds import (
     MTLD_NOTE_THRESHOLD,
     BURSTINESS_NOTE_LOW,
     SENT_CV_NOTE_LOW,
+    SIMILARITY_INLINE_MIN_COSINE,
+    SIMILARITY_DANGER_COSINE,
 )
 from ..shared.sqlalchemy import get_count
 from .associations import (
@@ -2792,6 +2794,27 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if not self._validated:
             check = self.is_valid
         return self._warnings.values()
+
+    @property
+    def open_similarity_concerns(self):
+        """All unreviewed SimilarityConcerns involving this record, highest cosine first."""
+        concerns = list(self.similarity_concerns_as_a.filter_by(reviewed=False).all()) + list(
+            self.similarity_concerns_as_b.filter_by(reviewed=False).all()
+        )
+        concerns.sort(
+            key=lambda c: c.transformer_cosine if c.transformer_cosine is not None else -1.0,
+            reverse=True,
+        )
+        return concerns
+
+    @property
+    def inline_similarity_concerns(self):
+        """Unreviewed concerns at or above SIMILARITY_INLINE_MIN_COSINE, for inline display."""
+        return [
+            c
+            for c in self.open_similarity_concerns
+            if c.transformer_cosine is not None and c.transformer_cosine >= SIMILARITY_INLINE_MIN_COSINE
+        ]
 
 
 @listens_for(SubmissionRecord, "before_update")

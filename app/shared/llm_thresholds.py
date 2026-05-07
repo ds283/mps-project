@@ -147,6 +147,10 @@ SENT_CV_NOTE_LOW = 0.55
 SENT_CV_NOTE_HIGH = 0.85
 SENT_CV_STRONG_HIGH = 1.10
 
+# Similarity concern cosine thresholds
+SIMILARITY_INLINE_MIN_COSINE = 0.78  # minimum score to show inline in submitters list
+SIMILARITY_DANGER_COSINE = 0.88  # threshold for danger (red) badge
+
 
 def classify_metric(value: float | None, note_threshold: float, strong_threshold: float) -> str:
     """Generic single-sided (lower-is-worse) classifier.

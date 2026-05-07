@@ -17,7 +17,16 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import SimilarityOrchestrationJob, SimilarityConcern, SubmissionRecord, TaskRecord, User
+from ..models import (
+    ProjectClass,
+    ProjectClassConfig,
+    SimilarityConcern,
+    SimilarityOrchestrationJob,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
+    TaskRecord,
+    User,
+)
 from ..shared.llm_services import _call_llm
 from ..shared.scraped_text_store import (
     get_scraped_text,
@@ -432,7 +441,56 @@ def register_similarity_analysis_tasks(celery):
         current_sigs: dict[str, list[int]] = chunks["minhash_signatures"]
 
         # ------------------------------------------------------------------
-        # Query all other records with computed signatures from MongoDB
+        # Determine this record's tenant so comparisons stay within-tenant
+        # ------------------------------------------------------------------
+        try:
+            current_record = db.session.get(SubmissionRecord, record_id)
+        except SQLAlchemyError as exc:
+            current_app.logger.warning(
+                f"run_similarity_check: SQLAlchemyError loading SubmissionRecord #{record_id}: {exc}"
+            )
+            return
+
+        if current_record is None:
+            current_app.logger.warning(
+                f"run_similarity_check: SubmissionRecord #{record_id} not found — skipping"
+            )
+            return
+
+        try:
+            tenant_id: int = current_record.period.config.project_class.tenant_id
+        except AttributeError:
+            current_app.logger.warning(
+                f"run_similarity_check: could not determine tenant for SubmissionRecord #{record_id} — skipping"
+            )
+            return
+
+        # Collect all other record IDs in the same tenant from SQL
+        try:
+            same_tenant_rows = (
+                db.session.query(SubmissionRecord.id)
+                .join(SubmissionRecord.period)
+                .join(SubmissionPeriodRecord.config)
+                .join(ProjectClassConfig.project_class)
+                .filter(ProjectClass.tenant_id == tenant_id)
+                .filter(SubmissionRecord.id != record_id)
+                .all()
+            )
+            same_tenant_ids = [row[0] for row in same_tenant_rows]
+        except SQLAlchemyError as exc:
+            current_app.logger.warning(
+                f"run_similarity_check: SQLAlchemyError fetching tenant record IDs for #{record_id}: {exc}"
+            )
+            return
+
+        if not same_tenant_ids:
+            current_app.logger.info(
+                f"run_similarity_check: no other records in same tenant — skipping for record #{record_id}"
+            )
+            return
+
+        # ------------------------------------------------------------------
+        # Query other same-tenant records with computed signatures from MongoDB
         # ------------------------------------------------------------------
         client, collection = _get_collection()
         if collection is None:
@@ -444,7 +502,7 @@ def register_similarity_analysis_tasks(celery):
         try:
             cursor = collection.find(
                 {
-                    "submission_record_id": {"$ne": record_id},
+                    "submission_record_id": {"$in": same_tenant_ids},
                     "similarity_chunks.minhash_signatures": {"$exists": True},
                 },
                 projection={"submission_record_id": 1, "similarity_chunks": 1, "_id": 0},

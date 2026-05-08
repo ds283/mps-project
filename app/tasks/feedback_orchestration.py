@@ -59,6 +59,16 @@ from .shared.utils import report_info
 
 PDF_BATCH_SIZE_DEFAULT = 5
 
+# Distributed lock acquired by _recover_active_jobs() so that only one worker
+# runs recovery at startup even when multiple workers start simultaneously.
+RECOVERY_LOCK_KEY = "feedback_orchestration:recovery_lock"
+RECOVERY_LOCK_TTL = 30  # seconds; auto-expires on crash
+
+# SET-NX flag set by _dispatch_global_coordinator() and cleared at the start of
+# global_feedback_orchestration_step to prevent redundant coordinator tasks.
+COORDINATOR_QUEUED_KEY = "feedback_orchestration:coordinator_queued"
+COORDINATOR_QUEUED_TTL = 120  # safety TTL; cleared normally when the task starts
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -93,7 +103,13 @@ def _populate_redis_queue(job: FeedbackOrchestrationJob, cr_ids: List[int]) -> N
 
 
 def _dispatch_global_coordinator() -> None:
-    """Dispatch global_feedback_orchestration_step to the default queue."""
+    """Dispatch global_feedback_orchestration_step, skipping if one is already queued."""
+    try:
+        r = _get_orchestration_redis()
+        if not r.set(COORDINATOR_QUEUED_KEY, "1", nx=True, ex=COORDINATOR_QUEUED_TTL):
+            return  # coordinator already queued; this call is a no-op
+    except Exception:
+        pass  # Redis unavailable; dispatch anyway so we don't stall permanently
     celery = current_app.extensions["celery"]
     t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
     t.apply_async(queue="default")
@@ -144,6 +160,11 @@ def _recover_active_jobs() -> None:
       - Any ConflationReport IDs in the inflight list are moved back to the
         pending queue via RPOPLPUSH so they will be re-processed.
       - If any queue has pending work, the global coordinator is dispatched.
+
+    A distributed Redis lock (RECOVERY_LOCK_KEY) ensures that only one worker
+    runs this function at a time so that concurrent recoveries on a Docker
+    Swarm restart cannot move inflight records back to the queue while a
+    coordinator is already processing them.
     """
     try:
         r = _get_orchestration_redis()
@@ -153,67 +174,79 @@ def _recover_active_jobs() -> None:
         )
         return
 
-    try:
-        active_jobs: List[FeedbackOrchestrationJob] = (
-            db.session.query(FeedbackOrchestrationJob)
-            .filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES))
-            .all()
-        )
-    except SQLAlchemyError as exc:
-        current_app.logger.exception(
-            "!! feedback_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
-            exc_info=exc,
-        )
-        return
-
-    if not active_jobs:
-        current_app.logger.info("** feedback_orchestration._recover_active_jobs: no active jobs found")
-        return
-
-    needs_coordinator = False
-    for job in active_jobs:
+    if not r.set(RECOVERY_LOCK_KEY, "1", nx=True, ex=RECOVERY_LOCK_TTL):
         current_app.logger.info(
-            f"** feedback_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})"
+            "** feedback_orchestration._recover_active_jobs: recovery lock held by another worker — skipping"
         )
-        recovered = 0
-        try:
-            while r.rpoplpush(job.redis_inflight_key, job.redis_queue_key):
-                recovered += 1
-        except Exception as exc:
-            current_app.logger.warning(
-                f"!! feedback_orchestration._recover_active_jobs: Redis error recovering "
-                f"inflight items for job {job.uuid}: {exc}"
-            )
+        return
 
-        if recovered:
-            current_app.logger.info(
-                f"@@ feedback_orchestration._recover_active_jobs: re-queued {recovered} "
-                f"inflight record(s) for job {job.uuid}"
-            )
-            needs_coordinator = True
-        else:
-            current_app.logger.info(
-                f"@@ feedback_orchestration._recover_active_jobs: no inflight records for job {job.uuid}"
-            )
-
+    try:
         try:
-            pending_count = r.llen(job.redis_queue_key)
+            active_jobs: List[FeedbackOrchestrationJob] = (
+                db.session.query(FeedbackOrchestrationJob)
+                .filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES))
+                .all()
+            )
+        except SQLAlchemyError as exc:
+            current_app.logger.exception(
+                "!! feedback_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
+                exc_info=exc,
+            )
+            return
+
+        if not active_jobs:
+            current_app.logger.info("** feedback_orchestration._recover_active_jobs: no active jobs found")
+            return
+
+        needs_coordinator = False
+        for job in active_jobs:
+            current_app.logger.info(
+                f"** feedback_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})"
+            )
+            recovered = 0
+            try:
+                while r.rpoplpush(job.redis_inflight_key, job.redis_queue_key):
+                    recovered += 1
+            except Exception as exc:
+                current_app.logger.warning(
+                    f"!! feedback_orchestration._recover_active_jobs: Redis error recovering "
+                    f"inflight items for job {job.uuid}: {exc}"
+                )
+
+            if recovered:
+                current_app.logger.info(
+                    f"@@ feedback_orchestration._recover_active_jobs: re-queued {recovered} "
+                    f"inflight record(s) for job {job.uuid}"
+                )
+                needs_coordinator = True
+            else:
+                current_app.logger.info(
+                    f"@@ feedback_orchestration._recover_active_jobs: no inflight records for job {job.uuid}"
+                )
+
+            try:
+                pending_count = r.llen(job.redis_queue_key)
+            except Exception:
+                pending_count = 0
+
+            if pending_count > 0:
+                needs_coordinator = True
+
+        if needs_coordinator:
+            try:
+                _dispatch_global_coordinator()
+                current_app.logger.info(
+                    "** feedback_orchestration._recover_active_jobs: dispatched global coordinator"
+                )
+            except Exception as exc:
+                current_app.logger.warning(
+                    f"!! feedback_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
+                )
+    finally:
+        try:
+            r.delete(RECOVERY_LOCK_KEY)
         except Exception:
-            pending_count = 0
-
-        if pending_count > 0:
-            needs_coordinator = True
-
-    if needs_coordinator:
-        try:
-            _dispatch_global_coordinator()
-            current_app.logger.info(
-                "** feedback_orchestration._recover_active_jobs: dispatched global coordinator"
-            )
-        except Exception as exc:
-            current_app.logger.warning(
-                f"!! feedback_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
-            )
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +439,14 @@ def register_feedback_orchestration_tasks(celery):
         ConflationReport IDs from all active FeedbackOrchestrationJob queues
         (round-robin).
         """
+        # Clear the coordinator-queued flag so that _dispatch_global_coordinator()
+        # can queue the next coordinator as soon as this one starts executing.
+        try:
+            r_coord = _get_orchestration_redis()
+            r_coord.delete(COORDINATOR_QUEUED_KEY)
+        except Exception:
+            pass
+
         batch_size: int = current_app.config.get("PDF_BATCH_SIZE", PDF_BATCH_SIZE_DEFAULT)
 
         # ------- load active jobs -------

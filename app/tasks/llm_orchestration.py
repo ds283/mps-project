@@ -98,6 +98,22 @@ from ..shared.workflow_logging import log_db_commit
 REDIS_GLOBAL_PAUSE_KEY = "llm_pipeline_paused"
 
 # ---------------------------------------------------------------------------
+# Orchestration coordination keys
+# ---------------------------------------------------------------------------
+
+# Distributed lock acquired by _recover_active_jobs() so that only one worker
+# runs recovery at startup even when multiple workers start simultaneously.
+RECOVERY_LOCK_KEY = "llm_orchestration:recovery_lock"
+RECOVERY_LOCK_TTL = 30  # seconds; long enough to cover recovery; auto-expires on crash
+
+# SET-NX flag set by _dispatch_global_coordinator() and cleared at the start of
+# global_orchestration_step.  Prevents multiple redundant coordinator tasks from
+# being queued when e.g. several workers each call _dispatch_global_coordinator()
+# before any coordinator has had a chance to run.
+COORDINATOR_QUEUED_KEY = "llm_orchestration:coordinator_queued"
+COORDINATOR_QUEUED_TTL = 120  # safety TTL; cleared normally when the task starts
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -381,7 +397,13 @@ def _create_and_dispatch_job(
 
 
 def _dispatch_global_coordinator() -> None:
-    """Dispatch global_orchestration_step."""
+    """Dispatch global_orchestration_step, skipping if one is already queued."""
+    try:
+        r = _get_orchestration_redis()
+        if not r.set(COORDINATOR_QUEUED_KEY, "1", nx=True, ex=COORDINATOR_QUEUED_TTL):
+            return  # coordinator already queued; this call is a no-op
+    except Exception:
+        pass  # Redis unavailable; dispatch anyway so we don't stall permanently
     celery = current_app.extensions["celery"]
     t = celery.tasks["app.tasks.llm_orchestration.global_orchestration_step"]
     t.apply_async(queue="default")
@@ -487,6 +509,13 @@ def _recover_active_jobs() -> None:
     Jobs whose pending and inflight queues are both empty but whose counters
     have not yet reached total_count are left in RUNNING state; they will be
     cleaned up when their last in-flight chain completes normally.
+
+    A distributed Redis lock (RECOVERY_LOCK_KEY) ensures that only one worker
+    runs this function at a time.  When multiple workers start simultaneously
+    (e.g. on a Docker Swarm restart) only the first acquires the lock; the
+    others log and return immediately, preventing concurrent recoveries from
+    moving inflight records back to the queue while a coordinator is already
+    processing them.
     """
     try:
         r = _get_orchestration_redis()
@@ -496,69 +525,81 @@ def _recover_active_jobs() -> None:
         )
         return
 
+    if not r.set(RECOVERY_LOCK_KEY, "1", nx=True, ex=RECOVERY_LOCK_TTL):
+        current_app.logger.info(
+            "** llm_orchestration._recover_active_jobs: recovery lock held by another worker — skipping"
+        )
+        return
+
     try:
-        active_jobs: List[LLMOrchestrationJob] = (
-            db.session.query(LLMOrchestrationJob)
-            .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
-            .all()
-        )
-    except SQLAlchemyError as exc:
-        current_app.logger.exception(
-            "!! llm_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
-            exc_info=exc,
-        )
-        return
-
-    if not active_jobs:
-        current_app.logger.info('** llm_orchestration._recover_active_jobs: no active jobs found')
-        return
-
-    needs_coordinator = False
-    for job in active_jobs:
-        current_app.logger.info(f'** llm_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})')
-        # Move any inflight records back to the pending queue.
-        recovered = 0
         try:
-            while r.rpoplpush(job.redis_inflight_key, job.redis_queue_key):
-                recovered += 1
-        except Exception as exc:
-            current_app.logger.warning(
-                f"!! llm_orchestration._recover_active_jobs: Redis error recovering "
-                f"inflight items for job {job.uuid}: {exc}"
+            active_jobs: List[LLMOrchestrationJob] = (
+                db.session.query(LLMOrchestrationJob)
+                .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+                .all()
             )
+        except SQLAlchemyError as exc:
+            current_app.logger.exception(
+                "!! llm_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
+                exc_info=exc,
+            )
+            return
 
-        if recovered:
-            current_app.logger.info(
-                f"@@ llm_orchestration._recover_active_jobs: re-queued {recovered} "
-                f"inflight record(s) for job {job.uuid}"
-            )
+        if not active_jobs:
+            current_app.logger.info('** llm_orchestration._recover_active_jobs: no active jobs found')
+            return
+
+        needs_coordinator = False
+        for job in active_jobs:
+            current_app.logger.info(f'** llm_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})')
+            # Move any inflight records back to the pending queue.
+            recovered = 0
+            try:
+                while r.rpoplpush(job.redis_inflight_key, job.redis_queue_key):
+                    recovered += 1
+            except Exception as exc:
+                current_app.logger.warning(
+                    f"!! llm_orchestration._recover_active_jobs: Redis error recovering "
+                    f"inflight items for job {job.uuid}: {exc}"
+                )
+
+            if recovered:
+                current_app.logger.info(
+                    f"@@ llm_orchestration._recover_active_jobs: re-queued {recovered} "
+                    f"inflight record(s) for job {job.uuid}"
+                )
+            else:
+                current_app.logger.info(
+                    f"@@ llm_orchestration._recover_active_jobs: did not discover any inflight records for job {job.uuid}"
+                )
+
+            # Dispatch the coordinator if this job has pending work.
+            try:
+                if r.llen(job.redis_queue_key) > 0:
+                    needs_coordinator = True
+            except Exception as exc:
+                current_app.logger.warning(
+                    f"!! llm_orchestration._recover_active_jobs: Redis error checking queue "
+                    f"length for job {job.uuid}: {exc}"
+                )
+
+        if needs_coordinator:
+            try:
+                _dispatch_global_coordinator()
+                current_app.logger.info(
+                    "@@ llm_orchestration._recover_active_jobs: dispatched global coordinator"
+                )
+            except Exception as exc:
+                current_app.logger.error(
+                    f"!! llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
+                )
         else:
-            current_app.logger.info(
-                f"@@ llm_orchestration._recover_active_jobs: did not discover any inflight records for job {job.uuid}"
-            )
-
-        # Dispatch the coordinator if this job has pending work.
+            current_app.logger.info(f"@@ llm_orchestration._recover_active_jobs: no pending work for job {job.uuid}")
+    finally:
         try:
-            if r.llen(job.redis_queue_key) > 0:
-                needs_coordinator = True
-        except Exception as exc:
-            current_app.logger.warning(
-                f"!! llm_orchestration._recover_active_jobs: Redis error checking queue "
-                f"length for job {job.uuid}: {exc}"
-            )
-
-    if needs_coordinator:
-        try:
-            _dispatch_global_coordinator()
-            current_app.logger.info(
-                "@@ llm_orchestration._recover_active_jobs: dispatched global coordinator"
-            )
-        except Exception as exc:
-            current_app.logger.error(
-                f"!! llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
-            )
-    else:
-        current_app.logger.info(f"@@ llm_orchestration._recover_active_jobs: no pending work for job {job.uuid}")
+            r.delete(RECOVERY_LOCK_KEY)
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -1136,6 +1177,14 @@ def register_llm_orchestration_tasks(celery):
         list via RPOPLPUSH; the inflight list is the source of truth for
         in-flight count (sum of LLEN across all active jobs' inflight lists).
         """
+        # Clear the coordinator-queued flag so that _dispatch_global_coordinator()
+        # can queue the next coordinator as soon as this one starts executing.
+        try:
+            r_coord = _get_orchestration_redis()
+            r_coord.delete(COORDINATOR_QUEUED_KEY)
+        except Exception:
+            pass
+
         batch_size: int = current_app.config.get("OLLAMA_BATCH_SIZE", 1)
 
         # ------- load active jobs -------

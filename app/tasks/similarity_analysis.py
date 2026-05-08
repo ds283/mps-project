@@ -192,27 +192,46 @@ def register_similarity_analysis_tasks(celery):
             return
 
         # ------------------------------------------------------------------
-        # Idempotency check — also detects document re-uploads by comparing
-        # scraped_text.updated_at against similarity_chunks.extracted_at so
-        # that a new upload forces re-extraction even when the prompt version
-        # is unchanged.
+        # Idempotency check — skip if chunks are already present at the
+        # current prompt version.  Bumping CHUNK_EXTRACTION_PROMPT_VERSION
+        # is the mechanism to force re-extraction across all records.
         # ------------------------------------------------------------------
-        scraped = get_scraped_text(record_id)
-        existing = get_similarity_chunks(record_id)
-        scraped_updated_at = scraped.get("updated_at") if scraped else None
-        chunks_extracted_at = existing.get("extracted_at") if existing else None
-
-        if (
-            existing is not None
-            and existing.get("chunk_prompt_version") == CHUNK_EXTRACTION_PROMPT_VERSION
-            and scraped_updated_at is not None
-            and chunks_extracted_at is not None
-            and chunks_extracted_at >= scraped_updated_at
-        ):
+        if record.chunks_present and record.chunks_prompt_version == CHUNK_EXTRACTION_PROMPT_VERSION:
             current_app.logger.info(
                 f"extract_chunks: SubmissionRecord #{record_id} already has current chunk extraction — skipping"
             )
+            record_step_end(_r, record_id, "extract_chunks", _t0)
             return
+
+        # Version-bump cascade: when the prompt version has changed and old chunks
+        # exist at a different version, delete unreviewed SimilarityConcern rows and
+        # reset similarity_complete so the similarity scan re-runs against fresh chunks.
+        if record.chunks_present and record.chunks_prompt_version != CHUNK_EXTRACTION_PROMPT_VERSION:
+            current_app.logger.info(
+                f"extract_chunks: SubmissionRecord #{record_id} chunk version mismatch "
+                f"(stored={record.chunks_prompt_version}, current={CHUNK_EXTRACTION_PROMPT_VERSION}) "
+                f"— clearing stale similarity data before re-extraction"
+            )
+            try:
+                db.session.query(SimilarityConcern).filter(
+                    db.or_(
+                        SimilarityConcern.record_a_id == record_id,
+                        SimilarityConcern.record_b_id == record_id,
+                    ),
+                    SimilarityConcern.reviewed == False,
+                ).delete(synchronize_session=False)
+                record.similarity_complete = False
+                record.chunks_present = False
+                record.chunks_prompt_version = None
+                db.session.commit()
+            except SQLAlchemyError as exc:
+                db.session.rollback()
+                current_app.logger.warning(
+                    f"extract_chunks: could not clear stale similarity data for "
+                    f"record #{record_id}: {exc}"
+                )
+
+        scraped = get_scraped_text(record_id)
 
         if scraped is None:
             current_app.logger.warning(
@@ -248,6 +267,18 @@ def register_similarity_analysis_tasks(celery):
             store_similarity_chunks(
                 record_id, _empty_sections, model, CHUNK_EXTRACTION_PROMPT_VERSION, "none", 0
             )
+            try:
+                record = db.session.get(SubmissionRecord, record_id)
+                if record is not None:
+                    record.chunks_present = True
+                    record.chunks_prompt_version = CHUNK_EXTRACTION_PROMPT_VERSION
+                    db.session.commit()
+            except SQLAlchemyError as exc:
+                db.session.rollback()
+                current_app.logger.warning(
+                    f"extract_chunks: could not set chunks_present for record #{record_id}: {exc}"
+                )
+            record_step_end(_r, record_id, "extract_chunks", _t0)
             return
 
         # ------------------------------------------------------------------
@@ -282,12 +313,15 @@ def register_similarity_analysis_tasks(celery):
                 if rec is not None:
                     rec.llm_chunking_failed = True
                     rec.llm_chunking_failure_reason = "LLM heading classification returned no result"
+                    rec.chunks_present = False
+                    rec.chunks_prompt_version = None
                     db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
                 current_app.logger.warning(
                     f"extract_chunks: could not set llm_chunking_failed for record #{record_id}: {exc}"
                 )
+            record_step_end(_r, record_id, "extract_chunks", _t0, error="LLM heading classification returned no result")
             return
 
         # ------------------------------------------------------------------
@@ -323,6 +357,8 @@ def register_similarity_analysis_tasks(celery):
         try:
             record = db.session.get(SubmissionRecord, record_id)
             if record is not None:
+                record.chunks_present = True
+                record.chunks_prompt_version = CHUNK_EXTRACTION_PROMPT_VERSION
                 db.session.commit()
         except SQLAlchemyError as exc:
             current_app.logger.warning(

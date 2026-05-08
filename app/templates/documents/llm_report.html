@@ -44,23 +44,32 @@
             {% endcall %}
         </div>
         {# Admin actions: shown when there is an error flag or the record is stuck #}
-        {% if can_admin and (record.llm_analysis_failed or record.llm_feedback_failed or is_stuck) %}
+        {% if can_admin and (record.llm_analysis_failed or record.llm_feedback_failed or record.llm_chunking_failed or is_stuck) %}
             <div class="card border-secondary mb-3">
                 <div class="card-header bg-light text-body-secondary small">
                     <i class="fas fa-tools fa-fw me-1"></i> Admin actions
                 </div>
-                <div class="card-body d-flex gap-2 flex-wrap">
-                    {% if record.llm_analysis_failed or record.llm_feedback_failed %}
-                        <a href="{{ url_for('documents.clear_llm_failure', sid=record.id, url=url, text=text) }}"
-                           class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-eraser fa-fw me-1"></i> Clear failure flag
+                <div class="card-body">
+                    <p class="small text-body-secondary mb-2">
+                        <strong>Retry with cached data</strong> — re-runs only the failed step using the already-extracted
+                        text; faster, but may not help if the underlying report is the problem.
+                        <strong>Full reset and re-run</strong> — clears all results and re-downloads the report from
+                        scratch; use this if the asset itself may be problematic.
+                    </p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% if record.llm_analysis_failed or record.llm_feedback_failed or record.llm_chunking_failed %}
+                            <a href="{{ url_for('documents.retry_language_analysis', sid=record.id, url=url, text=text) }}"
+                               class="btn btn-sm btn-outline-secondary"
+                               onclick="return confirm('Retry with cached data?')">
+                                <i class="fas fa-sync fa-fw me-1"></i> Retry with cached data
+                            </a>
+                        {% endif %}
+                        <a href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}"
+                           class="btn btn-sm btn-outline-primary"
+                           onclick="return confirm('Clear all results and re-run language analysis from scratch?')">
+                            <i class="fas fa-redo fa-fw me-1"></i> Full reset and re-run
                         </a>
-                    {% endif %}
-                    <a href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}"
-                       class="btn btn-sm btn-outline-primary"
-                       onclick="return confirm('Clear results and re-run language analysis?')">
-                        <i class="fas fa-redo fa-fw me-1"></i> Clear and re-run
-                    </a>
+                    </div>
                 </div>
             </div>
         {% endif %}
@@ -932,22 +941,68 @@
                 <div class="card-header bg-light text-body-secondary small">
                     <i class="fas fa-tools fa-fw me-1"></i> Admin actions
                 </div>
-                <div class="card-body d-flex gap-2 flex-wrap">
-                    <a href="{{ url_for('documents.clear_language_analysis', sid=record.id, url=url, text=text) }}"
-                       class="btn btn-sm btn-outline-danger"
-                       onclick="return confirm('Clear the LLM analysis results? This will also remove the processed report.')">
-                        <i class="fas fa-trash fa-fw me-1"></i> Clear results
-                    </a>
-                    <a href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}"
-                       class="btn btn-sm btn-outline-primary"
-                       onclick="return confirm('Clear results and re-run language analysis?')">
-                        <i class="fas fa-redo fa-fw me-1"></i> Clear and re-run
-                    </a>
-                    <a href="{{ url_for('documents.clear_and_regenerate_processed_report', sid=record.id, url=url, text=text) }}"
-                       class="btn btn-sm btn-outline-secondary"
-                       onclick="return confirm('Clear and regenerate the processed report? LLM analysis results will be kept.')">
-                        <i class="fas fa-sync fa-fw me-1"></i> Regenerate processed report
-                    </a>
+                <div class="card-body">
+                    {# Targeted step resubmission — only shown when a specific output is absent #}
+                    {% set missing_stats = not record.stats_present %}
+                    {% set missing_grading = not record.llm_grading_present %}
+                    {% set missing_feedback = not record.llm_feedback_present %}
+                    {% set missing_chunks = not record.chunks_present %}
+                    {% if missing_stats or missing_grading or missing_feedback or missing_chunks %}
+                        <p class="small text-body-secondary mb-2">
+                            <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                            Some pipeline outputs are missing for this record. Use the targeted buttons below
+                            to re-run only the missing steps (cached text is reused).
+                        </p>
+                        <div class="d-flex gap-2 flex-wrap mb-3">
+                            {% if missing_stats %}
+                                <a href="{{ url_for('documents.resubmit_stats', sid=record.id, url=url, text=text) }}"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   onclick="return confirm('Re-run statistics computation for this record?')">
+                                    <i class="fas fa-chart-bar fa-fw me-1"></i> Re-run stats
+                                </a>
+                            {% endif %}
+                            {% if missing_grading %}
+                                <a href="{{ url_for('documents.resubmit_grading', sid=record.id, url=url, text=text) }}"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   onclick="return confirm('Re-run LLM grading for this record? Feedback will also be re-run.')">
+                                    <i class="fas fa-robot fa-fw me-1"></i> Re-run grading
+                                </a>
+                            {% endif %}
+                            {% if missing_feedback %}
+                                <a href="{{ url_for('documents.resubmit_feedback', sid=record.id, url=url, text=text) }}"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   onclick="return confirm('Re-run LLM feedback for this record?')">
+                                    <i class="fas fa-comment-dots fa-fw me-1"></i> Re-run feedback
+                                </a>
+                            {% endif %}
+                            {% if missing_chunks %}
+                                <a href="{{ url_for('documents.resubmit_chunks', sid=record.id, url=url, text=text) }}"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   onclick="return confirm('Re-run chunk extraction for this record? Similarity state will be reset.')">
+                                    <i class="fas fa-puzzle-piece fa-fw me-1"></i> Re-run chunks
+                                </a>
+                            {% endif %}
+                        </div>
+                        <hr class="my-2">
+                    {% endif %}
+                    {# Bulk / destructive actions #}
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('documents.clear_language_analysis', sid=record.id, url=url, text=text) }}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Clear the LLM analysis results? This will also remove the processed report.')">
+                            <i class="fas fa-trash fa-fw me-1"></i> Clear results
+                        </a>
+                        <a href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}"
+                           class="btn btn-sm btn-outline-primary"
+                           onclick="return confirm('Clear all results and re-run language analysis from scratch?')">
+                            <i class="fas fa-redo fa-fw me-1"></i> Full reset and re-run
+                        </a>
+                        <a href="{{ url_for('documents.clear_and_regenerate_processed_report', sid=record.id, url=url, text=text) }}"
+                           class="btn btn-sm btn-outline-secondary"
+                           onclick="return confirm('Clear and regenerate the processed report? LLM analysis results will be kept.')">
+                            <i class="fas fa-sync fa-fw me-1"></i> Regenerate processed report
+                        </a>
+                    </div>
                 </div>
             </div>
         {% endif %}

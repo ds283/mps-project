@@ -183,7 +183,8 @@ def is_pipeline_paused() -> bool:
 def _clear_record_state(record: SubmissionRecord) -> None:
     """
     Reset all language-analysis state on *record*, including deletion of its
-    processed report from the object store.  Does NOT commit the session.
+    processed report from the object store and its MongoDB cached documents.
+    Does NOT commit the session.
     """
     record.language_analysis = None
     record.language_analysis_started = False
@@ -196,6 +197,21 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     record.llm_chunking_failure_reason = None
     record.similarity_complete = False
     record.risk_factors = None
+    # Fine-grained presence flags and version columns
+    record.stats_present = False
+    record.stats_algorithm_version = None
+    record.llm_grading_present = False
+    record.llm_prompt_version = None
+    record.llm_feedback_present = False
+    record.llm_feedback_prompt_version = None
+    record.chunks_present = False
+    record.chunks_prompt_version = None
+
+    # Delete the MongoDB cached documents (scraped text + embedded similarity chunks).
+    # SubmissionRecord is the source of truth; the MongoDB documents are a cache that
+    # must be invalidated whenever the record is fully reset.
+    from ..shared.scraped_text_store import delete_scraped_text
+    delete_scraped_text(record.id)
 
     if record.processed_report is not None:
         old_asset = record.processed_report
@@ -901,6 +917,145 @@ def launch_error_global_pipeline(
         user=user,
         description="Global (errors only): all project classes and cycles",
         log_message=f"Launched global LLM orchestration job for error records ({len(record_ids)} records)",
+    )
+
+
+def _retry_clear_error_flags(record_ids: List[int]) -> None:
+    """
+    Soft-reset error records for a cached retry: clear error flags and the
+    presence flags for steps that failed, leaving scraped text in MongoDB intact.
+    ``download_and_extract`` will skip (asset_id guard), and successfully-completed
+    steps will skip via their own presence-flag guards.
+    """
+    if not record_ids:
+        return
+    db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(record_ids)).update(
+        {
+            SubmissionRecord.language_analysis_started: False,
+            SubmissionRecord.llm_analysis_failed: False,
+            SubmissionRecord.llm_failure_reason: None,
+            SubmissionRecord.llm_feedback_failed: None,
+            SubmissionRecord.llm_feedback_failure_reason: None,
+            SubmissionRecord.llm_chunking_failed: False,
+            SubmissionRecord.llm_chunking_failure_reason: None,
+            # Grading re-run also invalidates feedback (submit_to_llm clears it),
+            # so clear both together to keep flags consistent.
+            SubmissionRecord.llm_grading_present: False,
+            SubmissionRecord.llm_prompt_version: None,
+            SubmissionRecord.llm_feedback_present: False,
+            SubmissionRecord.llm_feedback_prompt_version: None,
+            SubmissionRecord.chunks_present: False,
+            SubmissionRecord.chunks_prompt_version: None,
+        },
+        synchronize_session="fetch",
+    )
+
+
+def launch_retry_errors_period_pipeline(
+    period_id: int,
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Retry error records for one period using cached scraped text (soft reset).
+    Unlike ``launch_error_period_pipeline``, this does NOT delete the MongoDB
+    scraped-text document — ``download_and_extract`` skips when the cached
+    asset_id still matches, so only the failed step re-runs.
+    """
+    period: SubmissionPeriodRecord = (
+        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+    )
+    if period is None:
+        current_app.logger.error(
+            f"launch_retry_errors_period_pipeline: SubmissionPeriodRecord #{period_id} not found"
+        )
+        return None
+
+    record_ids = _collect_error_record_ids([period_id])
+    if not record_ids:
+        return None
+
+    _retry_clear_error_flags(record_ids)
+    record_ids = _filter_already_queued(record_ids, "launch_retry_errors_period_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_PERIOD,
+        scope_id=period_id,
+        record_ids=record_ids,
+        clear_existing=False,
+        user=user,
+        description=f"Period (cached retry): {period.display_name}",
+        log_message=f"Launched cached-retry LLM job for error records (period #{period_id}, {len(record_ids)} records)",
+    )
+
+
+def launch_retry_errors_cycle_pipeline(
+    year: int,
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Retry error records for one academic cycle using cached scraped text (soft reset).
+    """
+    period_ids = [
+        row[0]
+        for row in (
+            db.session.query(SubmissionPeriodRecord.id)
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+            .filter(ProjectClassConfig.year == year)
+            .all()
+        )
+    ]
+    if not period_ids:
+        return None
+
+    record_ids = _collect_error_record_ids(period_ids)
+    if not record_ids:
+        return None
+
+    _retry_clear_error_flags(record_ids)
+    record_ids = _filter_already_queued(record_ids, "launch_retry_errors_cycle_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_CYCLE,
+        scope_id=year,
+        record_ids=record_ids,
+        clear_existing=False,
+        user=user,
+        description=f"Cycle (cached retry): {year}/{year + 1}",
+        log_message=f"Launched cached-retry LLM job for error records (cycle {year}, {len(record_ids)} records)",
+    )
+
+
+def launch_retry_errors_global_pipeline(
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Retry all error records globally using cached scraped text (soft reset).
+    """
+    period_ids = [row[0] for row in db.session.query(SubmissionPeriodRecord.id).all()]
+    if not period_ids:
+        return None
+
+    record_ids = _collect_error_record_ids(period_ids)
+    if not record_ids:
+        return None
+
+    _retry_clear_error_flags(record_ids)
+    record_ids = _filter_already_queued(record_ids, "launch_retry_errors_global_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_GLOBAL,
+        scope_id=None,
+        record_ids=record_ids,
+        clear_existing=False,
+        user=user,
+        description="Global (cached retry): all project classes and cycles",
+        log_message=f"Launched global cached-retry LLM job for error records ({len(record_ids)} records)",
     )
 
 

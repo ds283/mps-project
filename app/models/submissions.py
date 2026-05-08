@@ -994,6 +994,31 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # Used to identify records that need the similarity pipeline without re-running LLM analysis.
     similarity_complete = db.Column(db.Boolean(), nullable=False, default=False)
 
+    # Fine-grained pipeline presence flags and version tracking.
+    # Each flag indicates whether the corresponding pipeline output is present at the current
+    # algorithm/prompt version.  Used for idempotency (skip the step if the output is already
+    # current) and for surfacing incomplete pipeline data in the UI.
+    # A None version column means the output was produced before version tracking was introduced
+    # (i.e. by a pre-Phase-2 pipeline run), and the output should be treated as current unless
+    # the corresponding algorithm/prompt constant has been bumped above 1.
+
+    # compute_statistics
+    stats_present = db.Column(db.Boolean(), nullable=False, default=False)
+    stats_algorithm_version = db.Column(db.Integer(), nullable=True, default=None)
+
+    # submit_to_llm (grading + metadata extraction: stated word count, AI declaration,
+    # personal contribution)
+    llm_grading_present = db.Column(db.Boolean(), nullable=False, default=False)
+    llm_prompt_version = db.Column(db.Integer(), nullable=True, default=None)
+
+    # submit_to_llm_feedback
+    llm_feedback_present = db.Column(db.Boolean(), nullable=False, default=False)
+    llm_feedback_prompt_version = db.Column(db.Integer(), nullable=True, default=None)
+
+    # extract_chunks (LLM heading-classification for similarity analysis)
+    chunks_present = db.Column(db.Boolean(), nullable=False, default=False)
+    chunks_prompt_version = db.Column(db.Integer(), nullable=True, default=None)
+
     # LLM pipeline provenance — captured at submission time so past runs can be
     # evaluated if a larger model or larger context window becomes available later.
     llm_model_name = db.Column(db.String(200, collation="utf8_bin"), nullable=True)

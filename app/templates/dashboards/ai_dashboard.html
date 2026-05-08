@@ -198,7 +198,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro status_actions_panel(agg, submit_url, clear_url, clear_errors_url, resubmit_errors_url, level_label, can_launch) %}
+{% macro status_actions_panel(agg, submit_url, clear_url, clear_errors_url, resubmit_errors_url, retry_errors_url, level_label, can_launch) %}
     {# ---- stats badges row ---- #}
     <div class="d-flex flex-row flex-wrap justify-content-between gap-2 align-items-center mb-2">
         <div class="d-flex flex-row flex-wrap justify-content-start gap-2 align-items-center small">
@@ -236,6 +236,12 @@
                     {%- if agg.n_feedback_failed != 1 -%}s{%- endif -%}
                 </span>
             {% endif %}
+            {% if agg.n_chunking_failed > 0 %}
+                <span class="text-warning-emphasis">
+                    <i class="fas fa-puzzle-piece me-1"></i>{{ agg.n_chunking_failed }} chunking error
+                    {%- if agg.n_chunking_failed != 1 -%}s{%- endif -%}
+                </span>
+            {% endif %}
             {% if agg.n_stuck > 0 %}
                 <span class="text-danger">
                     <i class="fas fa-pause-circle me-1"></i>{{ agg.n_stuck }} stalled
@@ -265,17 +271,32 @@
                         <a href="{{ clear_errors_url }}"
                            class="btn btn-outline-secondary"
                            data-bs-toggle="tooltip"
-                           title="Clear error flags on failed records, do not resubmit">
+                           title="Clear LLM error flags on failed records, do not resubmit">
                             <i class="fas fa-eraser me-1"></i>Clear errors
+                        </a>
+                        <a href="{{ retry_errors_url }}"
+                           class="btn btn-outline-secondary"
+                           data-bs-toggle="tooltip"
+                           title="Retry failed records using cached text — faster, does not re-download"
+                           onclick="return confirm('Retry error records for {{ level_label }} using cached scraped text?')">
+                            <i class="fas fa-sync me-1"></i>Retry cached
                         </a>
                         <a href="{{ resubmit_errors_url }}"
                            class="btn btn-outline-danger"
                            data-bs-toggle="tooltip"
-                           title="Clear and resubmit only records with error flags"
-                           onclick="return confirm('Clear error records for {{ level_label }} and resubmit for re-analysis?')">
-                            <i class="fas fa-redo me-1"></i>Clear errors &amp; resubmit
+                           title="Full reset: clear all results and re-download the report from scratch"
+                           onclick="return confirm('Full reset: clear all results for error records in {{ level_label }} and re-run from scratch?')">
+                            <i class="fas fa-redo me-1"></i>Full reset &amp; resubmit
                         </a>
                     </div>
+                {% endif %}
+                {% if agg.n_chunking_failed > 0 %}
+                    <span class="small text-body-secondary">
+                        <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                        {{ agg.n_chunking_failed }} chunking error{{ 's' if agg.n_chunking_failed != 1 }} —
+                        manage from the
+                        <a href="{{ url_for('dashboards.similarity_dashboard') }}">Similarity Dashboard</a>
+                    </span>
                 {% endif %}
             </div>
         {% else %}
@@ -443,12 +464,19 @@
                                title="Clear error flags on all failed records, do not resubmit">
                                 <i class="fas fa-eraser me-1"></i>Clear all errors
                             </a>
+                            <a href="{{ url_for('dashboards.retry_errors_global') }}"
+                               class="btn btn-outline-secondary"
+                               data-bs-toggle="tooltip"
+                               title="Retry all failed records using cached text — does not re-download"
+                               onclick="return confirm('Retry all error records globally using cached scraped text?')">
+                                <i class="fas fa-sync me-1"></i>Retry all cached
+                            </a>
                             <a href="{{ url_for('dashboards.resubmit_errors_global') }}"
                                class="btn btn-outline-danger"
                                data-bs-toggle="tooltip"
-                               title="Clear and resubmit all records with error flags globally"
-                               onclick="return confirm('Clear all error records globally and resubmit for re-analysis?')">
-                                <i class="fas fa-redo me-1"></i>Clear all errors &amp; resubmit
+                               title="Full reset: clear all results and re-download from scratch"
+                               onclick="return confirm('Full reset: clear all results for error records globally and re-run from scratch?')">
+                                <i class="fas fa-redo me-1"></i>Full reset &amp; resubmit all
                             </a>
                         </div>
                     </div>
@@ -462,6 +490,138 @@
                 <i class="fas fa-info-circle me-2"></i>
                 No submission data found for the selected filters. Try adjusting your project class or cycle selection.
             </div>
+        {% endif %}
+
+        {# ---- pipeline health tiles (summed across all visible cycles) ---- #}
+        {% if sections %}
+            {% set g = namespace(
+                n_total=0, n_complete=0, n_missing=0,
+                n_analysis_failed=0, n_feedback_failed=0, n_chunking_failed=0,
+                n_stats_missing=0, n_grading_missing=0, n_feedback_missing=0, n_chunks_missing=0
+            ) %}
+            {% for section in sections %}
+                {% set g.n_total = g.n_total + section.cycle_agg.n_total %}
+                {% set g.n_complete = g.n_complete + section.cycle_agg.n_complete %}
+                {% set g.n_missing = g.n_missing + section.cycle_agg.n_missing %}
+                {% set g.n_analysis_failed = g.n_analysis_failed + section.cycle_agg.n_analysis_failed %}
+                {% set g.n_feedback_failed = g.n_feedback_failed + section.cycle_agg.n_feedback_failed %}
+                {% set g.n_chunking_failed = g.n_chunking_failed + section.cycle_agg.n_chunking_failed %}
+                {% set g.n_stats_missing = g.n_stats_missing + section.cycle_agg.n_stats_missing %}
+                {% set g.n_grading_missing = g.n_grading_missing + section.cycle_agg.n_grading_missing %}
+                {% set g.n_feedback_missing = g.n_feedback_missing + section.cycle_agg.n_feedback_missing %}
+                {% set g.n_chunks_missing = g.n_chunks_missing + section.cycle_agg.n_chunks_missing %}
+            {% endfor %}
+            {% set n_errors = g.n_analysis_failed + g.n_feedback_failed + g.n_chunking_failed %}
+            {% set n_gaps = g.n_stats_missing + g.n_grading_missing + g.n_feedback_missing + g.n_chunks_missing %}
+            {% if n_errors > 0 or n_gaps > 0 or g.n_missing > 0 %}
+                <div class="card border-0 shadow-sm mb-4" style="border-left: 3px solid var(--db-blue-200) !important;">
+                    <div class="card-header py-2 small fw-semibold"
+                         style="background-color: var(--db-blue-50); color: var(--db-blue-800); border-bottom: 1px solid var(--db-blue-200);">
+                        <i class="fas fa-heartbeat me-1"></i> Pipeline health
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-xl-6 g-3">
+
+                            {# not-yet-started / in-progress #}
+                            {% if g.n_missing > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm" style="background-color: var(--db-blue-50);">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold" style="color: var(--db-blue-800);">{{ g.n_missing }}</div>
+                                            <div class="small" style="color: var(--db-blue-600);">Awaiting analysis</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# missing stats (complete records, stats absent) #}
+                            {% if g.n_stats_missing > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-warning">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-warning-emphasis">{{ g.n_stats_missing }}</div>
+                                            <div class="small text-warning-emphasis">Stats missing</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# missing grading #}
+                            {% if g.n_grading_missing > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-warning">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-warning-emphasis">{{ g.n_grading_missing }}</div>
+                                            <div class="small text-warning-emphasis">Grading missing</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# missing feedback #}
+                            {% if g.n_feedback_missing > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-warning">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-warning-emphasis">{{ g.n_feedback_missing }}</div>
+                                            <div class="small text-warning-emphasis">Feedback missing</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# missing chunks #}
+                            {% if g.n_chunks_missing > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-warning">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-warning-emphasis">{{ g.n_chunks_missing }}</div>
+                                            <div class="small text-warning-emphasis">Chunks missing</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# LLM analysis errors #}
+                            {% if g.n_analysis_failed > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-danger">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-danger">{{ g.n_analysis_failed }}</div>
+                                            <div class="small text-danger">Analysis error{{ 's' if g.n_analysis_failed != 1 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# LLM feedback errors #}
+                            {% if g.n_feedback_failed > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-danger">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-danger">{{ g.n_feedback_failed }}</div>
+                                            <div class="small text-danger">Feedback error{{ 's' if g.n_feedback_failed != 1 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {# chunking errors #}
+                            {% if g.n_chunking_failed > 0 %}
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm border-danger">
+                                        <div class="card-body text-center py-3">
+                                            <div class="fs-3 fw-bold text-danger">{{ g.n_chunking_failed }}</div>
+                                            <div class="small text-danger">Chunking error{{ 's' if g.n_chunking_failed != 1 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
         {% endif %}
 
         {# ---- per-cycle sections ---- #}
@@ -489,6 +649,7 @@
                         url_for('dashboards.clear_cycle', year=section.year),
                         url_for('dashboards.clear_errors_cycle', year=section.year),
                         url_for('dashboards.resubmit_errors_cycle', year=section.year),
+                        url_for('dashboards.retry_errors_cycle', year=section.year),
                         'cycle ' ~ section.label,
                         section.can_launch_cycle
                     ) }}
@@ -547,6 +708,7 @@
                                         url_for('dashboards.clear_period', period_id=sub.period.id),
                                         url_for('dashboards.clear_errors_period', period_id=sub.period.id),
                                         url_for('dashboards.resubmit_errors_period', period_id=sub.period.id),
+                                        url_for('dashboards.retry_errors_period', period_id=sub.period.id),
                                         sub.period.display_name,
                                         sub.can_launch
                                     ) }}
@@ -581,6 +743,7 @@
                                     url_for('dashboards.clear_cycle', year=section.year),
                                     url_for('dashboards.clear_errors_cycle', year=section.year),
                                     url_for('dashboards.resubmit_errors_cycle', year=section.year),
+                                    url_for('dashboards.retry_errors_cycle', year=section.year),
                                     'cycle ' ~ section.label,
                                     section.can_launch_cycle
                                 ) }}

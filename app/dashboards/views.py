@@ -65,6 +65,9 @@ from ..tasks.llm_orchestration import (
     launch_global_pipeline,
     launch_pclass_pipeline,
     launch_period_pipeline,
+    launch_retry_errors_cycle_pipeline,
+    launch_retry_errors_global_pipeline,
+    launch_retry_errors_period_pipeline,
     launch_similarity_only_pipeline,
     set_pipeline_paused,
 )
@@ -671,12 +674,19 @@ def _aggregate_records(records: List[SubmissionRecord], inflight_ids: set = None
     n_ai_flagged = 0
     n_analysis_failed = 0
     n_feedback_failed = 0
+    n_chunking_failed = 0
+    n_stats_missing = 0
+    n_grading_missing = 0
+    n_feedback_missing = 0
+    n_chunks_missing = 0
 
     for record in records:
         if record.llm_analysis_failed:
             n_analysis_failed += 1
         if record.llm_feedback_failed:
             n_feedback_failed += 1
+        if record.llm_chunking_failed:
+            n_chunking_failed += 1
 
         if not record.language_analysis_complete:
             n_missing += 1
@@ -688,6 +698,16 @@ def _aggregate_records(records: List[SubmissionRecord], inflight_ids: set = None
             ):
                 n_stuck += 1
             continue
+
+        # Count fine-grained missing outputs for complete records
+        if not record.stats_present:
+            n_stats_missing += 1
+        if not record.llm_grading_present:
+            n_grading_missing += 1
+        if not record.llm_feedback_present:
+            n_feedback_missing += 1
+        if not record.chunks_present and not record.llm_chunking_failed:
+            n_chunks_missing += 1
 
         la = record.language_analysis_data
         metrics = la.get("metrics", {})
@@ -743,6 +763,11 @@ def _aggregate_records(records: List[SubmissionRecord], inflight_ids: set = None
         "n_ai_flagged": n_ai_flagged,
         "n_analysis_failed": n_analysis_failed,
         "n_feedback_failed": n_feedback_failed,
+        "n_chunking_failed": n_chunking_failed,
+        "n_stats_missing": n_stats_missing,
+        "n_grading_missing": n_grading_missing,
+        "n_feedback_missing": n_feedback_missing,
+        "n_chunks_missing": n_chunks_missing,
     }
     for key in metric_values:
         result[key] = _stats(metric_values[key])
@@ -1563,6 +1588,67 @@ def resubmit_errors_global():
         flash("No records with error flags were found.", "info")
     else:
         flash(f"Cleared and queued {job.total_count} error record(s) for re-analysis.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/retry_errors_cycle/<int:year>")
+@roles_accepted("admin", "root")
+def retry_errors_cycle(year: int):
+    """Retry error records for one academic cycle using cached scraped text."""
+    try:
+        job = launch_retry_errors_cycle_pipeline(year=year, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while retrying error records with cached data.", "error")
+        current_app.logger.exception("LLM cached-retry resubmit failed", exc_info=exc)
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No records with error flags were found for this cycle.", "info")
+    else:
+        flash(f"Queued {job.total_count} error record(s) for cached retry.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/retry_errors_period/<int:period_id>")
+@roles_accepted("faculty", "admin", "root")
+def retry_errors_period(period_id: int):
+    """Retry error records for one period using cached scraped text (soft reset)."""
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    pclass = period.config.project_class if period.config else None
+
+    if not _can_launch_orchestration(pclass):
+        flash("You do not have permission to launch analysis tasks for this period.", "error")
+        return redirect(redirect_url())
+
+    try:
+        job = launch_retry_errors_period_pipeline(period_id=period_id, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while retrying error records with cached data.", "error")
+        current_app.logger.exception("LLM cached-retry resubmit failed", exc_info=exc)
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No records with error flags were found for this period.", "info")
+    else:
+        flash(f"Queued {job.total_count} error record(s) for cached retry.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/retry_errors_global")
+@roles_accepted("admin", "root")
+def retry_errors_global():
+    """Retry all error records globally using cached scraped text (soft reset)."""
+    try:
+        job = launch_retry_errors_global_pipeline(user=current_user)
+    except Exception as exc:
+        flash("An error occurred while retrying error records with cached data.", "error")
+        current_app.logger.exception("LLM global cached-retry resubmit failed", exc_info=exc)
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No records with error flags were found.", "info")
+    else:
+        flash(f"Queued {job.total_count} error record(s) for cached retry.", "success")
     return redirect(redirect_url())
 
 

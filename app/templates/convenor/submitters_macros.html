@@ -189,6 +189,19 @@
                             <i class="fas fa-exclamation-triangle fa-fw"></i> Chunking failed
                         </span>
                     {% endif %}
+                    {# Warning indicator: analysis complete but fine-grained outputs missing #}
+                    {% set n_missing_outputs = (0 if r.stats_present else 1)
+                        + (0 if r.llm_grading_present else 1)
+                        + (0 if r.llm_feedback_present else 1)
+                        + (0 if (r.chunks_present or r.llm_chunking_failed) else 1) %}
+                    {% if n_missing_outputs > 0 %}
+                        <a href="{{ url_for('documents.llm_report', record_id=r.id, url=url_for('convenor.submitters', id=pclass.id), text='convenor submitters view') }}"
+                           class="badge bg-warning-subtle text-warning-emphasis border border-warning text-decoration-none"
+                           title="{{ n_missing_outputs }} pipeline output{{ 's' if n_missing_outputs != 1 else '' }} missing — click for details and resubmission options">
+                            <i class="fas fa-exclamation-triangle fa-fw"></i>
+                            {{ n_missing_outputs }} output{{ 's' if n_missing_outputs != 1 else '' }} missing
+                        </a>
+                    {% endif %}
                     {# Documents link #}
                     <a class="btn btn-xs btn-outline-secondary"
                        href="{{ url_for('documents.submitter_documents', sid=r.id, url=url_for('convenor.submitters', id=pclass.id), text='Submitters') }}">

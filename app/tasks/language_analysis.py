@@ -61,6 +61,10 @@ from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_
 
 PROMPT_VERSION = 1
 
+# Bump STATS_ALGORITHM_VERSION when the compute_statistics logic changes in a way
+# that would produce materially different output from the same input text.
+STATS_ALGORITHM_VERSION = 1
+
 
 def _prompt_hash(prompt: str) -> str:
     return hashlib.sha256(prompt.encode()).hexdigest()[:12]
@@ -1673,6 +1677,19 @@ def register_language_analysis_tasks(celery):
             )
 
         asset = record.report
+
+        # Idempotency check: skip download if MongoDB already has current scraped
+        # text for this exact asset.  The uploaded asset is immutable, so a matching
+        # asset_id means the cached text is still valid.
+        cached = get_scraped_text(record_id)
+        if cached is not None and cached.get("asset_id") == asset.id:
+            current_app.logger.info(
+                f"language_analysis.download_and_extract: record #{record_id} — "
+                f"scraped text cache is current (asset_id={asset.id}); skipping download"
+            )
+            record_step_end(_r, record_id, "download_and_extract", _t0)
+            return
+
         storage = current_app.config["OBJECT_STORAGE_ASSETS"]
         adapter = AssetCloudAdapter(
             asset,
@@ -1786,6 +1803,15 @@ def register_language_analysis_tasks(celery):
             raise Exception(
                 f"language_analysis.compute_statistics: SubmissionRecord #{record_id} not found"
             )
+
+        # Idempotency check: skip if statistics are already present at the current version
+        if record.stats_present and record.stats_algorithm_version == STATS_ALGORITHM_VERSION:
+            current_app.logger.info(
+                f"language_analysis.compute_statistics: skipping record #{record_id} — "
+                f"stats already present at algorithm_version={STATS_ALGORITHM_VERSION}"
+            )
+            record_step_end(_r, record_id, "compute_statistics", _t0)
+            return
 
         data = record.language_analysis_data
         _cached = get_scraped_text(record_id)
@@ -1964,6 +1990,8 @@ def register_language_analysis_tasks(celery):
         data["patterns"] = patterns_info
         data["errors"] = errors
         record.set_language_analysis_data(data)
+        record.stats_present = True
+        record.stats_algorithm_version = STATS_ALGORITHM_VERSION
 
         try:
             db.session.commit()
@@ -2037,9 +2065,22 @@ def register_language_analysis_tasks(celery):
             current_app.logger.info(
                 f"language_analysis.submit_to_llm: skipping record #{record_id} — llm_analysis_failed is set"
             )
+            record_step_end(_r, record_id, "submit_to_llm", _t0)
             return
 
         data = record.language_analysis_data
+
+        # Idempotency check: skip if a grading result is already present at the current
+        # prompt version.  Bumping PROMPT_VERSION in code is the mechanism to force
+        # re-grading across all records.
+        if record.llm_grading_present and record.llm_prompt_version == PROMPT_VERSION:
+            current_app.logger.info(
+                f"language_analysis.submit_to_llm: skipping record #{record_id} — "
+                f"grading result already present at prompt_version={PROMPT_VERSION}"
+            )
+            record_step_end(_r, record_id, "submit_to_llm", _t0)
+            return
+
         _cached = get_scraped_text(record_id)
         raw_text: str = _cached["scraped_text"] if _cached else ""
 
@@ -2132,6 +2173,10 @@ def register_language_analysis_tasks(celery):
             data["flags"] = _flags
 
             data["errors"] = errors
+            data["prompt_version"] = PROMPT_VERSION
+            # Clear any stale feedback from a previous run; feedback must re-run
+            # against the fresh grading result.
+            data.pop("llm_feedback", None)
             record = db.session.get(SubmissionRecord, record_id)
             if record is None:
                 raise Exception(
@@ -2139,6 +2184,10 @@ def register_language_analysis_tasks(celery):
                 )
             record.llm_model_name = model
             record.llm_context_size = context_size
+            record.llm_grading_present = True
+            record.llm_prompt_version = PROMPT_VERSION
+            record.llm_feedback_present = False
+            record.llm_feedback_prompt_version = None
             record.set_language_analysis_data(data)
             try:
                 db.session.commit()
@@ -2513,9 +2562,16 @@ def register_language_analysis_tasks(celery):
                 for band_idx, band in enumerate(rubric_snap._bands, start=1)
                 for crit_idx, c in enumerate(band["criteria"], start=1)
             }
+            # Clear any stale feedback from a previous grading run; feedback must
+            # re-run against the fresh grading result.
+            data.pop("llm_feedback", None)
             # Clean up intermediate chunking state.
             data.pop("_llm_chunks", None)
             data.pop("_llm_metadata", None)
+            record.llm_grading_present = True
+            record.llm_prompt_version = PROMPT_VERSION
+            record.llm_feedback_present = False
+            record.llm_feedback_prompt_version = None
         else:
             failure_reason = (
                 f"{last_exc} (~{est_tok} est. input tokens)" if last_exc else "Unknown error"
@@ -2599,6 +2655,17 @@ def register_language_analysis_tasks(celery):
         if record.llm_feedback_failed:
             current_app.logger.info(
                 f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — llm_feedback_failed is set"
+            )
+            record_step_end(_r, record_id, "submit_to_llm_feedback", _t0)
+            return
+
+        # Idempotency check: skip if feedback is already present at the current prompt version.
+        # Note: submit_to_llm clears llm_feedback_present whenever grading re-runs, ensuring
+        # feedback is always regenerated after a grading change.
+        if record.llm_feedback_present and record.llm_feedback_prompt_version == PROMPT_VERSION:
+            current_app.logger.info(
+                f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — "
+                f"feedback already present at prompt_version={PROMPT_VERSION}"
             )
             record_step_end(_r, record_id, "submit_to_llm_feedback", _t0)
             return
@@ -2709,6 +2776,8 @@ def register_language_analysis_tasks(celery):
             # three-way semantics: None = not yet run, False = succeeded, True = failed.
             record.llm_feedback_failed = False
             record.llm_feedback_failure_reason = None
+            record.llm_feedback_present = True
+            record.llm_feedback_prompt_version = PROMPT_VERSION
         else:
             failure_reason = (
                 f"{last_exc} (~{est_tok} est. input tokens)" if last_exc else "Unknown error"

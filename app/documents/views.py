@@ -428,6 +428,193 @@ def clear_llm_failure(sid):
     return redirect(redirect_url())
 
 
+@documents.route("/retry_language_analysis/<int:sid>")
+@login_required
+def retry_language_analysis(sid):
+    """
+    Retry language analysis using cached scraped text, without a full reset.
+    Clears error and presence flags for the failed step only, then re-dispatches
+    the pipeline. MongoDB scraped text is preserved so download_and_extract skips.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_admin(current_user):
+        flash("Only administrators can retry language analysis.", "error")
+        return redirect(redirect_url())
+
+    if record.report is None:
+        flash(
+            "Could not retry language analysis because no report has been uploaded for this submitter.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    # Clear only the error flags and presence flags for failed steps so the
+    # idempotency guards in the pipeline treat them as needing re-execution.
+    # Scraped text and any successful outputs remain in place.
+    record.language_analysis_started = False
+    if record.llm_analysis_failed:
+        record.llm_analysis_failed = False
+        record.llm_failure_reason = None
+        record.llm_grading_present = False
+        record.llm_prompt_version = None
+        # Grading re-run will clear feedback, so invalidate it here too
+        record.llm_feedback_present = False
+        record.llm_feedback_prompt_version = None
+    if record.llm_feedback_failed:
+        record.llm_feedback_failed = False
+        record.llm_feedback_present = False
+        record.llm_feedback_prompt_version = None
+    if record.llm_chunking_failed:
+        record.llm_chunking_failed = False
+        record.chunks_present = False
+        record.chunks_prompt_version = None
+
+    from ..tasks.llm_orchestration import enqueue_single_record
+
+    try:
+        log_db_commit(
+            "Cleared LLM error flags for retry with cached data",
+            project_classes=record.owner.config.project_class,
+        )
+        enqueue_single_record(record.id, user=current_user, clear_existing=False)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            "A database error was encountered while retrying language analysis. Please contact an administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@documents.route("/resubmit_stats/<int:sid>")
+@login_required
+def resubmit_stats(sid):
+    """Clear the stats presence flag and resubmit through the full pipeline (cached)."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_admin(current_user):
+        flash("Only administrators can resubmit pipeline steps.", "error")
+        return redirect(redirect_url())
+
+    record.stats_present = False
+    record.stats_algorithm_version = None
+    record.language_analysis_started = False
+
+    from ..tasks.llm_orchestration import enqueue_single_record
+
+    try:
+        log_db_commit(
+            "Cleared stats presence flag for targeted resubmission",
+            project_classes=record.owner.config.project_class,
+        )
+        enqueue_single_record(record.id, user=current_user, clear_existing=False)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("A database error was encountered. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@documents.route("/resubmit_grading/<int:sid>")
+@login_required
+def resubmit_grading(sid):
+    """Clear the grading (and feedback) presence flags and resubmit through the full pipeline (cached)."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_admin(current_user):
+        flash("Only administrators can resubmit pipeline steps.", "error")
+        return redirect(redirect_url())
+
+    record.llm_grading_present = False
+    record.llm_prompt_version = None
+    # Grading re-run will clear feedback via submit_to_llm; invalidate here for consistency
+    record.llm_feedback_present = False
+    record.llm_feedback_prompt_version = None
+    record.language_analysis_started = False
+
+    from ..tasks.llm_orchestration import enqueue_single_record
+
+    try:
+        log_db_commit(
+            "Cleared grading presence flag for targeted resubmission",
+            project_classes=record.owner.config.project_class,
+        )
+        enqueue_single_record(record.id, user=current_user, clear_existing=False)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("A database error was encountered. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@documents.route("/resubmit_feedback/<int:sid>")
+@login_required
+def resubmit_feedback(sid):
+    """Clear the feedback presence flag and resubmit through the full pipeline (cached)."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_admin(current_user):
+        flash("Only administrators can resubmit pipeline steps.", "error")
+        return redirect(redirect_url())
+
+    record.llm_feedback_present = False
+    record.llm_feedback_prompt_version = None
+    record.language_analysis_started = False
+
+    from ..tasks.llm_orchestration import enqueue_single_record
+
+    try:
+        log_db_commit(
+            "Cleared feedback presence flag for targeted resubmission",
+            project_classes=record.owner.config.project_class,
+        )
+        enqueue_single_record(record.id, user=current_user, clear_existing=False)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("A database error was encountered. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@documents.route("/resubmit_chunks/<int:sid>")
+@login_required
+def resubmit_chunks(sid):
+    """Clear the chunks presence flag, reset similarity state, and resubmit (cached)."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_admin(current_user):
+        flash("Only administrators can resubmit pipeline steps.", "error")
+        return redirect(redirect_url())
+
+    record.chunks_present = False
+    record.chunks_prompt_version = None
+    record.similarity_complete = False
+    record.llm_chunking_failed = False
+    record.llm_chunking_failure_reason = None
+    record.language_analysis_started = False
+
+    from ..tasks.llm_orchestration import enqueue_single_record
+
+    try:
+        log_db_commit(
+            "Cleared chunks presence flag for targeted resubmission",
+            project_classes=record.owner.config.project_class,
+        )
+        enqueue_single_record(record.id, user=current_user, clear_existing=False)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("A database error was encountered. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
 @documents.route("/delete_submitter_report/<int:sid>")
 @login_required
 def delete_submitter_report(sid):

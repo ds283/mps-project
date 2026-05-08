@@ -186,6 +186,12 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     processed report from the object store and its MongoDB cached documents.
     Does NOT commit the session.
     """
+    # Load the lazy relationship while the session is still clean.  Accessing it
+    # after dirtying the record would trigger an SQLAlchemy autoflush, which would
+    # try to UPDATE all pending changes before issuing the SELECT — and that UPDATE
+    # can race with worker transactions holding row locks on submission_records.
+    old_processed_report = record.processed_report
+
     record.language_analysis = None
     record.language_analysis_started = False
     record.language_analysis_complete = False
@@ -213,8 +219,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     from ..shared.scraped_text_store import delete_scraped_text
     delete_scraped_text(record.id)
 
-    if record.processed_report is not None:
-        old_asset = record.processed_report
+    if old_processed_report is not None:
         record.processed_report_id = None
         record.celery_finished = False
         record.celery_failed = False
@@ -222,7 +227,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
             object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
             if object_store is not None:
                 object_store.delete(
-                    old_asset.unique_name,
+                    old_processed_report.unique_name,
                     audit_data="llm_orchestration._clear_record_state",
                 )
         except Exception as exc:
@@ -230,7 +235,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
                 f"llm_orchestration: could not delete processed report asset "
                 f"for SubmissionRecord #{record.id}: {exc}"
             )
-        db.session.delete(old_asset)
+        db.session.delete(old_processed_report)
 
 
 def _reset_record_flags_only(record: SubmissionRecord) -> None:
@@ -389,15 +394,6 @@ def _create_and_dispatch_job(
     )
     db.session.add(job)
     db.session.flush()
-    if clear_existing and record_ids:
-        records = db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(record_ids)).all()
-        for record in records:
-            _clear_record_state(record)
-        try:
-            db.session.flush()
-        except SQLAlchemyError:
-            db.session.rollback()
-            raise
     _populate_redis_queue(job, record_ids)
     try:
         log_db_commit(log_message, **log_db_commit_kwargs)
@@ -1621,7 +1617,14 @@ def register_llm_orchestration_tasks(celery):
                 continue
 
             # ------- prepare record for (re-)submission -------
-            if job.similarity_only:
+            if job.clear_existing and not job.similarity_only:
+                # Full state wipe requested: clear all flags, presence columns,
+                # language_analysis blob, processed report asset, and MongoDB cache.
+                # Done here (per-record, one commit at a time) rather than upfront in
+                # _create_and_dispatch_job to avoid bulk lock contention with running workers.
+                _clear_record_state(record)
+                record.language_analysis_started = True  # mark in-progress after full wipe
+            elif job.similarity_only:
                 # Similarity-only job: preserve LLM analysis flags; only reset
                 # similarity_complete so the similarity chain runs from scratch.
                 record.similarity_complete = False

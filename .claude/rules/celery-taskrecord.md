@@ -21,3 +21,11 @@ terminal state (`SUCCESS`, `FAILURE`, or `TERMINATED`).
 - The `task_failure` and `task_revoked` Celery signals in `make_celery.py` act as a catch-all
   safety net for directly-launched tasks (where Celery task_id == TaskRecord UUID), but do not
   cover tasks inside replacement chains.
+
+## Key symbols
+
+| Symbol | Defined in | Notes |
+|---|---|---|
+| `register_task()` | `app/task_queue/background_task.py` | Decorator; creates and registers a `TaskRecord` |
+| `progress_update()` | `app/task_queue/background_task.py` | Updates `TaskRecord` state, progress, and message |
+| `TaskRecord` | `app/models/utilities.py` (export: `app/models`) | Import as `from ..models import TaskRecord` |

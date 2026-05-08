@@ -1,3 +1,8 @@
+---
+paths:
+  - app/tasks/**
+---
+
 # Pipeline step instrumentation
 
 ## Overview

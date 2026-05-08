@@ -5,12 +5,11 @@ paths:
 
 # AJAX endpoints and DataTables
 
-## View pattern
-
-Inspector views that are lists should use a DataTables front end backed by an AJAX endpoint. Implement
-AJAX row formatters in `app/ajax/convenor`.
-
 ## Handler selection
+
+Both handlers are defined in `app/tools/ServerSideProcessing.py` and exported from `app/tools`.
+Import via `from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler`. They are context
+managers; see `app/tools/ServerSideProcessing.py` for full signatures.
 
 - Use `ServerSideSQLHandler` where a single SQL query can satisfy all sorting, searching, and pagination
   requirements.

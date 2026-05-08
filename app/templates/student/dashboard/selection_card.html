@@ -50,7 +50,7 @@
         {% endcall %}
         {% if has_custom_offers %}
             {% call icon_block("info-circle", extra_classes='mt-3') %}
-                {% if sel.has_submitted and sel.has_accepted_offer() %}
+                {% if sel.has_submitted and sel.has_accepted_offers() %}
                     <div><strong>You have accepted a custom offer.</strong></div>
                 {% else %}
                     <div><strong>You have custom offers available.</strong></div>

@@ -167,13 +167,13 @@
                     </a>
                     <a href="{{ url_for('dashboards.resubmit_chunking_errors_global') }}"
                        class="btn btn-sm btn-outline-db-orange"
-                       onclick="return confirm('Clear chunking error flags and resubmit affected records for similarity analysis?')">
-                        <i class="fas fa-redo me-1"></i>Clear &amp; resubmit
+                       onclick="return confirm('Drop cached chunks and resubmit affected records for similarity analysis?')">
+                        <i class="fas fa-redo me-1"></i>Drop cache &amp; resubmit similarity
                     </a>
                     <a href="{{ url_for('dashboards.launch_similarity_rebuild_missing') }}"
                        class="btn btn-sm btn-outline-db-orange"
                        onclick="return confirm('Queue similarity analysis for all reports that completed LLM analysis but have not yet had similarity checked?')">
-                        <i class="fas fa-search me-1"></i>Run missing
+                        <i class="fas fa-sync me-1"></i>Retry cached
                     </a>
                     <a href="{{ url_for('dashboards.launch_similarity_rebuild_global') }}"
                        class="btn btn-sm btn-db-orange"
@@ -185,9 +185,11 @@
         </div>
 
         {# ---- active jobs panel (shared with AI dashboard) ---- #}
-        {% with panel_colour_ramp="orange", panel_back_url=url_for('dashboards.similarity_dashboard',
-            tenant_id=selected_tenant.id, pclass_id=selected_pclass_ids,
-            year=selected_years, status=status_filter, chunk_type=selected_chunk_type) %}
+        {% with panel_colour_ramp="orange",
+                panel_back_url=url_for('dashboards.similarity_dashboard',
+                    tenant_id=selected_tenant.id, pclass_id=selected_pclass_ids,
+                    year=selected_years, status=status_filter, chunk_type=selected_chunk_type),
+                pipeline_paused=pipeline_paused %}
             {% include "dashboards/_active_jobs_panel.html" %}
         {% endwith %}
 

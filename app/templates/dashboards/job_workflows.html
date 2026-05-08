@@ -25,7 +25,7 @@
                  style="background-color: var(--db-blue-50); border-bottom: 1px solid var(--db-blue-200); color: var(--db-blue-800);">
                 <i class="fas fa-tasks fa-fw"></i>
                 <span class="fw-semibold">Job summary</span>
-                <span class="badge ms-auto bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+                <span class="badge ms-auto bg-{{ job.status_colour }}-subtle text-{{ job.status_colour }}-emphasis">{{ job.status_label }}</span>
             </div>
             <div class="card-body">
                 <dl class="row mb-0 small">
@@ -53,10 +53,10 @@
         {# ---- step badge legend ---- #}
         <div class="d-flex align-items-center gap-2 mb-3 small text-body-secondary flex-wrap">
             <span class="fw-semibold me-1">Step state:</span>
-            <span class="badge bg-success bg-opacity-75">Complete</span>
-            <span class="badge bg-warning text-dark">In progress</span>
-            <span class="badge bg-danger bg-opacity-75">Error</span>
-            <span class="badge bg-secondary bg-opacity-50">Not started</span>
+            <span class="badge bg-success-subtle text-success-emphasis">Complete</span>
+            <span class="badge bg-warning-subtle text-warning-emphasis">In progress</span>
+            <span class="badge bg-danger-subtle text-danger-emphasis">Error</span>
+            <span class="badge bg-secondary-subtle text-body-secondary">Not started</span>
         </div>
 
         {# ---- in-flight records ---- #}
@@ -113,27 +113,27 @@
                                                 {% if step_entry.found %}
                                                     {% set s = step_entry.found %}
                                                     {% if s.error %}
-                                                        <span class="badge bg-danger bg-opacity-75"
+                                                        <span class="badge bg-danger-subtle text-danger-emphasis"
                                                               data-bs-toggle="tooltip"
                                                               title="{{ s.name }}: {{ s.error }}">
                                                             {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
                                                         </span>
                                                     {% elif s.elapsed_ms is not none %}
                                                         {% set secs = (s.elapsed_ms / 1000) | round(1) %}
-                                                        <span class="badge bg-success bg-opacity-75"
+                                                        <span class="badge bg-success-subtle text-success-emphasis"
                                                               data-bs-toggle="tooltip"
                                                               title="{{ s.name }}: {{ secs }}s">
                                                             {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
                                                         </span>
                                                     {% else %}
-                                                        <span class="badge bg-warning text-dark"
+                                                        <span class="badge bg-warning-subtle text-warning-emphasis"
                                                               data-bs-toggle="tooltip"
                                                               title="{{ s.name }}: in progress">
                                                             {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
                                                         </span>
                                                     {% endif %}
                                                 {% else %}
-                                                    <span class="badge bg-secondary bg-opacity-25 text-body-secondary"
+                                                    <span class="badge bg-secondary-subtle text-body-secondary"
                                                           data-bs-toggle="tooltip"
                                                           title="{{ sname }}: not started">
                                                         {{ sname | replace('_', ' ') | truncate(12, True, '…') }}
@@ -222,7 +222,7 @@
                                                 {% if step_entry.found %}
                                                     {% set s = step_entry.found %}
                                                     {% if s.error %}
-                                                        <span class="badge bg-danger bg-opacity-75"
+                                                        <span class="badge bg-danger-subtle text-danger-emphasis"
                                                               data-bs-toggle="tooltip"
                                                               title="{{ s.name }}: {{ s.error }}">
                                                             {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
@@ -230,13 +230,13 @@
                                                     {% else %}
                                                         {% if s.elapsed_ms is not none %}
                                                             {% set secs = (s.elapsed_ms / 1000) | round(1) %}
-                                                            <span class="badge bg-success bg-opacity-75"
+                                                            <span class="badge bg-success-subtle text-success-emphasis"
                                                                   data-bs-toggle="tooltip"
                                                                   title="{{ s.name }}: {{ secs }}s">
                                                                 {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
                                                             </span>
                                                         {% else %}
-                                                            <span class="badge bg-secondary bg-opacity-50 text-body-secondary"
+                                                            <span class="badge bg-secondary-subtle text-body-secondary"
                                                                   data-bs-toggle="tooltip"
                                                                   title="{{ s.name }}: no timing data">
                                                                 {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
@@ -244,7 +244,7 @@
                                                         {% endif %}
                                                     {% endif %}
                                                 {% else %}
-                                                    <span class="badge bg-secondary bg-opacity-25 text-body-secondary"
+                                                    <span class="badge bg-secondary-subtle text-body-secondary"
                                                           data-bs-toggle="tooltip"
                                                           title="{{ sname }}: not executed">
                                                         {{ sname | replace('_', ' ') | truncate(12, True, '…') }}

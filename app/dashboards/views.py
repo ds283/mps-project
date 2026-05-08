@@ -2800,6 +2800,7 @@ def similarity_dashboard():
 
     # ---- summary stat cards -------------------------------------------------
     summary = _similarity_dashboard_summary()
+    pipeline_paused: bool = is_pipeline_paused()
 
     return render_template_context(
         "dashboards/similarity_dashboard.html",
@@ -2815,6 +2816,7 @@ def similarity_dashboard():
         summary=summary,
         active_jobs=active_jobs,
         avg_seconds_per_record=avg_seconds_per_record,
+        pipeline_paused=pipeline_paused,
         can_launch=_can_launch_similarity_rebuild(),
     )
 

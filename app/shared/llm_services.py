@@ -108,6 +108,7 @@ def _call_llm(
 
             finish_reason: str | None = None
             usage: dict | None = None
+            seen_done = False
             for line in resp.iter_lines():
                 if not line:
                     continue
@@ -116,6 +117,7 @@ def _call_llm(
                     continue
                 payload = line_str[6:]
                 if payload.strip() == "[DONE]":
+                    seen_done = True
                     break
                 try:
                     chunk_data = json.loads(payload)
@@ -141,6 +143,11 @@ def _call_llm(
                     f"{label}: token usage — prompt={usage.get('prompt_tokens')} "
                     f"completion={usage.get('completion_tokens')} "
                     f"total={usage.get('total_tokens')}"
+                )
+            if not seen_done:
+                current_app.logger.warning(
+                    f"{label}: stream ended without [DONE] marker on attempt {attempt + 1}; "
+                    f"accumulated_len={len(accumulated)} finish_reason={finish_reason!r}"
                 )
             if finish_reason == "length":
                 raise ValueError(
@@ -177,8 +184,17 @@ def _call_llm(
 
         except (json.JSONDecodeError, ValueError) as exc:
             last_exc = exc
+            _tail = accumulated[-300:] if len(accumulated) > 300 else accumulated
+            _usage_str = (
+                f" prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')}"
+                if usage else ""
+            )
             current_app.logger.warning(
-                f"{label}: JSON parse failure on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
+                f"{label}: JSON parse failure on attempt {attempt + 1} "
+                f"(~{est_input_tokens} est. input tokens): {exc}\n"
+                f"  seen_done={seen_done} finish_reason={finish_reason!r} "
+                f"accumulated_len={len(accumulated)}{_usage_str}\n"
+                f"  accumulated_tail: {_tail!r}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)

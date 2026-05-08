@@ -110,7 +110,7 @@ class LiveProject(
     id = db.Column(db.Integer(), primary_key=True)
 
     # key to ProjectClassConfig record that identifies the year and pclass
-    config_id = db.Column(db.Integer(), db.ForeignKey("project_class_config.id"))
+    config_id = db.Column(db.Integer(), db.ForeignKey("project_class_config.id"), index=True)
     config = db.relationship(
         "ProjectClassConfig",
         uselist=False,

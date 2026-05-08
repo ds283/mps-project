@@ -1340,6 +1340,10 @@ class Notification(db.Model, NotificationTypesMixin):
 class PopularityRecord(db.Model):
     __tablename__ = "popularity_record"
 
+    __table_args__ = (
+        db.Index("ix_popularity_record_liveproject_datestamp", "liveproject_id", "datestamp"),
+    )
+
     # unique id for this record
     id = db.Column(db.Integer(), primary_key=True)
 

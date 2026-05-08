@@ -142,6 +142,24 @@ def _split_document(raw_text: str) -> tuple[str, str, str]:
     return pre_core, pre_biblio, ""
 
 
+def _strip_toc_lines(text: str) -> str:
+    """
+    Remove lines that look like table-of-contents entries from *text*.
+
+    Two patterns are matched:
+      1. Space-separated dot leaders: ". . . . ." (3+ repetitions)
+      2. Consecutive dots: "...." (4+ consecutive)
+
+    Both patterns are characteristic of PDF-extracted TOC pages.  These lines
+    are pure navigational noise for the LLM and can trigger pathological
+    grammar-constrained generation (the model quotes the dotted leaders verbatim
+    as an "excerpt", producing an unbounded string that Ollama cannot terminate).
+    """
+    _TOC_LEADER_RE = re.compile(r"(?:\.\s){3,}|\.{4,}")
+    lines = text.splitlines()
+    return "\n".join(line for line in lines if not _TOC_LEADER_RE.search(line))
+
+
 def _strip_math_lines(text: str) -> str:
     """
     Remove lines that consist predominantly of mathematical notation produced

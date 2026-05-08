@@ -30,7 +30,7 @@ from ..shared.llm_services import _call_llm, _truncate_text, _TOKENS_PER_WORD
 # chunks are sized conservatively.
 _TOKENS_PER_WORD_CONTENT = 2.0
 from ..shared.scraped_text_store import get_scraped_text, store_scraped_text
-from ..shared.text_utils import _APPENDIX_HEADING, _split_document, _strip_math_lines
+from ..shared.text_utils import _APPENDIX_HEADING, _split_document, _strip_math_lines, _strip_toc_lines
 from ..task_queue import progress_update
 from ..shared.llm_thresholds import (
     classify_burstiness,
@@ -1324,8 +1324,8 @@ _LLM_CHUNK_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "criterion_code": {"type": "string"},
-                    "excerpt": {"type": "string"},
-                    "observation": {"type": "string"},
+                    "excerpt": {"type": "string", "maxLength": 500},
+                    "observation": {"type": "string", "maxLength": 300},
                     "polarity": {
                         "type": "string",
                         "enum": ["supports", "undermines", "neutral"],
@@ -2016,9 +2016,9 @@ def register_language_analysis_tasks(celery):
         # the LLM assessor).  Math-extraction artefacts are stripped so that
         # equation fragments do not waste context tokens.
         _core, _references, _appendices = _split_document(raw_text)
-        clean_text = _strip_math_lines(_core)
+        clean_text = _strip_toc_lines(_strip_math_lines(_core))
         if _appendices:
-            clean_text = clean_text + "\n\n" + _strip_math_lines(_appendices)
+            clean_text = clean_text + "\n\n" + _strip_toc_lines(_strip_math_lines(_appendices))
 
         context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 12288)
         base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")

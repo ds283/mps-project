@@ -8,10 +8,17 @@
     active_jobs            list[LLMOrchestrationJob]  — currently active jobs
     avg_seconds_per_record float|None                 — rolling historical avg
     pipeline_paused        bool                       — global pause flag (AI dashboard only)
+
+  Optional with-block variables:
+    panel_colour_ramp      str  — CSS variable ramp name (default: 'blue')
+    panel_back_url         str  — URL for back buttons on detail pages (default: ai_dashboard)
 #}
+{% set ramp = panel_colour_ramp | default('blue') %}
+{% set _back = panel_back_url | default(url_for('dashboards.ai_dashboard')) %}
 {% if active_jobs %}
-    <div class="card mb-4" style="border-color: var(--db-blue-200);">
-        <div class="card-header pipeline-panel-header d-flex align-items-center gap-2 flex-wrap">
+    <div class="card mb-4" style="border-color: var(--db-{{ ramp }}-200);">
+        <div class="card-header d-flex align-items-center gap-2 flex-wrap"
+             style="background-color: var(--db-{{ ramp }}-50); border-bottom: 1px solid var(--db-{{ ramp }}-200); color: var(--db-{{ ramp }}-800);">
             <i class="fas fa-tasks fa-fw"></i>
             <strong>Active analysis pipeline jobs</strong>
             {% if pipeline_paused is defined and pipeline_paused %}
@@ -29,7 +36,7 @@
                 </span>
             {% endif %}
             <span class="badge ms-auto"
-                  style="background-color: var(--db-blue-100); color: var(--db-blue-800);">{{ active_jobs|length }} job
+                  style="background-color: var(--db-{{ ramp }}-100); color: var(--db-{{ ramp }}-800);">{{ active_jobs|length }} job
                 {%- if active_jobs|length != 1 -%}s{%- endif -%}</span>
             {% if is_root or is_admin %}
                 {% if pipeline_paused is defined and pipeline_paused %}
@@ -74,7 +81,6 @@
                     </thead>
                     <tbody>
                     {% for job in active_jobs %}
-                        {% set bar_colour = 'secondary' if job.paused else job.status_colour %}
                         <tr data-job-uuid="{{ job.uuid }}">
                             <td>
                                 {{ job.description or job.scope_label }}
@@ -92,10 +98,10 @@
                             </td>
                             <td class="text-end" style="min-width:120px">
                                 <div class="progress" style="height:8px; min-width:80px">
-                                    <div class="progress-bar {% if job.paused %}bg-secondary{% else %}pipeline-progress-fill{% endif %}"
+                                    <div class="progress-bar"
                                          data-cell="progress-bar"
                                          role="progressbar"
-                                         style="width:{{ job.progress_pct }}%"
+                                         style="width:{{ job.progress_pct }}%; background-color: {% if job.paused %}var(--bs-secondary){% else %}var(--db-{{ ramp }}-400){% endif %};"
                                          aria-valuenow="{{ job.progress_pct }}"
                                          aria-valuemin="0" aria-valuemax="100">
                                     </div>
@@ -127,7 +133,7 @@
                                     —
                                 {% endif %}
                             </td>
-                            <td class="text-end">
+                            <td class="text-end text-nowrap">
                                 {% if job.is_active and (is_root or is_admin or job.owner_id == current_user.id) %}
                                     {% if job.paused %}
                                         <a href="{{ url_for('dashboards.resume_job', uuid=job.uuid) }}"
@@ -147,6 +153,18 @@
                                        title="Cancel this job"
                                        onclick="return confirm('Cancel this job? Any queued reports will no longer be submitted for analysis.')">
                                         <i class="fas fa-times"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('dashboards.job_workflows', uuid=job.uuid, back=_back) }}"
+                                   class="btn btn-xs btn-outline-secondary py-0 px-1"
+                                   title="View pipeline workflow steps">
+                                    <i class="fas fa-list-ol"></i>
+                                </a>
+                                {% if job.error_count > 0 %}
+                                    <a href="{{ url_for('dashboards.job_error_log', uuid=job.uuid, back=_back) }}"
+                                       class="btn btn-xs btn-outline-danger py-0 px-1"
+                                       title="{{ job.error_count }} error{{ 's' if job.error_count != 1 }}">
+                                        <i class="fas fa-exclamation-triangle"></i>
                                     </a>
                                 {% endif %}
                             </td>

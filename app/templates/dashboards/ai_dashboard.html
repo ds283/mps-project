@@ -322,7 +322,9 @@
         </div>
 
         {# ---- active orchestration jobs panel ---- #}
-        {% include "dashboards/_active_jobs_panel.html" %}
+        {% with panel_colour_ramp="blue", panel_back_url=url_for('dashboards.ai_dashboard') %}
+            {% include "dashboards/_active_jobs_panel.html" %}
+        {% endwith %}
 
         {# ---- filter controls ---- #}
         <div class="card border-0 shadow-sm mb-4">

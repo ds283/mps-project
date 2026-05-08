@@ -30,6 +30,7 @@ from ..shared.scraped_text_store import (
     store_similarity_chunks,
 )
 from ..shared.text_utils import _detect_top_level_sections, _split_document, _strip_math_lines
+from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_start
 
 # ---------------------------------------------------------------------------
 # Pipeline constants
@@ -159,12 +160,20 @@ def register_similarity_analysis_tasks(celery):
         """
         from billiard.exceptions import SoftTimeLimitExceeded
 
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "extract_chunks")
+
         # ------------------------------------------------------------------
         # Load record and guard on language analysis completion
         # ------------------------------------------------------------------
         try:
             record: SubmissionRecord = db.session.get(SubmissionRecord, record_id)
         except SQLAlchemyError as exc:
+            record_step_end(_r, record_id, "extract_chunks", _t0, error=repr(exc))
             current_app.logger.exception(
                 f"extract_chunks: SQLAlchemyError loading SubmissionRecord #{record_id}"
             )
@@ -331,6 +340,8 @@ def register_similarity_analysis_tasks(celery):
             f"(style={heading_style}, sections={len(top_level_sections)})"
         )
 
+        record_step_end(_r, record_id, "extract_chunks", _t0)
+
     # -----------------------------------------------------------------------
     # Task 2: compute_minhash  (default queue)
     # -----------------------------------------------------------------------
@@ -344,6 +355,13 @@ def register_similarity_analysis_tasks(celery):
         Stores hashvalue lists in MongoDB similarity_chunks.minhash_signatures.
         """
         from datasketch import MinHash
+
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "compute_minhash")
 
         chunks = get_similarity_chunks(record_id)
         if chunks is None:
@@ -405,6 +423,8 @@ def register_similarity_analysis_tasks(celery):
                 f"compute_minhash: no signatures produced for SubmissionRecord #{record_id}"
             )
 
+        record_step_end(_r, record_id, "compute_minhash", _t0)
+
     # -----------------------------------------------------------------------
     # Task 3: run_similarity_check  (default queue)
     # -----------------------------------------------------------------------
@@ -422,11 +442,20 @@ def register_similarity_analysis_tasks(celery):
 
         from ..shared.scraped_text_store import _get_collection
 
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "run_similarity_check")
+
         chunks = get_similarity_chunks(record_id)
         if chunks is None or not chunks.get("minhash_signatures"):
             current_app.logger.warning(
                 f"run_similarity_check: no minhash signatures for SubmissionRecord #{record_id} — skipping"
             )
+            record_step_end(_r, record_id, "run_similarity_check", _t0,
+                            error="No minhash signatures — skipped")
             return
 
         current_sections = chunks.get("sections", {})
@@ -680,7 +709,10 @@ def register_similarity_analysis_tasks(celery):
                 f"run_similarity_check: SQLAlchemyError for record #{record_id}: {exc}"
             )
             db.session.rollback()
+            record_step_end(_r, record_id, "run_similarity_check", _t0, error=repr(exc))
             raise self.retry(exc=exc)
+
+        record_step_end(_r, record_id, "run_similarity_check", _t0)
 
     return (
         extract_chunks,

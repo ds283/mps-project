@@ -1,0 +1,111 @@
+{% extends "base_app.html" %}
+
+{% block title %}Error log – job {{ job.description or job.scope_label }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="container-fluid mt-4 mb-5">
+
+        {# ---- page header ---- #}
+        <div class="d-flex align-items-center mb-3 gap-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}">
+                <i class="fas fa-arrow-left fa-fw me-1"></i>Back
+            </a>
+            <h4 class="mb-0">
+                <i class="fas fa-exclamation-triangle fa-fw text-danger me-1"></i>
+                Error log
+                <span class="text-body-secondary fw-normal small ms-1">
+                    {{ job.description or job.scope_label }}
+                </span>
+            </h4>
+        </div>
+
+        {# ---- job summary card ---- #}
+        <div class="card border-0 shadow-sm mb-4" style="border-color: var(--db-blue-200) !important;">
+            <div class="card-header d-flex align-items-center gap-2 py-2"
+                 style="background-color: var(--db-blue-50); border-bottom: 1px solid var(--db-blue-200); color: var(--db-blue-800);">
+                <i class="fas fa-tasks fa-fw"></i>
+                <span class="fw-semibold">Job summary</span>
+                <span class="badge ms-auto bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3">Description</dt>
+                    <dd class="col-sm-9">{{ job.description or job.scope_label }}</dd>
+
+                    <dt class="col-sm-3">Scope</dt>
+                    <dd class="col-sm-9">{{ job.scope_label | title }}</dd>
+
+                    <dt class="col-sm-3">Created</dt>
+                    <dd class="col-sm-9">
+                        {% if job.created_at %}{{ job.created_at.strftime('%a %d %b %Y %H:%M') }}{% else %}<span class="text-body-secondary">—</span>{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-3">Progress</dt>
+                    <dd class="col-sm-9">
+                        {{ job.completed_count }} completed,
+                        <span class="{% if job.failed_count > 0 %}text-danger fw-semibold{% endif %}">{{ job.failed_count }} failed</span>
+                        of {{ job.total_count }} total
+                    </dd>
+
+                    <dt class="col-sm-3">Errors logged</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-danger">{{ entries | length }}</span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        {# ---- error entries table ---- #}
+        <div class="card border-danger mb-3">
+            <div class="card-header bg-danger bg-opacity-10 border-danger d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold text-danger">
+                    <i class="fas fa-exclamation-triangle fa-fw me-1"></i>Error entries
+                </span>
+                <span class="badge bg-danger">{{ entries | length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if entries %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 small">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="min-width:145px;">Timestamp</th>
+                                <th class="text-end" style="width:80px;">Record #</th>
+                                <th>Student</th>
+                                <th>Project class</th>
+                                <th class="text-end" style="width:60px;">Year</th>
+                                <th>Stage</th>
+                                <th>Type</th>
+                                <th>Message</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entry in entries %}
+                                <tr>
+                                    <td class="text-body-secondary text-nowrap">
+                                        {{ entry.timestamp | replace("T", " ") if entry.timestamp else "—" }}
+                                    </td>
+                                    <td class="text-end text-body-secondary">
+                                        {% if entry.record_id %}#{{ entry.record_id }}{% else %}—{% endif %}
+                                    </td>
+                                    <td>{{ entry.student_name or "—" }}</td>
+                                    <td>{{ entry.pclass or "—" }}</td>
+                                    <td class="text-end text-body-secondary">{{ entry.year or "—" }}</td>
+                                    <td><code class="small">{{ entry.stage or "—" }}</code></td>
+                                    <td><span class="badge bg-danger bg-opacity-75">{{ entry.exc_type or "—" }}</span></td>
+                                    <td class="text-danger">{{ entry.message or "—" }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-3">
+                        <span class="text-body-secondary fst-italic">No errors recorded.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

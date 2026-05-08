@@ -39,6 +39,7 @@ from ..shared.llm_thresholds import (
     classify_sentence_cv,
 )
 from ..shared.workflow_logging import log_db_commit
+from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_start
 
 # ---------------------------------------------------------------------------
 # Prompt versioning.
@@ -1639,22 +1640,34 @@ def register_language_analysis_tasks(celery):
             state=states.STARTED, meta={"msg": "Downloading report asset"}
         )
 
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "download_and_extract")
+
         try:
             record: SubmissionRecord = (
                 db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             )
         except SQLAlchemyError as exc:
+            record_step_end(_r, record_id, "download_and_extract", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in download_and_extract", exc_info=exc
             )
             raise self.retry()
 
         if record is None:
+            record_step_end(_r, record_id, "download_and_extract", _t0,
+                            error="SubmissionRecord not found")
             raise Exception(
                 f"language_analysis.download_and_extract: SubmissionRecord #{record_id} not found"
             )
 
         if record.report is None:
+            record_step_end(_r, record_id, "download_and_extract", _t0,
+                            error="SubmissionRecord has no report")
             raise Exception(
                 f"language_analysis.download_and_extract: SubmissionRecord #{record_id} has no report"
             )
@@ -1728,10 +1741,13 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
+            record_step_end(_r, record_id, "download_and_extract", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError committing extracted text", exc_info=exc
             )
             raise self.retry()
+
+        record_step_end(_r, record_id, "download_and_extract", _t0)
 
     # -----------------------------------------------------------------------
 
@@ -1746,17 +1762,27 @@ def register_language_analysis_tasks(celery):
             state=states.STARTED, meta={"msg": "Computing language statistics"}
         )
 
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "compute_statistics")
+
         try:
             record: SubmissionRecord = (
                 db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             )
         except SQLAlchemyError as exc:
+            record_step_end(_r, record_id, "compute_statistics", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in compute_statistics", exc_info=exc
             )
             raise self.retry()
 
         if record is None:
+            record_step_end(_r, record_id, "compute_statistics", _t0,
+                            error="SubmissionRecord not found")
             raise Exception(
                 f"language_analysis.compute_statistics: SubmissionRecord #{record_id} not found"
             )
@@ -1943,10 +1969,13 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
+            record_step_end(_r, record_id, "compute_statistics", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError committing statistics", exc_info=exc
             )
             raise self.retry()
+
+        record_step_end(_r, record_id, "compute_statistics", _t0)
 
     # -----------------------------------------------------------------------
 
@@ -1980,6 +2009,13 @@ def register_language_analysis_tasks(celery):
         are not retried until an administrator explicitly clears the flag.
         """
         self.update_state(state=states.STARTED, meta={"msg": "Submitting to LLM"})
+
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "submit_to_llm")
 
         try:
             record: SubmissionRecord = (
@@ -2485,6 +2521,7 @@ def register_language_analysis_tasks(celery):
             )
             record.llm_analysis_failed = True
             record.llm_failure_reason = failure_reason
+            record_step_end(_r, record_id, "submit_to_llm", _t0, error=failure_reason)
             data["llm_raw_response"] = accumulated
             errors.append(
                 {
@@ -2510,6 +2547,9 @@ def register_language_analysis_tasks(celery):
             )
             raise self.retry()
 
+        if not record.llm_analysis_failed:
+            record_step_end(_r, record_id, "submit_to_llm", _t0)
+
     # -----------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
@@ -2531,6 +2571,13 @@ def register_language_analysis_tasks(celery):
         the analysis results remain available.
         """
         self.update_state(state=states.STARTED, meta={"msg": "Generating feedback"})
+
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "submit_to_llm_feedback")
 
         try:
             record: SubmissionRecord = (
@@ -2690,6 +2737,12 @@ def register_language_analysis_tasks(celery):
             )
             raise self.retry()
 
+        if record.llm_feedback_failed:
+            record_step_end(_r, record_id, "submit_to_llm_feedback", _t0,
+                            error=record.llm_feedback_failure_reason or "Feedback generation failed")
+        else:
+            record_step_end(_r, record_id, "submit_to_llm_feedback", _t0)
+
     # -----------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -2700,17 +2753,27 @@ def register_language_analysis_tasks(celery):
         in finalize_risk_flags after the similarity scan has run, so that
         risk_factors.similarity_flagged reflects fresh data.
         """
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "finalize_language_step")
+
         try:
             record: SubmissionRecord = (
                 db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             )
         except SQLAlchemyError as exc:
+            record_step_end(_r, record_id, "finalize_language_step", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in language_analysis.finalize_language_step", exc_info=exc
             )
             raise self.retry()
 
         if record is None:
+            record_step_end(_r, record_id, "finalize_language_step", _t0,
+                            error="SubmissionRecord not found")
             raise Exception(
                 f"language_analysis.finalize_language_step: SubmissionRecord #{record_id} not found"
             )
@@ -2726,10 +2789,13 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
+            record_step_end(_r, record_id, "finalize_language_step", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in language_analysis.finalize_language_step commit", exc_info=exc
             )
             raise self.retry()
+
+        record_step_end(_r, record_id, "finalize_language_step", _t0)
 
     # -----------------------------------------------------------------------
 
@@ -2741,17 +2807,27 @@ def register_language_analysis_tasks(celery):
         reflects the freshest SimilarityConcern data, and the processed-report template
         can incorporate similarity results if desired.
         """
+        _r = None
+        try:
+            _r = get_pipeline_redis()
+        except Exception:
+            pass
+        _t0 = record_step_start(_r, record_id, "finalize_risk_flags")
+
         try:
             record: SubmissionRecord = (
                 db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             )
         except SQLAlchemyError as exc:
+            record_step_end(_r, record_id, "finalize_risk_flags", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in language_analysis.finalize_risk_flags", exc_info=exc
             )
             raise self.retry()
 
         if record is None:
+            record_step_end(_r, record_id, "finalize_risk_flags", _t0,
+                            error="SubmissionRecord not found")
             raise Exception(
                 f"language_analysis.finalize_risk_flags: SubmissionRecord #{record_id} not found"
             )
@@ -2787,6 +2863,8 @@ def register_language_analysis_tasks(celery):
         # similarity data are available.
         if record.report is not None:
             _dispatch_process_report(record_id)
+
+        record_step_end(_r, record_id, "finalize_risk_flags", _t0)
 
     # -----------------------------------------------------------------------
 

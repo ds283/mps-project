@@ -69,6 +69,7 @@ from ..tasks.llm_orchestration import (
     set_pipeline_paused,
 )
 from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD, CHUNK_TYPES
+from ..tasks.pipeline_tracking import get_pipeline_redis, read_workflow_entry
 from ..tools import ServerSideSQLHandler
 from .forms import MarkingExportForm, ResolveSimilarityConcernForm
 from . import dashboards
@@ -3092,3 +3093,110 @@ def cancel_similarity_job(uuid: str):
         "success",
     )
     return redirect(redirect_url())
+
+
+# ---------------------------------------------------------------------------
+# Job detail views — error log and workflow step log
+# ---------------------------------------------------------------------------
+
+
+def _safe_back_url(candidate: Optional[str]) -> str:
+    """Return *candidate* if it is a known-safe dashboard URL, else the AI dashboard."""
+    allowed = {
+        url_for("dashboards.ai_dashboard"),
+        url_for("dashboards.similarity_dashboard"),
+    }
+    if candidate and candidate in allowed:
+        return candidate
+    return url_for("dashboards.ai_dashboard")
+
+
+def _build_workflow_entry_from_redis(
+    raw: dict, record, record_id: int, status: str
+) -> dict:
+    """Reconstruct a workflow-summary dict from a raw Redis hash."""
+    from ..tasks.pipeline_tracking import PIPELINE_STEPS
+
+    def _decode(v) -> str:
+        return v.decode() if isinstance(v, bytes) else v
+
+    fields = {_decode(k): _decode(v) for k, v in raw.items()}
+
+    steps = []
+    for name in PIPELINE_STEPS:
+        started = fields.get(f"{name}:started_at")
+        if started is None:
+            continue
+        elapsed_raw = fields.get(f"{name}:elapsed_ms")
+        steps.append(
+            {
+                "name": name,
+                "started_at": started,
+                "elapsed_ms": int(elapsed_raw) if elapsed_raw is not None else None,
+                "error": fields.get(f"{name}:error"),
+            }
+        )
+
+    from ..models.llm_orchestration import _safe_pclass_name, _safe_student_name, _safe_year
+
+    return {
+        "record_id": record_id,
+        "student_name": _safe_student_name(record) if record else "Unknown",
+        "pclass": _safe_pclass_name(record) if record else "Unknown",
+        "year": _safe_year(record) if record else None,
+        "status": status,
+        "started_at": fields.get("_record_started_at"),
+        "finished_at": None,
+        "steps": steps,
+    }
+
+
+@dashboards.route("/ai/job/<uuid>/error_log")
+@login_required
+@roles_accepted("root", "admin", "data_dashboard_AI", "data_dashboard_similarity")
+def job_error_log(uuid):
+    job: LLMOrchestrationJob = (
+        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    back_url = _safe_back_url(request.args.get("back"))
+    entries = list(reversed(job.error_log_list))
+    return render_template_context(
+        "dashboards/job_error_log.html",
+        job=job,
+        entries=entries,
+        back_url=back_url,
+    )
+
+
+@dashboards.route("/ai/job/<uuid>/workflows")
+@login_required
+@roles_accepted("root", "admin", "data_dashboard_AI", "data_dashboard_similarity")
+def job_workflows(uuid):
+    job: LLMOrchestrationJob = (
+        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    back_url = _safe_back_url(request.args.get("back"))
+
+    inflight_entries = []
+    try:
+        r = get_pipeline_redis()
+        raw_ids = r.lrange(job.redis_inflight_key, 0, -1)
+        inflight_ids = [int(x) for x in raw_ids]
+        for rid in inflight_ids:
+            raw = r.hgetall(f"llm_step:{rid}")
+            record = db.session.query(SubmissionRecord).filter_by(id=rid).first()
+            inflight_entries.append(
+                _build_workflow_entry_from_redis(raw, record, rid, "in_flight")
+            )
+    except Exception as exc:
+        current_app.logger.warning(f"job_workflows: could not read inflight entries: {exc}")
+
+    recent_entries = job.recent_workflows_list
+
+    return render_template_context(
+        "dashboards/job_workflows.html",
+        job=job,
+        inflight_entries=inflight_entries,
+        recent_entries=recent_entries,
+        back_url=back_url,
+    )

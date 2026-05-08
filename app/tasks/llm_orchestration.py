@@ -69,14 +69,13 @@ Architecture (Global coordinator with reliable Redis queue):
   complexity for negligible benefit.
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from celery import chain
 from celery.signals import worker_ready
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
-
-import redis as redis_lib
 
 from ..database import db
 from ..models import (
@@ -87,6 +86,7 @@ from ..models import (
     User,
 )
 from ..shared.workflow_logging import log_db_commit
+from .pipeline_tracking import delete_workflow_hash, get_pipeline_redis, read_workflow_entry
 
 # ---------------------------------------------------------------------------
 # Global pause state key
@@ -118,14 +118,9 @@ COORDINATOR_QUEUED_TTL = 120  # safety TTL; cleared normally when the task start
 # ---------------------------------------------------------------------------
 
 
-def _get_orchestration_redis() -> redis_lib.Redis:
+def _get_orchestration_redis():
     """Return a Redis client connected to the orchestration Redis database."""
-    url = current_app.config.get("ORCHESTRATION_REDIS_URL")
-    if not url:
-        raise RuntimeError(
-            "ORCHESTRATION_REDIS_URL is not set in the Flask configuration"
-        )
-    return redis_lib.Redis.from_url(url, decode_responses=False)
+    return get_pipeline_redis()
 
 
 def get_inflight_record_ids(active_jobs: List[LLMOrchestrationJob]) -> set:
@@ -1049,6 +1044,48 @@ def register_llm_orchestration_tasks(celery):
                 )
 
     # ------------------------------------------------------------------
+    # _finalize_workflow_entry  (internal helper)
+    # ------------------------------------------------------------------
+
+    def _finalize_workflow_entry(
+        redis_client,
+        job: LLMOrchestrationJob,
+        record,
+        status: str,
+    ) -> None:
+        """
+        Read the Redis step-tracking hash for *record*, build a workflow-summary
+        entry (augmented with student/pclass/year metadata from *record*), prepend
+        it to *job.recent_workflows*, and delete the Redis hash.
+
+        This is called from both :func:`orchestration_record_done` and
+        :func:`orchestration_record_error` before the DB commit.
+        """
+        if redis_client is None:
+            return
+        try:
+            from ..models.llm_orchestration import (
+                _safe_pclass_name,
+                _safe_student_name,
+                _safe_year,
+            )
+            entry = read_workflow_entry(redis_client, record.id if record else 0)
+            if record is not None:
+                entry["student_name"] = _safe_student_name(record)
+                entry["pclass"] = _safe_pclass_name(record)
+                entry["year"] = _safe_year(record)
+            entry["status"] = status
+            entry["finished_at"] = datetime.now().isoformat(timespec="milliseconds")
+            job.prepend_workflow(entry)
+            if record is not None:
+                delete_workflow_hash(redis_client, record.id)
+        except Exception as exc:
+            current_app.logger.warning(
+                f"llm_orchestration._finalize_workflow_entry: failed for "
+                f"record #{record.id if record else '?'}: {exc}"
+            )
+
+    # ------------------------------------------------------------------
     # orchestration_record_done
     # ------------------------------------------------------------------
 
@@ -1061,6 +1098,7 @@ def register_llm_orchestration_tasks(celery):
         """
         # Remove from inflight list first (best-effort: don't let Redis errors
         # block the counter update or the next coordinator dispatch).
+        r = None
         try:
             r = _get_orchestration_redis()
             r.lrem(f"llm_inflight:{job_uuid}", 0, str(record_id).encode())
@@ -1071,10 +1109,14 @@ def register_llm_orchestration_tasks(celery):
             )
 
         try:
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
             job: LLMOrchestrationJob = (
                 db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
             )
             if job is not None:
+                _finalize_workflow_entry(r, job, record, "complete")
                 job.increment_completed()
                 # Use >= (not ==) to correctly handle the double-processing race
                 # where a record may be counted twice after crash recovery.
@@ -1107,6 +1149,7 @@ def register_llm_orchestration_tasks(celery):
         the record's progress flags, increments the job's failed_count, and
         triggers the global coordinator.
         """
+        r = None
         try:
             r = _get_orchestration_redis()
             r.lrem(f"llm_inflight:{job_uuid}", 0, str(record_id).encode())
@@ -1140,6 +1183,16 @@ def register_llm_orchestration_tasks(celery):
                 db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
             )
             if job is not None:
+                job.append_error(
+                    record,
+                    stage="workflow",
+                    exc_type="OrchestrationError",
+                    message=(
+                        "An unhandled exception occurred during bulk orchestration. "
+                        "Check Celery logs for record #{}.".format(record_id)
+                    ),
+                )
+                _finalize_workflow_entry(r, job, record, "failed")
                 job.increment_failed()
                 if (
                     (job.completed_count + job.failed_count) >= job.total_count
@@ -1349,6 +1402,12 @@ def register_llm_orchestration_tasks(celery):
                 )
                 r.lrem(job.redis_inflight_key, 0, record_id_bytes)
                 try:
+                    job.append_error(
+                        None,
+                        stage="dispatch",
+                        exc_type="SQLAlchemyError",
+                        message=f"Failed to load SubmissionRecord #{record_id} from database.",
+                    )
                     job.increment_failed()
                     db.session.commit()
                 except Exception:
@@ -1363,6 +1422,12 @@ def register_llm_orchestration_tasks(celery):
                 )
                 r.lrem(job.redis_inflight_key, 0, record_id_bytes)
                 try:
+                    job.append_error(
+                        None,
+                        stage="dispatch",
+                        exc_type="RecordMissing",
+                        message=f"SubmissionRecord #{record_id} not found or has no uploaded report.",
+                    )
                     job.increment_failed()
                     if (
                         (job.completed_count + job.failed_count) >= job.total_count
@@ -1399,6 +1464,12 @@ def register_llm_orchestration_tasks(celery):
                 )
                 r.lrem(job.redis_inflight_key, 0, record_id_bytes)
                 try:
+                    job.append_error(
+                        record,
+                        stage="dispatch",
+                        exc_type="SQLAlchemyError",
+                        message=f"Failed to reset flags on SubmissionRecord #{record_id} before dispatch.",
+                    )
                     job.increment_failed()
                     db.session.commit()
                 except Exception:

@@ -185,7 +185,9 @@
         </div>
 
         {# ---- active jobs panel (shared with AI dashboard) ---- #}
-        {% include "dashboards/_active_jobs_panel.html" %}
+        {% with panel_colour_ramp="orange", panel_back_url=url_for('dashboards.similarity_dashboard') %}
+            {% include "dashboards/_active_jobs_panel.html" %}
+        {% endwith %}
 
         {# ---- summary stat cards ---- #}
         <div class="row row-cols-2 row-cols-md-4 g-3 mb-4 px-3">

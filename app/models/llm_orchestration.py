@@ -8,12 +8,34 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import json
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
+
+
+def _safe_student_name(record) -> str:
+    try:
+        return record.owner.student.user.name
+    except Exception:
+        return "Unknown"
+
+
+def _safe_pclass_name(record) -> str:
+    try:
+        return record.period.config.project_class.abbreviation
+    except Exception:
+        return "Unknown"
+
+
+def _safe_year(record) -> Optional[int]:
+    try:
+        return record.period.config.year
+    except Exception:
+        return None
 
 
 class LLMOrchestrationJob(db.Model):
@@ -51,6 +73,13 @@ class LLMOrchestrationJob(db.Model):
     SCOPE_GLOBAL = "global"    # every period in the database
 
     ALL_SCOPES = [SCOPE_PERIOD, SCOPE_PCLASS, SCOPE_CYCLE, SCOPE_GLOBAL]
+
+    # ------------------------------------------------------------------
+    # Log-size caps
+    # ------------------------------------------------------------------
+
+    _ERROR_LOG_MAX: int = 100
+    _RECENT_WORKFLOWS_MAX: int = 20
 
     # ------------------------------------------------------------------
     # Columns
@@ -111,6 +140,14 @@ class LLMOrchestrationJob(db.Model):
 
     # Short human-readable description shown in the dashboard status panel.
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+
+    # Structured error log — JSON list of {timestamp, record_id, student_name, pclass, year,
+    # stage, exc_type, message} dicts, capped at _ERROR_LOG_MAX entries.
+    error_log = db.Column(db.Text(collation="utf8_bin"), nullable=True)
+
+    # Rolling log of the last _RECENT_WORKFLOWS_MAX completed/failed record workflows,
+    # newest-first. Each entry is a workflow-summary dict built from Redis step hashes.
+    recent_workflows = db.Column(db.Text(collation="utf8_bin"), nullable=True)
 
     # ------------------------------------------------------------------
     # Class methods
@@ -241,6 +278,61 @@ class LLMOrchestrationJob(db.Model):
     def resume(self) -> None:
         """Clear the paused flag so the coordinator will dispatch records again."""
         self.paused = False
+
+    # ------------------------------------------------------------------
+    # Error log helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def error_log_list(self) -> list:
+        if self.error_log is None:
+            return []
+        return json.loads(self.error_log)
+
+    @property
+    def error_count(self) -> int:
+        return len(self.error_log_list)
+
+    def append_error(
+        self,
+        record,
+        stage: str,
+        exc_type: str,
+        message: str,
+    ) -> None:
+        """Append a timestamped, record-attributed error entry to the job error log."""
+        entry = {
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "record_id": record.id if record is not None else None,
+            "student_name": _safe_student_name(record) if record is not None else "Unknown",
+            "pclass": _safe_pclass_name(record) if record is not None else "Unknown",
+            "year": _safe_year(record) if record is not None else None,
+            "stage": stage,
+            "exc_type": exc_type,
+            "message": message,
+        }
+        entries = self.error_log_list
+        entries.append(entry)
+        if len(entries) > self._ERROR_LOG_MAX:
+            entries = entries[-self._ERROR_LOG_MAX:]
+        self.error_log = json.dumps(entries)
+
+    # ------------------------------------------------------------------
+    # Workflow step log helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def recent_workflows_list(self) -> list:
+        if self.recent_workflows is None:
+            return []
+        return json.loads(self.recent_workflows)
+
+    def prepend_workflow(self, entry: dict) -> None:
+        """Prepend a completed workflow entry and trim to _RECENT_WORKFLOWS_MAX."""
+        entries = [entry] + self.recent_workflows_list
+        if len(entries) > self._RECENT_WORKFLOWS_MAX:
+            entries = entries[: self._RECENT_WORKFLOWS_MAX]
+        self.recent_workflows = json.dumps(entries)
 
     @property
     def avg_seconds_per_record(self) -> Optional[float]:

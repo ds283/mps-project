@@ -1,0 +1,270 @@
+{% extends "base_app.html" %}
+
+{% block title %}Workflow steps – job {{ job.description or job.scope_label }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="container-fluid mt-4 mb-5">
+
+        {# ---- page header ---- #}
+        <div class="d-flex align-items-center mb-3 gap-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}">
+                <i class="fas fa-arrow-left fa-fw me-1"></i>Back
+            </a>
+            <h4 class="mb-0">
+                <i class="fas fa-list-ol fa-fw text-body-secondary me-1"></i>
+                Workflow steps
+                <span class="text-body-secondary fw-normal small ms-1">
+                    {{ job.description or job.scope_label }}
+                </span>
+            </h4>
+        </div>
+
+        {# ---- job summary card ---- #}
+        <div class="card border-0 shadow-sm mb-4" style="border-color: var(--db-blue-200) !important;">
+            <div class="card-header d-flex align-items-center gap-2 py-2"
+                 style="background-color: var(--db-blue-50); border-bottom: 1px solid var(--db-blue-200); color: var(--db-blue-800);">
+                <i class="fas fa-tasks fa-fw"></i>
+                <span class="fw-semibold">Job summary</span>
+                <span class="badge ms-auto bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3">Description</dt>
+                    <dd class="col-sm-9">{{ job.description or job.scope_label }}</dd>
+
+                    <dt class="col-sm-3">Scope</dt>
+                    <dd class="col-sm-9">{{ job.scope_label | title }}</dd>
+
+                    <dt class="col-sm-3">Created</dt>
+                    <dd class="col-sm-9">
+                        {% if job.created_at %}{{ job.created_at.strftime('%a %d %b %Y %H:%M') }}{% else %}<span class="text-body-secondary">—</span>{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-3">Progress</dt>
+                    <dd class="col-sm-9">
+                        {{ job.completed_count }} completed,
+                        <span class="{% if job.failed_count > 0 %}text-danger fw-semibold{% endif %}">{{ job.failed_count }} failed</span>
+                        of {{ job.total_count }} total
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        {# ---- step badge legend ---- #}
+        <div class="d-flex align-items-center gap-2 mb-3 small text-body-secondary flex-wrap">
+            <span class="fw-semibold me-1">Step state:</span>
+            <span class="badge bg-success bg-opacity-75">Complete</span>
+            <span class="badge bg-warning text-dark">In progress</span>
+            <span class="badge bg-danger bg-opacity-75">Error</span>
+            <span class="badge bg-secondary bg-opacity-50">Not started</span>
+        </div>
+
+        {# ---- in-flight records ---- #}
+        <div class="card border-0 shadow-sm mb-4" style="border-color: var(--db-blue-200) !important;">
+            <div class="card-header d-flex align-items-center justify-content-between py-2"
+                 style="background-color: var(--db-blue-50); border-bottom: 1px solid var(--db-blue-200); color: var(--db-blue-800);">
+                <span class="fw-semibold">
+                    <i class="fas fa-spinner fa-spin fa-fw me-1"></i>In flight
+                </span>
+                <span class="badge" style="background-color: var(--db-blue-200); color: var(--db-blue-800);">{{ inflight_entries | length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if inflight_entries %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 small align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="text-end" style="width:70px;">Record #</th>
+                                <th>Student</th>
+                                <th>Project class</th>
+                                <th class="text-end" style="width:55px;">Year</th>
+                                <th>Started</th>
+                                <th>Pipeline steps</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entry in inflight_entries %}
+                                <tr>
+                                    <td class="text-end text-body-secondary">
+                                        {% if entry.record_id %}#{{ entry.record_id }}{% else %}—{% endif %}
+                                    </td>
+                                    <td>{{ entry.student_name or "—" }}</td>
+                                    <td>{{ entry.pclass or "—" }}</td>
+                                    <td class="text-end text-body-secondary">{{ entry.year or "—" }}</td>
+                                    <td class="text-body-secondary text-nowrap">
+                                        {{ entry.started_at | replace("T", " ") if entry.started_at else "—" }}
+                                    </td>
+                                    <td>
+                                        {% set step_names = entry.steps | map(attribute='name') | list %}
+                                        {% set all_step_names = ["download_and_extract", "compute_statistics",
+                                                                  "submit_to_llm", "submit_to_llm_feedback",
+                                                                  "finalize_language_step", "extract_chunks",
+                                                                  "compute_minhash", "run_similarity_check",
+                                                                  "finalize_risk_flags"] %}
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for sname in all_step_names %}
+                                                {# Find matching step entry #}
+                                                {% set step_entry = namespace(found=None) %}
+                                                {% for s in entry.steps %}
+                                                    {% if s.name == sname %}
+                                                        {% set step_entry.found = s %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% if step_entry.found %}
+                                                    {% set s = step_entry.found %}
+                                                    {% if s.error %}
+                                                        <span class="badge bg-danger bg-opacity-75"
+                                                              data-bs-toggle="tooltip"
+                                                              title="{{ s.name }}: {{ s.error }}">
+                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                        </span>
+                                                    {% elif s.elapsed_ms is not none %}
+                                                        {% set secs = (s.elapsed_ms / 1000) | round(1) %}
+                                                        <span class="badge bg-success bg-opacity-75"
+                                                              data-bs-toggle="tooltip"
+                                                              title="{{ s.name }}: {{ secs }}s">
+                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark"
+                                                              data-bs-toggle="tooltip"
+                                                              title="{{ s.name }}: in progress">
+                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-secondary bg-opacity-25 text-body-secondary"
+                                                          data-bs-toggle="tooltip"
+                                                          title="{{ sname }}: not started">
+                                                        {{ sname | replace('_', ' ') | truncate(12, True, '…') }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-3">
+                        <span class="text-body-secondary fst-italic">No records currently in flight.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- recent completions ---- #}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <span class="fw-semibold">
+                    <i class="fas fa-history fa-fw me-1 text-body-secondary"></i>Recent completions
+                    <span class="text-body-secondary fw-normal small ms-1">(last {{ recent_entries | length }})</span>
+                </span>
+                <span class="badge bg-secondary bg-opacity-50 text-body-secondary">{{ recent_entries | length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_entries %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 small align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="text-end" style="width:70px;">Record #</th>
+                                <th>Student</th>
+                                <th>Project class</th>
+                                <th class="text-end" style="width:55px;">Year</th>
+                                <th>Status</th>
+                                <th>Started</th>
+                                <th>Finished</th>
+                                <th>Pipeline steps</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entry in recent_entries %}
+                                <tr>
+                                    <td class="text-end text-body-secondary">
+                                        {% if entry.record_id %}#{{ entry.record_id }}{% else %}—{% endif %}
+                                    </td>
+                                    <td>{{ entry.student_name or "—" }}</td>
+                                    <td>{{ entry.pclass or "—" }}</td>
+                                    <td class="text-end text-body-secondary">{{ entry.year or "—" }}</td>
+                                    <td>
+                                        {% if entry.status == "complete" %}
+                                            <span class="badge bg-success bg-opacity-75">Complete</span>
+                                        {% elif entry.status == "failed" %}
+                                            <span class="badge bg-danger bg-opacity-75">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ entry.status or "—" }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-body-secondary text-nowrap">
+                                        {{ entry.started_at | replace("T", " ") if entry.started_at else "—" }}
+                                    </td>
+                                    <td class="text-body-secondary text-nowrap">
+                                        {{ entry.finished_at | replace("T", " ") if entry.finished_at else "—" }}
+                                    </td>
+                                    <td>
+                                        {% set all_step_names = ["download_and_extract", "compute_statistics",
+                                                                  "submit_to_llm", "submit_to_llm_feedback",
+                                                                  "finalize_language_step", "extract_chunks",
+                                                                  "compute_minhash", "run_similarity_check",
+                                                                  "finalize_risk_flags"] %}
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for sname in all_step_names %}
+                                                {# Find matching step entry #}
+                                                {% set step_entry = namespace(found=None) %}
+                                                {% for s in entry.steps %}
+                                                    {% if s.name == sname %}
+                                                        {% set step_entry.found = s %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% if step_entry.found %}
+                                                    {% set s = step_entry.found %}
+                                                    {% if s.error %}
+                                                        <span class="badge bg-danger bg-opacity-75"
+                                                              data-bs-toggle="tooltip"
+                                                              title="{{ s.name }}: {{ s.error }}">
+                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                        </span>
+                                                    {% else %}
+                                                        {% if s.elapsed_ms is not none %}
+                                                            {% set secs = (s.elapsed_ms / 1000) | round(1) %}
+                                                            <span class="badge bg-success bg-opacity-75"
+                                                                  data-bs-toggle="tooltip"
+                                                                  title="{{ s.name }}: {{ secs }}s">
+                                                                {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary bg-opacity-50 text-body-secondary"
+                                                                  data-bs-toggle="tooltip"
+                                                                  title="{{ s.name }}: no timing data">
+                                                                {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                            </span>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-secondary bg-opacity-25 text-body-secondary"
+                                                          data-bs-toggle="tooltip"
+                                                          title="{{ sname }}: not executed">
+                                                        {{ sname | replace('_', ' ') | truncate(12, True, '…') }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-3">
+                        <span class="text-body-secondary fst-italic">No completed workflows recorded yet.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

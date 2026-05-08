@@ -10,7 +10,7 @@
 
 """Add indexes to fix slow most_popular_projects query
 
-Revision ID: b3c4d5e6f7a8
+Revision ID: c4d5e6f7a8b9
 Revises: a2b3c4d5e6f7
 Create Date: 2026-05-08
 
@@ -23,7 +23,7 @@ Adds:
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "b3c4d5e6f7a8"
+revision = "c4d5e6f7a8b9"
 down_revision = "a2b3c4d5e6f7"
 branch_labels = None
 depends_on = None

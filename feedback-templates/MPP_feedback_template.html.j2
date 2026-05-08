@@ -1,225 +1,380 @@
 {%- macro format_feedback(label, report) %}
-    {# report is a MarkingReport instance #}
-    {% set positive = report.feedback_positive %}
-    {% set improvement = report.feedback_improvement %}
+    {# report is a MarkingReport instance or dict with feedback_positive/feedback_improvement #}
+    {% if report is mapping %}
+        {% set positive = report.feedback_positive %}
+        {% set improvement = report.feedback_improvement %}
+    {% else %}
+        {% set positive = report.feedback_positive %}
+        {% set improvement = report.feedback_improvement %}
+    {% endif %}
     {% if positive is none %}{% set positive = "" %}{% endif %}
     {% if improvement is none %}{% set improvement = "" %}{% endif %}
     {% if positive|length > 0 or improvement|length > 0 %}
-        <div class="mt2">
-            <div class="p1 pl1 pr1 bg-light-yellow pt12">
-                <strong>Feedback from {{ label }}</strong>
+        <div class="feedback-card">
+            <div class="feedback-card-header">
+                <span class="feedback-from-label">Feedback from</span>
+                <span class="feedback-assessor-name">{{ label }}</span>
             </div>
-            <div class="mt1">
+            <div class="feedback-card-body">
                 {% if positive|length > 0 %}
-                    <div class="text-medium pt12">What was done well in the project?</div>
-                    <div class="pt11 justify">{{ positive|safe }}</div>
+                    <div class="feedback-section">
+                        <div class="feedback-section-label feedback-section-label--positive">
+                            <span class="feedback-section-icon">&#10003;</span>
+                            What was done well
+                        </div>
+                        <div class="feedback-text">{{ positive|safe }}</div>
+                    </div>
                 {% endif %}
                 {% if improvement|length > 0 %}
-                    <div class="text-medium pt12">Things to consider for next time</div>
-                    <div class="pt11 justify">{{ improvement|safe }}</div>
+                    <div class="feedback-section{% if positive|length > 0 %} feedback-section--border{% endif %}">
+                        <div class="feedback-section-label feedback-section-label--improve">
+                            <span class="feedback-section-icon">&#8594;</span>
+                            Things to consider for next time
+                        </div>
+                        <div class="feedback-text">{{ improvement|safe }}</div>
+                    </div>
                 {% endif %}
             </div>
         </div>
     {% endif %}
 {% endmacro -%}
 <!DOCTYPE html>
-<html>
-<style>
-    @page {
-        size: A4;
-        margin: 2cm;
-    }
-
-    .justify {
-        text-align: justify;
-    }
-
-    .pt11 {
-        font-size: 11pt;
-    }
-
-    .pt12 {
-        font-size: 12pt;
-    }
-
-    .pt13 {
-        font-size: 13pt;
-    }
-
-    .pt16 {
-        font-size: 16pt;
-    }
-
-    .text-semibold {
-        font-weight: 600;
-    }
-
-    .text-medium {
-        font-weight: 500;
-    }
-
-    .centre {
-        text-align: center;
-    }
-
-    .img-100px {
-        width: 100px;
-        max-width: 100%;
-    }
-
-    .bg-light-green {
-        background-color: #b8d5b9;
-    }
-
-    .bg-light-blue {
-        background-color: #bcd0ef;
-    }
-
-    .bg-light-yellow {
-        background-color: #f1e4b9;
-    }
-
-    .pt1 {
-        padding-top: 1ex;
-    }
-
-    .pt2 {
-        padding-top: 2ex;
-    }
-
-    .pt3 {
-        padding-top: 3ex;
-    }
-
-    .pb1 {
-        padding-bottom: 1ex;
-    }
-
-    .pb2 {
-        padding-bottom: 2ex;
-    }
-
-    .pb3 {
-        padding-bottom: 3ex;
-    }
-
-    .p1 {
-        padding-top: 1ex;
-        padding-bottom: 1ex;
-    }
-
-    .p2 {
-        padding-top: 2ex;
-        padding-bottom: 2ex;
-    }
-
-    .p3 {
-        padding-top: 3ex;
-        padding-bottom: 3ex;
-    }
-
-    .pl1 {
-        padding-left: 1ex;
-    }
-
-    .pr1 {
-        padding-right: 1ex;
-    }
-
-    .mt1 {
-        margin-top: 1ex;
-    }
-
-    .mt2 {
-        margin-top: 2ex;
-    }
-
-    .mt3 {
-        margin-top: 3ex;
-    }
-
-    .mb1 {
-        margin-bottom: 1ex;
-    }
-
-    .mb2 {
-        margin-bottom: 2ex;
-    }
-
-    .mb3 {
-        margin-bottom: 3ex;
-    }
-
-    .m1 {
-        margin-top: 1ex;
-        margin-bottom: 1ex;
-    }
-
-    .m2 {
-        margin-top: 2ex;
-        margin-bottom: 2ex;
-    }
-
-    .m3 {
-        margin-top: 3ex;
-        margin-bottom: 3ex;
-    }
-</style>
-<head lang="en">
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <title>{{ pclass.name }} feedback for {{ student_user.name }}</title>
+    <style>
+        /* ─── Sussex Brand Colours ─────────────────────────────── */
+        :root {
+            --south-downs-green: #033803;
+            --south-downs-green-80: #356035;
+            --south-downs-green-40: #9AAF9A;
+            --south-downs-green-20: #CDD7CD;
+            --seven-sisters-chalk: #EAE5DD;
+            --seven-sisters-chalk-60: #F2EFEC;
+            --seven-sisters-chalk-40: #F7F5F1;
+            --english-channel: #32D8C5;
+            --english-channel-40: #ADEFE8;
+            --ocean-teal: #003B4A;
+            --shell-peach: #F5C48A;
+            --body-text: #1a1a1a;
+        }
+
+        /* ─── Page Setup ───────────────────────────────────────── */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @page {
+            @bottom-center {
+                content: counter(page) " of " counter(pages);
+                font-family: 'Inter', sans-serif;
+                font-size: 8pt;
+                color: var(--south-downs-green-80);
+                padding-bottom: 8mm;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 10pt;
+            line-height: 1.6;
+            color: var(--body-text);
+            background: white;
+        }
+
+        /* ─── Header Band ──────────────────────────────────────── */
+        .page-header {
+            background-color: var(--south-downs-green);
+            padding: 10mm 18mm 8mm 18mm;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-logo img {
+            height: 28pt;
+            display: block;
+        }
+
+        .header-title-block {
+            text-align: right;
+        }
+
+        .header-pclass-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 11pt;
+            font-weight: 600;
+            color: var(--english-channel);
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+
+        .header-doc-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 8pt;
+            font-weight: 400;
+            color: var(--english-channel-40);
+            letter-spacing: 0.03em;
+            margin-top: 1pt;
+        }
+
+        /* ─── Chalk Strap: student name + grade ───────────────── */
+        .student-strap {
+            background-color: var(--seven-sisters-chalk);
+            padding: 8mm 18mm;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            border-bottom: 2pt solid var(--south-downs-green-20);
+        }
+
+        .student-name {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 18pt;
+            font-weight: 700;
+            color: var(--south-downs-green);
+            line-height: 1.2;
+        }
+
+        .grade-badge {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .grade-badge-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 7pt;
+            font-weight: 500;
+            color: var(--south-downs-green-80);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 1pt;
+        }
+
+        .grade-badge-value {
+            font-family: 'Inter', sans-serif;
+            font-size: 26pt;
+            font-weight: 700;
+            color: var(--south-downs-green);
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        /* ─── Main Content Area ────────────────────────────────── */
+        .content {
+            padding: 10mm 18mm 16mm 18mm;
+            background: white;
+        }
+
+        /* ─── Workflow Section (Supervisor / Examiner) ─────────── */
+        .workflow-section {
+            margin-top: 10mm;
+        }
+
+        .workflow-section:first-child {
+            margin-top: 0;
+        }
+
+        .workflow-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            border-bottom: 1.5pt solid var(--south-downs-green);
+            padding-bottom: 2pt;
+            margin-bottom: 4mm;
+        }
+
+        .workflow-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 12pt;
+            font-weight: 600;
+            color: var(--south-downs-green);
+            letter-spacing: -0.02em;
+        }
+
+        .workflow-grade {
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt;
+            font-weight: 500;
+            color: var(--south-downs-green-80);
+        }
+
+        .workflow-grade strong {
+            font-weight: 700;
+            color: var(--south-downs-green);
+        }
+
+        /* ─── Feedback Cards ───────────────────────────────────── */
+        .feedback-card {
+            margin-bottom: 5mm;
+            border: 1pt solid var(--south-downs-green-20);
+            border-radius: 3pt;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+
+        .feedback-card-header {
+            background-color: var(--south-downs-green);
+            padding: 3mm 5mm;
+            display: flex;
+            align-items: baseline;
+            gap: 6pt;
+        }
+
+        .feedback-from-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 7.5pt;
+            font-weight: 400;
+            color: var(--english-channel-40);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .feedback-assessor-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt;
+            font-weight: 600;
+            color: var(--seven-sisters-chalk);
+            letter-spacing: -0.01em;
+        }
+
+        .feedback-card-body {
+            padding: 4mm 5mm;
+            background: white;
+        }
+
+        .feedback-section {
+            padding: 2mm 0;
+        }
+
+        .feedback-section--border {
+            border-top: 0.75pt solid var(--seven-sisters-chalk);
+            margin-top: 3mm;
+            padding-top: 3mm;
+        }
+
+        .feedback-section-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 8.5pt;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin-bottom: 2mm;
+            display: flex;
+            align-items: center;
+            gap: 4pt;
+        }
+
+        .feedback-section-icon {
+            font-size: 9pt;
+            line-height: 1;
+        }
+
+        .feedback-section-label--positive {
+            color: var(--south-downs-green);
+        }
+
+        .feedback-section-label--improve {
+            color: var(--ocean-teal);
+        }
+
+        .feedback-text {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 9.5pt;
+            line-height: 1.65;
+            color: var(--body-text);
+            text-align: justify;
+        }
+
+        /* ─── Turquoise accent rule between workflow sections ──── */
+        .workflow-divider {
+            border: none;
+            border-top: 2pt solid var(--english-channel);
+            margin: 9mm 0;
+            opacity: 0.5;
+        }
+
+    </style>
 </head>
 <body>
-<div class="container">
-    <div class="mb3">
-        <div class="centre"><img class="img-100px" src="{{ UoS_Logo }}"/></div>
+
+<!-- ══ Header ══════════════════════════════════════════════ -->
+<div class="page-header">
+    <div class="header-logo">
+        <img src="{{ UoS_Logo }}" alt="University of Sussex"/>
     </div>
-    <div class="m3">
-        <div class="pt16 centre">{{ pclass.name }} feedback</div>
+    <div class="header-title-block">
+        <div class="header-pclass-name">{{ pclass.name }}</div>
+        <div class="header-doc-label">Assessment feedback</div>
     </div>
-    <div class="m2">
-        <span class="p1 pt11"><strong>{{ student_user.name }}</strong></span>
-        {# expect the conflation_report to contain a single target "report" #}
-        {# this should contain the conflated report #}
-        {% if 'report' in conflation_report %}
-            <span class="p1 pt13"><strong>{{ conflation_report['report']|round(precision=0) }}%</strong></span>
-        {% endif %}
-        {% if "supervisor" in workflow_data %}
-            {% set supervisor_workflow = workflow_data["supervisor"] %}
-            {% set grade = supervisor_workflow["grade"] %}
-            {% set num_reports = supervisor_workflow["reports"]|length %}
-            <div class="mt3">
-                {% if num_reports > 1 %}
-                    <div class="pt13 p2 text-semibold bg-light-blue centre">Supervision team</div>
-                    <div class="mt1 pt11">
-                        Combined supervision grade: {{ grade|round(precision=0) }}%
-                    </div>
-                {% else %}
-                    <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Supervision reports</div>
-                    <div class="mt1 pt11">Supervision grade: {{ grade|round(precision=0) }}%</div>
-                {% endif %}
+</div>
+
+<!-- ══ Student strap ════════════════════════════════════════ -->
+<div class="student-strap">
+    <span class="student-name">{{ student_user.name }}</span>
+    {% if 'report' in conflation_report %}
+        <div class="grade-badge">
+            <span class="grade-badge-label">Overall grade</span>
+            <span class="grade-badge-value">{{ conflation_report['report']|round(precision=0)|int }}%</span>
+        </div>
+    {% endif %}
+</div>
+
+<!-- ══ Content ══════════════════════════════════════════════ -->
+<div class="content">
+
+    {% if "supervisor" in workflow_data %}
+        {% set supervisor_workflow = workflow_data["supervisor"] %}
+        {% set num_reports = supervisor_workflow["reports"]|length %}
+        <div class="workflow-section">
+            <div class="workflow-header">
+                    <span class="workflow-title">
+                        {% if num_reports > 1 %}Supervision team{% else %}Supervisor's report{% endif %}
+                    </span>
+                <span class="workflow-grade">
+                        {% if num_reports > 1 %}Combined supervision grade{% else %}Supervision grade{% endif %}:
+                        <strong>{{ supervisor_workflow["grade"]|round(precision=0)|int }}%</strong>
+                    </span>
             </div>
             {% for report in supervisor_workflow["reports"] %}
-                {{ format_feedback(report.name, report) }}
+                {{ format_feedback(report.name if report.name else "Supervisor", report) }}
             {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if "examiner" in workflow_data %}
+        {% if "supervisor" in workflow_data %}
+            <hr class="workflow-divider">
         {% endif %}
-        {% if "examiner" in workflow_data %}
-            {% set examiner_workflow = workflow_data["examiner"] %}
-            {% set grade = examiner_workflow["grade"] %}
-            {% set num_reports = examiner_workflow["reports"]|length %}
-            <div class="mt-3">
-                {% if num_reports > 1 %}
-                    <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Examiners&rsquo; reports</div>
-                    <div class="mt1 pt11">Combined examiners&rsquo; grade: {{ grade|round(precision=0) }}%</div>
-                {% else %}
-                    <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Examiner&rsquo;s report</div>
-                    <div class="mt1 pt11">Examiner&rsquo;s grade: {{ grade|round(precision=0) }}%</div>
-                {% endif %}
+        {% set examiner_workflow = workflow_data["examiner"] %}
+        {% set num_reports = examiner_workflow["reports"]|length %}
+        <div class="workflow-section">
+            <div class="workflow-header">
+                    <span class="workflow-title">
+                        {% if num_reports > 1 %}Examiners&rsquo; reports{% else %}Examiner&rsquo;s report{% endif %}
+                    </span>
+                <span class="workflow-grade">
+                        {% if num_reports > 1 %}Combined examiners&rsquo; grade{% else %}Examiner&rsquo;s
+                            grade{% endif %}:
+                        <strong>{{ examiner_workflow["grade"]|round(precision=0)|int }}%</strong>
+                    </span>
             </div>
             {% for report in examiner_workflow["reports"] %}
                 {{ format_feedback('Examiner #' + loop.index|string, report) }}
             {% endfor %}
-        {% endif %}
-    </div>
+        </div>
+    {% endif %}
+
+</div>
+
 </body>
 </html>

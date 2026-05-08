@@ -1016,7 +1016,7 @@ def register_marking_tasks(celery):
                 HTML(filename=html_mgr.path, base_url=".").write_pdf(
                     pdf_mgr.path,
                     stylesheets=[
-                        "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap",
+                        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap",
                         sheet,
                     ],
                     font_config=font_config,

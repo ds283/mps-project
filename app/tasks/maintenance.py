@@ -714,6 +714,7 @@ def register_maintenance_tasks(celery):
                         thumb_adapter = AssetCloudAdapter(
                             thumbnail,
                             thumbnails_store,
+                            encryption_attr=None,
                             audit_data=f'maintenance.asset_test_expiry thumbnail cleanup (record type="{asset_type}", record id #{id})',
                         )
                         thumb_adapter.delete()

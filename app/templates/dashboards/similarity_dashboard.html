@@ -185,7 +185,9 @@
         </div>
 
         {# ---- active jobs panel (shared with AI dashboard) ---- #}
-        {% with panel_colour_ramp="orange", panel_back_url=url_for('dashboards.similarity_dashboard') %}
+        {% with panel_colour_ramp="orange", panel_back_url=url_for('dashboards.similarity_dashboard',
+            tenant_id=selected_tenant.id, pclass_id=selected_pclass_ids,
+            year=selected_years, status=status_filter, chunk_type=selected_chunk_type) %}
             {% include "dashboards/_active_jobs_panel.html" %}
         {% endwith %}
 

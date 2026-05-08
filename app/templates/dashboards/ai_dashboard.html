@@ -322,7 +322,9 @@
         </div>
 
         {# ---- active orchestration jobs panel ---- #}
-        {% with panel_colour_ramp="blue", panel_back_url=url_for('dashboards.ai_dashboard') %}
+        {% with panel_colour_ramp="blue", panel_back_url=url_for('dashboards.ai_dashboard',
+            tenant_id=selected_tenant.id, pclass_id=selected_pclass_ids,
+            year=selected_years, sort_order=sort_order) %}
             {% include "dashboards/_active_jobs_panel.html" %}
         {% endwith %}
 

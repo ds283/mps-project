@@ -3101,13 +3101,21 @@ def cancel_similarity_job(uuid: str):
 
 
 def _safe_back_url(candidate: Optional[str]) -> str:
-    """Return *candidate* if it is a known-safe dashboard URL, else the AI dashboard."""
-    allowed = {
+    """Return *candidate* if its path matches a known-safe dashboard URL, else the AI dashboard.
+
+    Query parameters are preserved so that filter state survives the round-trip.
+    Scheme and netloc must be absent to prevent open-redirect attacks.
+    """
+    from urllib.parse import urlparse
+
+    allowed_paths = {
         url_for("dashboards.ai_dashboard"),
         url_for("dashboards.similarity_dashboard"),
     }
-    if candidate and candidate in allowed:
-        return candidate
+    if candidate:
+        parsed = urlparse(candidate)
+        if not parsed.scheme and not parsed.netloc and parsed.path in allowed_paths:
+            return candidate
     return url_for("dashboards.ai_dashboard")
 
 

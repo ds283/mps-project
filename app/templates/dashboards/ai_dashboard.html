@@ -261,9 +261,9 @@
                     <a href="{{ clear_url }}"
                        class="btn btn-outline-danger"
                        data-bs-toggle="tooltip"
-                       title="Clear existing results and resubmit all reports for {{ level_label }}"
-                       onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
-                        <i class="fas fa-sync-alt me-1"></i>Clear all &amp; resubmit
+                       title="Drop cached data and resubmit every report for {{ level_label }}"
+                       onclick="return confirm('Drop cache and resubmit ALL reports for {{ level_label }}? This cannot be undone.')">
+                        <i class="fas fa-sync-alt me-1"></i>Drop cache &amp; resubmit all
                     </a>
                 </div>
                 {% if agg.n_analysis_failed > 0 or agg.n_feedback_failed > 0 %}
@@ -277,16 +277,14 @@
                         <a href="{{ retry_errors_url }}"
                            class="btn btn-outline-secondary"
                            data-bs-toggle="tooltip"
-                           title="Retry failed records using cached text — faster, does not re-download"
-                           onclick="return confirm('Retry error records for {{ level_label }} using cached scraped text?')">
+                           title="Resubmit failed records using cached scraped text — does not re-download">
                             <i class="fas fa-sync me-1"></i>Retry cached
                         </a>
                         <a href="{{ resubmit_errors_url }}"
                            class="btn btn-outline-danger"
                            data-bs-toggle="tooltip"
-                           title="Full reset: clear all results and re-download the report from scratch"
-                           onclick="return confirm('Full reset: clear all results for error records in {{ level_label }} and re-run from scratch?')">
-                            <i class="fas fa-redo me-1"></i>Full reset &amp; resubmit
+                           title="Drop cached data and resubmit only the failed records from scratch">
+                            <i class="fas fa-redo me-1"></i>Drop cache &amp; resubmit errors
                         </a>
                     </div>
                 {% endif %}
@@ -452,9 +450,9 @@
                             <a href="{{ url_for('dashboards.clear_global') }}"
                                class="btn btn-outline-danger"
                                data-bs-toggle="tooltip"
-                               title="Clear existing results and resubmit all reports"
-                               onclick="return confirm('Clear ALL existing analysis results globally and resubmit every report? This cannot be undone.')">
-                                <i class="fas fa-sync-alt me-1"></i>Clear all &amp; resubmit
+                               title="Drop cached data and resubmit every report globally"
+                               onclick="return confirm('Drop cache and resubmit ALL reports globally? This cannot be undone.')">
+                                <i class="fas fa-sync-alt me-1"></i>Drop cache &amp; resubmit all
                             </a>
                         </div>
                         <div class="btn-group btn-group-xs" role="group">
@@ -467,16 +465,14 @@
                             <a href="{{ url_for('dashboards.retry_errors_global') }}"
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
-                               title="Retry all failed records using cached text — does not re-download"
-                               onclick="return confirm('Retry all error records globally using cached scraped text?')">
-                                <i class="fas fa-sync me-1"></i>Retry all cached
+                               title="Resubmit all failed records using cached scraped text — does not re-download">
+                                <i class="fas fa-sync me-1"></i>Retry cached
                             </a>
                             <a href="{{ url_for('dashboards.resubmit_errors_global') }}"
                                class="btn btn-outline-danger"
                                data-bs-toggle="tooltip"
-                               title="Full reset: clear all results and re-download from scratch"
-                               onclick="return confirm('Full reset: clear all results for error records globally and re-run from scratch?')">
-                                <i class="fas fa-redo me-1"></i>Full reset &amp; resubmit all
+                               title="Drop cached data and resubmit only the failed records from scratch">
+                                <i class="fas fa-redo me-1"></i>Drop cache &amp; resubmit errors
                             </a>
                         </div>
                     </div>

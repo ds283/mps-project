@@ -2593,6 +2593,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         metrics = la.get("metrics", {})
         flags = la.get("flags", {})
         llm_result = la.get("llm_result", {})
+        _llm_metadata = la.get("_llm_metadata", {})
+        # No-rubric path stores metadata in _llm_metadata rather than llm_result;
+        # merge so risk factor computation works in both cases.
+        effective_meta = {**_llm_metadata, **llm_result}
 
         existing = self.risk_factors_data
         new_data = {}
@@ -2623,10 +2627,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         new_data[self.RISK_TURNITIN] = turnitin_factor
 
         # --- AI COMPLIANCE STATEMENT ---
-        genai_found = llm_result.get("genai_statement_found", False)
+        genai_found = effective_meta.get("genai_statement_found", False)
         genai_factor = {
             "present": bool(genai_found),
-            "statement_precis": llm_result.get("genai_statement", None),
+            "statement_precis": effective_meta.get("genai_statement", None),
         }
         if genai_found:
             genai_factor = _carry_resolution(self.RISK_AI_COMPLIANCE, genai_factor)
@@ -2687,8 +2691,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         new_data[self.RISK_DOCUMENT_LENGTH] = length_factor
 
         # --- WORD COUNT DISCREPANCY ---
-        stated_found = llm_result.get("stated_word_count_found", False)
-        stated_words = llm_result.get("stated_word_count", None) if stated_found else None
+        stated_found = effective_meta.get("stated_word_count_found", False)
+        stated_words = effective_meta.get("stated_word_count", None) if stated_found else None
         tolerance = float(config.effective_word_count_tolerance) if config is not None else 0.15
         discrepancy_present = False
         discrepancy_pct = None

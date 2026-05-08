@@ -85,6 +85,7 @@ from ..models import (
     SubmissionRecord,
     User,
 )
+from ..shared.scraped_text_store import delete_similarity_chunks
 from ..shared.workflow_logging import log_db_commit
 from .pipeline_tracking import delete_workflow_hash, get_pipeline_redis, read_workflow_entry
 
@@ -1056,7 +1057,12 @@ def register_llm_orchestration_tasks(celery):
         """
         Read the Redis step-tracking hash for *record*, build a workflow-summary
         entry (augmented with student/pclass/year metadata from *record*), prepend
-        it to *job.recent_workflows*, and delete the Redis hash.
+        it to *job.recent_workflows*.
+
+        Hash deletion is intentionally NOT performed here — it is the caller's
+        responsibility to call delete_workflow_hash() only after db.session.commit()
+        succeeds.  Deleting before the commit would permanently lose step-timing data
+        if the commit is rolled back and the task retries.
 
         This is called from both :func:`orchestration_record_done` and
         :func:`orchestration_record_error` before the DB commit.
@@ -1077,8 +1083,6 @@ def register_llm_orchestration_tasks(celery):
             entry["status"] = status
             entry["finished_at"] = datetime.now().isoformat(timespec="milliseconds")
             job.prepend_workflow(entry)
-            if record is not None:
-                delete_workflow_hash(redis_client, record.id)
         except Exception as exc:
             current_app.logger.warning(
                 f"llm_orchestration._finalize_workflow_entry: failed for "
@@ -1127,6 +1131,13 @@ def register_llm_orchestration_tasks(celery):
                 ):
                     job.mark_complete()
                 db.session.commit()
+            # Delete the Redis step hash only after a successful commit so that a
+            # retry (on transient DB failure) can still read the step-timing data.
+            if r is not None and record is not None:
+                try:
+                    delete_workflow_hash(r, record.id)
+                except Exception:
+                    pass
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
@@ -1134,6 +1145,10 @@ def register_llm_orchestration_tasks(celery):
                 f"for job {job_uuid} / record #{record_id}",
                 exc_info=exc,
             )
+            # Dispatch the coordinator before retrying so the pipeline can move
+            # on to the next pending record while this task re-attempts the commit.
+            _dispatch_global_coordinator()
+            raise self.retry()
 
         _dispatch_global_coordinator()
 
@@ -1201,6 +1216,12 @@ def register_llm_orchestration_tasks(celery):
                     job.mark_complete()
 
             db.session.commit()
+            # Delete the Redis step hash only after a successful commit.
+            if r is not None and record is not None:
+                try:
+                    delete_workflow_hash(r, record.id)
+                except Exception:
+                    pass
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
@@ -1208,6 +1229,10 @@ def register_llm_orchestration_tasks(celery):
                 f"for job {job_uuid} / record #{record_id}",
                 exc_info=exc,
             )
+            # Dispatch the coordinator before retrying so the pipeline can move
+            # on to the next pending record while this task re-attempts the commit.
+            _dispatch_global_coordinator()
+            raise self.retry()
 
         _dispatch_global_coordinator()
 
@@ -1452,6 +1477,9 @@ def register_llm_orchestration_tasks(celery):
                 record.llm_failure_reason = None
                 record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
                 record.llm_feedback_failure_reason = None
+                record.similarity_complete = False
+                record.llm_chunking_failed = False
+                record.llm_chunking_failure_reason = None
 
             try:
                 db.session.commit()
@@ -1476,6 +1504,9 @@ def register_llm_orchestration_tasks(celery):
                     db.session.rollback()
                 dispatched += 1
                 continue
+
+            if not job.similarity_only:
+                delete_similarity_chunks(record_id)
 
             # ------- dispatch the analysis chain -------
             if job.similarity_only:

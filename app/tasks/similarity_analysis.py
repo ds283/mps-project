@@ -275,11 +275,7 @@ def register_similarity_analysis_tasks(celery):
 
         if parsed_result is None:
             current_app.logger.error(
-                f"extract_chunks: LLM classification failed for SubmissionRecord #{record_id} "
-                f"— storing all chunks as absent"
-            )
-            store_similarity_chunks(
-                record_id, _empty_sections, model, CHUNK_EXTRACTION_PROMPT_VERSION, heading_style, len(top_level_sections)
+                f"extract_chunks: LLM classification failed for SubmissionRecord #{record_id}"
             )
             try:
                 rec = db.session.get(SubmissionRecord, record_id)

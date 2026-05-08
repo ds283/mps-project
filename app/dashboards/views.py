@@ -48,7 +48,7 @@ from ..models.similarity import SimilarityConcern
 from ..models.students import StudentData
 from ..models.users import User as UserModel
 from ..shared.context.global_context import render_template_context
-from ..shared.scraped_text_store import get_similarity_chunks
+from ..shared.scraped_text_store import delete_similarity_chunks, get_similarity_chunks
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
@@ -3033,6 +3033,9 @@ def resubmit_chunking_errors_global():
         db.session.rollback()
         flash("An error occurred while clearing chunking error flags.", "error")
         return redirect(url_for("dashboards.similarity_dashboard"))
+
+    for rid in record_ids:
+        delete_similarity_chunks(rid)
 
     try:
         job = launch_similarity_only_pipeline(user=current_user)

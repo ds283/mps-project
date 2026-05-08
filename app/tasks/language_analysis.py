@@ -2148,6 +2148,7 @@ def register_language_analysis_tasks(celery):
                     "SQLAlchemyError committing no-rubric metadata result", exc_info=exc
                 )
                 raise self.retry()
+            record_step_end(_r, record_id, "submit_to_llm", _t0)
             return
 
         # ----------------------------------------------------------------
@@ -2599,6 +2600,7 @@ def register_language_analysis_tasks(celery):
             current_app.logger.info(
                 f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — llm_feedback_failed is set"
             )
+            record_step_end(_r, record_id, "submit_to_llm_feedback", _t0)
             return
 
         data = record.language_analysis_data

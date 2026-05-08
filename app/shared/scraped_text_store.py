@@ -208,6 +208,35 @@ def store_similarity_chunks(
         client.close()
 
 
+def delete_similarity_chunks(record_id: int) -> bool:
+    """
+    Remove the similarity_chunks subdocument from the MongoDB scraped-text document for
+    *record_id*.  Called when clearing similarity-phase error flags so that extract_chunks
+    retries the LLM classification rather than treating the stale failed document as current.
+
+    Returns True on success (or if no document exists); False if MongoDB is unavailable.
+    """
+    client, collection = _get_collection()
+    if collection is None:
+        current_app.logger.warning(
+            "scraped_text_store.delete_similarity_chunks: MongoDB not configured — skipping"
+        )
+        return False
+    try:
+        collection.update_one(
+            {"submission_record_id": record_id},
+            {"$unset": {"similarity_chunks": ""}},
+        )
+        return True
+    except Exception as exc:
+        current_app.logger.warning(
+            f"scraped_text_store.delete_similarity_chunks: failed for record #{record_id}: {exc}"
+        )
+        return False
+    finally:
+        client.close()
+
+
 def get_similarity_chunks(record_id: int) -> dict | None:
     """
     Retrieve the "similarity_chunks" subdocument for *record_id*.

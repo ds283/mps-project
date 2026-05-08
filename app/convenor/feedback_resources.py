@@ -331,6 +331,7 @@ def delete_feedback_asset(asset_id):
                             thumb_adapter = AssetCloudAdapter(
                                 thumbnail,
                                 thumbnails_store,
+                                encryption_attr=None,
                                 audit_data=f"delete_feedback_asset thumbnail (asset id #{asset_id})",
                             )
                             thumb_adapter.delete()

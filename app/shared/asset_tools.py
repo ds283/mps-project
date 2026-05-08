@@ -19,7 +19,8 @@ import humanize
 from flask import current_app
 
 import app.shared.cloud_object_store.encryption_types as encryptions
-from .cloud_object_store import ObjectStore, ObjectMeta
+
+from .cloud_object_store import ObjectMeta, ObjectStore
 
 _DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
 
@@ -104,9 +105,9 @@ class AssetCloudAdapter:
         audit_data: str,
         key_attr: str = "unique_name",
         size_attr: str = "filesize",
-        encryption_attr: str = "encryption",
-        nonce_attr: str = "nonce",
-        compressed_attr: str = "compressed",
+        encryption_attr: Optional[str] = "encryption",
+        nonce_attr: Optional[str] = "nonce",
+        compressed_attr: Optional[str] = "compressed",
     ):
         self._asset = asset
         self._storage = storage

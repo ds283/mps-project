@@ -64,9 +64,28 @@ Architecture (Global coordinator with reliable Redis queue):
     - _dispatch_process_report() is called twice from finalize(); the second
       run overwrites the first processed report, which is harmless.
 
-  This race can only occur after a worker crash and restart, which is rare in
-  practice.  The alternative (a per-record Redis lock) adds meaningful
-  complexity for negligible benefit.
+  This race is triggered by on_worker_ready on a genuine crash + restart.
+  The periodic llm_watchdog does NOT drain inflight items for this reason:
+  doing so would trigger the race for every in-flight record every ~30 minutes,
+  causing multiple concurrent LLM submissions and overloading the LLM server.
+
+  Hard-crash gap (SIGKILL / OOM):
+
+  SoftTimeLimitExceeded is delivered by billiard's MainProcess via SIGALRM to
+  the child ForkPoolWorker.  If the entire worker process group is SIGKILL'd
+  (OOM kill of the main process, Docker OOM killer, etc.) the MainProcess is
+  dead and no signal is sent.  The .on_error() callback never runs, and the
+  record stays in the inflight list indefinitely.
+
+  The only recovery path in this scenario is on_worker_ready →
+  _recover_active_jobs() when the worker restarts.  In a Docker Swarm
+  deployment the orchestrator restarts crashed services automatically, so the
+  window is bounded by restart latency.
+
+  If timestamp-based recovery is ever needed (drain only items older than the
+  soft time limit), add an `only_older_than_seconds` parameter to
+  _recover_active_jobs() rather than re-enabling inflight draining in the
+  watchdog.
 """
 
 from datetime import datetime
@@ -498,6 +517,38 @@ def _dispatch_similarity_chain(celery, job_uuid: str, record_id: int) -> None:
     ).on_error(t_err.si(job_uuid, record_id).set(queue="default"))
 
     work.apply_async()
+
+
+def _dispatch_coordinator_if_pending() -> None:
+    """
+    Dispatch the global coordinator if any active job has pending work in its
+    Redis queue, without touching inflight items.
+
+    Used by the periodic watchdog to kick the coordinator back into motion if
+    it has stalled (e.g. a coordinator task was lost without being re-queued),
+    while leaving genuinely in-flight records undisturbed.
+
+    Draining inflight items (as _recover_active_jobs() does) must NOT be done
+    from a periodic watchdog: the tasks behind those inflight entries are still
+    running, so draining causes multiple concurrent submissions.  That function
+    is reserved for on_worker_ready, where tasks genuinely died with the worker.
+    """
+    try:
+        r = _get_orchestration_redis()
+        active_jobs: List[LLMOrchestrationJob] = (
+            db.session.query(LLMOrchestrationJob)
+            .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+            .all()
+        )
+        if not active_jobs:
+            return
+        has_pending = any(r.llen(job.redis_queue_key) > 0 for job in active_jobs)
+        if has_pending:
+            _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(
+            f"_dispatch_coordinator_if_pending: error checking queues: {exc}"
+        )
 
 
 def _recover_active_jobs() -> None:
@@ -1680,25 +1731,35 @@ def register_llm_orchestration_tasks(celery):
     @celery.task(bind=True, default_retry_delay=60)
     def llm_watchdog(self):
         """
-        Periodic watchdog: recover any stalled LLMOrchestrationJob instances.
+        Periodic watchdog: kick the global coordinator if it has stalled.
 
-        Calls _recover_active_jobs(), which moves any records that are stuck in the
-        inflight Redis list back to the pending queue and re-dispatches the global
-        coordinator.  Intended to run every ~30 minutes via the DatabaseScheduler
-        Beat schedule, providing automatic recovery without requiring a manual
-        worker restart.
+        Dispatches global_orchestration_step when there is pending work in any
+        active job's Redis queue but no coordinator is currently running (e.g.
+        a coordinator task was dropped by the broker without being re-queued).
 
-        Accepts the double-processing race documented in the module-level docstring:
-        if a record is genuinely in-flight at the time the watchdog fires, it is
-        re-queued and may be processed twice.  This is safe but wasteful; the last
-        writer wins and orchestration_record_done's >= total_count guard prevents
-        double-completion.
+        Does NOT drain inflight items.  Draining is reserved for on_worker_ready
+        (crash recovery), where tasks genuinely died with the worker process.
+        Draining from a live system would move actively-running records back to
+        the pending queue, causing the coordinator to dispatch a second chain
+        while the first is still executing — violating the OLLAMA_BATCH_SIZE
+        single-submission guarantee and overloading the LLM server.
+
+        Hard-crash gap: if the entire worker process group is SIGKILL'd (OOM
+        killer, Docker kill) the SoftTimeLimitExceeded signal is never sent (it
+        is delivered by billiard's MainProcess via SIGALRM to a child
+        ForkPoolWorker — if the MainProcess is dead the signal cannot fire).
+        In that case inflight items remain stuck until the worker restarts and
+        on_worker_ready → _recover_active_jobs() re-queues them.  In a Docker
+        Swarm deployment the orchestrator restarts crashed services automatically,
+        so the window is bounded by restart latency.  If timestamp-based recovery
+        is ever needed (drain only items older than the soft time limit), add an
+        `only_older_than_seconds` parameter to _recover_active_jobs().
         """
         try:
-            _recover_active_jobs()
+            _dispatch_coordinator_if_pending()
         except Exception as exc:
             current_app.logger.exception(
-                "llm_orchestration.llm_watchdog: recovery failed", exc_info=exc
+                "llm_orchestration.llm_watchdog: failed", exc_info=exc
             )
             raise self.retry()
 

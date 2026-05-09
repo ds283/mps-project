@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% from "labels.html" import simple_label %}
 
 {% block title %}Similarity Concern — {{ concern.chunk_type | replace('_', ' ') | title }}{% endblock %}
 
@@ -104,7 +105,7 @@
                             {{ student_a.student.user.name }}
                         </div>
                         <div class="text-body-secondary small">
-                            {{ student_a.student.exam_number_label }}
+                            {{ simple_label(student_a.student.exam_number_label) }}
                             &middot; {{ record_a.period.config.project_class.name }}
                             &middot; {{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }}
                         </div>
@@ -159,7 +160,7 @@
                             {{ student_b.student.user.name }}
                         </div>
                         <div class="text-body-secondary small">
-                            {{ student_b.student.exam_number_label }}
+                            {{ simple_label(student_b.student.exam_number_label) }}
                             &middot; {{ record_b.period.config.project_class.name }}
                             &middot; {{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }}
                         </div>

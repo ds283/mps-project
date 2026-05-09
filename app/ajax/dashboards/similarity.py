@@ -10,7 +10,7 @@
 
 from typing import List, Dict
 
-from flask import current_app, render_template, url_for
+from flask import current_app, get_template_attribute, render_template, url_for
 
 
 # language=jinja2
@@ -20,7 +20,7 @@ _student_cell = """
 {% set pclass = record.period.config.project_class %}
 <div class="fw-semibold">{{ user.name }}</div>
 <div class="small text-muted">
-    {% if student.exam_number %}{{ student.exam_number_label }}{% endif %}
+    {{ simple_label(student.exam_number_label) }}
 </div>
 <div class="small mt-1">
     <span class="badge bg-secondary">{{ pclass.abbreviation }}</span>
@@ -108,22 +108,22 @@ _status_cell = """
 
 # language=jinja2
 _actions_cell = """
-<div class="d-flex flex-column gap-1">
+{% if concern.reviewed %}
     <a href="{{ view_url }}" class="btn btn-sm btn-outline-secondary">
         <i class="fas fa-eye me-1"></i>View
     </a>
-    {% if not concern.reviewed %}
-        <a href="{{ review_url }}" class="btn btn-sm btn-db-orange">
-            <i class="fas fa-gavel me-1"></i>Review
-        </a>
-    {% endif %}
-</div>
+{% else %}
+    <a href="{{ review_url }}" class="btn btn-sm btn-db-orange">
+        <i class="fas fa-gavel me-1"></i>Review
+    </a>
+{% endif %}
 """
 
 
 def similarity_concern_data(concerns) -> List[Dict]:
     """Format SimilarityConcern rows for DataTables."""
     env = current_app.jinja_env
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     student_tmpl = env.from_string(_student_cell)
     chunk_type_tmpl = env.from_string(_chunk_type_cell)
@@ -140,8 +140,8 @@ def similarity_concern_data(concerns) -> List[Dict]:
 
         rows.append(
             {
-                "student_a": render_template(student_tmpl, record=concern.record_a),
-                "student_b": render_template(student_tmpl, record=concern.record_b),
+                "student_a": render_template(student_tmpl, record=concern.record_a, simple_label=simple_label),
+                "student_b": render_template(student_tmpl, record=concern.record_b, simple_label=simple_label),
                 "chunk_type": render_template(chunk_type_tmpl, concern=concern),
                 "cosine": render_template(cosine_tmpl, concern=concern),
                 "turnitin": render_template(turnitin_tmpl, concern=concern),

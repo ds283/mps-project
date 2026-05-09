@@ -11,6 +11,7 @@
     chunking_factor   dict                     — similarity_chunking_failed entry (may be empty)
 #}
 
+{% from "labels.html" import simple_label %}
 {% set is_resolved = risk_data.get('resolved', False) %}
 
 <div class="card mb-4" style="border-color: var(--db-orange-200);">
@@ -78,7 +79,7 @@
                         <td>
                             <div class="fw-semibold">{{ other_student.student.user.name }}</div>
                             <div class="text-body-secondary" style="font-size:0.8em;">
-                                {{ other_student.student.exam_number_label }}
+                                {{ simple_label(other_student.student.exam_number_label) }}
                                 &middot;
                                 {{ other.period.config.project_class.abbreviation }}
                                 {{ other.period.config.year }}/{{ other.period.config.year + 1 }}

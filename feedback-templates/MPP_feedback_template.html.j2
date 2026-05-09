@@ -1,5 +1,4 @@
 {%- macro format_feedback(label, report) %}
-    {# report is a MarkingReport instance or dict with feedback_positive/feedback_improvement #}
     {% if report is mapping %}
         {% set positive = report.feedback_positive %}
         {% set improvement = report.feedback_improvement %}
@@ -12,24 +11,26 @@
     {% if positive|length > 0 or improvement|length > 0 %}
         <div class="feedback-card">
             <div class="feedback-card-header">
-                <span class="feedback-from-label">Feedback from</span>
-                <span class="feedback-assessor-name">{{ label }}</span>
+                <div class="fch-label-cell">
+                    <span class="feedback-from-label">Feedback from</span>
+                </div>
+                <div class="fch-name-cell">
+                    <span class="feedback-assessor-name">{{ label }}</span>
+                </div>
             </div>
             <div class="feedback-card-body">
                 {% if positive|length > 0 %}
                     <div class="feedback-section">
-                        <div class="feedback-section-label feedback-section-label--positive">
-                            <span class="feedback-section-icon">&#10003;</span>
-                            What was done well
+                        <div class="feedback-section-label feedback-section-label--positive">&#10003;&nbsp; What was
+                            done well
                         </div>
                         <div class="feedback-text">{{ positive|safe }}</div>
                     </div>
                 {% endif %}
                 {% if improvement|length > 0 %}
                     <div class="feedback-section{% if positive|length > 0 %} feedback-section--border{% endif %}">
-                        <div class="feedback-section-label feedback-section-label--improve">
-                            <span class="feedback-section-icon">&#8594;</span>
-                            Things to consider for next time
+                        <div class="feedback-section-label feedback-section-label--improve">&#8594;&nbsp; Things to
+                            consider for next time
                         </div>
                         <div class="feedback-text">{{ improvement|safe }}</div>
                     </div>
@@ -44,35 +45,81 @@
     <meta charset="UTF-8">
     <title>{{ pclass.name }} feedback for {{ student_user.name }}</title>
     <style>
-        /* ─── Sussex Brand Colours ─────────────────────────────── */
+        /* ═══════════════════════════════════════════════════════════════════
+         * COLOUR SCHEME
+         * ───────────────────────────────────────────────────────────────────
+         * All colour decisions are isolated here. To switch scheme, replace
+         * the values in this block only — nothing else needs to change.
+         *
+         * Current scheme: D — Ocean Teal 80% header
+         *
+         *   --c-header      header band background
+         *   --c-anchor      primary text colour (titles, rules, bold grades)
+         *   --c-mid         secondary text colour (grade labels, subdued text)
+         *   --c-card        card header fill
+         *   --c-rule        thin rule colour (workflow header underline, card border)
+         *   --c-improve     "Things to consider" label colour
+         *   --c-accent      section divider rule colour
+         *   --c-strap       student strap background (Seven Sisters Chalk throughout)
+         *   --c-strap-rule  bottom border of student strap
+         *
+         * Scheme reference:
+         *
+         *   Scheme D (current) — Ocean Teal family + Adonis Blue accent
+         *     --c-header:    #33626E   Ocean Teal 80%
+         *     --c-anchor:    #003B4A   Ocean Teal
+         *     --c-mid:       #33626E   Ocean Teal 80%
+         *     --c-card:      #CCD8DB   Ocean Teal 20%
+         *     --c-rule:      #003B4A   Ocean Teal
+         *     --c-improve:   #3F77CA   Adonis Blue
+         *     --c-accent:    #3F77CA   Adonis Blue
+         *     --c-strap:     #EAE5DD   Seven Sisters Chalk
+         *     --c-strap-rule:#99B0B7   Ocean Teal 40%
+         *
+         *   Scheme B — Ocean Teal full header
+         *     --c-header:    #003B4A   (only this line changes vs D)
+         *
+         *   Scheme C — Flint Grey family + Adonis Blue accent
+         *     --c-header:    #6F7587   Flint Grey
+         *     --c-anchor:    #3a3d4a   Flint Grey darkened
+         *     --c-mid:       #6F7587   Flint Grey
+         *     --c-card:      #E2E3E7   Flint Grey 20%
+         *     --c-rule:      #3a3d4a
+         *     --c-improve:   #3F77CA   Adonis Blue
+         *     --c-accent:    #3F77CA   Adonis Blue
+         *     --c-strap:     #EAE5DD   Seven Sisters Chalk
+         *     --c-strap-rule:#C5C8CF   Flint Grey 40%
+         * ═══════════════════════════════════════════════════════════════════ */
         :root {
-            --south-downs-green: #033803;
-            --south-downs-green-80: #356035;
-            --south-downs-green-40: #9AAF9A;
-            --south-downs-green-20: #CDD7CD;
-            --seven-sisters-chalk: #EAE5DD;
-            --seven-sisters-chalk-60: #F2EFEC;
-            --seven-sisters-chalk-40: #F7F5F1;
-            --english-channel: #32D8C5;
-            --english-channel-40: #ADEFE8;
-            --ocean-teal: #003B4A;
-            --shell-peach: #F5C48A;
-            --body-text: #1a1a1a;
+            --c-header: #33626E;
+            --c-anchor: #003B4A;
+            --c-mid: #33626E;
+            --c-card: #CCD8DB;
+            --c-rule: #003B4A;
+            --c-improve: #3F77CA;
+            --c-accent: #3F77CA;
+            --c-strap: #EAE5DD;
+            --c-strap-rule: #99B0B7;
+            --c-body: #1a1a1a;
         }
 
-        /* ─── Page Setup ───────────────────────────────────────── */
+        /* ───────────────────────────────────────────────────────────────────
+         * PAGE SETUP
+         * ─────────────────────────────────────────────────────────────────── */
         @page {
             size: A4;
-            margin: 0;
+            /* Bottom margin reserves space for the page number footer.
+             * Top/side margins are 0 so the header band bleeds to the edge. */
+            margin: 0 0 14mm 0;
         }
 
         @page {
             @bottom-center {
                 content: counter(page) " of " counter(pages);
                 font-family: 'Inter', sans-serif;
-                font-size: 8pt;
-                color: var(--south-downs-green-80);
-                padding-bottom: 8mm;
+                font-size: 7.5pt;
+                color: var(--c-mid);
+                padding-bottom: 4mm;
             }
         }
 
@@ -86,25 +133,43 @@
             font-family: 'Libre Baskerville', serif;
             font-size: 10pt;
             line-height: 1.6;
-            color: var(--body-text);
+            color: var(--c-body);
             background: white;
         }
 
-        /* ─── Header Band ──────────────────────────────────────── */
+        /* ───────────────────────────────────────────────────────────────────
+         * LAYOUT NOTE
+         * WeasyPrint has limited flexbox support and wraps flex children
+         * unexpectedly. All two-column layouts use display:table / table-cell.
+         * ─────────────────────────────────────────────────────────────────── */
+
+        /* ───────────────────────────────────────────────────────────────────
+         * HEADER BAND
+         * ─────────────────────────────────────────────────────────────────── */
         .page-header {
-            background-color: var(--south-downs-green);
-            padding: 10mm 18mm 8mm 18mm;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            background-color: var(--c-header);
+            padding: 8mm 18mm;
         }
 
-        .header-logo img {
-            height: 28pt;
+        .header-inner {
+            display: table;
+            width: 100%;
+        }
+
+        .header-logo-cell {
+            display: table-cell;
+            vertical-align: middle;
+            width: 90pt;
+        }
+
+        .header-logo-cell img {
+            height: 38pt;
             display: block;
         }
 
-        .header-title-block {
+        .header-title-cell {
+            display: table-cell;
+            vertical-align: middle;
             text-align: right;
         }
 
@@ -112,8 +177,8 @@
             font-family: 'Inter', sans-serif;
             font-size: 11pt;
             font-weight: 600;
-            color: var(--english-channel);
-            letter-spacing: -0.02em;
+            color: white;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
@@ -121,131 +186,163 @@
             font-family: 'Inter', sans-serif;
             font-size: 8pt;
             font-weight: 400;
-            color: var(--english-channel-40);
+            color: rgba(255, 255, 255, 0.65);
             letter-spacing: 0.03em;
-            margin-top: 1pt;
+            margin-top: 1.5pt;
         }
 
-        /* ─── Chalk Strap: student name + grade ───────────────── */
+        /* ───────────────────────────────────────────────────────────────────
+         * STUDENT STRAP
+         * ─────────────────────────────────────────────────────────────────── */
         .student-strap {
-            background-color: var(--seven-sisters-chalk);
-            padding: 8mm 18mm;
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            border-bottom: 2pt solid var(--south-downs-green-20);
+            background-color: var(--c-strap);
+            padding: 7mm 18mm;
+            border-bottom: 2pt solid var(--c-strap-rule);
+            display: table;
+            width: 100%;
+        }
+
+        .student-name-cell {
+            display: table-cell;
+            vertical-align: bottom;
         }
 
         .student-name {
             font-family: 'Libre Baskerville', serif;
-            font-size: 18pt;
+            font-size: 20pt;
             font-weight: 700;
-            color: var(--south-downs-green);
+            color: var(--c-anchor);
             line-height: 1.2;
         }
 
-        .grade-badge {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: flex-end;
+        .grade-cell {
+            display: table-cell;
+            vertical-align: bottom;
+            text-align: right;
+            white-space: nowrap;
+            width: 80pt;
         }
 
-        .grade-badge-label {
+        .grade-label {
             font-family: 'Inter', sans-serif;
-            font-size: 7pt;
-            font-weight: 500;
-            color: var(--south-downs-green-80);
-            letter-spacing: 0.08em;
+            font-size: 6.5pt;
+            font-weight: 600;
+            color: var(--c-mid);
+            letter-spacing: 0.09em;
             text-transform: uppercase;
-            margin-bottom: 1pt;
+            display: block;
         }
 
-        .grade-badge-value {
+        .grade-value {
             font-family: 'Inter', sans-serif;
-            font-size: 26pt;
+            font-size: 28pt;
             font-weight: 700;
-            color: var(--south-downs-green);
-            letter-spacing: -0.04em;
+            color: var(--c-anchor);
             line-height: 1;
+            display: block;
         }
 
-        /* ─── Main Content Area ────────────────────────────────── */
+        /* ───────────────────────────────────────────────────────────────────
+         * CONTENT AREA
+         * ─────────────────────────────────────────────────────────────────── */
         .content {
-            padding: 10mm 18mm 16mm 18mm;
-            background: white;
+            padding: 9mm 18mm 14mm 18mm;
         }
 
-        /* ─── Workflow Section (Supervisor / Examiner) ─────────── */
+        /* ───────────────────────────────────────────────────────────────────
+         * WORKFLOW SECTION (Supervisor / Examiner)
+         * ─────────────────────────────────────────────────────────────────── */
         .workflow-section {
-            margin-top: 10mm;
+            margin-top: 9mm;
         }
 
         .workflow-section:first-child {
             margin-top: 0;
         }
 
-        .workflow-header {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            border-bottom: 1.5pt solid var(--south-downs-green);
-            padding-bottom: 2pt;
+        .workflow-header-row {
+            display: table;
+            width: 100%;
+            border-bottom: 1.5pt solid var(--c-rule);
+            padding-bottom: 2.5pt;
             margin-bottom: 4mm;
+            /* Prevents a page break between this header and the first card below it */
+            page-break-after: avoid;
+        }
+
+        .workflow-title-cell {
+            display: table-cell;
+            vertical-align: bottom;
+            white-space: nowrap;
+        }
+
+        .workflow-grade-cell {
+            display: table-cell;
+            vertical-align: bottom;
+            text-align: right;
+            white-space: nowrap;
         }
 
         .workflow-title {
             font-family: 'Inter', sans-serif;
             font-size: 12pt;
             font-weight: 600;
-            color: var(--south-downs-green);
-            letter-spacing: -0.02em;
+            color: var(--c-anchor);
         }
 
         .workflow-grade {
             font-family: 'Inter', sans-serif;
-            font-size: 10pt;
-            font-weight: 500;
-            color: var(--south-downs-green-80);
+            font-size: 9.5pt;
+            color: var(--c-mid);
         }
 
         .workflow-grade strong {
-            font-weight: 700;
-            color: var(--south-downs-green);
+            color: var(--c-anchor);
         }
 
-        /* ─── Feedback Cards ───────────────────────────────────── */
+        /* ───────────────────────────────────────────────────────────────────
+         * FEEDBACK CARDS
+         * ─────────────────────────────────────────────────────────────────── */
         .feedback-card {
             margin-bottom: 5mm;
-            border: 1pt solid var(--south-downs-green-20);
-            border-radius: 3pt;
-            overflow: hidden;
+            border: 1pt solid var(--c-card);
             page-break-inside: avoid;
         }
 
         .feedback-card-header {
-            background-color: var(--south-downs-green);
-            padding: 3mm 5mm;
-            display: flex;
-            align-items: baseline;
-            gap: 6pt;
+            background-color: var(--c-card);
+            padding: 2.5mm 5mm;
+            display: table;
+            width: 100%;
+        }
+
+        .fch-label-cell {
+            display: table-cell;
+            vertical-align: middle;
+            white-space: nowrap;
+            width: 1%;
+            padding-right: 5pt;
+        }
+
+        .fch-name-cell {
+            display: table-cell;
+            vertical-align: middle;
         }
 
         .feedback-from-label {
             font-family: 'Inter', sans-serif;
-            font-size: 7.5pt;
+            font-size: 7pt;
             font-weight: 400;
-            color: var(--english-channel-40);
-            letter-spacing: 0.04em;
+            color: var(--c-mid);
+            letter-spacing: 0.05em;
             text-transform: uppercase;
-            flex-shrink: 0;
         }
 
         .feedback-assessor-name {
             font-family: 'Inter', sans-serif;
-            font-size: 10pt;
+            font-size: 10.5pt;
             font-weight: 600;
-            color: var(--seven-sisters-chalk);
-            letter-spacing: -0.01em;
+            color: var(--c-anchor);
         }
 
         .feedback-card-body {
@@ -254,11 +351,11 @@
         }
 
         .feedback-section {
-            padding: 2mm 0;
+            padding: 1.5mm 0;
         }
 
         .feedback-section--border {
-            border-top: 0.75pt solid var(--seven-sisters-chalk);
+            border-top: 0.75pt solid var(--c-card);
             margin-top: 3mm;
             padding-top: 3mm;
         }
@@ -267,83 +364,84 @@
             font-family: 'Inter', sans-serif;
             font-size: 8.5pt;
             font-weight: 600;
-            letter-spacing: -0.01em;
-            margin-bottom: 2mm;
-            display: flex;
-            align-items: center;
-            gap: 4pt;
-        }
-
-        .feedback-section-icon {
-            font-size: 9pt;
-            line-height: 1;
+            margin-bottom: 1.5mm;
+            white-space: nowrap;
         }
 
         .feedback-section-label--positive {
-            color: var(--south-downs-green);
+            color: var(--c-anchor);
         }
 
         .feedback-section-label--improve {
-            color: var(--ocean-teal);
+            color: var(--c-improve);
         }
 
         .feedback-text {
             font-family: 'Libre Baskerville', serif;
             font-size: 9.5pt;
             line-height: 1.65;
-            color: var(--body-text);
+            color: var(--c-body);
             text-align: justify;
         }
 
-        /* ─── Turquoise accent rule between workflow sections ──── */
+        /* ───────────────────────────────────────────────────────────────────
+         * SECTION DIVIDER
+         * ─────────────────────────────────────────────────────────────────── */
         .workflow-divider {
             border: none;
-            border-top: 2pt solid var(--english-channel);
-            margin: 9mm 0;
-            opacity: 0.5;
+            border-top: 1.5pt solid var(--c-accent);
+            margin: 8mm 0;
+            opacity: 0.55;
         }
-
     </style>
 </head>
 <body>
 
-<!-- ══ Header ══════════════════════════════════════════════ -->
+<!-- ══ Header ══════════════════════════════════════════════════════════════ -->
 <div class="page-header">
-    <div class="header-logo">
-        <img src="{{ UoS_Logo }}" alt="University of Sussex"/>
-    </div>
-    <div class="header-title-block">
-        <div class="header-pclass-name">{{ pclass.name }}</div>
-        <div class="header-doc-label">Assessment feedback</div>
+    <div class="header-inner">
+        <div class="header-logo-cell">
+            <img src="{{ UoS_Logo }}" alt="University of Sussex"/>
+        </div>
+        <div class="header-title-cell">
+            <div class="header-pclass-name">{{ pclass.name }}</div>
+            <div class="header-doc-label">Assessment feedback</div>
+        </div>
     </div>
 </div>
 
-<!-- ══ Student strap ════════════════════════════════════════ -->
+<!-- ══ Student strap ════════════════════════════════════════════════════════ -->
 <div class="student-strap">
-    <span class="student-name">{{ student_user.name }}</span>
+    <div class="student-name-cell">
+        <span class="student-name">{{ student_user.name }}</span>
+    </div>
     {% if 'report' in conflation_report %}
-        <div class="grade-badge">
-            <span class="grade-badge-label">Overall grade</span>
-            <span class="grade-badge-value">{{ conflation_report['report']|round(precision=0)|int }}%</span>
+        <div class="grade-cell">
+            <span class="grade-label">Overall grade</span>
+            <span class="grade-value">{{ conflation_report['report']|round(precision=0)|int }}%</span>
         </div>
     {% endif %}
 </div>
 
-<!-- ══ Content ══════════════════════════════════════════════ -->
+<!-- ══ Content ══════════════════════════════════════════════════════════════ -->
 <div class="content">
 
     {% if "supervisor" in workflow_data %}
         {% set supervisor_workflow = workflow_data["supervisor"] %}
         {% set num_reports = supervisor_workflow["reports"]|length %}
         <div class="workflow-section">
-            <div class="workflow-header">
+            <div class="workflow-header-row">
+                <div class="workflow-title-cell">
                     <span class="workflow-title">
-                        {% if num_reports > 1 %}Supervision team{% else %}Supervisor's report{% endif %}
+                        {% if num_reports > 1 %}Supervision team{% else %}Supervisor&#8217;s report{% endif %}
                     </span>
-                <span class="workflow-grade">
+                </div>
+                <div class="workflow-grade-cell">
+                    <span class="workflow-grade">
                         {% if num_reports > 1 %}Combined supervision grade{% else %}Supervision grade{% endif %}:
                         <strong>{{ supervisor_workflow["grade"]|round(precision=0)|int }}%</strong>
                     </span>
+                </div>
             </div>
             {% for report in supervisor_workflow["reports"] %}
                 {{ format_feedback(report.name if report.name else "Supervisor", report) }}
@@ -358,15 +456,19 @@
         {% set examiner_workflow = workflow_data["examiner"] %}
         {% set num_reports = examiner_workflow["reports"]|length %}
         <div class="workflow-section">
-            <div class="workflow-header">
+            <div class="workflow-header-row">
+                <div class="workflow-title-cell">
                     <span class="workflow-title">
-                        {% if num_reports > 1 %}Examiners&rsquo; reports{% else %}Examiner&rsquo;s report{% endif %}
+                        {% if num_reports > 1 %}Examiners&#8217; reports{% else %}Examiner&#8217;s report{% endif %}
                     </span>
-                <span class="workflow-grade">
-                        {% if num_reports > 1 %}Combined examiners&rsquo; grade{% else %}Examiner&rsquo;s
+                </div>
+                <div class="workflow-grade-cell">
+                    <span class="workflow-grade">
+                        {% if num_reports > 1 %}Combined examiners&#8217; grade{% else %}Examiner&#8217;s
                             grade{% endif %}:
                         <strong>{{ examiner_workflow["grade"]|round(precision=0)|int }}%</strong>
                     </span>
+                </div>
             </div>
             {% for report in examiner_workflow["reports"] %}
                 {{ format_feedback('Examiner #' + loop.index|string, report) }}

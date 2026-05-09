@@ -1006,22 +1006,18 @@ def register_marking_tasks(celery):
             with ScratchFileManager(suffix=".pdf") as pdf_mgr:
                 font_config = FontConfiguration()
                 sheet = CSS(
-                    string="""
-                            body {
-                                font-family: Roboto;
-                            }
-                            """,
+                    string="",  # no body rule needed; the template handles fonts
                     font_config=font_config,
                 )
                 HTML(filename=html_mgr.path, base_url=".").write_pdf(
                     pdf_mgr.path,
                     stylesheets=[
-                        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap",
+                        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
+                        "&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap",
                         sheet,
                     ],
                     font_config=font_config,
                 )
-
                 target_name = sanitize_filename(
                     f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf"
                 )

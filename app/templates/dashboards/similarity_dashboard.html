@@ -177,9 +177,16 @@
                     </a>
                     <a href="{{ url_for('dashboards.launch_similarity_rebuild_global') }}"
                        class="btn btn-sm btn-db-orange"
-                       onclick="return confirm('Launch a global similarity rebuild across all indexed submissions?')">
-                        <i class="fas fa-play me-1"></i>Rebuild all
+                       onclick="return confirm('Queue analysis for all reports that have not yet been processed?')">
+                        <i class="fas fa-robot me-1"></i>Submit missing
                     </a>
+                {% endif %}
+                {% if can_launch %}
+                    <p class="small text-body-secondary mb-0 mt-1">
+                        To initiate a complete rebuild, use
+                        <strong>Drop cache &amp; resubmit all</strong> from the
+                        <a href="{{ url_for('dashboards.ai_dashboard', tenant_id=selected_tenant.id) }}">AI dashboard</a>.
+                    </p>
                 {% endif %}
             </div>
         </div>

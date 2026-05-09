@@ -32,11 +32,26 @@ Architecture mirrors LLMOrchestrationJob / llm_orchestration.py exactly:
 
   Crash safety and recovery follow the same pattern as llm_orchestration:
   inflight IDs are moved back to the pending queue on worker restart by the
-  worker_ready signal handler and the periodic feedback_watchdog task.
+  worker_ready signal handler.
 
   The same double-processing race applies: if a record is genuinely in-flight
-  on another worker at recovery time, it may be processed twice.  This is
-  safe (later write wins; the completion guard uses >=) but wasteful.
+  on another worker at recovery time (worker_ready fires on restart), it may be
+  processed twice.  This is safe (later write wins; the completion guard uses >=)
+  but wasteful.
+
+  The periodic feedback_watchdog does NOT drain inflight items — see
+  llm_orchestration.py's module docstring for the full explanation.  Draining
+  from a live system moves actively-running records back to the pending queue,
+  causing the coordinator to dispatch a second chain while the first is still
+  executing.  The watchdog only checks whether the coordinator needs to be kicked
+  back into motion.
+
+  Hard-crash gap (SIGKILL / OOM): SoftTimeLimitExceeded is delivered by
+  billiard's MainProcess via SIGALRM to the child ForkPoolWorker.  If the entire
+  worker process group is hard-killed, the signal cannot fire and inflight items
+  remain stuck until the worker restarts (on_worker_ready → _recover_active_jobs).
+  In a Docker Swarm deployment the orchestrator restarts crashed services
+  automatically, so the window is bounded by restart latency.
 """
 
 from typing import List, Optional
@@ -151,9 +166,37 @@ def _notify_completion(
     report_info(msg, "feedback_orchestration", convenor)
 
 
+def _dispatch_coordinator_if_pending() -> None:
+    """
+    Dispatch the global coordinator if any active job has pending work in its
+    Redis queue, without touching inflight items.
+
+    Used by the periodic watchdog to kick the coordinator back into motion if
+    it has stalled, while leaving genuinely in-flight records undisturbed.
+    Draining inflight items must NOT be done from a periodic watchdog — see the
+    module-level docstring for the full explanation.
+    """
+    try:
+        r = _get_orchestration_redis()
+        active_jobs: List[FeedbackOrchestrationJob] = (
+            db.session.query(FeedbackOrchestrationJob)
+            .filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES))
+            .all()
+        )
+        if not active_jobs:
+            return
+        has_pending = any(r.llen(job.redis_queue_key) > 0 for job in active_jobs)
+        if has_pending:
+            _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(
+            f"feedback_orchestration._dispatch_coordinator_if_pending: error checking queues: {exc}"
+        )
+
+
 def _recover_active_jobs() -> None:
     """
-    Called on worker startup (and by the watchdog) to resume any jobs that
+    Called on worker startup to resume any jobs that
     were active when the worker last stopped.
 
     For each PENDING or RUNNING FeedbackOrchestrationJob:
@@ -613,16 +656,22 @@ def register_feedback_orchestration_tasks(celery):
     @celery.task(bind=True, default_retry_delay=60)
     def feedback_watchdog(self):
         """
-        Periodic watchdog: recover any stalled FeedbackOrchestrationJob
-        instances by moving inflight items back to the pending queue and
-        re-dispatching the global coordinator.  Intended to run every ~30
-        minutes via the DatabaseScheduler Beat schedule.
+        Periodic watchdog: kick the global coordinator if it has stalled.
+
+        Dispatches global_feedback_orchestration_step when there is pending work
+        in any active job's Redis queue but no coordinator is currently running.
+
+        Does NOT drain inflight items — draining from a live system causes
+        multiple concurrent PDF generation chains (violating PDF_BATCH_SIZE) and
+        wasted work.  Inflight draining is reserved for on_worker_ready, where
+        tasks genuinely died with the worker.  See the module-level docstring
+        for the full explanation including the hard-crash (SIGKILL/OOM) gap.
         """
         try:
-            _recover_active_jobs()
+            _dispatch_coordinator_if_pending()
         except Exception as exc:
             current_app.logger.exception(
-                "feedback_orchestration.feedback_watchdog: recovery failed", exc_info=exc
+                "feedback_orchestration.feedback_watchdog: failed", exc_info=exc
             )
             raise self.retry()
 

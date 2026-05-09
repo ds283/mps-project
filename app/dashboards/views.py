@@ -2655,6 +2655,43 @@ def _similarity_dashboard_summary() -> Dict:
     }
 
 
+def _similarity_pipeline_health(
+    tenant_id: int,
+    pclass_ids: List[int],
+    years: List[int],
+) -> Dict:
+    """
+    Count SubmissionRecords awaiting similarity processing and those with
+    chunking errors, scoped to the current filter selection.
+
+    Only counts records where report_id IS NOT NULL (report present, text
+    extraction possible) to match the eligibility gate used by
+    _collect_similarity_only_record_ids().
+    """
+    base = (
+        db.session.query(SubmissionRecord)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .filter(SubmissionRecord.report_id.isnot(None))
+    )
+    if pclass_ids:
+        base = base.filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
+    if years:
+        base = base.filter(ProjectClassConfig.year.in_(years))
+
+    n_awaiting_similarity = (
+        base.filter(SubmissionRecord.language_analysis_complete == db.true())
+        .filter(SubmissionRecord.similarity_complete.isnot(True))
+        .filter(SubmissionRecord.llm_chunking_failed.isnot(True))
+        .count()
+    )
+    n_chunking_failed = base.filter(SubmissionRecord.llm_chunking_failed == db.true()).count()
+    return {
+        "n_awaiting_similarity": n_awaiting_similarity,
+        "n_chunking_failed": n_chunking_failed,
+    }
+
+
 def _recompute_similarity_flag(record_id: int) -> None:
     """
     Clear the similarity_flagged risk factor on a SubmissionRecord when no
@@ -2800,6 +2837,7 @@ def similarity_dashboard():
 
     # ---- summary stat cards -------------------------------------------------
     summary = _similarity_dashboard_summary()
+    pipeline_health = _similarity_pipeline_health(selected_tenant_id, selected_pclass_ids, selected_years)
     pipeline_paused: bool = is_pipeline_paused()
 
     return render_template_context(
@@ -2814,6 +2852,7 @@ def similarity_dashboard():
         selected_chunk_type=selected_chunk_type,
         chunk_types=CHUNK_TYPES,
         summary=summary,
+        pipeline_health=pipeline_health,
         active_jobs=active_jobs,
         avg_seconds_per_record=avg_seconds_per_record,
         pipeline_paused=pipeline_paused,

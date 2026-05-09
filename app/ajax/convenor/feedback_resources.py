@@ -108,6 +108,7 @@ _template_metadata = """
 
 # language=jinja2
 _template_description_tags = """
+{% from "labels.html" import simple_label %}
 {% if ft.description %}
     <div class="small mb-1">{{ ft.description }}</div>
 {% endif %}
@@ -115,7 +116,7 @@ _template_description_tags = """
 {% if tag_list %}
     <div class="d-flex flex-row flex-wrap gap-1">
         {% for tag in tag_list %}
-            {{ tag.make_label()|safe }}
+            {{ simple_label(tag.make_label()) }}
         {% endfor %}
     </div>
 {% else %}

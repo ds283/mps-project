@@ -36,7 +36,7 @@ from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_
 # Pipeline constants
 # ---------------------------------------------------------------------------
 
-CHUNK_EXTRACTION_PROMPT_VERSION = 1
+CHUNK_EXTRACTION_PROMPT_VERSION = 2
 
 CHUNK_TYPES = [
     "abstract",

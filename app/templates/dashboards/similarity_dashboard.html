@@ -163,30 +163,28 @@
                     <a href="{{ url_for('dashboards.clear_chunking_errors_global') }}"
                        class="btn btn-sm btn-outline-secondary"
                        onclick="return confirm('Clear chunking error flags on all failed records? Records will not be automatically resubmitted.')">
-                        <i class="fas fa-eraser me-1"></i>Clear errors
+                        <i class="fas fa-eraser me-1"></i>Clear all errors
+                    </a>
+                    <a href="{{ url_for('dashboards.retry_similarity_errors_global') }}"
+                       class="btn btn-sm btn-outline-db-orange"
+                       onclick="return confirm('Clear chunking error flags and resubmit failed records? Cached chunks will be reused where available.')">
+                        <i class="fas fa-redo me-1"></i>Retry errors
                     </a>
                     <a href="{{ url_for('dashboards.resubmit_chunking_errors_global') }}"
                        class="btn btn-sm btn-outline-db-orange"
-                       onclick="return confirm('Drop cached chunks and resubmit affected records for similarity analysis?')">
-                        <i class="fas fa-redo me-1"></i>Drop cache &amp; resubmit similarity
+                       onclick="return confirm('Drop cached chunks and resubmit failed records for similarity analysis?')">
+                        <i class="fas fa-trash-restore me-1"></i>Drop cache &amp; retry errors
                     </a>
                     <a href="{{ url_for('dashboards.launch_similarity_rebuild_missing') }}"
                        class="btn btn-sm btn-outline-db-orange"
                        onclick="return confirm('Queue similarity analysis for all reports that completed LLM analysis but have not yet had similarity checked?')">
-                        <i class="fas fa-sync me-1"></i>Retry cached
+                        <i class="fas fa-sync me-1"></i>Submit missing
                     </a>
-                    <a href="{{ url_for('dashboards.launch_similarity_rebuild_global') }}"
+                    <a href="{{ url_for('dashboards.resubmit_all_global') }}"
                        class="btn btn-sm btn-db-orange"
-                       onclick="return confirm('Queue analysis for all reports that have not yet been processed?')">
-                        <i class="fas fa-robot me-1"></i>Submit missing
+                       onclick="return confirm('Drop ALL cached similarity chunks and resubmit every eligible record from scratch? This affects all records with completed language analysis.')">
+                        <i class="fas fa-robot me-1"></i>Drop cache &amp; resubmit all
                     </a>
-                {% endif %}
-                {% if can_launch %}
-                    <p class="small text-body-secondary mb-0 mt-1">
-                        To initiate a complete rebuild, use
-                        <strong>Drop cache &amp; resubmit all</strong> from the
-                        <a href="{{ url_for('dashboards.ai_dashboard', tenant_id=selected_tenant.id) }}">AI dashboard</a>.
-                    </p>
                 {% endif %}
             </div>
         </div>

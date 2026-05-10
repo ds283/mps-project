@@ -1429,6 +1429,21 @@ def _collect_chunking_error_record_ids() -> List[int]:
     ]
 
 
+def _collect_all_similarity_eligible_record_ids() -> List[int]:
+    """Return IDs of all SubmissionRecords eligible for similarity analysis.
+
+    Eligibility requires a report and completed language analysis.  The full
+    set is used by the nuclear 'Drop cache & resubmit all' action.
+    """
+    return [
+        row[0]
+        for row in db.session.query(SubmissionRecord.id)
+        .filter(SubmissionRecord.report_id.isnot(None))
+        .filter(SubmissionRecord.language_analysis_complete.is_(True))
+        .all()
+    ]
+
+
 def _clear_chunking_error_flags_for_records(record_ids: List[int]) -> int:
     """
     Clear LLM chunking-error flags and reset similarity_complete=False on the
@@ -3145,15 +3160,13 @@ def clear_chunking_errors_global():
 @dashboards.route("/similarity/resubmit_chunking_errors")
 @roles_accepted("admin", "root")
 def resubmit_chunking_errors_global():
-    """Clear LLM chunking-error flags globally and resubmit for similarity analysis."""
+    """Drop cached chunks for error records and resubmit them for similarity analysis."""
     record_ids = _collect_chunking_error_record_ids()
     if not record_ids:
         flash("No records with chunking error flags were found.", "info")
         return redirect(url_for("dashboards.similarity_dashboard"))
 
     count = _clear_chunking_error_flags_for_records(record_ids)
-    # Commit the flag clearing before launching the pipeline so that
-    # launch_similarity_only_pipeline() sees the now-eligible records.
     try:
         log_db_commit(f"Cleared LLM chunking error flags on {count} record(s) prior to resubmit")
     except SQLAlchemyError:
@@ -3179,6 +3192,93 @@ def resubmit_chunking_errors_global():
     else:
         flash(
             f"Cleared chunking error flags on {count} record(s) and queued {job.total_count} report(s) for similarity analysis.",
+            "success",
+        )
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+@dashboards.route("/similarity/retry_errors")
+@roles_accepted("admin", "root")
+def retry_similarity_errors_global():
+    """Clear LLM chunking-error flags and resubmit error records, keeping cached chunks."""
+    record_ids = _collect_chunking_error_record_ids()
+    if not record_ids:
+        flash("No records with chunking error flags were found.", "info")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    count = _clear_chunking_error_flags_for_records(record_ids)
+    try:
+        log_db_commit(f"Cleared LLM chunking error flags on {count} record(s) prior to retry (cache kept)")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while clearing chunking error flags.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    try:
+        job = launch_similarity_only_pipeline(user=current_user)
+    except Exception as exc:
+        flash(f"Cleared error flags on {count} record(s) but failed to launch similarity pipeline.", "error")
+        current_app.logger.exception("retry_errors_global: pipeline launch failed", exc_info=exc)
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    if job is None:
+        flash(
+            f"Cleared chunking error flags on {count} record(s), but no eligible records were found for similarity analysis.",
+            "info",
+        )
+    else:
+        flash(
+            f"Cleared chunking error flags on {count} record(s) and queued {job.total_count} report(s) for similarity analysis.",
+            "success",
+        )
+    return redirect(url_for("dashboards.similarity_dashboard"))
+
+
+@dashboards.route("/similarity/resubmit_all")
+@roles_accepted("admin", "root")
+def resubmit_all_global():
+    """Drop all cached similarity chunks and resubmit every eligible record from scratch."""
+    record_ids = _collect_all_similarity_eligible_record_ids()
+    if not record_ids:
+        flash("No records eligible for similarity analysis were found.", "info")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    db.session.query(SubmissionRecord).filter(
+        SubmissionRecord.id.in_(record_ids)
+    ).update(
+        {
+            SubmissionRecord.similarity_complete: False,
+            SubmissionRecord.chunks_present: False,
+            SubmissionRecord.llm_chunking_failed: False,
+            SubmissionRecord.llm_chunking_failure_reason: None,
+        },
+        synchronize_session="fetch",
+    )
+    try:
+        log_db_commit(f"Reset similarity state on {len(record_ids)} record(s) for full resubmit")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while resetting similarity state.", "error")
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    for rid in record_ids:
+        delete_similarity_chunks(rid)
+
+    try:
+        job = launch_similarity_only_pipeline(user=current_user)
+    except Exception as exc:
+        flash(f"Reset state on {len(record_ids)} record(s) but failed to launch similarity pipeline.", "error")
+        current_app.logger.exception("resubmit_all_global: pipeline launch failed", exc_info=exc)
+        return redirect(url_for("dashboards.similarity_dashboard"))
+
+    if job is None:
+        flash(
+            f"Reset similarity state on {len(record_ids)} record(s), but no eligible records were found for queueing.",
+            "info",
+        )
+    else:
+        flash(
+            f"Reset similarity state on {len(record_ids)} record(s) and queued {job.total_count} report(s) for similarity analysis.",
             "success",
         )
     return redirect(url_for("dashboards.similarity_dashboard"))

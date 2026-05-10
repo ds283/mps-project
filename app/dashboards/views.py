@@ -937,7 +937,16 @@ def overview():
 
     summary = _dashboard_summary_for_user()
     marking_summary = _marking_summary_for_user()
-    similarity_summary = _similarity_dashboard_summary() if _can_access_similarity_dashboard() else None
+    if _can_access_similarity_dashboard():
+        _overview_tenants = _get_accessible_tenants()
+        _overview_pclass_ids = [
+            p.id for t in _overview_tenants for p in _get_accessible_pclasses(t.id)
+        ]
+        similarity_summary = _similarity_dashboard_summary(
+            pclass_ids=_overview_pclass_ids if _overview_pclass_ids else None
+        )
+    else:
+        similarity_summary = None
 
     return render_template_context(
         "dashboards/overview.html",
@@ -2637,6 +2646,25 @@ def _base_concern_query(
         )
         q = q.filter(year_subq)
 
+    # ---- tenant filter ---------------------------------------------------------
+    if tenant_id is not None:
+        PeriodTenant = aliased(SubmissionPeriodRecord)
+        ConfigTenant = aliased(ProjectClassConfig)
+        PClassTenant = aliased(ProjectClass)
+        tenant_subq = (
+            db.session.query(SubmissionRecord.id)
+            .join(PeriodTenant, PeriodTenant.id == SubmissionRecord.period_id)
+            .join(ConfigTenant, ConfigTenant.id == PeriodTenant.config_id)
+            .join(PClassTenant, PClassTenant.id == ConfigTenant.pclass_id)
+            .filter(
+                SubmissionRecord.id == SimilarityConcern.record_a_id,
+                PClassTenant.tenant_id == tenant_id,
+            )
+            .correlate(SimilarityConcern)
+            .exists()
+        )
+        q = q.filter(tenant_subq)
+
     # ---- status filter ---------------------------------------------------------
     if status_filter == "open":
         q = q.filter(SimilarityConcern.reviewed == db.false())
@@ -2651,16 +2679,40 @@ def _base_concern_query(
     return q
 
 
-def _similarity_dashboard_summary() -> Dict:
-    """Return concern counts for the overview card and similarity dashboard header."""
-    n_open = _base_concern_query(status_filter="open").count()
-    n_resolved = _base_concern_query(status_filter="resolved").count()
-    n_pairs = _base_concern_query(status_filter="all").count()
-    n_indexed = (
+def _similarity_dashboard_summary(
+    tenant_id: Optional[int] = None,
+    pclass_ids: Optional[List[int]] = None,
+    years: Optional[List[int]] = None,
+) -> Dict:
+    """Return concern counts for the overview card and similarity dashboard header.
+
+    When called with no arguments (from the overview page) returns global totals.
+    When called with filter args (from the similarity dashboard) returns scoped counts.
+    """
+    n_open = _base_concern_query(
+        tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="open"
+    ).count()
+    n_resolved = _base_concern_query(
+        tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="resolved"
+    ).count()
+    n_pairs = _base_concern_query(
+        tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="all"
+    ).count()
+    indexed_q = (
         db.session.query(SubmissionRecord)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
         .filter(SubmissionRecord.language_analysis_complete == db.true())
-        .count()
     )
+    if tenant_id is not None:
+        indexed_q = indexed_q.join(
+            ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id
+        ).filter(ProjectClass.tenant_id == tenant_id)
+    if pclass_ids:
+        indexed_q = indexed_q.filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
+    if years:
+        indexed_q = indexed_q.filter(ProjectClassConfig.year.in_(years))
+    n_indexed = indexed_q.count()
     return {
         "n_open": n_open,
         "n_resolved": n_resolved,
@@ -2687,8 +2739,11 @@ def _similarity_pipeline_health(
         db.session.query(SubmissionRecord)
         .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
         .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
         .filter(SubmissionRecord.report_id.isnot(None))
     )
+    if tenant_id is not None:
+        base = base.filter(ProjectClass.tenant_id == tenant_id)
     if pclass_ids:
         base = base.filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
     if years:
@@ -2851,7 +2906,7 @@ def similarity_dashboard():
     )
 
     # ---- summary stat cards -------------------------------------------------
-    summary = _similarity_dashboard_summary()
+    summary = _similarity_dashboard_summary(selected_tenant_id, selected_pclass_ids, selected_years)
     pipeline_health = _similarity_pipeline_health(selected_tenant_id, selected_pclass_ids, selected_years)
     pipeline_paused: bool = is_pipeline_paused()
 

@@ -1378,13 +1378,13 @@ def submitter_reports_inspector(workflow_id):
         (SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE, "Feedback available"),
     ]
 
+    can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
+
     total = workflow.submitter_reports.count()
-    all_ready_to_sign_off = (
-        total > 0
-        and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0)
-        == total
+    all_ready_to_sign_off = can_edit and (
+        total > 0 and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0) == total
     )
-    any_completed = state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
+    any_completed = can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
 
     return render_template_context(
         "convenor/markingevent/submitter_reports_inspector.html",
@@ -1393,6 +1393,7 @@ def submitter_reports_inspector(workflow_id):
         pclass=pclass,
         url=url,
         text=text,
+        can_edit=can_edit,
         state_counts=state_counts,
         state_labels=state_labels,
         all_ready_to_sign_off=all_ready_to_sign_off,
@@ -3508,6 +3509,14 @@ def clear_marking_grade(report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
+    url = request.args.get(
+        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
+    )
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
+
     report.grade_submitted_by_id = None
     report.grade_submitted_timestamp = None
 
@@ -3527,9 +3536,6 @@ def clear_marking_grade(report_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash("Could not clear marking grade due to a database error.", "error")
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
-    )
     return redirect(url)
 
 
@@ -3551,6 +3557,10 @@ def marking_report_properties(report_id):
     url = request.args.get(
         "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
     )
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
 
     form = MarkingReportPropertiesForm(obj=report)
 
@@ -3597,6 +3607,7 @@ def assign_moderator(submitter_report_id):
         .first_or_404()
     )
     workflow = sr.workflow
+    event = workflow.event
     pclass = workflow.pclass
 
     if not validate_is_convenor(pclass):
@@ -3605,6 +3616,10 @@ def assign_moderator(submitter_report_id):
     url = request.args.get(
         "url", url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
     )
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
 
     form = AssignModeratorFormFactory(pclass.id)()
 
@@ -3708,6 +3723,10 @@ def complete_submitter_report(sr_id):
 
     url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
 
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
+
     if sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_SIGN_OFF:
         flash("This report is not in the Ready to sign off state.", "error")
         return redirect(url)
@@ -3762,6 +3781,10 @@ def complete_all_submitter_reports(workflow_id):
         "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
     )
     text = request.args.get("text", "Marking workflows")
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
 
     # Count reports eligible for completion
     ready_reports = [
@@ -3852,6 +3875,10 @@ def return_submitter_report_to_convenor(sr_id):
 
     url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
 
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
+
     if sr.workflow_state != SubmitterReportWorkflowStates.COMPLETED:
         flash("This report is not in the Completed state.", "error")
         return redirect(url)
@@ -3905,6 +3932,10 @@ def return_all_submitter_reports(workflow_id):
         "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
     )
     text = request.args.get("text", "Marking workflows")
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
 
     completed_reports = [
         sr

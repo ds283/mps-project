@@ -279,22 +279,25 @@ _submitter_report_actions = """
 {% set inspector_url = url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id) %}
 
 {# --- Direct action buttons (shown above the dropdown) --- #}
-{% if state == NEEDS_MODERATOR_ASSIGNED %}
-    <a class="btn btn-danger btn-sm full-width-button mb-2"
-       href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
-                url=inspector_url, text='Submitter reports') }}">
-        <i class="fas fa-user-plus fa-fw"></i> Assign moderator
-    </a>
-{% elif state == READY_TO_SIGN_OFF %}
-    <form method="POST"
-          action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
-          class="mb-2">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn btn-success btn-sm full-width-button" type="submit">
-            <i class="fas fa-check-double fa-fw"></i> Complete
-        </button>
-    </form>
-{% elif is_completed %}
+{% if not event_is_closed %}
+    {% if state == NEEDS_MODERATOR_ASSIGNED %}
+        <a class="btn btn-danger btn-sm full-width-button mb-2"
+           href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
+                    url=inspector_url, text='Submitter reports') }}">
+            <i class="fas fa-user-plus fa-fw"></i> Assign moderator
+        </a>
+    {% elif state == READY_TO_SIGN_OFF %}
+        <form method="POST"
+              action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
+              class="mb-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-success btn-sm full-width-button" type="submit">
+                <i class="fas fa-check-double fa-fw"></i> Complete
+            </button>
+        </form>
+    {% endif %}
+{% endif %}
+{% if is_completed %}
     <div class="mb-2">
         <span class="badge bg-success py-2 px-3">
             <i class="fas fa-check-circle fa-fw"></i> Completed
@@ -316,7 +319,7 @@ _submitter_report_actions = """
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
 
         {# Complete: shown in dropdown for READY_TO_SIGN_OFF (in addition to direct button) #}
-        {% if state == READY_TO_SIGN_OFF %}
+        {% if state == READY_TO_SIGN_OFF and not event_is_closed %}
             <form method="POST"
                   action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
                   style="display:contents">
@@ -328,8 +331,8 @@ _submitter_report_actions = """
             <div class="dropdown-divider"></div>
         {% endif %}
 
-        {# Return to convenor: admin/root only, shown when COMPLETED #}
-        {% if is_completed and (is_root or is_admin) %}
+        {# Return to convenor: admin/root only, shown when COMPLETED and event is not closed #}
+        {% if is_completed and (is_root or is_admin) and not event_is_closed %}
             <form method="POST"
                   action="{{ url_for('convenor.return_submitter_report_to_convenor', sr_id=report.id) }}"
                   style="display:contents">
@@ -341,9 +344,9 @@ _submitter_report_actions = """
             <div class="dropdown-divider"></div>
         {% endif %}
 
-        {# Moderator assignment: shown for NEEDS_MODERATOR_ASSIGNED and AWAITING_MODERATOR_REPORT, disabled when COMPLETED #}
-        {% if state in (NEEDS_MODERATOR_ASSIGNED, AWAITING_MODERATOR_REPORT) %}
-            <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
+        {# Moderator assignment: shown for NEEDS_MODERATOR_ASSIGNED and AWAITING_MODERATOR_REPORT, suppressed when event is closed #}
+        {% if state in (NEEDS_MODERATOR_ASSIGNED, AWAITING_MODERATOR_REPORT) and not event_is_closed %}
+            <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
                         url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-user-plus fa-fw"></i> Assign moderator&hellip;
@@ -351,9 +354,9 @@ _submitter_report_actions = """
             <div class="dropdown-divider"></div>
         {% endif %}
 
-        {# Risk factors: resolve (only shown when unresolved factors are present, disabled when COMPLETED) #}
-        {% if rec is not none and rec.has_unresolved_risk_factors %}
-            <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
+        {# Risk factors: resolve (only shown when unresolved factors are present and event is not closed) #}
+        {% if rec is not none and rec.has_unresolved_risk_factors and not event_is_closed %}
+            <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.resolve_risk_factors',
                                 record_id=rec.id,
                                 url=inspector_url, text='Submitter reports') }}">
@@ -361,21 +364,20 @@ _submitter_report_actions = """
             </a>
         {% endif %}
 
-        {# Turnitin: re-fetch from Canvas or enter manually (only when score is missing, disabled when COMPLETED) #}
-        {% if rec is not none and rec.turnitin_score is none %}
+        {# Turnitin: re-fetch from Canvas or enter manually (only when score is missing and event is not closed) #}
+        {% if rec is not none and rec.turnitin_score is none and not event_is_closed %}
             {% if rec.canvas_turnitin_refetchable %}
                 <form method="POST"
                       action="{{ url_for('convenor.refetch_turnitin_from_canvas',
                                          record_id=rec.id,
                                          url=inspector_url) }}"
                       style="display:contents">
-                    <button class="dropdown-item d-flex gap-2{% if is_completed %} disabled{% endif %}" type="submit"
-                            {% if is_completed %}disabled{% endif %}>
+                    <button class="dropdown-item d-flex gap-2" type="submit">
                         <i class="fas fa-sync fa-fw"></i> Re-fetch Turnitin from Canvas
                     </button>
                 </form>
             {% endif %}
-            <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
+            <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.enter_turnitin_score',
                                 record_id=rec.id,
                                 url=inspector_url, text='Submitter reports') }}">
@@ -740,12 +742,14 @@ _marking_report_actions = """
                      url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
             <i class="fas fa-pen fa-fw"></i> {% if report.report_submitted %}Edit{% else %}View{% endif %} report&hellip;
         </a>
-        <a class="dropdown-item d-flex gap-2"
-           href="{{ url_for('convenor.marking_report_properties', report_id=report.id,
-                     url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
-            <i class="fas fa-sliders-h fa-fw"></i> Edit properties&hellip;
-        </a>
-        {% if report.grade_submitted_timestamp is not none %}
+        {% if not event_is_closed %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.marking_report_properties', report_id=report.id,
+                         url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
+                <i class="fas fa-sliders-h fa-fw"></i> Edit properties&hellip;
+            </a>
+        {% endif %}
+        {% if report.grade_submitted_timestamp is not none and not event_is_closed %}
             <form method="POST"
                   action="{{ url_for('convenor.clear_marking_grade', report_id=report.id,
                              url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}"
@@ -855,7 +859,7 @@ def submitter_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
             "risk_factors": render_template(risk_factors_tmpl, report=report, event_is_closed=event_is_closed),
-            "actions": render_template(actions_tmpl, report=report, **state_ctx),
+            "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, **state_ctx),
         }
         for report in reports
     ]
@@ -874,6 +878,11 @@ def marking_report_data(reports):
     offcanvas_tmpl = env.from_string(_mr_emails_offcanvas)
     actions_tmpl = env.from_string(_marking_report_actions)
 
+    event_is_closed = (
+        reports[0].submitter_report.workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED
+        if reports else False
+    )
+
     return [
         {
             "marker": render_template(
@@ -885,7 +894,7 @@ def marking_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
-            "actions": render_template(actions_tmpl, report=report, **_EVENT_STATES),
+            "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, **_EVENT_STATES),
         }
         for report in reports
     ]

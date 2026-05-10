@@ -430,6 +430,12 @@ def register_similarity_analysis_tasks(celery):
                 continue
             try:
                 words = text.lower().split()
+                if len(words) < 3:
+                    current_app.logger.debug(
+                        f"compute_minhash: chunk '{chunk_type}' for record #{record_id} "
+                        f"has fewer than 3 words — skipping"
+                    )
+                    continue
                 shingles = set()
                 for i in range(len(words) - 2):
                     shingles.add(tuple(words[i : i + 3]))

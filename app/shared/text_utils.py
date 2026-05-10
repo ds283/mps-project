@@ -15,7 +15,7 @@ import re
 # ---------------------------------------------------------------------------
 
 _BIBLIO_HEADING = re.compile(
-    r"^\s*(references|bibliography|works\s+cited)\s*$",
+    r"^\s*(references|bibliography|works\s+cited)\s*:?\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 

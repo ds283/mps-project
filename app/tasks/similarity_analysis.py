@@ -29,7 +29,11 @@ from ..shared.scraped_text_store import (
     store_minhash_signatures,
     store_similarity_chunks,
 )
-from ..shared.text_utils import _detect_top_level_sections, _split_document, _strip_math_lines
+from ..shared.text_utils import (
+    _detect_top_level_sections,
+    _split_document,
+    _strip_math_lines,
+)
 from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_start
 
 # ---------------------------------------------------------------------------
@@ -62,7 +66,7 @@ MINHASH_LSH_THRESHOLD = 0.15
 MINHASH_NUM_PERM = 128
 
 _CHUNK_EXTRACTION_CTX_KEY = "OLLAMA_CHUNK_EXTRACTION_CONTEXT_SIZE"
-_CHUNK_EXTRACTION_CTX_DEFAULT = 12288
+_CHUNK_EXTRACTION_CTX_DEFAULT = 18432
 
 # ---------------------------------------------------------------------------
 # Lazy sentence-transformers model loader

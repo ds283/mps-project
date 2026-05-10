@@ -272,19 +272,19 @@
                            class="btn btn-outline-secondary"
                            data-bs-toggle="tooltip"
                            title="Clear LLM error flags on failed records, do not resubmit">
-                            <i class="fas fa-eraser me-1"></i>Clear errors
+                            <i class="fas fa-eraser me-1"></i>Clear all errors
                         </a>
                         <a href="{{ retry_errors_url }}"
                            class="btn btn-outline-secondary"
                            data-bs-toggle="tooltip"
                            title="Resubmit failed records using cached scraped text — does not re-download">
-                            <i class="fas fa-sync me-1"></i>Retry cached
+                            <i class="fas fa-sync me-1"></i>Retry errors
                         </a>
                         <a href="{{ resubmit_errors_url }}"
                            class="btn btn-outline-danger"
                            data-bs-toggle="tooltip"
                            title="Drop cached data and resubmit only the failed records from scratch">
-                            <i class="fas fa-redo me-1"></i>Drop cache &amp; resubmit errors
+                            <i class="fas fa-redo me-1"></i>Drop cache &amp; retry errors
                         </a>
                     </div>
                 {% endif %}
@@ -466,13 +466,13 @@
                                class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
                                title="Resubmit all failed records using cached scraped text — does not re-download">
-                                <i class="fas fa-sync me-1"></i>Retry cached
+                                <i class="fas fa-sync me-1"></i>Retry errors
                             </a>
                             <a href="{{ url_for('dashboards.resubmit_errors_global') }}"
                                class="btn btn-outline-danger"
                                data-bs-toggle="tooltip"
                                title="Drop cached data and resubmit only the failed records from scratch">
-                                <i class="fas fa-redo me-1"></i>Drop cache &amp; resubmit errors
+                                <i class="fas fa-redo me-1"></i>Drop cache &amp; retry errors
                             </a>
                         </div>
                     </div>

@@ -206,6 +206,16 @@ def _get_accessible_tenants() -> List[Tenant]:
     return current_user.tenants.order_by(Tenant.name).all()
 
 
+def _get_default_tenant_id(accessible_tenants: List[Tenant]) -> int:
+    """Return the ID of the user's first tenant membership (by name), falling back to
+    the first accessible tenant when the user has no direct membership (e.g. root with
+    no tenant assigned)."""
+    user_first = current_user.tenants.order_by(Tenant.name).first()
+    if user_first is not None:
+        return user_first.id
+    return accessible_tenants[0].id
+
+
 def _pclass_has_reports_subq():
     """
     Correlated EXISTS subquery: True when a ProjectClass has at least one
@@ -983,20 +993,21 @@ def ai_dashboard():
 
     # ---- tenant filter ------------------------------------------------------
     # Single-tenant users don't get to choose; multi-tenant users do.
+    default_tenant_id = _get_default_tenant_id(accessible_tenants)
     if len(accessible_tenants) == 1:
         selected_tenant_id = accessible_tenants[0].id
     else:
         try:
             selected_tenant_id = int(
-                request.args.get("tenant_id", accessible_tenants[0].id)
+                request.args.get("tenant_id", default_tenant_id)
             )
         except (ValueError, TypeError):
-            selected_tenant_id = accessible_tenants[0].id
+            selected_tenant_id = default_tenant_id
 
     # Ensure the tenant is actually accessible
     accessible_tenant_ids = {t.id for t in accessible_tenants}
     if selected_tenant_id not in accessible_tenant_ids:
-        selected_tenant_id = accessible_tenants[0].id
+        selected_tenant_id = default_tenant_id
 
     selected_tenant = next(
         (t for t in accessible_tenants if t.id == selected_tenant_id), None
@@ -2218,17 +2229,18 @@ def marking_dashboard():
         return redirect(url_for("dashboards.overview"))
 
     # Resolve tenant filter
+    default_tenant_id = _get_default_tenant_id(accessible_tenants)
     if len(accessible_tenants) == 1:
         selected_tenant_id = accessible_tenants[0].id
     else:
         try:
-            selected_tenant_id = int(request.args.get("tenant_id", 0)) or accessible_tenants[0].id
+            selected_tenant_id = int(request.args.get("tenant_id", 0)) or default_tenant_id
         except (ValueError, TypeError):
-            selected_tenant_id = accessible_tenants[0].id
+            selected_tenant_id = default_tenant_id
 
     accessible_tenant_ids = {t.id for t in accessible_tenants}
     if selected_tenant_id not in accessible_tenant_ids:
-        selected_tenant_id = accessible_tenants[0].id
+        selected_tenant_id = default_tenant_id
 
     selected_tenant = next((t for t in accessible_tenants if t.id == selected_tenant_id), None)
 
@@ -2812,19 +2824,20 @@ def similarity_dashboard():
         return redirect(url_for("dashboards.overview"))
 
     # ---- tenant filter ------------------------------------------------------
+    default_tenant_id = _get_default_tenant_id(accessible_tenants)
     if len(accessible_tenants) == 1:
         selected_tenant_id = accessible_tenants[0].id
     else:
         try:
             selected_tenant_id = int(
-                request.args.get("tenant_id", accessible_tenants[0].id)
+                request.args.get("tenant_id", default_tenant_id)
             )
         except (ValueError, TypeError):
-            selected_tenant_id = accessible_tenants[0].id
+            selected_tenant_id = default_tenant_id
 
     accessible_tenant_ids = {t.id for t in accessible_tenants}
     if selected_tenant_id not in accessible_tenant_ids:
-        selected_tenant_id = accessible_tenants[0].id
+        selected_tenant_id = default_tenant_id
 
     selected_tenant = next(
         (t for t in accessible_tenants if t.id == selected_tenant_id), None

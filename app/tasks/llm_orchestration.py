@@ -98,8 +98,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
+    GeneratedAsset,
     LLMOrchestrationJob,
     ProjectClassConfig,
+    SimilarityConcern,
     SubmissionPeriodRecord,
     SubmissionRecord,
     User,
@@ -413,6 +415,101 @@ def _create_and_dispatch_job(
     )
     db.session.add(job)
     db.session.flush()
+    if clear_existing and record_ids:
+        # Collect processed_report_id values before we null them out, so we can
+        # clean up the GeneratedAsset rows and their object-store files afterwards.
+        old_asset_ids: list[int] = [
+            row[0]
+            for row in (
+                db.session.query(SubmissionRecord.processed_report_id)
+                .filter(SubmissionRecord.id.in_(record_ids))
+                .filter(SubmissionRecord.processed_report_id.isnot(None))
+                .all()
+            )
+        ]
+
+        # Single bulk SQL UPDATE — one statement, no ORM lazy loads, no autoflush.
+        # The original per-record ORM approach generated N individual UPDATE statements,
+        # each susceptible to lock contention and each triggering autoflush; a single
+        # bulk UPDATE is one lock-acquisition pass over the affected rows.
+        try:
+            db.session.query(SubmissionRecord).filter(
+                SubmissionRecord.id.in_(record_ids)
+            ).update(
+                {
+                    "language_analysis": None,
+                    "language_analysis_started": False,
+                    "language_analysis_complete": False,
+                    "llm_analysis_failed": False,
+                    "llm_failure_reason": None,
+                    "llm_feedback_failed": None,
+                    "llm_feedback_failure_reason": None,
+                    "llm_chunking_failed": False,
+                    "llm_chunking_failure_reason": None,
+                    "similarity_complete": False,
+                    "risk_factors": None,
+                    "stats_present": False,
+                    "stats_algorithm_version": None,
+                    "llm_grading_present": False,
+                    "llm_prompt_version": None,
+                    "llm_feedback_present": False,
+                    "llm_feedback_prompt_version": None,
+                    "chunks_present": False,
+                    "chunks_prompt_version": None,
+                    "processed_report_id": None,
+                    "celery_finished": False,
+                    "celery_failed": False,
+                },
+                synchronize_session=False,
+            )
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
+
+        # Delete unreviewed SimilarityConcern rows for these records.  Reviewed
+        # concerns are preserved (an instructor may have already acted on them).
+        try:
+            db.session.query(SimilarityConcern).filter(
+                db.or_(
+                    SimilarityConcern.record_a_id.in_(record_ids),
+                    SimilarityConcern.record_b_id.in_(record_ids),
+                ),
+                SimilarityConcern.reviewed == False,  # noqa: E712
+            ).delete(synchronize_session=False)
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
+
+        # Delete the now-orphaned GeneratedAsset rows and their object-store files.
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        for asset_id in old_asset_ids:
+            asset = db.session.get(GeneratedAsset, asset_id)
+            if asset is None:
+                continue
+            if object_store is not None:
+                try:
+                    object_store.delete(
+                        asset.unique_name,
+                        audit_data="llm_orchestration._create_and_dispatch_job",
+                    )
+                except Exception as exc:
+                    current_app.logger.warning(
+                        f"llm_orchestration: could not delete processed report asset "
+                        f"#{asset_id}: {exc}"
+                    )
+            db.session.delete(asset)
+
+        # Invalidate MongoDB scraped-text cache for every record being reset.
+        from ..shared.scraped_text_store import delete_scraped_text
+
+        for rid in record_ids:
+            delete_scraped_text(rid)
+
+        try:
+            db.session.flush()  # flush the GeneratedAsset deletions
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
     _populate_redis_queue(job, record_ids)
     try:
         log_db_commit(log_message, **log_db_commit_kwargs)
@@ -1668,14 +1765,7 @@ def register_llm_orchestration_tasks(celery):
                 continue
 
             # ------- prepare record for (re-)submission -------
-            if job.clear_existing and not job.similarity_only:
-                # Full state wipe requested: clear all flags, presence columns,
-                # language_analysis blob, processed report asset, and MongoDB cache.
-                # Done here (per-record, one commit at a time) rather than upfront in
-                # _create_and_dispatch_job to avoid bulk lock contention with running workers.
-                _clear_record_state(record)
-                record.language_analysis_started = True  # mark in-progress after full wipe
-            elif job.similarity_only:
+            if job.similarity_only:
                 # Similarity-only job: preserve LLM analysis flags; only reset
                 # similarity_complete so the similarity chain runs from scratch.
                 record.similarity_complete = False

@@ -103,7 +103,7 @@ def _call_llm(
                     **({"options": options} if options else {}),
                 },
                 stream=True,
-                timeout=(30, 3600),
+                timeout=(30, 600),
             )
             resp.raise_for_status()
 
@@ -196,6 +196,15 @@ def _call_llm(
                 f"  seen_done={seen_done} finish_reason={finish_reason!r} "
                 f"accumulated_len={len(accumulated)}{_usage_str}\n"
                 f"  accumulated_tail: {_tail!r}"
+            )
+            if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                time.sleep(_LLM_RETRY_DELAY)
+
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            last_exc = exc
+            current_app.logger.warning(
+                f"{label}: transient network error on attempt {attempt + 1} "
+                f"(~{est_input_tokens} est. input tokens): {type(exc).__name__}: {exc}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)

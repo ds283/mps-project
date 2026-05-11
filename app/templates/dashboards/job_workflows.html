@@ -3,6 +3,68 @@
 {% block title %}Workflow steps – job {{ job.description or job.scope_label }}{% endblock %}
 
 {% block bodyblock %}
+{% macro render_step_badges(entry, is_inflight=False) %}
+    {% set all_step_names = ["download_and_extract", "compute_statistics",
+                              "submit_to_llm", "submit_to_llm_feedback",
+                              "finalize_language_step", "extract_chunks",
+                              "compute_minhash", "run_similarity_check",
+                              "finalize_risk_flags"] %}
+    <div class="d-flex flex-wrap gap-1">
+        {% for sname in all_step_names %}
+            {% set step_entry = namespace(found=None) %}
+            {% for s in entry.steps %}
+                {% if s.name == sname %}
+                    {% set step_entry.found = s %}
+                {% endif %}
+            {% endfor %}
+            {% if step_entry.found %}
+                {% set s = step_entry.found %}
+                {% if s.error %}
+                    <span class="badge bg-danger-subtle text-danger-emphasis"
+                          data-bs-toggle="tooltip"
+                          title="{{ s.name }}: {{ s.error }}">
+                        {{ s.name | replace('_', ' ') | truncate(16, True, '…') }}
+                    </span>
+                {% elif s.elapsed_ms is not none %}
+                    {% set secs = (s.elapsed_ms / 1000) | round(1) %}
+                    {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none and s.peak_context_pressure >= 0.85 %}
+                        {% set _badge_cls = "bg-warning-subtle text-warning-emphasis" %}
+                    {% else %}
+                        {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
+                    {% endif %}
+                    {% set _label = s.name | replace('_', ' ') | truncate(16, True, '…') %}
+                    {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
+                        {% set _label = _label ~ " ·no appx" %}
+                    {% endif %}
+                    <span class="badge {{ _badge_cls }}"
+                          data-bs-toggle="tooltip"
+                          title="{{ s.name }}: {{ secs }}s">
+                        {{ _label }}
+                    </span>
+                {% elif is_inflight %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis"
+                          data-bs-toggle="tooltip"
+                          title="{{ s.name }}: in progress">
+                        {{ s.name | replace('_', ' ') | truncate(16, True, '…') }}
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-body-secondary"
+                          data-bs-toggle="tooltip"
+                          title="{{ s.name }}: no timing data">
+                        {{ s.name | replace('_', ' ') | truncate(16, True, '…') }}
+                    </span>
+                {% endif %}
+            {% else %}
+                <span class="badge bg-secondary-subtle text-body-secondary"
+                      data-bs-toggle="tooltip"
+                      title="{{ sname }}: {{ 'not started' if is_inflight else 'not executed' }}">
+                    {{ sname | replace('_', ' ') | truncate(16, True, '…') }}
+                </span>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endmacro %}
+
     <div class="container-fluid mt-4 mb-5">
 
         {# ---- page header ---- #}
@@ -45,18 +107,30 @@
                         {{ job.completed_count }} completed,
                         <span class="{% if job.failed_count > 0 %}text-danger fw-semibold{% endif %}">{{ job.failed_count }} failed</span>
                         of {{ job.total_count }} total
+                        {% if job.total_count > 0 %}
+                        <div class="progress mt-1" style="height:6px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                 style="width:{{ ((job.completed_count / job.total_count) * 100) | round }}%"
+                                 aria-valuenow="{{ job.completed_count }}"
+                                 aria-valuemin="0" aria-valuemax="{{ job.total_count }}"></div>
+                        </div>
+                        {% endif %}
                     </dd>
                 </dl>
             </div>
         </div>
 
         {# ---- step badge legend ---- #}
-        <div class="d-flex align-items-center gap-2 mb-3 small text-body-secondary flex-wrap">
-            <span class="fw-semibold me-1">Step state:</span>
-            <span class="badge bg-success-subtle text-success-emphasis">Complete</span>
-            <span class="badge bg-warning-subtle text-warning-emphasis">In progress</span>
-            <span class="badge bg-danger-subtle text-danger-emphasis">Error</span>
-            <span class="badge bg-secondary-subtle text-body-secondary">Not started</span>
+        <div class="card border-0 shadow-sm mb-4" style="border-color: var(--db-blue-200) !important;">
+            <div class="card-body py-2">
+                <div class="d-flex align-items-center gap-2 small flex-wrap">
+                    <span class="fw-semibold text-body-secondary me-1">Pipeline step key:</span>
+                    <span class="badge bg-success-subtle text-success-emphasis">Complete</span>
+                    <span class="badge bg-warning-subtle text-warning-emphasis">In progress</span>
+                    <span class="badge bg-danger-subtle text-danger-emphasis">Error</span>
+                    <span class="badge bg-secondary-subtle text-body-secondary">Not started</span>
+                </div>
+            </div>
         </div>
 
         {# ---- in-flight records ---- #}
@@ -79,6 +153,7 @@
                                 <th>Project class</th>
                                 <th class="text-end" style="width:55px;">Year</th>
                                 <th>Started</th>
+                                <th>Running</th>
                                 <th>Pipeline steps</th>
                             </tr>
                             </thead>
@@ -91,65 +166,13 @@
                                     <td>{{ entry.student_name or "—" }}</td>
                                     <td>{{ entry.pclass or "—" }}</td>
                                     <td class="text-end text-body-secondary">{{ entry.year or "—" }}</td>
-                                    <td class="text-body-secondary text-nowrap">
-                                        {{ entry.started_at | replace("T", " ") if entry.started_at else "—" }}
+                                    <td class="text-body-secondary text-nowrap"
+                                        title="{{ entry.started_at | replace('T', ' ') if entry.started_at else '—' }}">
+                                        {{ (entry.started_at | replace("T", " "))[11:19] if entry.started_at else "—" }}
                                     </td>
-                                    <td>
-                                        {% set all_step_names = ["download_and_extract", "compute_statistics",
-                                                                  "submit_to_llm", "submit_to_llm_feedback",
-                                                                  "finalize_language_step", "extract_chunks",
-                                                                  "compute_minhash", "run_similarity_check",
-                                                                  "finalize_risk_flags"] %}
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for sname in all_step_names %}
-                                                {# Find matching step entry #}
-                                                {% set step_entry = namespace(found=None) %}
-                                                {% for s in entry.steps %}
-                                                    {% if s.name == sname %}
-                                                        {% set step_entry.found = s %}
-                                                    {% endif %}
-                                                {% endfor %}
-                                                {% if step_entry.found %}
-                                                    {% set s = step_entry.found %}
-                                                    {% if s.error %}
-                                                        <span class="badge bg-danger-subtle text-danger-emphasis"
-                                                              data-bs-toggle="tooltip"
-                                                              title="{{ s.name }}: {{ s.error }}">
-                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
-                                                        </span>
-                                                    {% elif s.elapsed_ms is not none %}
-                                                        {% set secs = (s.elapsed_ms / 1000) | round(1) %}
-                                                        {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none and s.peak_context_pressure >= 0.85 %}
-                                                            {% set _badge_cls = "bg-warning-subtle text-warning-emphasis" %}
-                                                        {% else %}
-                                                            {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
-                                                        {% endif %}
-                                                        {% set _label = s.name | replace('_', ' ') | truncate(12, True, '…') %}
-                                                        {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
-                                                            {% set _label = _label ~ " ·no appx" %}
-                                                        {% endif %}
-                                                        <span class="badge {{ _badge_cls }}"
-                                                              data-bs-toggle="tooltip"
-                                                              title="{{ s.name }}: {{ secs }}s">
-                                                            {{ _label }}
-                                                        </span>
-                                                    {% else %}
-                                                        <span class="badge bg-warning-subtle text-warning-emphasis"
-                                                              data-bs-toggle="tooltip"
-                                                              title="{{ s.name }}: in progress">
-                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
-                                                        </span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="badge bg-secondary-subtle text-body-secondary"
-                                                          data-bs-toggle="tooltip"
-                                                          title="{{ sname }}: not started">
-                                                        {{ sname | replace('_', ' ') | truncate(12, True, '…') }}
-                                                    </span>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    </td>
+                                    <td class="text-nowrap text-body-secondary"
+                                        data-started="{{ entry.started_at or '' }}">—</td>
+                                    <td>{{ render_step_badges(entry, is_inflight=True) }}</td>
                                 </tr>
                                 {# ---- LLM detail subrow ---- #}
                                 {% set _llm_detail = [] %}
@@ -160,8 +183,9 @@
                                 {% endfor %}
                                 {% if _llm_detail %}
                                 <tr class="border-top-0">
-                                    <td colspan="6" class="pt-0 pb-2 border-top-0" style="background:transparent;">
-                                        <div class="ms-4 d-flex flex-wrap gap-3 small text-body-secondary">
+                                    <td colspan="7" class="pt-0 pb-2 border-top-0 border-start border-2 border-primary-subtle"
+                                        style="background-color: var(--db-blue-50);">
+                                        <div class="d-flex flex-wrap gap-3 small text-body-secondary">
                                             {% for s in _llm_detail %}
                                                 {% set _lbl = 'Grading' if s.name == 'submit_to_llm' else 'Feedback' %}
                                                 {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
@@ -198,13 +222,13 @@
         </div>
 
         {# ---- recent completions ---- #}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <div class="card border-0 shadow-sm mb-3" style="border-color: var(--db-blue-200) !important;">
+            <div class="card-header d-flex align-items-center justify-content-between py-2"
+                 style="background-color: var(--db-blue-50); border-bottom: 1px solid var(--db-blue-200); color: var(--db-blue-800);">
                 <span class="fw-semibold">
-                    <i class="fas fa-history fa-fw me-1 text-body-secondary"></i>Recent completions
+                    <i class="fas fa-history fa-fw me-1"></i>Recent completions
                     <span class="text-body-secondary fw-normal small ms-1">(last {{ recent_entries | length }})</span>
                 </span>
-                <span class="badge bg-secondary bg-opacity-50 text-body-secondary">{{ recent_entries | length }}</span>
             </div>
             <div class="card-body p-0">
                 {% if recent_entries %}
@@ -219,6 +243,7 @@
                                 <th>Status</th>
                                 <th>Started</th>
                                 <th>Finished</th>
+                                <th>Duration</th>
                                 <th>Pipeline steps</th>
                             </tr>
                             </thead>
@@ -240,70 +265,16 @@
                                             <span class="badge bg-secondary">{{ entry.status or "—" }}</span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-body-secondary text-nowrap">
-                                        {{ entry.started_at | replace("T", " ") if entry.started_at else "—" }}
+                                    <td class="text-body-secondary text-nowrap"
+                                        title="{{ entry.started_at | replace('T', ' ') if entry.started_at else '—' }}">
+                                        {{ (entry.started_at | replace("T", " "))[11:19] if entry.started_at else "—" }}
                                     </td>
-                                    <td class="text-body-secondary text-nowrap">
-                                        {{ entry.finished_at | replace("T", " ") if entry.finished_at else "—" }}
+                                    <td class="text-body-secondary text-nowrap"
+                                        title="{{ entry.finished_at | replace('T', ' ') if entry.finished_at else '—' }}">
+                                        {{ (entry.finished_at | replace("T", " "))[11:19] if entry.finished_at else "—" }}
                                     </td>
-                                    <td>
-                                        {% set all_step_names = ["download_and_extract", "compute_statistics",
-                                                                  "submit_to_llm", "submit_to_llm_feedback",
-                                                                  "finalize_language_step", "extract_chunks",
-                                                                  "compute_minhash", "run_similarity_check",
-                                                                  "finalize_risk_flags"] %}
-                                        <div class="d-flex flex-wrap gap-1">
-                                            {% for sname in all_step_names %}
-                                                {# Find matching step entry #}
-                                                {% set step_entry = namespace(found=None) %}
-                                                {% for s in entry.steps %}
-                                                    {% if s.name == sname %}
-                                                        {% set step_entry.found = s %}
-                                                    {% endif %}
-                                                {% endfor %}
-                                                {% if step_entry.found %}
-                                                    {% set s = step_entry.found %}
-                                                    {% if s.error %}
-                                                        <span class="badge bg-danger-subtle text-danger-emphasis"
-                                                              data-bs-toggle="tooltip"
-                                                              title="{{ s.name }}: {{ s.error }}">
-                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
-                                                        </span>
-                                                    {% else %}
-                                                        {% if s.elapsed_ms is not none %}
-                                                            {% set secs = (s.elapsed_ms / 1000) | round(1) %}
-                                                            {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none and s.peak_context_pressure >= 0.85 %}
-                                                                {% set _badge_cls = "bg-warning-subtle text-warning-emphasis" %}
-                                                            {% else %}
-                                                                {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
-                                                            {% endif %}
-                                                            {% set _label = s.name | replace('_', ' ') | truncate(12, True, '…') %}
-                                                            {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
-                                                                {% set _label = _label ~ " ·no appx" %}
-                                                            {% endif %}
-                                                            <span class="badge {{ _badge_cls }}"
-                                                                  data-bs-toggle="tooltip"
-                                                                  title="{{ s.name }}: {{ secs }}s">
-                                                                {{ _label }}
-                                                            </span>
-                                                        {% else %}
-                                                            <span class="badge bg-secondary-subtle text-body-secondary"
-                                                                  data-bs-toggle="tooltip"
-                                                                  title="{{ s.name }}: no timing data">
-                                                                {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
-                                                            </span>
-                                                        {% endif %}
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="badge bg-secondary-subtle text-body-secondary"
-                                                          data-bs-toggle="tooltip"
-                                                          title="{{ sname }}: not executed">
-                                                        {{ sname | replace('_', ' ') | truncate(12, True, '…') }}
-                                                    </span>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    </td>
+                                    <td class="text-body-secondary text-nowrap">{{ entry.duration_display or "—" }}</td>
+                                    <td>{{ render_step_badges(entry) }}</td>
                                 </tr>
                                 {# ---- LLM detail subrow ---- #}
                                 {% set _llm_detail = [] %}
@@ -314,8 +285,9 @@
                                 {% endfor %}
                                 {% if _llm_detail %}
                                 <tr class="border-top-0">
-                                    <td colspan="8" class="pt-0 pb-2 border-top-0" style="background:transparent;">
-                                        <div class="ms-4 d-flex flex-wrap gap-3 small text-body-secondary">
+                                    <td colspan="9" class="pt-0 pb-2 border-top-0 border-start border-2 border-primary-subtle"
+                                        style="background-color: var(--db-blue-50);">
+                                        <div class="d-flex flex-wrap gap-3 small text-body-secondary">
                                             {% for s in _llm_detail %}
                                                 {% set _lbl = 'Grading' if s.name == 'submit_to_llm' else 'Feedback' %}
                                                 {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
@@ -352,4 +324,22 @@
         </div>
 
     </div>
+
+    <script>
+    (function () {
+        function updateRunningTimers() {
+            document.querySelectorAll('[data-started]').forEach(function (cell) {
+                var raw = cell.dataset.started;
+                if (!raw) return;
+                var elapsed = Math.max(0, Math.floor((Date.now() - new Date(raw).getTime()) / 1000));
+                var h = Math.floor(elapsed / 3600);
+                var m = Math.floor((elapsed % 3600) / 60);
+                var s = elapsed % 60;
+                cell.textContent = h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            });
+        }
+        updateRunningTimers();
+        setInterval(updateRunningTimers, 1000);
+    }());
+    </script>
 {% endblock %}

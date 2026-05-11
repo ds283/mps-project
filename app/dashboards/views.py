@@ -3487,6 +3487,22 @@ def job_error_log(uuid):
     )
 
 
+def _format_duration(started_at: str | None, finished_at: str | None) -> str:
+    if not started_at or not finished_at:
+        return "—"
+    try:
+        from datetime import datetime as _dt
+
+        total_secs = int((_dt.fromisoformat(finished_at) - _dt.fromisoformat(started_at)).total_seconds())
+        if total_secs < 0:
+            return "—"
+        h, rem = divmod(total_secs, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}h {m}m" if h else f"{m}m {s}s"
+    except Exception:
+        return "—"
+
+
 @dashboards.route("/ai/job/<uuid>/workflows")
 @login_required
 @roles_accepted("root", "admin", "data_dashboard_AI", "data_dashboard_similarity")
@@ -3511,6 +3527,8 @@ def job_workflows(uuid):
         current_app.logger.warning(f"job_workflows: could not read inflight entries: {exc}")
 
     recent_entries = job.recent_workflows_list
+    for entry in recent_entries:
+        entry["duration_display"] = _format_duration(entry.get("started_at"), entry.get("finished_at"))
 
     return render_template_context(
         "dashboards/job_workflows.html",

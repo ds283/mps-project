@@ -296,7 +296,7 @@ def register_similarity_analysis_tasks(celery):
         db.session.close()
 
         try:
-            parsed_result, _accumulated, last_exc, _est_tok = _call_llm(
+            parsed_result, _accumulated, last_exc, _est_tok, _ = _call_llm(
                 base_url=base_url,
                 model=model,
                 system_prompt=system_prompt,

@@ -321,11 +321,27 @@ class LLMOrchestrationJob(db.Model):
     # Workflow step log helpers
     # ------------------------------------------------------------------
 
+    # Step-level fields added over time; absent in older serialised entries.
+    _STEP_DEFAULTS: dict = {
+        "num_chunks": None,
+        "peak_prompt_tokens": None,
+        "peak_context_pressure": None,
+        "total_est_tokens": None,
+        "total_actual_prompt_tokens": None,
+        "tier": None,
+        "feedback_word_budget": None,
+    }
+
     @property
     def recent_workflows_list(self) -> list:
         if self.recent_workflows is None:
             return []
-        return json.loads(self.recent_workflows)
+        entries = json.loads(self.recent_workflows)
+        for entry in entries:
+            for step in entry.get("steps", []):
+                for k, v in self._STEP_DEFAULTS.items():
+                    step.setdefault(k, v)
+        return entries
 
     def prepend_workflow(self, entry: dict) -> None:
         """Prepend a completed workflow entry and trim to _RECENT_WORKFLOWS_MAX."""

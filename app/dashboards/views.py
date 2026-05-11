@@ -3428,6 +3428,12 @@ def _build_workflow_entry_from_redis(
 
     fields = {_decode(k): _decode(v) for k, v in raw.items()}
 
+    def _to_int(v):
+        return int(v) if v is not None else None
+
+    def _to_float(v):
+        return float(v) if v is not None else None
+
     steps = []
     for name in PIPELINE_STEPS:
         started = fields.get(f"{name}:started_at")
@@ -3440,6 +3446,13 @@ def _build_workflow_entry_from_redis(
                 "started_at": started,
                 "elapsed_ms": int(elapsed_raw) if elapsed_raw is not None else None,
                 "error": fields.get(f"{name}:error"),
+                "num_chunks": _to_int(fields.get(f"{name}:num_chunks")),
+                "peak_prompt_tokens": _to_int(fields.get(f"{name}:peak_prompt_tokens")),
+                "peak_context_pressure": _to_float(fields.get(f"{name}:peak_context_pressure")),
+                "total_est_tokens": _to_int(fields.get(f"{name}:total_est_tokens")),
+                "total_actual_prompt_tokens": _to_int(fields.get(f"{name}:total_actual_prompt_tokens")),
+                "tier": _to_int(fields.get(f"{name}:tier")),
+                "feedback_word_budget": _to_int(fields.get(f"{name}:feedback_word_budget")),
             }
         )
 

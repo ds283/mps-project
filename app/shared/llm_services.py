@@ -62,15 +62,17 @@ def _call_llm(
     options: dict | None = None,
     validate_fn=None,
     label: str = "llm",
-) -> tuple[dict | None, str, Exception | None, int]:
+) -> tuple[dict | None, str, Exception | None, int, dict | None]:
     """
     Submit a prompt to Ollama via the OpenAI-compatible
     /v1/chat/completions endpoint with JSON-schema constrained generation.
 
-    Returns (parsed_result, last_accumulated_text, last_exception, est_input_tokens).
+    Returns (parsed_result, last_accumulated_text, last_exception, est_input_tokens, actual_usage).
     parsed_result is None if all attempts failed.
     est_input_tokens is a rough estimate of the input prompt size in tokens,
     useful for diagnosing context-window failures.
+    actual_usage is the Ollama-reported usage dict from the last successful attempt,
+    or None if no usage chunk was received or all attempts failed.
     """
     est_input_tokens = int(
         (len(system_prompt.split()) + len(user_prompt.split())) * _TOKENS_PER_WORD
@@ -78,6 +80,7 @@ def _call_llm(
     accumulated = ""
     last_exc: Exception | None = None
     parsed_result: dict | None = None
+    actual_usage: dict | None = None
 
     for attempt in range(_LLM_RETRY_ATTEMPTS):
         accumulated = ""
@@ -167,6 +170,7 @@ def _call_llm(
                 )
             parsed_result = parsed
             last_exc = None
+            actual_usage = usage
             break
 
         except requests.HTTPError as exc:
@@ -224,4 +228,4 @@ def _call_llm(
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
 
-    return parsed_result, accumulated, last_exc, est_input_tokens
+    return parsed_result, accumulated, last_exc, est_input_tokens, actual_usage

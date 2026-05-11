@@ -2164,7 +2164,7 @@ def register_language_analysis_tasks(celery):
         # ----------------------------------------------------------------
         if rubric_snap is None:
             candidate_text = _extract_metadata_regions(clean_text)
-            meta_parsed, _, meta_exc, _ = _call_llm(
+            meta_parsed, _, meta_exc, _, _ = _call_llm(
                 base_url,
                 model,
                 _build_metadata_system_prompt(),
@@ -2288,6 +2288,11 @@ def register_language_analysis_tasks(celery):
         prompt_hash_val: str | None = None
         num_chunks = 1  # updated to actual chunk count on the chunked path
         est_tok: int = 0
+        # Token instrumentation — computed on each path and passed to record_step_end.
+        _peak_prompt_tokens: int | None = None
+        _peak_context_pressure: float | None = None
+        _total_est_tokens: int | None = None
+        _total_actual_prompt_tokens: int | None = None
 
         if doc_words <= single_pass_word_budget:
             # ----------------------------------------------------------------
@@ -2296,7 +2301,7 @@ def register_language_analysis_tasks(celery):
             # Step 1: dedicated metadata extraction (same as chunked path step 1).
             candidate_text = _extract_metadata_regions(clean_text)
             metadata_result: dict | None = None
-            meta_parsed, _, meta_exc, _ = _call_llm(
+            meta_parsed, _, meta_exc, _, _ = _call_llm(
                 base_url,
                 model,
                 _build_metadata_system_prompt(),
@@ -2317,7 +2322,7 @@ def register_language_analysis_tasks(celery):
             document_text, was_truncated = _truncate_text(clean_text)
             _system_prompt = _build_system_prompt(was_truncated, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
-            parsed_result, accumulated, last_exc, est_tok = _call_llm(
+            parsed_result, accumulated, last_exc, est_tok, _sp_actual_usage = _call_llm(
                 base_url,
                 model,
                 _system_prompt,
@@ -2340,6 +2345,15 @@ def register_language_analysis_tasks(celery):
                     "preface_precis",
                 ):
                     parsed_result[field] = metadata_result.get(field)
+
+            # Token instrumentation for single-pass path.
+            _total_est_tokens = est_tok
+            if _sp_actual_usage is not None:
+                _pt = _sp_actual_usage.get("prompt_tokens")
+                if _pt is not None:
+                    _peak_prompt_tokens = _pt
+                    _total_actual_prompt_tokens = _pt
+                    _peak_context_pressure = _pt / context_size
 
         else:
             # ----------------------------------------------------------------
@@ -2372,7 +2386,7 @@ def register_language_analysis_tasks(celery):
             metadata_result: dict | None = data.get("_llm_metadata")
             if metadata_result is None:
                 candidate_text = _extract_metadata_regions(clean_text)
-                meta_parsed, _, meta_exc, _ = _call_llm(
+                meta_parsed, _, meta_exc, _, _ = _call_llm(
                     base_url,
                     model,
                     _build_metadata_system_prompt(),
@@ -2432,12 +2446,14 @@ def register_language_analysis_tasks(celery):
             chunk_results: dict = chunk_state.get("results", {})
             chunk_failed = False
             chunk_failure_reason = ""
+            _chunk_est_tokens: list[int] = []
+            _chunk_actual_tokens: list[int | None] = []
 
             for idx, chunk_text in enumerate(chunks):
                 if idx in completed_chunks:
                     continue  # already persisted on a previous Celery attempt
 
-                chunk_parsed, accumulated, last_exc, est_tok = _call_llm(
+                chunk_parsed, accumulated, last_exc, est_tok, _chunk_actual_usage = _call_llm(
                     base_url,
                     model,
                     _build_chunk_system_prompt(idx, total_chunks, rubric_snap),
@@ -2452,6 +2468,10 @@ def register_language_analysis_tasks(celery):
                     chunk_failure_reason = f"chunk {idx + 1}/{total_chunks} failed (~{est_tok} est. input tokens): {last_exc}"
                     break
 
+                _chunk_est_tokens.append(est_tok)
+                _chunk_actual_tokens.append(
+                    _chunk_actual_usage.get("prompt_tokens") if _chunk_actual_usage else None
+                )
                 chunk_results[str(idx)] = chunk_parsed
                 completed_chunks.add(idx)
                 chunk_state = {
@@ -2540,7 +2560,7 @@ def register_language_analysis_tasks(celery):
 
             _system_prompt = _build_system_prompt(False, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
-            parsed_result, accumulated, last_exc, est_tok = _call_llm(
+            parsed_result, accumulated, last_exc, est_tok, _ = _call_llm(
                 base_url,
                 model,
                 _system_prompt,
@@ -2563,6 +2583,15 @@ def register_language_analysis_tasks(celery):
                     "preface_precis",
                 ):
                     parsed_result[field] = metadata_result.get(field)
+
+            # Token instrumentation for chunked path.
+            if _chunk_est_tokens:
+                _total_est_tokens = sum(_chunk_est_tokens)
+            _actual_available = [t for t in _chunk_actual_tokens if t is not None]
+            if _actual_available:
+                _peak_prompt_tokens = max(_actual_available)
+                _peak_context_pressure = _peak_prompt_tokens / context_size
+                _total_actual_prompt_tokens = sum(_actual_available)
 
         # ----------------------------------------------------------------
         # Common outcome handling (single-pass and chunked-synthesis paths).
@@ -2691,7 +2720,19 @@ def register_language_analysis_tasks(celery):
             raise self.retry()
 
         if not record.llm_analysis_failed:
-            record_step_end(_r, record_id, "submit_to_llm", _t0)
+            record_step_end(
+                _r,
+                record_id,
+                "submit_to_llm",
+                _t0,
+                meta={
+                    "num_chunks": num_chunks,
+                    "peak_prompt_tokens": _peak_prompt_tokens,
+                    "peak_context_pressure": _peak_context_pressure,
+                    "total_est_tokens": _total_est_tokens,
+                    "total_actual_prompt_tokens": _total_actual_prompt_tokens,
+                },
+            )
 
     # -----------------------------------------------------------------------
 
@@ -2803,9 +2844,11 @@ def register_language_analysis_tasks(celery):
 
         if full_words <= feedback_word_budget:
             # Tier 1: core + appendices fits within the context window.
+            tier = 1
             chunk_texts = [clean_full]
         elif core_words <= feedback_word_budget:
             # Tier 2: appendix stripped; core fits without chunking.
+            tier = 2
             chunk_texts = [clean_core]
             current_app.logger.info(
                 f"language_analysis.submit_to_llm_feedback: record #{record_id} — "
@@ -2813,6 +2856,7 @@ def register_language_analysis_tasks(celery):
             )
         else:
             # Tier 3: core still exceeds budget; chunk it.
+            tier = 3
             chunk_texts = _build_chunks(clean_core, feedback_word_budget)
             if not chunk_texts:
                 chunk_texts = [clean_core]
@@ -2825,9 +2869,11 @@ def register_language_analysis_tasks(celery):
         feedback_results: list[dict] = []
         last_exc: Exception | None = None
         est_tok: int = 0
+        _fb_chunk_est_tokens: list[int] = []
+        _fb_chunk_actual_tokens: list[int | None] = []
 
         for chunk_idx, chunk_text in enumerate(chunk_texts):
-            chunk_parsed, _, chunk_exc, est_tok = _call_llm(
+            chunk_parsed, _, chunk_exc, est_tok, _fb_actual_usage = _call_llm(
                 base_url,
                 model,
                 _build_feedback_system_prompt(False),
@@ -2840,6 +2886,10 @@ def register_language_analysis_tasks(celery):
                     f"(record #{record_id})"
                 ),
             )
+            _fb_chunk_est_tokens.append(est_tok)
+            _fb_chunk_actual_tokens.append(
+                _fb_actual_usage.get("prompt_tokens") if _fb_actual_usage else None
+            )
             if chunk_parsed is not None:
                 feedback_results.append(chunk_parsed)
             else:
@@ -2848,6 +2898,16 @@ def register_language_analysis_tasks(celery):
                     f"language_analysis.submit_to_llm_feedback: chunk {chunk_idx + 1}/"
                     f"{len(chunk_texts)} failed for record #{record_id}: {chunk_exc}"
                 )
+
+        _fb_actual_available = [t for t in _fb_chunk_actual_tokens if t is not None]
+        _fb_peak_prompt_tokens: int | None = max(_fb_actual_available) if _fb_actual_available else None
+        _fb_peak_context_pressure: float | None = (
+            _fb_peak_prompt_tokens / context_size if _fb_peak_prompt_tokens is not None else None
+        )
+        _fb_total_est_tokens: int | None = sum(_fb_chunk_est_tokens) if _fb_chunk_est_tokens else None
+        _fb_total_actual_prompt_tokens: int | None = (
+            sum(_fb_actual_available) if _fb_actual_available else None
+        )
 
         data.setdefault("timings", {})["llm_feedback_s"] = round(
             time.monotonic() - _t_feedback, 1
@@ -2910,17 +2970,26 @@ def register_language_analysis_tasks(celery):
             )
             raise self.retry()
 
+        _fb_meta = {
+            "num_chunks": len(chunk_texts),
+            "peak_prompt_tokens": _fb_peak_prompt_tokens,
+            "peak_context_pressure": _fb_peak_context_pressure,
+            "total_est_tokens": _fb_total_est_tokens,
+            "total_actual_prompt_tokens": _fb_total_actual_prompt_tokens,
+            "tier": tier,
+            "feedback_word_budget": feedback_word_budget,
+        }
         if record.llm_feedback_failed:
             record_step_end(
                 _r,
                 record_id,
                 "submit_to_llm_feedback",
                 _t0,
-                error=record.llm_feedback_failure_reason
-                or "Feedback generation failed",
+                error=record.llm_feedback_failure_reason or "Feedback generation failed",
+                meta=_fb_meta,
             )
         else:
-            record_step_end(_r, record_id, "submit_to_llm_feedback", _t0)
+            record_step_end(_r, record_id, "submit_to_llm_feedback", _t0, meta=_fb_meta)
 
     # -----------------------------------------------------------------------
 

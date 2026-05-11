@@ -8,11 +8,22 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import logging
 import time
 from datetime import datetime
 
 import redis as redis_lib
 from flask import current_app
+
+logger = logging.getLogger(__name__)
+
+
+def _to_int(v) -> int | None:
+    return int(v) if v is not None else None
+
+
+def _to_float(v) -> float | None:
+    return float(v) if v is not None else None
 
 _STEP_KEY_PREFIX = "llm_step"
 _STEP_TTL = 86400  # 24 h safety expiry on Redis hashes
@@ -61,6 +72,7 @@ def record_step_end(
     step: str,
     t0: float,
     error: str | None = None,
+    meta: dict | None = None,
 ) -> None:
     """
     Record that *step* has finished for *record_id*.
@@ -69,6 +81,10 @@ def record_step_end(
     call so that elapsed time can be computed accurately.
 
     If *redis_client* is ``None`` the call is a silent no-op.
+
+    Optional *meta* dict: each key-value pair is stored as a ``{step}:{key}``
+    field in the Redis hash.  None values are skipped.  Redis errors writing
+    meta fields are logged as warnings and do not propagate.
     """
     if redis_client is None:
         return
@@ -79,6 +95,18 @@ def record_step_end(
             redis_client.hset(step_key(record_id), f"{step}:error", error)
     except Exception:
         pass
+    if meta:
+        try:
+            for k, v in meta.items():
+                if v is not None:
+                    redis_client.hset(step_key(record_id), f"{step}:{k}", str(v))
+        except Exception as exc:
+            logger.warning(
+                "pipeline_tracking: failed to write meta fields for %s/%s: %s",
+                record_id,
+                step,
+                exc,
+            )
 
 
 # Ordered list of all pipeline step names, used when reconstructing
@@ -136,6 +164,13 @@ def read_workflow_entry(redis_client, record_id: int) -> dict:
                 "started_at": started,
                 "elapsed_ms": int(elapsed_raw) if elapsed_raw is not None else None,
                 "error": fields.get(f"{name}:error"),
+                "num_chunks": _to_int(fields.get(f"{name}:num_chunks")),
+                "peak_prompt_tokens": _to_int(fields.get(f"{name}:peak_prompt_tokens")),
+                "peak_context_pressure": _to_float(fields.get(f"{name}:peak_context_pressure")),
+                "total_est_tokens": _to_int(fields.get(f"{name}:total_est_tokens")),
+                "total_actual_prompt_tokens": _to_int(fields.get(f"{name}:total_actual_prompt_tokens")),
+                "tier": _to_int(fields.get(f"{name}:tier")),
+                "feedback_word_budget": _to_int(fields.get(f"{name}:feedback_word_budget")),
             }
         )
 

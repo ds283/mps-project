@@ -120,10 +120,32 @@
                                                         </span>
                                                     {% elif s.elapsed_ms is not none %}
                                                         {% set secs = (s.elapsed_ms / 1000) | round(1) %}
-                                                        <span class="badge bg-success-subtle text-success-emphasis"
+                                                        {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none and s.peak_context_pressure >= 0.85 %}
+                                                            {% set _badge_cls = "bg-warning-subtle text-warning-emphasis" %}
+                                                        {% else %}
+                                                            {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
+                                                        {% endif %}
+                                                        {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none %}
+                                                            {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
+                                                            {% if s.total_actual_prompt_tokens is not none and s.total_est_tokens is not none and s.total_est_tokens > 0 %}
+                                                                {% set _cal_pct = (((s.total_actual_prompt_tokens - s.total_est_tokens) / s.total_est_tokens) * 100) | round(1) %}
+                                                                {% set _cal_str = ("+" if _cal_pct >= 0 else "") ~ _cal_pct ~ "%" %}
+                                                            {% else %}
+                                                                {% set _cal_str = "—" %}
+                                                            {% endif %}
+                                                            {% set _chunks_str = s.num_chunks if s.num_chunks is not none else "—" %}
+                                                            {% set _tip = s.name ~ ": " ~ secs ~ "s | " ~ _chunks_str ~ " chunk(s) | peak " ~ _ctx_pct ~ "% ctx | est Δ" ~ _cal_str %}
+                                                        {% else %}
+                                                            {% set _tip = s.name ~ ": " ~ secs ~ "s" %}
+                                                        {% endif %}
+                                                        {% set _label = s.name | replace('_', ' ') | truncate(12, True, '…') %}
+                                                        {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
+                                                            {% set _label = _label ~ " ·no appx" %}
+                                                        {% endif %}
+                                                        <span class="badge {{ _badge_cls }}"
                                                               data-bs-toggle="tooltip"
-                                                              title="{{ s.name }}: {{ secs }}s">
-                                                            {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                              title="{{ _tip }}">
+                                                            {{ _label }}
                                                         </span>
                                                     {% else %}
                                                         <span class="badge bg-warning-subtle text-warning-emphasis"
@@ -230,10 +252,32 @@
                                                     {% else %}
                                                         {% if s.elapsed_ms is not none %}
                                                             {% set secs = (s.elapsed_ms / 1000) | round(1) %}
-                                                            <span class="badge bg-success-subtle text-success-emphasis"
+                                                            {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none and s.peak_context_pressure >= 0.85 %}
+                                                                {% set _badge_cls = "bg-warning-subtle text-warning-emphasis" %}
+                                                            {% else %}
+                                                                {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
+                                                            {% endif %}
+                                                            {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none %}
+                                                                {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
+                                                                {% if s.total_actual_prompt_tokens is not none and s.total_est_tokens is not none and s.total_est_tokens > 0 %}
+                                                                    {% set _cal_pct = (((s.total_actual_prompt_tokens - s.total_est_tokens) / s.total_est_tokens) * 100) | round(1) %}
+                                                                    {% set _cal_str = ("+" if _cal_pct >= 0 else "") ~ _cal_pct ~ "%" %}
+                                                                {% else %}
+                                                                    {% set _cal_str = "—" %}
+                                                                {% endif %}
+                                                                {% set _chunks_str = s.num_chunks if s.num_chunks is not none else "—" %}
+                                                                {% set _tip = s.name ~ ": " ~ secs ~ "s | " ~ _chunks_str ~ " chunk(s) | peak " ~ _ctx_pct ~ "% ctx | est Δ" ~ _cal_str %}
+                                                            {% else %}
+                                                                {% set _tip = s.name ~ ": " ~ secs ~ "s" %}
+                                                            {% endif %}
+                                                            {% set _label = s.name | replace('_', ' ') | truncate(12, True, '…') %}
+                                                            {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
+                                                                {% set _label = _label ~ " ·no appx" %}
+                                                            {% endif %}
+                                                            <span class="badge {{ _badge_cls }}"
                                                                   data-bs-toggle="tooltip"
-                                                                  title="{{ s.name }}: {{ secs }}s">
-                                                                {{ s.name | replace('_', ' ') | truncate(12, True, '…') }}
+                                                                  title="{{ _tip }}">
+                                                                {{ _label }}
                                                             </span>
                                                         {% else %}
                                                             <span class="badge bg-secondary-subtle text-body-secondary"

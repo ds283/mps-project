@@ -171,7 +171,7 @@
                                         {{ (entry.started_at | replace("T", " "))[11:19] if entry.started_at else "—" }}
                                     </td>
                                     <td class="text-nowrap text-body-secondary"
-                                        data-started="{{ entry.started_at or '' }}">—</td>
+                                        data-started="{{ entry.started_at ~ 'Z' if entry.started_at else '' }}">—</td>
                                     <td>{{ render_step_badges(entry, is_inflight=True) }}</td>
                                 </tr>
                                 {# ---- LLM detail subrow ---- #}

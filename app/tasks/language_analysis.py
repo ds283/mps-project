@@ -170,7 +170,7 @@ BURSTINESS_MIN_OCCURRENCES = 8
 HEDGING_PATTERNS = [
     r"it is important to note that",
     r"it is worth noting that",
-    r"it is crucial toin  note that",
+    r"it is crucial to note that",
     r"it should be noted that",
     r"needless to say",
     r"it goes without saying that",

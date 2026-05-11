@@ -206,7 +206,7 @@ BURSTINESS_MIN_OCCURRENCES = 8
 # ---------------------------------------------------------------------------
 
 _BIBLIO_HEADING = re.compile(
-    r"^\s*(references|bibliography|works\s+cited)\s*$",
+    r"^\s*(references|bibliography|works\s+cited)\s*:?\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 _CAPTION_LINE = re.compile(
@@ -251,7 +251,8 @@ def _get_nlp():
     if _nlp is None:
         import spacy  # noqa: PLC0415 — intentional late import
         _nlp = spacy.load("en_core_web_sm", disable=["ner", "parser"])
-        _nlp.add_pipe("sentencizer")
+        if not _nlp.has_pipe("senter") and not _nlp.has_pipe("sentencizer"):
+            _nlp.add_pipe("sentencizer", first=True)
     return _nlp
 
 

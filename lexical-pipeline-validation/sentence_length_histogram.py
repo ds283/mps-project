@@ -7,7 +7,7 @@ then tokenises sentences with spaCy (same logic as compute_sentence_cv).
 Usage:
     python sentence_length_histogram.py [PDF_PATH]
 
-Default PDF: Project_report_Final_version_1_.pdf
+Default PDF: Cameron_Final_version_1_.pdf
 
 Output:
     - Summary statistics printed to stdout
@@ -22,7 +22,6 @@ from __future__ import annotations
 import sys
 
 import numpy as np
-
 from language_analysis_core import (
     _get_nlp,
     _looks_like_code,
@@ -61,9 +60,7 @@ def collect_sentence_lengths(clean_content_text: str) -> list[int]:
 
 
 def main():
-    pdf_path = (
-        sys.argv[1] if len(sys.argv) > 1 else "Project_report_Final_version_1_.pdf"
-    )
+    pdf_path = sys.argv[1] if len(sys.argv) > 1 else "Cameron_Final_version_1_.pdf"
 
     print(f"Extracting text from: {pdf_path}")
     raw_text, page_count = extract_pdf_text(pdf_path)

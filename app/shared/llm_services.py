@@ -103,7 +103,10 @@ def _call_llm(
                     **({"options": options} if options else {}),
                 },
                 stream=True,
-                timeout=(30, 600),
+                timeout=(
+                    current_app.config.get("OLLAMA_CONNECT_TIMEOUT", 30),
+                    current_app.config.get("OLLAMA_STREAMING_READ_TIMEOUT", 120),
+                ),
             )
             resp.raise_for_status()
 

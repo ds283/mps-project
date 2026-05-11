@@ -25,3 +25,11 @@ OLLAMA_CONTEXT_SIZE = int(os.environ.get("OLLAMA_CONTEXT_SIZE", "18432"))
 # Batch size for submission of reports to the LLM pipeline for appraisal.
 # For running on a desktop-scale Mac Studio, we can probably only process 1 at once.
 OLLAMA_BATCH_SIZE = int(os.environ.get("OLLAMA_BATCH_SIZE", "1"))
+
+# TCP connect timeout (seconds) when opening a connection to the Ollama server.
+OLLAMA_CONNECT_TIMEOUT = int(os.environ.get("OLLAMA_CONNECT_TIMEOUT", "30"))
+
+# Per-chunk read timeout (seconds) for streaming responses from Ollama.
+# This is not a total-generation limit — it is the maximum allowed gap between
+# consecutive streamed tokens. It primarily needs to cover time-to-first-token.
+OLLAMA_STREAMING_READ_TIMEOUT = int(os.environ.get("OLLAMA_STREAMING_READ_TIMEOUT", "180"))

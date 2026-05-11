@@ -147,7 +147,7 @@ class LLMOrchestrationJob(db.Model):
 
     # Rolling log of the last _RECENT_WORKFLOWS_MAX completed/failed record workflows,
     # newest-first. Each entry is a workflow-summary dict built from Redis step hashes.
-    recent_workflows = db.Column(db.Text(collation="utf8_bin"), nullable=True)
+    recent_workflows = db.Column(db.Text(length=16777215, collation="utf8_bin"), nullable=True)
 
     # ------------------------------------------------------------------
     # Class methods

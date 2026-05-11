@@ -101,6 +101,7 @@ def _call_llm(
                         },
                     },
                     "stream": True,
+                    "stream_options": {"include_usage": True},
                     "temperature": 0.0,
                     "keep_alive": -1,
                     **({"options": options} if options else {}),

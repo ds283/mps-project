@@ -27,8 +27,8 @@
                 </div>
                 <div class="mt-2">
                     {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} |
-                    {% if project.generic %}
-                        <span class="badge bg-info">Generic</span>
+                    {% if project.use_supervisor_pool %}
+                        <span class="badge bg-secondary">Pool</span>
                     {% else %}
                         {% if project.owner is not none %}
                             <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">

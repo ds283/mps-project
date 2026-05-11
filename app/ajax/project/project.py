@@ -105,8 +105,8 @@ _name = """
 
 # language=jinja2
 _owner = """
-{% if project.generic %}
-    <div class="fw-semibold text-secondary">Generic</div>
+{% if project.use_supervisor_pool %}
+    <div class="fw-semibold text-secondary">Uses supervisor pool</div>
     {% set num = project.number_supervisors() %}
     <div class="mt-1 d-flex flex-row gap-2 justify-content-start align-items-center">
         {% if num > 0 %}
@@ -561,7 +561,7 @@ def build_data(
     )
 
     def _process(p: ProjectLike, d: Optional[ProjectDescription]):
-        if config is not None and not p.generic and p.owner is not None:
+        if config is not None and not p.use_supervisor_pool and p.owner is not None:
             e = (
                 db.session.query(EnrollmentRecord)
                 .filter_by(owner_id=current_user.id, pclass_id=config.pclass_id)

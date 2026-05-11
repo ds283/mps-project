@@ -162,7 +162,7 @@ class LiveProject(
             return False
 
         # generic projects are always available
-        if self.generic:
+        if self.use_supervisor_pool:
             return True
 
         # if student doesn't satisfy recommended modules, sign-off is required by default (whether or not
@@ -1491,7 +1491,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                 # STEP 2a: if the project is not available to this student, the selection is not valid
                 if not project.is_available(self):
                     valid = False
-                    if not project.generic and project.owner is not None:
+                    if not project.use_supervisor_pool and project.owner is not None:
                         fac: FacultyData = project.owner
                         user: User = fac.user
                         messages.append(
@@ -1515,7 +1515,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
                 # STEP 2b - check that the maximum number of projects for a single faculty member
                 # is not exceeded
-                if not project.generic:
+                if not project.use_supervisor_pool:
                     if project.owner_id not in counts:
                         counts[project.owner_id] = 1
                     else:

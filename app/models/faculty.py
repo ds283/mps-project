@@ -135,7 +135,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return db.session.query(Project).filter(
             Project.active.is_(True),
             Project.project_classes.any(id=pclass_id),
-            Project.generic.is_(True),
+            Project.use_supervisor_pool.is_(True),
             Project.supervisors.any(id=self.id),
         )
 
@@ -170,7 +170,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             Project.active.is_(True),
             Project.project_classes.any(id=pclass_id),
             or_(
-                and_(Project.generic.is_(True), Project.supervisors.any(id=self.id)),
+                and_(Project.use_supervisor_pool.is_(True), Project.supervisors.any(id=self.id)),
                 Project.owner_id == self.id,
             ),
         )

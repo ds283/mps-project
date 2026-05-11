@@ -35,8 +35,8 @@ _title = """
 
 # language=jinja2
 _owner = """
-{% if p.generic %}
-    <span class="badge bg-secondary">Generic</span>
+{% if p.use_supervisor_pool %}
+    <span class="badge bg-secondary">Pool</span>
 {% else %}
     {% set fac = p.owner %}
     {% if fac is not none %}

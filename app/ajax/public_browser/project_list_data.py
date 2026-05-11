@@ -20,10 +20,10 @@ _name = """
 
 # language=jinja2
 _owner = """
-{% if not project.generic and project.owner is not none %}
+{% if not project.use_supervisor_pool and project.owner is not none %}
     {{ project.owner.user.name }}
 {% else %}
-    <span class="badge bg-info">Generic</span>
+    <span class="badge bg-secondary">Pool</span>
 {% endif %}
 """
 

@@ -199,13 +199,13 @@ def project_list_in_memory_handler(
         return row.name
 
     def search_owner(row: Project):
-        if not row.generic and row.owner is not None:
+        if not row.use_supervisor_pool and row.owner is not None:
             return row.owner.user.name
 
         return "generic"
 
     def sort_owner(row: Project):
-        if not row.generic and row.owner is not None:
+        if not row.use_supervisor_pool and row.owner is not None:
             return [row.owner.user.last_name, row.owner.user.first_name]
 
         return ["generic", "generic"]

@@ -141,8 +141,8 @@
             {% endif %}
             {% if owner_col is not none %}
                 <div class="{{ owner_col }}">
-                    {% if project.generic %}
-                        <div class="text-primary">Generic</div>
+                    {% if project.use_supervisor_pool %}
+                        <div class="text-primary">Uses supervisor pool</div>
                     {% else %}
                         {% if project.owner is not none %}
                             <div><a class="text-decoration-none link-primary"

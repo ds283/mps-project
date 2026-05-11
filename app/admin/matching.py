@@ -2085,14 +2085,14 @@ def match_student_view_ajax(id):
     if type_filter == "ordinary":
 
         def filt(rs: List[MatchingRecord]):
-            return any(not r.project.generic for r in rs)
+            return any(not r.project.use_supervisor_pool for r in rs)
 
         filter_list.append(filt)
 
     elif type_filter == "generic":
 
         def filt(rs: List[MatchingRecord]):
-            return any(r.project.generic for r in rs)
+            return any(r.project.use_supervisor_pool for r in rs)
 
         filter_list.append(filt)
 
@@ -2222,14 +2222,14 @@ def match_faculty_view_ajax(id):
     if type_filter == "ordinary":
 
         def filt(rs: List[MatchingRecord]):
-            return any(not r.project.generic for r in rs)
+            return any(not r.project.use_supervisor_pool for r in rs)
 
         filter_list.append(filt)
 
     elif type_filter == "generic":
 
         def filt(rs: List[MatchingRecord]):
-            return any(r.project.generic for r in rs)
+            return any(r.project.use_supervisor_pool for r in rs)
 
         filter_list.append(filt)
 
@@ -2357,7 +2357,7 @@ def reassign_match_project(id, pid):
         if submitted_data.get("submitted"):
             adjust = False
 
-            if project.generic:
+            if project.use_supervisor_pool:
                 # don't change supervisors here
                 adjust = True
 

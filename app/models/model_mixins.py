@@ -244,7 +244,7 @@ def ProjectConfigurationMixinFactory(
         # OWNERSHIP
 
         # which faculty member owns this project?
-        # can be null if this is a generic project (one with a pool of faculty)
+        # can be null if use_supervisor_pool is True and the project is convenor-owned
         @declared_attr
         def owner_id(cls):
             return db.Column(
@@ -262,9 +262,9 @@ def ProjectConfigurationMixinFactory(
                 backref=db.backref(backref_label, lazy="dynamic"),
             )
 
-        # positively flag this as a generic project
-        # (generic projects can only be set up by convenors)
-        generic = db.Column(db.Boolean(), default=False)
+        # flag that this project draws its supervisor from a pool rather than a fixed owner
+        # (pool-based projects can only be set up by convenors)
+        use_supervisor_pool = db.Column(db.Boolean(), default=False)
 
         # TAGS AND METADATA
 
@@ -596,7 +596,7 @@ def ProjectConfigurationMixinFactory(
 
             return removed > 0
 
-        # table of allowed supervisors, if used (always used for generic projects)
+        # table of allowed supervisors, if used (always used for pool-based projects)
         @declared_attr
         def supervisors(cls):
             return db.relationship(
@@ -720,19 +720,19 @@ def ProjectConfigurationMixinFactory(
             when they come back from sabbatical
             :return:
             """
-            # only generic projects should have a nonzero supervisor pool
-            if not self.generic:
+            # only pool-based projects should have a nonzero supervisor pool
+            if not self.use_supervisor_pool:
                 count = get_count(self.supervisors) > 0
                 if count > 0:
                     self.supervisors = []
                     current_app.logger.info(
                         'Regular maintenance: removed supervisor pool from project "{proj}" because '
-                        "it is not of generic type,".format(proj=self.name)
+                        "it does not use the supervisor pool,".format(proj=self.name)
                     )
 
                     return count
 
-            if self.generic:
+            if self.use_supervisor_pool:
                 removed = [
                     f
                     for f in self.supervisors

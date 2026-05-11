@@ -24,7 +24,7 @@
                         {{ title }}
                     </div>
                 </div>
-                {% if not project.generic and project.owner %}
+                {% if not project.use_supervisor_pool and project.owner %}
                     <div class="d-flex flex-row justify-content-between align-items-start sm-gap-below">
                         <div>
                             <div class="project-owner-name">

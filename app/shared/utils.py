@@ -181,9 +181,9 @@ def build_project_approval_queues():
             != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
             Project.active.is_(True),
             or_(
-                Project.generic.is_(True),
+                Project.use_supervisor_pool.is_(True),
                 and_(
-                    Project.generic.is_(False),
+                    Project.use_supervisor_pool.is_(False),
                     FacultyData.id != None,
                     User.active.is_(True),
                 ),
@@ -217,7 +217,7 @@ def allow_approval_for_description(desc_id):
     parent: Project = desc.parent
 
     # generic projects don't require approval (they are managed by the convenor anyway)
-    if parent.generic:
+    if parent.use_supervisor_pool:
         return False
 
     owner: FacultyData = parent.owner

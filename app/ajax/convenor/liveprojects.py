@@ -32,8 +32,8 @@ _name = """
 
 # language=jinja2
 _owner = """
-{% if project.generic %}
-    <div class="fw-semibold text-secondary">Generic</div>
+{% if project.use_supervisor_pool %}
+    <div class="fw-semibold text-secondary">Uses supervisor pool</div>
     {% set num = project.number_supervisors %}
     <div class="mt-1 d-flex flex-row gap-2 justify-content-start align-items-center">
         {% if num > 0 %}

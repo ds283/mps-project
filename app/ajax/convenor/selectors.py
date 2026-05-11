@@ -171,7 +171,7 @@ _submitted = """
                     {{ truncate(offer.liveproject.name, length=30) }}
                 </span>
                 <div class="text-secondary fw-semibold">
-                    {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                    {% if offer.liveproject.use_supervisor_pool or offer.liveproject.owner is none %}
                         (Generic)
                     {% else %}
                         ({{ offer.liveproject.owner.user.name }})
@@ -204,7 +204,7 @@ _confirmations = """
                 <span class="text-primary fw-bold">Offer:</span>
                 <span class="text-secondary">{{ offer.liveproject.name }}</span>
                 <div class="text-secondary fw-semibold">
-                    {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                    {% if offer.liveproject.use_supervisor_pool or offer.liveproject.owner is none %}
                         (Generic)
                     {% else %}
                         ({{ offer.liveproject.owner.user.name }})
@@ -217,7 +217,7 @@ _confirmations = """
                 <span class="text-danger fw-bold">Declined:</span>
                 <span class="text-secondary">{{ offer.liveproject.name }}</span>
                 <div class="text-secondary fw-semibold">
-                    {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                    {% if offer.liveproject.use_supervisor_pool or offer.liveproject.owner is none %}
                         (Generic)
                     {% else %}
                         ({{ offer.liveproject.owner.user.name }})

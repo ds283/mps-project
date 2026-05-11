@@ -61,8 +61,8 @@
                 {{ wtf.render_field(project_form.ATAS_restricted) }}
             </div>
         {% endif %}
-        {% if project_form.generic %}
-            {{ wtf.render_field(project_form.generic) }}
+        {% if project_form.use_supervisor_pool %}
+            {{ wtf.render_field(project_form.use_supervisor_pool) }}
         {% endif %}
         {% if project_form.owner %}
             {{ wtf.render_field(project_form.owner) }}

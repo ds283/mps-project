@@ -70,29 +70,29 @@ def ProjectMixinFactory(
 ):
     class ProjectMixin:
         if convenor_editing:
-            # convenors can assign projects to any owner; ordinary faculty membes can only edit their own
+            # convenors can assign projects to any owner; ordinary faculty members can only edit their own
             # projects (and currently cannot reassign them to other owners)
             owner = QuerySelectField(
                 "Project owner",
                 query_factory=GetActiveFaculty,
                 get_label=BuildActiveFacultyName,
                 allow_blank=True,
-                description="This field is ignored if the project is set to generic",
+                description="Assign this project to a specified owner. If a project is managed by someone other than the superisor, you may wish to use this in conjuntion with the supervisor pool.",
             )
 
-            # flag the project as generic
-            generic = BooleanField(
-                "This is a generic project",
-                description="Generic projects are not owned by an individual faculty member. "
-                "Students allocated to a generic projects will be matched to a "
+            # flag the project as using a supervisor pool
+            use_supervisor_pool = BooleanField(
+                "Use a supervisor pool",
+                description="Pool-based projects are not owned by an individual faculty member. "
+                "Students allocated to a pool-based project will be matched to a "
                 "supervision group with a supervisor drawn from the assessor pool.",
             )
 
             @staticmethod
             def validate_owner(form, field):
-                if field.data is None and not form.generic.data:
+                if field.data is None and not form.use_supervisor_pool.data:
                     raise ValidationError(
-                        "This project is not marked as generic. Please assign an owner."
+                        "This project does not use a supervisor pool. Please assign an owner."
                     )
 
         if uses_tags:
@@ -188,7 +188,7 @@ def ProjectMixinFactory(
             "Meeting required?",
             choices=Project.MEETING_OPTIONS,
             coerce=int,
-            description="Not used for generic projects.",
+            description="Not used for pool-based projects.",
         )
 
         enforce_capacity = BooleanField(

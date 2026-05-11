@@ -134,8 +134,8 @@
                                href="{{ url_for('faculty.live_project', pid=record.project_id, text='edit roles view', url=url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id, url=url, text=text)) }}">
                                 {{ record.project.name }}
                             </a>
-                            {% if record.project.generic %}
-                                <span class="small text-capitalize text-secondary">Generic</span>
+                            {% if record.project.use_supervisor_pool %}
+                                <span class="small text-secondary">Uses supervisor pool</span>
                             {% elif record.project.owner is not none %}
                                 <span class="small text-body-secondary">(project owner <a
                                         href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }})</a></span>

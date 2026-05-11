@@ -67,7 +67,7 @@ _priority = """
 
 # langauge=jinja2
 _supervision = """
-{% if not lp.generic %}
+{% if not lp.use_supervisor_pool %}
     {% if lp.owner is not none %}
         <i class="fas fa-user-circle"></i> {{ lp.owner.user.name }}
     {% else %}
@@ -160,11 +160,11 @@ _alternative = """
 
 # language=jinja2
 _owner = """
-{% if not alt_lp.generic and alt_lp.owner is not none %}
+{% if not alt_lp.use_supervisor_pool and alt_lp.owner is not none %}
     <a class="text-decoration-none" href="mailto:{{ alt_lp.owner.user.email }}">{{ alt_lp.owner.user.name }}</a>
     {% if alt_lp.group %}{{ simple_label(alt_lp.group.make_label()) }}{% endif %}
 {% else %}
-    <span class="badge bg-info">Generic</span>
+    <span class="badge bg-secondary">Pool</span>
 {% endif %}
 """
 

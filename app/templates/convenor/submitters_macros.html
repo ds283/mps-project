@@ -99,8 +99,8 @@
                     </div>
                 </div>
                 <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
-                    {% if r.project.generic or r.project.owner is none %}
-                        <div class="small text-primary text-capitalize">Generic</div>
+                    {% if r.project.use_supervisor_pool or r.project.owner is none %}
+                        <div class="small text-primary">Uses supervisor pool</div>
                     {% else %}
                         <div class="small">
                             <span class="text-body-secondary">Owner</span>

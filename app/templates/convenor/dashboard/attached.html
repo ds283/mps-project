@@ -206,7 +206,7 @@
                         </a>
                         <a href="{{ url_for('convenor.attached', id=pclass.id, valid_filter=valid_filter, active_filter=active_filter, supervisor_filter=supervisor_filter, generic_filter='0' if generic_filter == '1' else '1', atas_filter=atas_filter, tag_ids=tag_ids_raw) }}"
                            class="btn btn-sm filter-btn {% if generic_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Generic
+                            Uses supervisor pool
                         </a>
                         <a href="{{ url_for('convenor.attached', id=pclass.id, valid_filter=valid_filter, active_filter=active_filter, supervisor_filter=supervisor_filter, generic_filter=generic_filter, atas_filter='0' if atas_filter == '1' else '1', tag_ids=tag_ids_raw) }}"
                            class="btn btn-sm filter-btn {% if atas_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">

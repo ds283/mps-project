@@ -1113,7 +1113,7 @@ def _liveprojects_ajax_handler(
     base_query, config: ProjectClassConfig, state_filter: str, type_filter: str
 ):
     if type_filter == "generic":
-        base_query = base_query.filter(LiveProject.generic.is_(True))
+        base_query = base_query.filter(LiveProject.use_supervisor_pool.is_(True))
     elif type_filter == "hidden":
         base_query = base_query.filter(LiveProject.hidden.is_(True))
     elif type_filter == "alternatives":
@@ -1551,7 +1551,7 @@ def attach_liveproject_ajax(id):
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(
         User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.generic.is_(True), User.active.is_(True)))
+    ).filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
 
     # remove projects that don't have a description
     base_query = base_query.join(
@@ -1673,7 +1673,7 @@ def attach_liveproject_other_ajax(id):
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(
         User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.generic.is_(True), User.active.is_(True)))
+    ).filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
 
     return project_list_SQL_handler(
         request,
@@ -2076,8 +2076,8 @@ def add_project(pclass_id):
             name=form.name.data,
             tags=tag_list,
             active=True,
-            owner=form.owner.data if not form.generic.data else None,
-            generic=form.generic.data,
+            owner=form.owner.data if not form.use_supervisor_pool.data else None,
+            generic=form.use_supervisor_pool.data,
             ATAS_restricted=form.ATAS_restricted.data,
             group=form.group.data,
             project_classes=form.project_classes.data,
@@ -2118,7 +2118,7 @@ def add_project(pclass_id):
             )
 
         # auto-enroll if implied by current project class associations
-        if not project.generic:
+        if not project.use_supervisor_pool:
             owner = project.owner
             assert owner is not None
 
@@ -2231,8 +2231,8 @@ def edit_project(id, pclass_id):
 
         project.name = form.name.data
         project.ATAS_restricted = form.ATAS_restricted.data
-        project.owner = form.owner.data if not form.generic.data else None
-        project.generic = form.generic.data
+        project.owner = form.owner.data if not form.use_supervisor_pool.data else None
+        project.use_supervisor_pool = form.use_supervisor_pool.data
         project.tags = tag_list
         project.group = form.group.data
         project.project_classes = form.project_classes.data
@@ -2262,7 +2262,7 @@ def edit_project(id, pclass_id):
             )
 
             # auto-enroll if implied by current project class associations
-            if not project.generic:
+            if not project.use_supervisor_pool:
                 for pclass in project.project_classes:
                     assert project.owner is not None
 
@@ -2337,8 +2337,8 @@ def duplicate_project(id):
         new_proj = Project(
             name=form.name.data,
             active=True,
-            owner=form.owner.data if not form.generic.data else None,
-            generic=form.generic.data,
+            owner=form.owner.data if not form.use_supervisor_pool.data else None,
+            generic=form.use_supervisor_pool.data,
             ATAS_restricted=form.ATAS_restricted.data,
             tags=tag_list,
             group=form.group.data,

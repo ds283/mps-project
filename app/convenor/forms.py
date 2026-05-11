@@ -750,7 +750,7 @@ class AddSubmitterRoleForm(Form):
                 SubmissionRole.ROLE_SUPERVISOR,
                 SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
             ]:
-                if project.generic:
+                if project.use_supervisor_pool:
                     if fd not in project.supervisor_list:
                         raise ValidationError(
                             "For generic projects, the assigned supervisor should be drawn from "

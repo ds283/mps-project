@@ -53,8 +53,8 @@
                         {{ format_availability(project, sel, now) }}
                     </div>
                     <div class="col-4">
-                        {% if project.generic %}
-                            <div class="text-primary">Generic</div>
+                        {% if project.use_supervisor_pool %}
+                            <div class="text-primary">Uses supervisor pool</div>
                         {% else %}
                             {% if project.owner is not none %}
                                 <div><a class="text-decoration-none link-primary"
@@ -275,8 +275,8 @@
                         {% endif %}
                     </div>
                     <div class="col-4">
-                        {% if project.generic %}
-                            <div class="text-primary">Generic</div>
+                        {% if project.use_supervisor_pool %}
+                            <div class="text-primary">Uses supervisor pool</div>
                         {% else %}
                             {% if project.owner is not none %}
                                 <div><a class="text-decoration-none link-primary"

@@ -301,14 +301,14 @@ def faculty_view_data(
         if type_filter == "ordinary":
 
             def filt(r: MatchingRecord):
-                return not r.project.generic
+                return not r.project.use_supervisor_pool
 
             filter_list.append(filt)
 
         elif type_filter == "generic":
 
             def filt(r: MatchingRecord):
-                return r.project.generic
+                return r.project.use_supervisor_pool
 
             filter_list.append(filt)
 

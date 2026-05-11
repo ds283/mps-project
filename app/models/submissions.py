@@ -781,7 +781,7 @@ def _SubmissionRecord_is_valid(sid):
                 )
 
     # 8. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
-    if project is not None and not project.generic:
+    if project is not None and not project.use_supervisor_pool:
         if project.owner is not None and project.owner_id not in supervisor_ids:
             warnings[("supervisors", 2)] = (
                 'Assigned project owner "{name}" does not have a supervision '
@@ -789,7 +789,7 @@ def _SubmissionRecord_is_valid(sid):
             )
 
     # 9. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
-    if project is not None and project.generic:
+    if project is not None and project.use_supervisor_pool:
         for r in supervisor_roles:
             user: User = r.user
             if not any(user.id == fd.id for fd in project.supervisors):
@@ -3215,7 +3215,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
     @property
     def is_selectable(self):
         # generic projects are always selectable
-        if self.liveproject.generic:
+        if self.liveproject.use_supervisor_pool:
             return True
 
         if not self.liveproject.owner:

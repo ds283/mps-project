@@ -601,9 +601,9 @@ def unofferable_ajax():
         .filter(
             Project.active.is_(True),
             or_(
-                Project.generic.is_(True),
+                Project.use_supervisor_pool.is_(True),
                 and_(
-                    Project.generic.is_(False),
+                    Project.use_supervisor_pool.is_(False),
                     User.active.is_(True),
                 ),
             ),
@@ -845,7 +845,7 @@ def confirm_description(config_id, did):
         return redirect(redirect_url())
 
     # reject if a generic project
-    if desc.parent.generic:
+    if desc.parent.use_supervisor_pool:
         flash("Individual faculty members cannot confirm generic projects.", "info")
 
     try:

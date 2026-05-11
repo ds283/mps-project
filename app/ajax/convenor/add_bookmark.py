@@ -20,11 +20,11 @@ _project = """
 
 # language=jinja2
 _owner = """
-{% if not project.generic and project.owner is not none %}
+{% if not project.use_supervisor_pool and project.owner is not none %}
     <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
     {% if project.group %}{{ simple_label(project.group.make_label()) }}{% endif %}
 {% else %}
-    <span class="badge bg-info">Generic</span>
+    <span class="badge bg-secondary">Pool</span>
 {% endif %}
 """
 
@@ -52,8 +52,8 @@ def add_student_bookmark(projects, sel):
                 ),
                 "sortvalue": project.owner.user.last_name
                 + project.owner.user.first_name
-                if not project.generic and project.owner is not None
-                else "Generic",
+                if not project.use_supervisor_pool and project.owner is not None
+                else "Pool",
             },
             "actions": render_template_string(_actions, sel=sel, project=project),
         }

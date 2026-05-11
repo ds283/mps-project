@@ -313,7 +313,7 @@ def all_projects_ajax():
     base_query = (
         db.session.query(Project)
         .join(User, User.id == Project.owner_id, isouter=True)
-        .filter(or_(Project.generic.is_(True), User.active.is_(True)))
+        .filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
     )
 
     if flag:

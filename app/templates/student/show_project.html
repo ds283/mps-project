@@ -61,7 +61,7 @@
                         {{ title }}
                     </div>
                 </div>
-                {% if not project.generic and project.owner %}
+                {% if not project.use_supervisor_pool and project.owner %}
                     <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
                         <div>
                             <div class="project-owner-name">
@@ -201,7 +201,7 @@
                                             <div class="col-3">Sign-up details</div>
                                             <div class="col-9">
                                                 <div class="sm-gap-below">
-                                                    {% if not project.generic and project.owner is not none %}
+                                                    {% if not project.use_supervisor_pool and project.owner is not none %}
                                                         {% if project.owner.sign_off_students and project.meeting_reqd == project.MEETING_REQUIRED %}
                                                             {% if project.is_confirmed(sel) %}
                                                                 <span class="badge bg-primary project-label"><i class="fas fa-check"></i> Meeting confirmed</span>

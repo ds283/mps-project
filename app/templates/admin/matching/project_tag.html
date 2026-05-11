@@ -43,7 +43,7 @@
                         <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
                            {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                             #{{ item.rank }}: {{ render_formatted_project(item) }}
-                            {% if project.generic or project.owner is none %}
+                            {% if project.use_supervisor_pool or project.owner is none %}
                                 (generic)
                             {% else %}
                                 ({{ project.owner.user.name }})
@@ -77,8 +77,8 @@
         {% if r.project_id != r.original_project_id %}
             <span class="badge bg-info">Modified</span>
         {% endif %}
-        {% if r.project.generic %}
-            <span class="badge bg-info">Generic</span>
+        {% if r.project.use_supervisor_pool %}
+            <span class="badge bg-secondary">Pool</span>
         {% endif %}
         {% if r.alternative %}
             <span class="badge bg-warning text-dark">Alternative</span>

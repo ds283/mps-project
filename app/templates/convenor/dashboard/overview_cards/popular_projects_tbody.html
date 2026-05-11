@@ -9,7 +9,7 @@
                href="{{ url_for('faculty.live_project', pid=p.id, text='convenor dashboard', url=url_for('convenor.status', id=config_pclass_id)) }}">{{ p.name }}</a>
         </td>
         <td>
-            {% if not p.generic %}
+            {% if not p.use_supervisor_pool %}
                 {% if p.owner %}
                     <a class="link-primary text-decoration-none small"
                        href="mailto:{{ p.owner.user.email }}">{{ p.owner.user.name }}</a>
@@ -17,7 +17,7 @@
                     <span class="badge bg-danger text-white">Owner missing</span>
                 {% endif %}
             {% else %}
-                <span class="badge bg-secondary text-white">Generic</span>
+                <span class="badge bg-secondary text-white">Pool</span>
             {% endif %}
         </td>
         <td>

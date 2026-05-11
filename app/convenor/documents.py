@@ -159,7 +159,7 @@ def force_convert_bookmarks(sel_id):
             <ul>
                 {% for item in stored %}
                     <li><strong>{{ item.name }}</strong>
-                    {% if item.name.generic %}
+                    {% if item.name.use_supervisor_pool %}
                         (generic)
                     {% elif item.owner is not none %}
                         owned by <i class="fas fa-user-circle"></i> {{ item.owner.user.name }}

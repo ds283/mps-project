@@ -1370,7 +1370,7 @@ def _MatchingRecord_is_valid(id):
                 )
 
     # 11. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
-    if not project.generic:
+    if not project.use_supervisor_pool:
         if project.owner is not None and project.owner_id not in supervisor_ids:
             warnings[("supervisors", 2)] = (
                 'Assigned project owner "{name}" does not have a supervision role'.format(
@@ -1379,7 +1379,7 @@ def _MatchingRecord_is_valid(id):
             )
 
     # 12. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
-    if project.generic:
+    if project.use_supervisor_pool:
         for u in supervisor_roles:
             if not any(u.id == fd.id for fd in project.supervisors):
                 errors[("supervisors", 3)] = (

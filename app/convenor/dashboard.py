@@ -623,7 +623,7 @@ def attached_ajax(id):
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(
         User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.generic.is_(True), User.active.is_(True)))
+    ).filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
 
     # get FilterRecord for currently logged-in user
     filter_record: FilterRecord = get_convenor_filter_record(config)
@@ -654,12 +654,12 @@ def attached_ajax(id):
             )
         )
         base_query = base_query.filter(
-            or_(Project.generic.is_(True), supervisor_enrolled)
+            or_(Project.use_supervisor_pool.is_(True), supervisor_enrolled)
         )
 
     # generic projects only (default OFF)
     if generic_filter == "1":
-        base_query = base_query.filter(Project.generic.is_(True))
+        base_query = base_query.filter(Project.use_supervisor_pool.is_(True))
 
     # ATAS-restricted projects only (default OFF)
     if atas_filter == "1":

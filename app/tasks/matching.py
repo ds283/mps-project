@@ -619,9 +619,9 @@ def _enumerate_liveprojects_primary(
             )
             .filter(
                 or_(
-                    LiveProject.generic.is_(True),
+                    LiveProject.use_supervisor_pool.is_(True),
                     and_(
-                        LiveProject.generic.is_(False),
+                        LiveProject.use_supervisor_pool.is_(False),
                         User.active.is_(True),
                         FacultyData.id != None,
                         EnrollmentRecord.supervisor_state
@@ -1269,7 +1269,7 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
 
             # if project is of generic/group type, then any member of the assessor pool is an allowed
             # supervisor
-            if proj.generic or proj.owner is None:
+            if proj.use_supervisor_pool or proj.owner is None:
                 count = get_count(
                     proj.supervisor_list_query.filter(FacultyData.id == fac.id)
                 )
@@ -1778,7 +1778,7 @@ def _create_PuLP_problem(
             for j in range(number_lp):
                 proj: LiveProject = lp_dict[j]
 
-                if proj.generic or proj.owner is None:
+                if proj.use_supervisor_pool or proj.owner is None:
                     tag = "generic"
                 else:
                     user_owner: User = proj.owner.user
@@ -1968,7 +1968,7 @@ def _create_PuLP_problem(
                 proj: LiveProject = lp_dict[j]
 
                 all_projects += ss[(k, j)]
-                if proj.generic:
+                if proj.use_supervisor_pool:
                     group_projects += ss[(k, j)]
 
             group_limit = record.max_different_group_projects
@@ -4064,7 +4064,8 @@ def register_matching_tasks(celery):
 
             # ignore periods that are retired, closed, or have open feedback; the markers for these
             # cannot be changed
-            from ..models.markingevent import MarkingEvent as _ME, MarkingEventWorkflowStates as _MEWS
+            from ..models.markingevent import MarkingEvent as _ME
+            from ..models.markingevent import MarkingEventWorkflowStates as _MEWS
 
             _feedback_open = (
                 period.marking_events.filter(
@@ -5024,7 +5025,7 @@ def register_matching_tasks(celery):
                     "is_optional": sel.is_optional,
                     "is_valid_selection": sel.is_valid_selection[0],
                     "allocated_project": proj.name,
-                    "generic": proj.generic or proj.owner is None,
+                    "use_supervisor_pool": proj.use_supervisor_pool or proj.owner is None,
                     "owner_last": None if ou is None else ou.last_name,
                     "owner_first": None if ou is None else ou.first_name,
                     "owner_full_name": None if ou is None else ou.name,

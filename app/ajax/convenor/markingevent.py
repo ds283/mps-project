@@ -238,7 +238,7 @@ _submitter_report_student = """
 _submitter_report_project = """
 {% if report.record.project is not none %}
     <div>{{ report.record.project.name }}</div>
-    {% if not report.record.project.generic and report.record.project.owner is not none %}
+    {% if not report.record.project.use_supervisor_pool and report.record.project.owner is not none %}
         <div class="small text-muted mt-1">{{ report.record.project.owner.user.name }}</div>
     {% endif %}
 {% else %}
@@ -1278,7 +1278,7 @@ _conflation_report_student = """
 _conflation_report_project = """
 {% if cr.submission_record.project is not none %}
     <div>{{ cr.submission_record.project.name }}</div>
-    {% if not cr.submission_record.project.generic and cr.submission_record.project.owner is not none %}
+    {% if not cr.submission_record.project.use_supervisor_pool and cr.submission_record.project.owner is not none %}
         <div class="small text-muted mt-1">{{ cr.submission_record.project.owner.user.name }}</div>
     {% endif %}
 {% else %}

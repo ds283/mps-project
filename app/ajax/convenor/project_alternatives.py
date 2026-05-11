@@ -44,7 +44,7 @@ _priority = """
 
 # langauge=jinja2
 _supervision = """
-{% if not proj.generic %}
+{% if not proj.use_supervisor_pool %}
     {% if proj.owner is not none %}
         <i class="fas fa-user-circle"></i> {{ proj.owner.user.name }}
     {% else %}
@@ -132,11 +132,11 @@ _alternative = """
 
 # language=jinja2
 _owner = """
-{% if not alt_proj.generic and alt_proj.owner is not none %}
+{% if not alt_proj.use_supervisor_pool and alt_proj.owner is not none %}
     <a class="text-decoration-none" href="mailto:{{ alt_proj.owner.user.email }}">{{ alt_proj.owner.user.name }}</a>
     {% if alt_proj.group %}{{ simple_label(alt_proj.group.make_label()) }}{% endif %}
 {% else %}
-    <span class="badge bg-info">Generic</span>
+    <span class="badge bg-secondary">Pool</span>
 {% endif %}
 """
 

@@ -154,8 +154,8 @@
                                                     {{ item.project.name }}
                                                 </a>
                                             </div>
-                                            {% if item.project.generic %}
-                                                <span class="small text-capitalize text-secondary">Generic</span>
+                                            {% if item.project.use_supervisor_pool %}
+                                                <span class="small text-secondary">Uses supervisor pool</span>
                                             {% elif item.project.owner is not none %}
                                                 <span class="text-body-secondary small">(Project owner <a
                                                         href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>)</span>

@@ -170,9 +170,9 @@ def register_golive_tasks(celery):
             )
             .filter(
                 or_(
-                    Project.generic.is_(True),
+                    Project.use_supervisor_pool.is_(True),
                     and_(
-                        Project.generic.is_(False),
+                        Project.use_supervisor_pool.is_(False),
                         User.active.is_(True),
                         FacultyData.id != None,
                         EnrollmentRecord.pclass_id == pclass_id,
@@ -230,7 +230,7 @@ def register_golive_tasks(celery):
 
             filtered_projects = []
             for p in attached_projects:
-                if not p.generic and p.owner_id is not None and is_full(p.owner_id):
+                if not p.use_supervisor_pool and p.owner_id is not None and is_full(p.owner_id):
                     print(
                         '## dropping project "{pname}" offered by supervisor "{sname}" because their CATS '
                         "allocation exceeds the limit (full_CATS={fc})".format(

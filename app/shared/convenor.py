@@ -103,7 +103,7 @@ def add_liveproject(
         number=number,
         name=item.name,
         owner_id=item.owner_id,
-        generic=item.generic,
+        generic=item.use_supervisor_pool,
         ATAS_restricted=item.ATAS_restricted,
         tags=item.tags,
         group_id=item.group_id,

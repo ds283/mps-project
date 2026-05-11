@@ -117,7 +117,7 @@
                         </a>
                         <a class="btn btn-sm filter-btn {% if type_filter == 'generic' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                            href="{{ url_for('convenor.liveprojects', id=pclass.id, type_filter='generic', state_filter=state_filter) }}">
-                            Generic
+                            Uses supervisor pool
                         </a>
                         <a class="btn btn-sm filter-btn {% if type_filter == 'hidden' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                            href="{{ url_for('convenor.liveprojects', id=pclass.id, type_filter='hidden', state_filter=state_filter) }}">

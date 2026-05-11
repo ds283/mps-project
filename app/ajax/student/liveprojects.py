@@ -21,7 +21,7 @@ from ...models import (
 
 # language=jinja2
 _meeting = """
-{% if not project.generic and project.owner is not none %}    
+{% if not project.use_supervisor_pool and project.owner is not none %}    
     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
         {% if sel %}
             {% if project.is_confirmed(sel) %}
@@ -159,8 +159,8 @@ _not_live = """
 
 # language=jinja2
 _owner = """
-{% if project.generic %}
-    <div class="text-primary">Generic</div>
+{% if project.use_supervisor_pool %}
+    <div class="text-primary">Uses supervisor pool</div>
 {% else %}
     {% if project.owner is not none %}
         <div><a class="text-decoration-none link-primary" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a></div>

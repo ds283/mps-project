@@ -67,7 +67,7 @@ def browse_ajax():
         .join(User, User.id == Project.owner_id, isouter=True)
         .filter(
             or_(
-                Project.generic.is_(True),
+                Project.use_supervisor_pool.is_(True),
                 User.active.is_(True),
             )
         )

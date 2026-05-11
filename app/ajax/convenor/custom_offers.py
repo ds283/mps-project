@@ -60,11 +60,11 @@ _project = """
 
 # language=jinja2
 _owner = """
-{% if not project.generic and project.owner is not none %}
+{% if not project.use_supervisor_pool and project.owner is not none %}
     <a class="link-primary text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
     {% if project.group %}{{ simple_label(project.group.make_label()) }}{% endif %}
 {% else %}
-    <span class="badge bg-info">Generic</span>
+    <span class="badge bg-secondary">Pool</span>
 {% endif %}
 """
 
@@ -287,8 +287,8 @@ def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
                 "display": render_template_string(
                     _owner, project=item.liveproject, simple_label=simple_label
                 ),
-                "sortvalue": "Generic"
-                if item.liveproject.generic or item.liveproject.owner is None
+                "sortvalue": "Pool"
+                if item.liveproject.use_supervisor_pool or item.liveproject.owner is None
                 else item.liveproject.owner.user.last_name
                      + item.liveproject.owner.user.first_name,
             },
@@ -343,8 +343,8 @@ def new_student_offer_projects(projects, sel):
                 "display": render_template_string(
                     _owner, project=project, simple_label=simple_label
                 ),
-                "sortvalue": "Generic"
-                if project.generic or project.owner is None
+                "sortvalue": "Pool"
+                if project.use_supervisor_pool or project.owner is None
                 else project.owner.user.last_name + project.owner.user.first_name,
             },
             "offers": render_template_string(_project_offers, record=project),

@@ -381,7 +381,7 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
     # to view the submission
     if (
         record.project is not None
-        and not record.project.generic
+        and not record.project.use_supervisor_pool
         and record.project.owner_id is not None
     ):
         if current_user.id == record.project.owner_id:

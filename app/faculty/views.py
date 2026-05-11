@@ -490,7 +490,7 @@ def add_project():
             tags=tag_list if uses_tags else None,
             active=True,
             owner_id=current_user.faculty_data.id,
-            generic=False,
+            use_supervisor_pool=False,
             group=form.group.data if uses_research_groups else None,
             project_classes=form.project_classes.data,
             skills=[],

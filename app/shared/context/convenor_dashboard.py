@@ -83,9 +83,9 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         )
         .filter(
             or_(
-                Project.generic.is_(True),
+                Project.use_supervisor_pool.is_(True),
                 and_(
-                    Project.generic.is_(False),
+                    Project.use_supervisor_pool.is_(False),
                     EnrollmentRecord.pclass_id == pclass.id,
                     EnrollmentRecord.supervisor_state
                     == EnrollmentRecord.SUPERVISOR_ENROLLED,
@@ -335,9 +335,9 @@ def _compute_group_capacity_data(pclass_id, group_id):
         )
         .filter(
             or_(
-                Project.generic.is_(True),
+                Project.use_supervisor_pool.is_(True),
                 and_(
-                    Project.generic.is_(False),
+                    Project.use_supervisor_pool.is_(False),
                     EnrollmentRecord.pclass_id == pclass_id,
                     EnrollmentRecord.supervisor_state
                     == EnrollmentRecord.SUPERVISOR_ENROLLED,
@@ -370,7 +370,7 @@ def _compute_group_capacity_data(pclass_id, group_id):
             projects += 1
 
             # add owner to list of faculty offering projects
-            if not p.generic and p.owner is not None:
+            if not p.use_supervisor_pool and p.owner is not None:
                 faculty_offering.add(p.owner.id)
 
             # evaluate workflow state for this project
@@ -442,9 +442,9 @@ def _compute_group_approvals_data(pclass_id, group_id):
         )
         .filter(
             or_(
-                Project.generic.is_(True),
+                Project.use_supervisor_pool.is_(True),
                 and_(
-                    Project.generic.is_(False),
+                    Project.use_supervisor_pool.is_(False),
                     EnrollmentRecord.pclass_id == pclass_id,
                     EnrollmentRecord.supervisor_state
                     == EnrollmentRecord.SUPERVISOR_ENROLLED,

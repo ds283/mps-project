@@ -1495,7 +1495,7 @@ def assign_from_selection(id, sel_id):
 
     try:
         # remove any SubmissionRole instances which have the owner as supervisor
-        if rec.project is not None and not rec.project.generic:
+        if rec.project is not None and not rec.project.use_supervisor_pool:
             owner = rec.project.owner
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
@@ -1512,7 +1512,7 @@ def assign_from_selection(id, sel_id):
         lp = sel.liveproject
         rec.project_id = lp.id
 
-        if not lp.generic:
+        if not lp.use_supervisor_pool:
             new_owner = lp.owner
             if new_owner is not None:
                 weight = 1.0
@@ -1584,7 +1584,7 @@ def assign_liveproject(id, pid):
 
     try:
         # remove any SubmissionRole instances that associate the previous project's owner as the supervisor
-        if rec.project is not None and not rec.project.generic:
+        if rec.project is not None and not rec.project.use_supervisor_pool:
             owner = rec.project.owner
             if owner is not None:
                 # remove any SubmissionRole instances that have the owner as supervisor
@@ -1601,7 +1601,7 @@ def assign_liveproject(id, pid):
         # assign the new project
         rec.project_id = lp.id
 
-        if not lp.generic:
+        if not lp.use_supervisor_pool:
             new_owner = lp.owner
             if new_owner is not None:
                 weight = 1.0
@@ -1662,7 +1662,7 @@ def deassign_project(id):
     # as long as we don't set both project and project_id (or marker and marker_id) simultaneously to zero,
     # the before-update listener for SubmissionRecord will invalidate the correct workload cache entries
     try:
-        if rec.project is not None and not rec.project.generic:
+        if rec.project is not None and not rec.project.use_supervisor_pool:
             owner = rec.project.owner
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor

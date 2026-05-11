@@ -62,7 +62,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-4">
-                                    {% if project.generic or project.owner is none %}
+                                    {% if project.use_supervisor_pool or project.owner is none %}
                                         generic
                                     {% else %}
                                         <i class="fas fa-user-circle me-1"></i>

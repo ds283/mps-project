@@ -214,7 +214,7 @@ def _Project_is_offerable(pid):
 
     # CONSTRAINT 2. The affiliated research group should be active, if this project is attached to any
     # classes that uses research groups
-    if project.generic or project.group is None:
+    if project.use_supervisor_pool or project.group is None:
         if (
             get_count(
                 project.project_classes.filter(ProjectClass.advertise_research_group)
@@ -279,12 +279,12 @@ def _Project_is_offerable(pid):
                     f'Variant "{desc.label}" has validation warnings'
                 )
 
-    # CONSTRAINT 5. For Generic projects, there should be a nonempty supervisor pool
-    if project.generic:
+    # CONSTRAINT 5. For pool-based projects, there should be a nonempty supervisor pool
+    if project.use_supervisor_pool:
         for pclass in project.project_classes:
             if project.number_supervisors(pclass) == 0:
                 errors[("supervisors", pclass.id)] = (
-                    f'There are no supervisors in the generic pool for "{pclass.name}"'
+                    f'There are no supervisors in the supervisor pool for "{pclass.name}"'
                 )
 
     # CONSTRAINT 6. The ATAS restricted flag has to be set

@@ -38,6 +38,12 @@ from ..shared.llm_services import _TOKENS_PER_WORD, _call_llm, _truncate_text
 # ~4% safety margin.  Used in word-budget division for chunk sizing and in est_tok computation
 # via the user_tokens_per_word argument to _call_llm.
 _TOKENS_PER_WORD_CONTENT = 1.5
+# Tokens-per-word for feedback chunks.  Feedback passes cover the full document including
+# appendices and reference lists, which are less dense than the body-only sections sent to
+# the grading map phase.  Empirical calibration across post-patch records gives ~1.37 t/w
+# actual; 1.40 provides a ~2% safety margin.  Used only in est_tok computation for feedback
+# _call_llm calls via user_tokens_per_word.
+_TOKENS_PER_WORD_FEEDBACK_CONTENT = 1.40
 from ..shared.llm_thresholds import (
     classify_burstiness,
     classify_mattr,
@@ -2905,7 +2911,7 @@ def register_language_analysis_tasks(celery):
                     f"submit_to_llm_feedback/chunk {chunk_idx + 1}/{len(chunk_texts)} "
                     f"(record #{record_id})"
                 ),
-                user_tokens_per_word=_TOKENS_PER_WORD_CONTENT,
+                user_tokens_per_word=_TOKENS_PER_WORD_FEEDBACK_CONTENT,
             )
             _fb_chunk_est_tokens.append(est_tok)
             _fb_chunk_actual_tokens.append(

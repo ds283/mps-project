@@ -244,7 +244,8 @@ def ProjectConfigurationMixinFactory(
         # OWNERSHIP
 
         # which faculty member owns this project?
-        # can be null if use_supervisor_pool is True and the project is convenor-owned
+        # if null, the project is interpreted to be convenor-owned.
+        # that would normally be used in conjunction with use_supervisor_pool
         @declared_attr
         def owner_id(cls):
             return db.Column(

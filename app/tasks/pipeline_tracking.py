@@ -171,6 +171,8 @@ def read_workflow_entry(redis_client, record_id: int) -> dict:
                 "total_actual_prompt_tokens": _to_int(fields.get(f"{name}:total_actual_prompt_tokens")),
                 "tier": _to_int(fields.get(f"{name}:tier")),
                 "feedback_word_budget": _to_int(fields.get(f"{name}:feedback_word_budget")),
+                "peak_completion_tokens": _to_int(fields.get(f"{name}:peak_completion_tokens")),
+                "total_completion_tokens": _to_int(fields.get(f"{name}:total_completion_tokens")),
             }
         )
 

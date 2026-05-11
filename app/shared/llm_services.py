@@ -62,6 +62,7 @@ def _call_llm(
     options: dict | None = None,
     validate_fn=None,
     label: str = "llm",
+    user_tokens_per_word: float | None = None,
 ) -> tuple[dict | None, str, Exception | None, int, dict | None]:
     """
     Submit a prompt to Ollama via the OpenAI-compatible
@@ -73,9 +74,15 @@ def _call_llm(
     useful for diagnosing context-window failures.
     actual_usage is the Ollama-reported usage dict from the last successful attempt,
     or None if no usage chunk was received or all attempts failed.
+
+    user_tokens_per_word: if provided, used instead of _TOKENS_PER_WORD for the user-prompt
+    word count.  Pass _TOKENS_PER_WORD_CONTENT for calls that submit student submission text
+    so that est_input_tokens matches the assumptions of the chunk-budget formula.
     """
+    _user_tpw = user_tokens_per_word if user_tokens_per_word is not None else _TOKENS_PER_WORD
     est_input_tokens = int(
-        (len(system_prompt.split()) + len(user_prompt.split())) * _TOKENS_PER_WORD
+        len(system_prompt.split()) * _TOKENS_PER_WORD
+        + len(user_prompt.split()) * _user_tpw
     )
     accumulated = ""
     last_exc: Exception | None = None

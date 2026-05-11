@@ -32,11 +32,12 @@ from ..shared.ai_calibration import mahalanobis_distance
 from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.llm_services import _TOKENS_PER_WORD, _call_llm, _truncate_text
 
-# Higher tokens-per-word estimate for student submission content: technical/academic text with
-# equations, DOIs, code snippets, and jargon tokenises at roughly 2.0 t/w rather than the 1.6
-# used for our own (plain-English) system prompts.  Used only in word-budget division so that
-# chunks are sized conservatively.
-_TOKENS_PER_WORD_CONTENT = 2.0
+# Tokens-per-word estimate for student submission content.  Technical/academic text with
+# equations, DOIs, code snippets, and jargon.  Empirical calibration (comparing Ollama-reported
+# prompt tokens against est_tok across many submissions) shows ~1.44 t/w actual; 1.5 provides a
+# ~4% safety margin.  Used in word-budget division for chunk sizing and in est_tok computation
+# via the user_tokens_per_word argument to _call_llm.
+_TOKENS_PER_WORD_CONTENT = 1.5
 from ..shared.llm_thresholds import (
     classify_burstiness,
     classify_mattr,
@@ -2293,6 +2294,8 @@ def register_language_analysis_tasks(celery):
         _peak_context_pressure: float | None = None
         _total_est_tokens: int | None = None
         _total_actual_prompt_tokens: int | None = None
+        _peak_completion_tokens: int | None = None
+        _total_completion_tokens: int | None = None
 
         if doc_words <= single_pass_word_budget:
             # ----------------------------------------------------------------
@@ -2331,6 +2334,7 @@ def register_language_analysis_tasks(celery):
                 options={"num_ctx": context_size},
                 validate_fn=_validate_llm_response,
                 label=f"submit_to_llm/single-pass (record #{record_id})",
+                user_tokens_per_word=_TOKENS_PER_WORD_CONTENT,
             )
 
             # Merge metadata into the grading result so downstream code and
@@ -2354,6 +2358,10 @@ def register_language_analysis_tasks(celery):
                     _peak_prompt_tokens = _pt
                     _total_actual_prompt_tokens = _pt
                     _peak_context_pressure = _pt / context_size
+                _ct = _sp_actual_usage.get("completion_tokens")
+                if _ct is not None:
+                    _peak_completion_tokens = _ct
+                    _total_completion_tokens = _ct
 
         else:
             # ----------------------------------------------------------------
@@ -2448,6 +2456,7 @@ def register_language_analysis_tasks(celery):
             chunk_failure_reason = ""
             _chunk_est_tokens: list[int] = []
             _chunk_actual_tokens: list[int | None] = []
+            _chunk_completion_tokens: list[int | None] = []
 
             for idx, chunk_text in enumerate(chunks):
                 if idx in completed_chunks:
@@ -2461,6 +2470,7 @@ def register_language_analysis_tasks(celery):
                     _LLM_CHUNK_SCHEMA,
                     options={"num_ctx": context_size},
                     label=f"submit_to_llm/chunk {idx + 1}/{total_chunks} (record #{record_id})",
+                    user_tokens_per_word=_TOKENS_PER_WORD_CONTENT,
                 )
 
                 if chunk_parsed is None:
@@ -2471,6 +2481,9 @@ def register_language_analysis_tasks(celery):
                 _chunk_est_tokens.append(est_tok)
                 _chunk_actual_tokens.append(
                     _chunk_actual_usage.get("prompt_tokens") if _chunk_actual_usage else None
+                )
+                _chunk_completion_tokens.append(
+                    _chunk_actual_usage.get("completion_tokens") if _chunk_actual_usage else None
                 )
                 chunk_results[str(idx)] = chunk_parsed
                 completed_chunks.add(idx)
@@ -2592,6 +2605,10 @@ def register_language_analysis_tasks(celery):
                 _peak_prompt_tokens = max(_actual_available)
                 _peak_context_pressure = _peak_prompt_tokens / context_size
                 _total_actual_prompt_tokens = sum(_actual_available)
+            _ct_available = [t for t in _chunk_completion_tokens if t is not None]
+            if _ct_available:
+                _peak_completion_tokens = max(_ct_available)
+                _total_completion_tokens = sum(_ct_available)
 
         # ----------------------------------------------------------------
         # Common outcome handling (single-pass and chunked-synthesis paths).
@@ -2731,6 +2748,8 @@ def register_language_analysis_tasks(celery):
                     "peak_context_pressure": _peak_context_pressure,
                     "total_est_tokens": _total_est_tokens,
                     "total_actual_prompt_tokens": _total_actual_prompt_tokens,
+                    "peak_completion_tokens": _peak_completion_tokens,
+                    "total_completion_tokens": _total_completion_tokens,
                 },
             )
 
@@ -2871,6 +2890,7 @@ def register_language_analysis_tasks(celery):
         est_tok: int = 0
         _fb_chunk_est_tokens: list[int] = []
         _fb_chunk_actual_tokens: list[int | None] = []
+        _fb_chunk_completion_tokens: list[int | None] = []
 
         for chunk_idx, chunk_text in enumerate(chunk_texts):
             chunk_parsed, _, chunk_exc, est_tok, _fb_actual_usage = _call_llm(
@@ -2885,10 +2905,14 @@ def register_language_analysis_tasks(celery):
                     f"submit_to_llm_feedback/chunk {chunk_idx + 1}/{len(chunk_texts)} "
                     f"(record #{record_id})"
                 ),
+                user_tokens_per_word=_TOKENS_PER_WORD_CONTENT,
             )
             _fb_chunk_est_tokens.append(est_tok)
             _fb_chunk_actual_tokens.append(
                 _fb_actual_usage.get("prompt_tokens") if _fb_actual_usage else None
+            )
+            _fb_chunk_completion_tokens.append(
+                _fb_actual_usage.get("completion_tokens") if _fb_actual_usage else None
             )
             if chunk_parsed is not None:
                 feedback_results.append(chunk_parsed)
@@ -2908,6 +2932,9 @@ def register_language_analysis_tasks(celery):
         _fb_total_actual_prompt_tokens: int | None = (
             sum(_fb_actual_available) if _fb_actual_available else None
         )
+        _fb_ct_available = [t for t in _fb_chunk_completion_tokens if t is not None]
+        _fb_peak_completion_tokens: int | None = max(_fb_ct_available) if _fb_ct_available else None
+        _fb_total_completion_tokens: int | None = sum(_fb_ct_available) if _fb_ct_available else None
 
         data.setdefault("timings", {})["llm_feedback_s"] = round(
             time.monotonic() - _t_feedback, 1
@@ -2978,6 +3005,8 @@ def register_language_analysis_tasks(celery):
             "total_actual_prompt_tokens": _fb_total_actual_prompt_tokens,
             "tier": tier,
             "feedback_word_budget": feedback_word_budget,
+            "peak_completion_tokens": _fb_peak_completion_tokens,
+            "total_completion_tokens": _fb_total_completion_tokens,
         }
         if record.llm_feedback_failed:
             record_step_end(

@@ -95,7 +95,6 @@
                                         {{ entry.started_at | replace("T", " ") if entry.started_at else "—" }}
                                     </td>
                                     <td>
-                                        {% set step_names = entry.steps | map(attribute='name') | list %}
                                         {% set all_step_names = ["download_and_extract", "compute_statistics",
                                                                   "submit_to_llm", "submit_to_llm_feedback",
                                                                   "finalize_language_step", "extract_chunks",
@@ -125,26 +124,13 @@
                                                         {% else %}
                                                             {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
                                                         {% endif %}
-                                                        {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none %}
-                                                            {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
-                                                            {% if s.total_actual_prompt_tokens is not none and s.total_est_tokens is not none and s.total_est_tokens > 0 %}
-                                                                {% set _cal_pct = (((s.total_actual_prompt_tokens - s.total_est_tokens) / s.total_est_tokens) * 100) | round(1) %}
-                                                                {% set _cal_str = ("+" if _cal_pct >= 0 else "") ~ _cal_pct ~ "%" %}
-                                                            {% else %}
-                                                                {% set _cal_str = "—" %}
-                                                            {% endif %}
-                                                            {% set _chunks_str = s.num_chunks if s.num_chunks is not none else "—" %}
-                                                            {% set _tip = s.name ~ ": " ~ secs ~ "s | " ~ _chunks_str ~ " chunk(s) | peak " ~ _ctx_pct ~ "% ctx | est Δ" ~ _cal_str %}
-                                                        {% else %}
-                                                            {% set _tip = s.name ~ ": " ~ secs ~ "s" %}
-                                                        {% endif %}
                                                         {% set _label = s.name | replace('_', ' ') | truncate(12, True, '…') %}
                                                         {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
                                                             {% set _label = _label ~ " ·no appx" %}
                                                         {% endif %}
                                                         <span class="badge {{ _badge_cls }}"
                                                               data-bs-toggle="tooltip"
-                                                              title="{{ _tip }}">
+                                                              title="{{ s.name }}: {{ secs }}s">
                                                             {{ _label }}
                                                         </span>
                                                     {% else %}
@@ -165,6 +151,40 @@
                                         </div>
                                     </td>
                                 </tr>
+                                {# ---- LLM detail subrow ---- #}
+                                {% set _llm_detail = [] %}
+                                {% for s in entry.steps %}
+                                    {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none %}
+                                        {% set _ = _llm_detail.append(s) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if _llm_detail %}
+                                <tr class="border-top-0">
+                                    <td colspan="6" class="pt-0 pb-2 border-top-0" style="background:transparent;">
+                                        <div class="ms-4 d-flex flex-wrap gap-3 small text-body-secondary">
+                                            {% for s in _llm_detail %}
+                                                {% set _lbl = 'Grading' if s.name == 'submit_to_llm' else 'Feedback' %}
+                                                {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
+                                                {% if s.total_actual_prompt_tokens is not none and s.total_est_tokens is not none and s.total_est_tokens > 0 %}
+                                                    {% set _cal_pct = (((s.total_actual_prompt_tokens - s.total_est_tokens) / s.total_est_tokens) * 100) | round(1) %}
+                                                    {% set _cal_str = ("+" if _cal_pct >= 0 else "") ~ _cal_pct ~ "%" %}
+                                                {% else %}
+                                                    {% set _cal_str = "—" %}
+                                                {% endif %}
+                                                <span>
+                                                    <span class="fw-semibold">{{ _lbl }}:</span>
+                                                    {{ s.num_chunks or "—" }} chunk(s) ·
+                                                    prompt {{ s.total_actual_prompt_tokens or "—" }} tok (peak {{ _ctx_pct }}% ctx)
+                                                    {% if s.peak_completion_tokens is not none %}
+                                                        · response {{ s.peak_completion_tokens }} tok peak
+                                                    {% endif %}
+                                                    · est Δ {{ _cal_str }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endfor %}
                             </tbody>
                         </table>
@@ -257,26 +277,13 @@
                                                             {% else %}
                                                                 {% set _badge_cls = "bg-success-subtle text-success-emphasis" %}
                                                             {% endif %}
-                                                            {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none %}
-                                                                {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
-                                                                {% if s.total_actual_prompt_tokens is not none and s.total_est_tokens is not none and s.total_est_tokens > 0 %}
-                                                                    {% set _cal_pct = (((s.total_actual_prompt_tokens - s.total_est_tokens) / s.total_est_tokens) * 100) | round(1) %}
-                                                                    {% set _cal_str = ("+" if _cal_pct >= 0 else "") ~ _cal_pct ~ "%" %}
-                                                                {% else %}
-                                                                    {% set _cal_str = "—" %}
-                                                                {% endif %}
-                                                                {% set _chunks_str = s.num_chunks if s.num_chunks is not none else "—" %}
-                                                                {% set _tip = s.name ~ ": " ~ secs ~ "s | " ~ _chunks_str ~ " chunk(s) | peak " ~ _ctx_pct ~ "% ctx | est Δ" ~ _cal_str %}
-                                                            {% else %}
-                                                                {% set _tip = s.name ~ ": " ~ secs ~ "s" %}
-                                                            {% endif %}
                                                             {% set _label = s.name | replace('_', ' ') | truncate(12, True, '…') %}
                                                             {% if s.name == 'submit_to_llm_feedback' and s.tier == 2 %}
                                                                 {% set _label = _label ~ " ·no appx" %}
                                                             {% endif %}
                                                             <span class="badge {{ _badge_cls }}"
                                                                   data-bs-toggle="tooltip"
-                                                                  title="{{ _tip }}">
+                                                                  title="{{ s.name }}: {{ secs }}s">
                                                                 {{ _label }}
                                                             </span>
                                                         {% else %}
@@ -298,6 +305,40 @@
                                         </div>
                                     </td>
                                 </tr>
+                                {# ---- LLM detail subrow ---- #}
+                                {% set _llm_detail = [] %}
+                                {% for s in entry.steps %}
+                                    {% if s.name in ('submit_to_llm', 'submit_to_llm_feedback') and s.peak_context_pressure is not none %}
+                                        {% set _ = _llm_detail.append(s) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if _llm_detail %}
+                                <tr class="border-top-0">
+                                    <td colspan="8" class="pt-0 pb-2 border-top-0" style="background:transparent;">
+                                        <div class="ms-4 d-flex flex-wrap gap-3 small text-body-secondary">
+                                            {% for s in _llm_detail %}
+                                                {% set _lbl = 'Grading' if s.name == 'submit_to_llm' else 'Feedback' %}
+                                                {% set _ctx_pct = (s.peak_context_pressure * 100) | round(1) %}
+                                                {% if s.total_actual_prompt_tokens is not none and s.total_est_tokens is not none and s.total_est_tokens > 0 %}
+                                                    {% set _cal_pct = (((s.total_actual_prompt_tokens - s.total_est_tokens) / s.total_est_tokens) * 100) | round(1) %}
+                                                    {% set _cal_str = ("+" if _cal_pct >= 0 else "") ~ _cal_pct ~ "%" %}
+                                                {% else %}
+                                                    {% set _cal_str = "—" %}
+                                                {% endif %}
+                                                <span>
+                                                    <span class="fw-semibold">{{ _lbl }}:</span>
+                                                    {{ s.num_chunks or "—" }} chunk(s) ·
+                                                    prompt {{ s.total_actual_prompt_tokens or "—" }} tok (peak {{ _ctx_pct }}% ctx)
+                                                    {% if s.peak_completion_tokens is not none %}
+                                                        · response {{ s.peak_completion_tokens }} tok peak
+                                                    {% endif %}
+                                                    · est Δ {{ _cal_str }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endfor %}
                             </tbody>
                         </table>

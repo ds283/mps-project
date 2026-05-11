@@ -15,7 +15,7 @@ from typing import Optional
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
 from .live_projects import SubmittingStudent
-from .model_mixins import EditingMetadataMixin
+from .model_mixins import EditingMetadataMixin, _get_current_year
 from .project_class import ProjectClass, ProjectClassConfig
 from .students import StudentData
 from .submissions import SubmissionRoleTypesMixin
@@ -280,6 +280,12 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         Extend this method as the SubmitterReport workflow grows to surface new CTA items.
         """
         actions = []
+
+        # Suppress all CTAs for closed events and archived (non-current-year) configs.
+        if self.workflow_state == MarkingEventWorkflowStates.CLOSED:
+            return []
+        if self.config.year != _get_current_year():
+            return []
 
         # CTA for READY_TO_CONFLATE state
         if self.workflow_state == MarkingEventWorkflowStates.READY_TO_CONFLATE:

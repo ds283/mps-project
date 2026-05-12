@@ -176,6 +176,99 @@ def _strip_math_lines(text: str) -> str:
     return "\n".join(kept)
 
 
+# Code-listing detection — used here (similarity chunks) and in language_analysis.py.
+_CODE_CHARS = frozenset("=()[]{}#")
+_CODE_CHAR_RATIO_THRESHOLD = 0.04  # >4 % of chars are code punctuation
+_UNDERSCORE_TOKEN_THRESHOLD = 0.15  # >15 % of whitespace-split tokens contain '_'
+_MIN_CODE_BLOCK_LINES = 3  # runs shorter than this are kept (false-positive protection)
+
+
+def _looks_like_code(text: str) -> bool:
+    """Return True when *text* looks more like source code than prose.
+
+    Two independent signals, either of which is sufficient:
+      1. High density of code-typical punctuation (=, (, ), [, ], {, }, #).
+      2. High fraction of whitespace-split tokens that contain an underscore
+         (Python/C-style identifiers).
+    """
+    if not text:
+        return False
+    code_ratio = sum(1 for ch in text if ch in _CODE_CHARS) / len(text)
+    if code_ratio > _CODE_CHAR_RATIO_THRESHOLD:
+        return True
+    tokens = text.split()
+    if tokens:
+        underscore_ratio = sum(1 for t in tokens if "_" in t) / len(tokens)
+        if underscore_ratio > _UNDERSCORE_TOKEN_THRESHOLD:
+            return True
+    return False
+
+
+def _strip_code_blocks(text: str, min_run: int = _MIN_CODE_BLOCK_LINES) -> str:
+    """Remove contiguous blocks of source-code lines from *text*.
+
+    Uses _looks_like_code() per line, but only strips lines that belong to a
+    run of >= min_run consecutive code-like lines.  Blank lines inside a run
+    are treated as neutral and do not break it — a blank line between two code
+    lines stays in the run, matching how code is commonly extracted from PDFs.
+
+    Mirrors strip_code_blocks() in language_analysis_core.py.
+    """
+    lines = text.splitlines()
+
+    # Tag each line: True = code-like, False = prose, None = blank
+    tags: list[bool | None] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            tags.append(None)
+        else:
+            tags.append(_looks_like_code(stripped))
+
+    # Resolve blank lines: a blank line is treated as code only when both its
+    # preceding and following non-blank lines are code-like.
+    # Forward pass: tentatively propagate True through blanks.
+    resolved: list[bool] = [False] * len(tags)
+    last = False
+    for i, t in enumerate(tags):
+        if t is True:
+            last = True
+        elif t is False:
+            last = False
+        else:  # blank
+            pass  # keep last unchanged
+        resolved[i] = last
+
+    # Backward pass: un-mark blank lines whose next non-blank line is prose.
+    last = False
+    for i in range(len(tags) - 1, -1, -1):
+        t = tags[i]
+        if t is True:
+            last = True
+        elif t is False:
+            last = False
+        # blank inherits from forward pass unless backward pass disagrees
+        if tags[i] is None and not last:
+            resolved[i] = False
+
+    # Remove runs of True that are long enough.
+    keep = [True] * len(lines)
+    i = 0
+    while i < len(resolved):
+        if resolved[i]:
+            j = i
+            while j < len(resolved) and resolved[j]:
+                j += 1
+            if (j - i) >= min_run:
+                for k in range(i, j):
+                    keep[k] = False
+            i = j
+        else:
+            i += 1
+
+    return "\n".join(line for line, k in zip(lines, keep) if k)
+
+
 def _strip_chapter_prefix(line: str) -> str:
     """Strip 'Chapter N' prefix and any trailing punctuation from a heading line."""
     m = _CHAPTER_HEADING.match(line)

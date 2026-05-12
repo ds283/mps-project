@@ -32,6 +32,7 @@ from ..shared.scraped_text_store import (
 from ..shared.text_utils import (
     _detect_top_level_sections,
     _split_document,
+    _strip_code_blocks,
     _strip_math_lines,
 )
 from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_start
@@ -40,7 +41,7 @@ from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_
 # Pipeline constants
 # ---------------------------------------------------------------------------
 
-CHUNK_EXTRACTION_PROMPT_VERSION = 2
+CHUNK_EXTRACTION_PROMPT_VERSION = 3
 
 CHUNK_TYPES = [
     "abstract",
@@ -255,6 +256,7 @@ def register_similarity_analysis_tasks(celery):
         # ------------------------------------------------------------------
         _core, _references, _appendices = _split_document(raw_text)
         clean_core = _strip_math_lines(_core)
+        clean_core = _strip_code_blocks(clean_core)
         top_level_sections, heading_style = _detect_top_level_sections(clean_core)
 
         context_size: int = current_app.config.get(_CHUNK_EXTRACTION_CTX_KEY, _CHUNK_EXTRACTION_CTX_DEFAULT)

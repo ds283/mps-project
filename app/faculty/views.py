@@ -3164,6 +3164,7 @@ def marking_form(report_id):
 
     schema = scheme.schema_as_dict
     is_editable = is_elevated or report.marking_form_is_open
+    prevent_submit_failures = []
 
     if form.validate_on_submit() and is_editable:
         # Extract field values from the submitted form
@@ -3226,7 +3227,7 @@ def marking_form(report_id):
 
                 if not test_passed:
                     if "prevent_submit" in actions:
-                        flash(message, "error")
+                        prevent_submit_failures.append(message)
                         prevent_submit = True
                     else:
                         if "email" in actions:
@@ -3437,6 +3438,7 @@ def marking_form(report_id):
         filtered_attachments=filtered_attachments,
         llm_feedback_positive=llm_feedback_positive,
         llm_feedback_improvements=llm_feedback_improvements,
+        prevent_submit_failures=prevent_submit_failures,
         url=url,
         submit_url=url_for("faculty.marking_form", report_id=report_id, url=url),
     )

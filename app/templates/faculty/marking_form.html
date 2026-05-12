@@ -8,6 +8,9 @@
     <script>
         $(document).ready(function () {
             $('[data-bs-toggle="tooltip"]').tooltip();
+            {% if prevent_submit_failures %}
+            new bootstrap.Modal(document.getElementById('validationFailureModal')).show();
+            {% endif %}
         });
     </script>
 {% endblock %}
@@ -338,8 +341,9 @@
 
                 {# Schema sections #}
                 {% for block in schema.get('scheme', []) %}
-                    <div class="card border-secondary mb-3">
-                        <div class="card-header bg-light">
+                    {%- set bg_colour = block.background if block.get('background') in ('primary', 'success', 'warning', 'danger', 'info') else none -%}
+                    <div class="card {% if bg_colour %}border-{{ bg_colour }}-subtle{% else %}border-secondary{% endif %} mb-3">
+                        <div class="card-header {% if bg_colour %}bg-{{ bg_colour }}-subtle{% else %}bg-light{% endif %}">
                             <strong>{{ block.title | safe }}</strong>
                         </div>
                         <div class="card-body">
@@ -472,4 +476,38 @@
         </div>
         <div class="col-1"></div>
     </div>
+
+    {# Validation failure modal — auto-shown on page load when the server blocks submission #}
+    {% if prevent_submit_failures %}
+    <div class="modal fade" id="validationFailureModal" tabindex="-1"
+         aria-labelledby="validationFailureModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="validationFailureModalLabel">
+                        <i class="fas fa-exclamation-triangle fa-fw me-1"></i> Submission blocked
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Your submission could not be accepted because the following checks failed:</p>
+                    <ul class="mb-2">
+                        {% for msg in prevent_submit_failures %}
+                            <li>{{ msg }}</li>
+                        {% endfor %}
+                    </ul>
+                    <p class="mb-0 text-body-secondary small">
+                        Your answers have been preserved. Please correct the issues and resubmit.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="fas fa-edit fa-fw me-1"></i> Return to form
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 {% endblock %}

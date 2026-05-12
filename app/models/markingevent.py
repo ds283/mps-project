@@ -74,6 +74,10 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     This consists of an ordered list of section blocks. Each section is a dict with the following keys:
         - "title": REQUIRED, HTML-formatted string to be displayed as the title of the block
         - "description": OPTIONAL, HTML-formatted string to be displayed below the title, describing the purpose of this block
+        - "background": OPTIONAL, Bootstrap semantic colour applied to the block card.
+          Accepted values: "primary", "success", "warning", "danger", "info".
+          Applies bg-*-subtle to the card header and border-*-subtle to the card border.
+          Defaults to the standard secondary/light styling when absent or not a recognised value.
         - "fields": REQUIRED, ordered list of questions. Each question is a dict with the following keys:
             - "key": REQUIRED, string used as a unique identified for the question
             - "text": REQUIRED, text of the question, should be formatted on the marking form that is presented to the user

@@ -89,8 +89,11 @@ def _call_llm(
     parsed_result: dict | None = None
     actual_usage: dict | None = None
 
+    max_request_seconds = current_app.config.get("OLLAMA_MAX_REQUEST_SECONDS", 1800)
+
     for attempt in range(_LLM_RETRY_ATTEMPTS):
         accumulated = ""
+        attempt_start = time.monotonic()
         try:
             resp = requests.post(
                 f"{base_url}/v1/chat/completions",
@@ -152,6 +155,17 @@ def _call_llm(
                     finish_reason = fr
                 if chunk_data.get("usage"):
                     usage = chunk_data["usage"]
+                if time.monotonic() - attempt_start > max_request_seconds:
+                    resp.close()
+                    elapsed = time.monotonic() - attempt_start
+                    current_app.logger.warning(
+                        f"{label}: wall-clock limit of {max_request_seconds}s exceeded "
+                        f"after {elapsed:.0f}s on attempt {attempt + 1} "
+                        f"(~{est_input_tokens} est. input tokens); aborting stream"
+                    )
+                    raise requests.exceptions.ReadTimeout(
+                        f"wall-clock limit of {max_request_seconds}s exceeded after {elapsed:.0f}s"
+                    )
 
             if usage is not None:
                 current_app.logger.debug(

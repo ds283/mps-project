@@ -33,3 +33,11 @@ OLLAMA_CONNECT_TIMEOUT = int(os.environ.get("OLLAMA_CONNECT_TIMEOUT", "30"))
 # This is not a total-generation limit — it is the maximum allowed gap between
 # consecutive streamed tokens. It primarily needs to cover time-to-first-token.
 OLLAMA_STREAMING_READ_TIMEOUT = int(os.environ.get("OLLAMA_STREAMING_READ_TIMEOUT", "180"))
+
+# Maximum wall-clock time (seconds) allowed for a single LLM request attempt,
+# measured from the moment requests.post() is called to receiving [DONE].
+# This is the primary guard against a slow-drip server that trickles tokens
+# just fast enough to keep resetting the per-chunk read timeout indefinitely.
+# With _LLM_RETRY_ATTEMPTS=3 the worst-case total is 3× this value plus
+# _LLM_RETRY_DELAY between attempts.  Default: 1800 s (30 min).
+OLLAMA_MAX_REQUEST_SECONDS = int(os.environ.get("OLLAMA_MAX_REQUEST_SECONDS", "1800"))

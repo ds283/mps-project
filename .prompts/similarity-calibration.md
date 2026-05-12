@@ -12,9 +12,12 @@ reports stored as `SubmissionRecord` instances. The pipeline:
 4. Re-ranks LSH candidates with cosine similarity via `sentence-transformers` (`all-MiniLM-L6-v2`)
 5. Creates a `SimilarityConcern` when cosine exceeds a per-chunk-type threshold
 
-The MongoDB collection storing scraped text and chunk data is accessed via `shared/scraped_text_store.py`. The relevant
+The MongoDB collection storing scraped text and chunk data is accessed via `app/shared/scraped_text_store.py`. The
+relevant
 subdocument structure is believed to be under `similarity_chunks`, but **you should verify the exact field paths by
 fetching and inspecting a real document before writing any analysis code**.
+
+Target the Python environment in ./arXiv_analysis_venv
 
 ## Goal
 
@@ -37,7 +40,7 @@ Fetch a single document from the MongoDB scraped text collection and print its f
 - The MinHash hashvalue arrays
 - The `submission_record_id` field type (integer vs string)
 
-Read `shared/scraped_text_store.py` to cross-check against the application code before proceeding.
+Read `app/shared/scraped_text_store.py` to cross-check against the application code before proceeding.
 
 ### 2. Data loading
 

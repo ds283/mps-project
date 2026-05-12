@@ -1267,9 +1267,9 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
 
             fac: FacultyData = sup_dict[j]
 
-            # if project is of generic/group type, then any member of the assessor pool is an allowed
-            # supervisor
-            if proj.use_supervisor_pool or proj.owner is None:
+            # if project uses a supervisor pool, then any member of the assessor pool is an allowed supervisor.
+            # in this case, the project owner is usually a manager and is not a potential supervisor.
+            if proj.use_supervisor_pool:
                 count = get_count(
                     proj.supervisor_list_query.filter(FacultyData.id == fac.id)
                 )
@@ -1778,13 +1778,15 @@ def _create_PuLP_problem(
             for j in range(number_lp):
                 proj: LiveProject = lp_dict[j]
 
-                if proj.use_supervisor_pool or proj.owner is None:
-                    tag = "generic"
-                else:
+                if proj.owner is not None:
                     user_owner: User = proj.owner.user
                     tag = "{first}{last}".format(
                         first=user_owner.first_name, last=user_owner.last_name
                     )
+                elif proj.use_supervisor_pool:
+                    tag = "SupervisorPool"
+                else:
+                    tag = "UNDEFINED"
 
                 prob += (
                     X[(l, j)] <= R[(l, j)],
@@ -3424,7 +3426,9 @@ def _execute_from_solution(
         else:
             msg = "Unknown solver"
             current_app.logger.error(msg)
-            progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
+            progress_update(
+                record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True
+            )
             raise Exception(msg)
 
         if status != pulp.LpStatusInfeasible:
@@ -3999,7 +4003,9 @@ def register_matching_tasks(celery):
             )
 
             if enum_data is None:
-                raise Exception("Marker enumeration failed: a project in this configuration has no active assessors")
+                raise Exception(
+                    "Marker enumeration failed: a project in this configuration has no active assessors"
+                )
 
             progress_update(
                 task_id,
@@ -4518,7 +4524,13 @@ def register_matching_tasks(celery):
         if record.year != year:
             msg = "MatchingAttempt is not for current year"
             current_app.logger.error(msg)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Match is not for the current year", autocommit=False)
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Match is not for the current year",
+                autocommit=False,
+            )
             user.post_message(
                 "Submitters could not be populated because the selected matching is not for the "
                 "current academic year (current year={cyr}, "
@@ -4531,7 +4543,13 @@ def register_matching_tasks(celery):
         if config.year != record.year:
             msg = "ProjectClassConfig does not belong to same year as MatchingAttempt"
             current_app.logger.error(msg)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Project configuration and matching were for different years", autocommit=False)
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Project configuration and matching were for different years",
+                autocommit=False,
+            )
             user.post_message(
                 "Submitters could not be populated because the selected matching does not belong "
                 "to the same academic year as the current project configuration (selected matching "
@@ -4557,7 +4575,13 @@ def register_matching_tasks(celery):
             if record.awaiting_upload:
                 msg = "MatchingAttempt still awaiting manual upload"
                 current_app.logger.error(msg)
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Match is still awaiting manual upload", autocommit=False)
+                progress_update(
+                    task_id,
+                    TaskRecord.FAILURE,
+                    100,
+                    "Match is still awaiting manual upload",
+                    autocommit=False,
+                )
                 user.post_message(
                     "Submitters could not be populated because the selecting matching is still awaiting manual upload of a solution.",
                     "error",
@@ -4577,7 +4601,13 @@ def register_matching_tasks(celery):
         if not record.solution_usable:
             msg = "MatchingAttempt solution is not usable"
             current_app.logger.error(msg)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Matching solution is not usable", autocommit=False)
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Matching solution is not usable",
+                autocommit=False,
+            )
             user.post_message(
                 "Submitters could not be populated because the selecting matching solution is not usable.",
                 "error",
@@ -4588,7 +4618,13 @@ def register_matching_tasks(celery):
         if not record.published:
             msg = "MatchingAttempt has not been published"
             current_app.logger.error(msg)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Matching has not yet been published to convenors", autocommit=True)
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Matching has not yet been published to convenors",
+                autocommit=True,
+            )
             user.post_message(
                 "Submitters could not be populated because the selecting matching has not yet "
                 "been published to convenors. Please publish the match before attempting "
@@ -5025,7 +5061,7 @@ def register_matching_tasks(celery):
                     "is_optional": sel.is_optional,
                     "is_valid_selection": sel.is_valid_selection[0],
                     "allocated_project": proj.name,
-                    "use_supervisor_pool": proj.use_supervisor_pool or proj.owner is None,
+                    "use_supervisor_pool": proj.use_supervisor_pool,
                     "owner_last": None if ou is None else ou.last_name,
                     "owner_first": None if ou is None else ou.first_name,
                     "owner_full_name": None if ou is None else ou.name,

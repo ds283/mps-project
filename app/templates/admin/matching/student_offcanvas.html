@@ -62,9 +62,10 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-4">
-                                    {% if project.use_supervisor_pool or project.owner is none %}
-                                        generic
-                                    {% else %}
+                                    {% if project.use_supervisor_pool %}
+                                        <span class="badge bg-primary-subtle">Pool</span>
+                                    {% endif %}
+                                    {% if project.owner is not none %}
                                         <i class="fas fa-user-circle me-1"></i>
                                         <a class="text-decoration-none"
                                            href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>

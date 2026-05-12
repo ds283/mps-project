@@ -99,9 +99,10 @@
                     </div>
                 </div>
                 <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
-                    {% if r.project.use_supervisor_pool or r.project.owner is none %}
-                        <div class="small text-primary">Uses supervisor pool</div>
-                    {% else %}
+                    {% if r.project.use_supervisor_pool %}
+                        <div class="badge bg-primary">Uses pool</div>
+                    {% endif %}
+                    {% if r.project.owner is not none %}
                         <div class="small">
                             <span class="text-body-secondary">Owner</span>
                             <a class="fw-semibold text-decoration-none"

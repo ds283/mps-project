@@ -9,11 +9,11 @@
 #
 from typing import List
 
-from flask import jsonify, get_template_attribute, current_app, render_template
+from flask import current_app, get_template_attribute, jsonify, render_template
 from flask_security import current_user
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 
-from ...models import SelectingStudent, ProjectClassConfig
+from ...models import ProjectClassConfig, SelectingStudent
 
 # language=jinja2
 _menu = """
@@ -170,11 +170,15 @@ _submitted = """
                 <span class="text-secondary">
                     {{ truncate(offer.liveproject.name, length=30) }}
                 </span>
-                <div class="text-secondary fw-semibold">
-                    {% if offer.liveproject.use_supervisor_pool or offer.liveproject.owner is none %}
-                        (Generic)
-                    {% else %}
-                        ({{ offer.liveproject.owner.user.name }})
+                <div class="text-secondary">
+                    {% if offer.liveproject.owner is not none %}
+                        <span class="fw-semibold"><i class="fas fa-user-circle"></i> {{ offer.liveproject.owner.user.name }}</span>
+                    {% endif %}
+                    {% if offer.liveproject.use_supervisor_pool %}
+                        (supervisor to be assigned)
+                    {% endif %}
+                    {% if offer.liveproject.owner is none and not offer.liveproject.use_supervisor_pool %}
+                        (please contact convenor for details)
                     {% endif %}
                 </div>
             </div>
@@ -203,11 +207,15 @@ _confirmations = """
             <div class="small">
                 <span class="text-primary fw-bold">Offer:</span>
                 <span class="text-secondary">{{ offer.liveproject.name }}</span>
-                <div class="text-secondary fw-semibold">
-                    {% if offer.liveproject.use_supervisor_pool or offer.liveproject.owner is none %}
-                        (Generic)
-                    {% else %}
-                        ({{ offer.liveproject.owner.user.name }})
+                <div class="text-secondary">
+                    {% if offer.liveproject.owner is not none %}
+                        <span class="fw-semibold"><i class="fas fa-user-circle"></i> {{ offer.liveproject.owner.user.name }}</span>
+                    {% endif %}
+                    {% if offer.liveproject.use_supervisor_pool %}
+                        (supervisor to be assigned)
+                    {% endif %}
+                    {% if offer.liveproject.owner is none and not offer.liveproject.use_supervisor_pool %}
+                        (please contact convenor for details)
                     {% endif %}
                 </div>
             </div>
@@ -216,11 +224,15 @@ _confirmations = """
             <div class="small">
                 <span class="text-danger fw-bold">Declined:</span>
                 <span class="text-secondary">{{ offer.liveproject.name }}</span>
-                <div class="text-secondary fw-semibold">
-                    {% if offer.liveproject.use_supervisor_pool or offer.liveproject.owner is none %}
-                        (Generic)
-                    {% else %}
-                        ({{ offer.liveproject.owner.user.name }})
+                <div class="text-secondary">
+                    {% if offer.liveproject.owner is not none %}
+                        <span class="fw-semibold"><i class="fas fa-user-circle"></i> {{ offer.liveproject.owner.user.name }}</span>
+                    {% endif %}
+                    {% if offer.liveproject.use_supervisor_pool %}
+                        (supervisor to be assigned)
+                    {% endif %}
+                    {% if offer.liveproject.owner is none and not offer.liveproject.use_supervisor_pool %}
+                        (please contact convenor for details)
                     {% endif %}
                 </div>
             </div>

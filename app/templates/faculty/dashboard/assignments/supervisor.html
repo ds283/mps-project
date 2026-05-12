@@ -116,11 +116,12 @@
                            href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                             {{ rec.project.name }}
                         </a>
-                        {% if rec.project.use_supervisor_pool or rec.project.owner is none %}
-                            <span class="small text-secondary">Uses supervisor pool</span>
-                        {% elif rec.project.owner_id != current_user.id %}
+                        {% if rec.project.use_supervisor_pool %}
+                            <span class="badge bg-primary">Uses pool</span>
+                        {% endif %}
+                        {% if rec.project.owner_id is not none and rec.project.owner_id != current_user.id %}
                             <div class="small text-body-secondary">
-                                Owner
+                                <span class="fw-semibold">Owner</span>
                                 <a class="text-decoration-none"
                                    href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
                             </div>

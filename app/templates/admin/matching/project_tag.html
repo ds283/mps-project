@@ -27,7 +27,8 @@
                             ({{ supervisors[0].last_name }})
                         {% endif %}
                     {% elif label_type == 2 %} {# label for faculty view #}
-                        {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 25) }})
+                        {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} (
+                        {{ truncate(r.project.name, 25) }})
                     {% else %}
                         {{ truncate(r.project.name, 35) }}
                     {% endif %}
@@ -43,10 +44,11 @@
                         <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
                            {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                             #{{ item.rank }}: {{ render_formatted_project(item) }}
-                            {% if project.use_supervisor_pool or project.owner is none %}
-                                (generic)
-                            {% else %}
-                                ({{ project.owner.user.name }})
+                            {% if project.owner is not none %}
+                                <i class="fas fa-user"></i> {{ project.owner.user.name }}
+                            {% endif %}
+                            {% if project.use_supervisor_pool %}
+                                (pool)
                             {% endif %}
                             {% if r.original_project_id == item.liveproject_id %}
                                 [automatch]
@@ -68,7 +70,8 @@
                         ({{ supervisors[0].last_name }})
                     {% endif %}
                 {% elif label_type == 2 %} {# label for faculty view #}
-                    {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 25) }})
+                    {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} (
+                    {{ truncate(r.project.name, 25) }})
                 {% else %}
                     {{ truncate(r.project.name, 35) }}
                 {% endif %}

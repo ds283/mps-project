@@ -2076,7 +2076,7 @@ def add_project(pclass_id):
             name=form.name.data,
             tags=tag_list,
             active=True,
-            owner=form.owner.data if not form.use_supervisor_pool.data else None,
+            owner=form.owner.data,
             generic=form.use_supervisor_pool.data,
             ATAS_restricted=form.ATAS_restricted.data,
             group=form.group.data,
@@ -2231,7 +2231,7 @@ def edit_project(id, pclass_id):
 
         project.name = form.name.data
         project.ATAS_restricted = form.ATAS_restricted.data
-        project.owner = form.owner.data if not form.use_supervisor_pool.data else None
+        project.owner = form.owner.data
         project.use_supervisor_pool = form.use_supervisor_pool.data
         project.tags = tag_list
         project.group = form.group.data
@@ -2337,7 +2337,7 @@ def duplicate_project(id):
         new_proj = Project(
             name=form.name.data,
             active=True,
-            owner=form.owner.data if not form.use_supervisor_pool.data else None,
+            owner=form.owner.data,
             generic=form.use_supervisor_pool.data,
             ATAS_restricted=form.ATAS_restricted.data,
             tags=tag_list,

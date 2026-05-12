@@ -9,9 +9,9 @@
 #
 from typing import List
 
-from flask import render_template_string, jsonify, get_template_attribute, url_for
+from flask import get_template_attribute, jsonify, render_template_string, url_for
 
-from app.models import LiveProject, CustomOffer, SelectingStudent
+from app.models import CustomOffer, LiveProject, SelectingStudent
 
 # language=jinja2
 _student = """
@@ -248,7 +248,7 @@ def project_offer_data(proj: LiveProject, items: List[CustomOffer]):
                     _student, offer=item, sel=item.selector
                 ),
                 "sortvalue": item.selector.student.user.last_name
-                             + item.selector.student.user.first_name,
+                + item.selector.student.user.first_name,
             },
             "timestamp": {
                 "display": render_template_string(_timestamp, offer=item),
@@ -288,9 +288,11 @@ def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
                     _owner, project=item.liveproject, simple_label=simple_label
                 ),
                 "sortvalue": "Pool"
-                if item.liveproject.use_supervisor_pool or item.liveproject.owner is None
+                if item.liveproject.use_supervisor_pool
+                else "None"
+                if item.liveproject.owner is None
                 else item.liveproject.owner.user.last_name
-                     + item.liveproject.owner.user.first_name,
+                + item.liveproject.owner.user.first_name,
             },
             "timestamp": {
                 "display": render_template_string(_timestamp, offer=item),
@@ -344,7 +346,9 @@ def new_student_offer_projects(projects, sel):
                     _owner, project=project, simple_label=simple_label
                 ),
                 "sortvalue": "Pool"
-                if project.use_supervisor_pool or project.owner is None
+                if project.use_supervisor_pool
+                else "None"
+                if project.owner is None
                 else project.owner.user.last_name + project.owner.user.first_name,
             },
             "offers": render_template_string(_project_offers, record=project),

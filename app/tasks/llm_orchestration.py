@@ -522,12 +522,17 @@ def _create_and_dispatch_job(
 
 def _dispatch_global_coordinator() -> None:
     """Dispatch global_orchestration_step, skipping if one is already queued."""
+    already_queued = False
     try:
         r = _get_orchestration_redis()
         if not r.set(COORDINATOR_QUEUED_KEY, "1", nx=True, ex=COORDINATOR_QUEUED_TTL):
-            return  # coordinator already queued; this call is a no-op
+            already_queued = True
     except Exception:
         pass  # Redis unavailable; dispatch anyway so we don't stall permanently
+    if already_queued:
+        current_app.logger.debug("_dispatch_global_coordinator: coordinator already queued (key present), skipping dispatch")
+        return
+    current_app.logger.debug("_dispatch_global_coordinator: dispatching global_orchestration_step")
     celery = current_app.extensions["celery"]
     t = celery.tasks["app.tasks.llm_orchestration.global_orchestration_step"]
     t.apply_async(queue="default")

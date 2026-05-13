@@ -3246,6 +3246,11 @@ def resubmit_chunking_errors_global():
         delete_similarity_chunks(rid)
 
     try:
+        _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(f"resubmit_chunking_errors_global: could not dispatch coordinator: {exc}")
+
+    try:
         job = launch_similarity_only_pipeline(user=current_user)
     except Exception as exc:
         flash(f"Cleared error flags on {count} record(s) but failed to launch similarity pipeline.", "error")
@@ -3281,6 +3286,11 @@ def retry_similarity_errors_global():
         db.session.rollback()
         flash("An error occurred while clearing chunking error flags.", "error")
         return redirect(url_for("dashboards.similarity_dashboard"))
+
+    try:
+        _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(f"retry_similarity_errors_global: could not dispatch coordinator: {exc}")
 
     try:
         job = launch_similarity_only_pipeline(user=current_user)
@@ -3331,6 +3341,11 @@ def resubmit_all_global():
 
     for rid in record_ids:
         delete_similarity_chunks(rid)
+
+    try:
+        _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(f"resubmit_all_global: could not dispatch coordinator: {exc}")
 
     try:
         job = launch_similarity_only_pipeline(user=current_user)

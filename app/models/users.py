@@ -255,6 +255,17 @@ class User(db.Model, UserMixin):
         return self.first_name + " " + self.last_name
 
     @property
+    def initials(self) -> str:
+        name: str = self.name or ""
+        tokens = [t for t in name.split() if t]
+        if not tokens:
+            return "?"
+        first = tokens[0][0].upper()
+        if len(tokens) == 1:
+            return first
+        return first + tokens[-1][0].upper()
+
+    @property
     def name_and_username(self):
         return self.name + " (" + self.username + ")"
 

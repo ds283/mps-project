@@ -3055,11 +3055,20 @@ def similarity_concern_detail(concern_id: int):
         .first_or_404()
     )
 
+    record_a = concern.record_a
+    record_b = concern.record_b
+
     # Load chunk texts from MongoDB
     chunks_a = get_similarity_chunks(concern.record_a_id) or {}
     chunks_b = get_similarity_chunks(concern.record_b_id) or {}
     chunk_text_a = chunks_a.get("sections", {}).get(concern.chunk_type, {}).get("text")
     chunk_text_b = chunks_b.get("sections", {}).get(concern.chunk_type, {}).get("text")
+
+    def _submitter_reports(record):
+        return record.submitter_reports.all()
+
+    def _conflation_reports(record):
+        return record.conflation_reports.all()
 
     form = ResolveSimilarityConcernForm()
 
@@ -3069,6 +3078,10 @@ def similarity_concern_detail(concern_id: int):
         concern_chunks={"a": chunk_text_a, "b": chunk_text_b},
         chunk_thresholds=CHUNK_SIMILARITY_THRESHOLD,
         form=form,
+        submitter_reports_a=_submitter_reports(record_a),
+        submitter_reports_b=_submitter_reports(record_b),
+        conflation_reports_a=_conflation_reports(record_a),
+        conflation_reports_b=_conflation_reports(record_b),
     )
 
 

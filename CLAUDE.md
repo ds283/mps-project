@@ -152,3 +152,16 @@ and add new migrations at the tip. Do not create forks.
 
 Do not use datetime.datetime.utcnow(), which is deprecated. Prefer datetime.datetime.now().
 
+## UI conventions
+
+### Staff initials avatars
+
+Whenever a staff member's initials are displayed in a UI component (avatar circles, monogram
+badges, etc.), always derive them from `user.initials` — the canonical `@property` defined on
+the `User` model in `app/models/users.py`.
+
+**Never** compute initials ad hoc in a template, view function, or JavaScript snippet.
+
+In Jinja2 templates: `{{ role.user.initials }}`
+In Python: `initials = user.initials`
+

@@ -9,6 +9,38 @@
     {% set student_a = record_a.owner %}
     {% set student_b = record_b.owner %}
 
+    <style>
+        .similarity-col2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(9, auto);
+            gap: 0 0.625rem;
+            margin-bottom: 1rem;
+            align-items: stretch;
+        }
+        .similarity-panel {
+            display: grid;
+            grid-row: 1 / -1;
+            grid-template-rows: subgrid;
+            border: 0.5px solid var(--bs-border-color);
+            border-radius: 0.625rem;
+            overflow: hidden;
+        }
+        .similarity-panel > * {
+            padding: 0.5rem 0.75rem;
+            min-width: 0;
+        }
+        .similarity-panel-header {
+            padding: 0.5rem 0.75rem;
+            background: var(--bs-tertiary-bg);
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+        }
+        .similarity-panel-divider {
+            padding: 0.5rem 0.75rem 0.375rem;
+            border-top: 1px solid var(--bs-border-color-translucent);
+        }
+    </style>
+
     <div class="container-fluid mt-4 mb-5">
 
         {# ---- page header ---- #}
@@ -100,120 +132,458 @@
             </div>
         </div>
 
-        {# ---- side-by-side student panels ---- #}
-        <div class="row g-3 mb-4">
+        {# ---- role colour mapping ---- #}
+        {% set role_color = {
+            'supervisor': 'warning',
+            'responsible_supervisor': 'warning',
+            'marker': 'info',
+            'moderator': 'secondary'
+        } %}
+        {% set _included_roles = [0, 1, 3, 6] %}
+        {% set _ai_keys = ['ai_use', 'ai_compliance'] %}
 
-            {# ---- Student A panel ---- #}
-            <div class="col-md-6">
-                <div class="card h-100" style="border-color: var(--db-orange-200);">
-                    <div class="card-header py-2"
-                         style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200);">
-                        <div class="fw-semibold" style="color: var(--db-orange-800);">
-                            {{ student_a.student.user.name }}
-                        </div>
-                        <div class="text-body-secondary small">
-                            {{ simple_label(student_a.student.exam_number_label) }}
-                            &middot; {{ record_a.period.config.project_class.name }}
-                            &middot; {{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }}
-                        </div>
+        {# ---- side-by-side student panels (9-row subgrid) ---- #}
+        <div class="similarity-col2">
+
+            {# ============================================================ #}
+            {# Student A panel                                               #}
+            {# ============================================================ #}
+            <div class="similarity-panel" style="border-left: 3px solid var(--db-orange-600);">
+
+                {# Row 1 — header #}
+                <div class="similarity-panel-header">
+                    <div class="fw-semibold" style="color: var(--db-orange-800);">
+                        {{ student_a.student.user.name }}
                     </div>
-                    <div class="card-body">
-
-                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
-                           style="letter-spacing:0.04em; font-size:0.7em;">Turnitin</p>
-                        <div class="row g-2 mb-3">
-                            {% for label, val in [
-                                ('Overall',     record_a.turnitin_score),
-                                ('Student',     record_a.turnitin_student_overlap),
-                                ('Web',         record_a.turnitin_web_overlap),
-                                ('Publication', record_a.turnitin_publication_overlap)
-                            ] %}
-                                <div class="col-3 text-center">
-                                    <div class="bg-light rounded p-1">
-                                        {% if val is not none %}
-                                            <div class="fw-semibold {% if val >= 20 and loop.index <= 2 %}text-danger{% else %}text-body-secondary{% endif %}">
-                                                {{ val }}%
-                                            </div>
-                                        {% else %}
-                                            <div class="text-body-secondary">—</div>
-                                        {% endif %}
-                                        <div class="text-body-secondary" style="font-size:0.7em;">{{ label }}</div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
-                           style="letter-spacing:0.04em; font-size:0.7em;">
-                            {{ concern.chunk_type | replace('_', ' ') | title }} section
-                        </p>
-                        {% if concern_chunks and concern_chunks.a %}
-                            <div class="border rounded p-3 bg-light"
-                                 style="font-size:0.85em; line-height:1.65; max-height:300px; overflow-y:auto; white-space:pre-wrap;">{{ concern_chunks.a | e }}</div>
-                        {% else %}
-                            <p class="text-body-secondary fst-italic small">Section text not available.</p>
-                        {% endif %}
-
+                    <div class="text-body-secondary small">
+                        {{ simple_label(student_a.student.exam_number_label) }}
+                        &middot; {{ record_a.period.config.project_class.name }}
+                        &middot; {{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }}
                     </div>
                 </div>
-            </div>
 
-            {# ---- Student B panel ---- #}
-            <div class="col-md-6">
-                <div class="card h-100" style="border-color: var(--db-orange-200);">
-                    <div class="card-header py-2"
-                         style="background-color: var(--db-orange-50); border-bottom-color: var(--db-orange-200);">
-                        <div class="fw-semibold" style="color: var(--db-orange-800);">
-                            {{ student_b.student.user.name }}
-                        </div>
-                        <div class="text-body-secondary small">
-                            {{ simple_label(student_b.student.exam_number_label) }}
-                            &middot; {{ record_b.period.config.project_class.name }}
-                            &middot; {{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }}
-                        </div>
-                    </div>
-                    <div class="card-body">
-
-                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
-                           style="letter-spacing:0.04em; font-size:0.7em;">Turnitin</p>
-                        <div class="row g-2 mb-3">
-                            {% for label, val in [
-                                ('Overall',     record_b.turnitin_score),
-                                ('Student',     record_b.turnitin_student_overlap),
-                                ('Web',         record_b.turnitin_web_overlap),
-                                ('Publication', record_b.turnitin_publication_overlap)
-                            ] %}
-                                <div class="col-3 text-center">
-                                    <div class="bg-light rounded p-1">
-                                        {% if val is not none %}
-                                            <div class="fw-semibold {% if val >= 20 and loop.index <= 2 %}text-danger{% else %}text-body-secondary{% endif %}">
-                                                {{ val }}%
-                                            </div>
-                                        {% else %}
-                                            <div class="text-body-secondary">—</div>
-                                        {% endif %}
-                                        <div class="text-body-secondary" style="font-size:0.7em;">{{ label }}</div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                        <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
-                           style="letter-spacing:0.04em; font-size:0.7em;">
-                            {{ concern.chunk_type | replace('_', ' ') | title }} section
-                        </p>
-                        {% if concern_chunks and concern_chunks.b %}
-                            <div class="border rounded p-3 bg-light"
-                                 style="font-size:0.85em; line-height:1.65; max-height:300px; overflow-y:auto; white-space:pre-wrap;">{{ concern_chunks.b | e }}</div>
-                        {% else %}
-                            <p class="text-body-secondary fst-italic small">Section text not available.</p>
+                {# Row 2 — project #}
+                <div>
+                    {% set project_a = record_a.project %}
+                    {% if project_a %}
+                        <div class="fw-semibold" style="font-size:0.85em;">{{ project_a.name }}</div>
+                        {% if project_a.owner %}
+                            <div class="text-body-secondary" style="font-size:0.78em;">
+                                Owner: {{ project_a.owner.user.name }}
+                                {% if project_a.owner.user.id not in record_a.supervisor_role_ids %}
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1"
+                                          style="font-size:0.7em;">not supervisor</span>
+                                {% endif %}
+                            </div>
                         {% endif %}
+                    {% endif %}
+                </div>
 
+                {# Row 3 — convenor banner #}
+                <div>
+                    {% set convenor_a = record_a.period.config.convenor %}
+                    {% if convenor_a %}
+                        <div class="d-flex align-items-center gap-2 p-2 rounded"
+                             style="background:var(--bs-success-bg-subtle);
+                                    border:0.5px solid var(--bs-success-border-subtle);
+                                    font-size:0.78em; color:var(--bs-success-text-emphasis);">
+                            <i class="fas fa-user-check fa-sm"></i>
+                            Convenor ({{ record_a.period.config.year }}/{{ record_a.period.config.year + 1 }}):
+                            <strong>{{ convenor_a.user.name }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Row 4 — staff list #}
+                <div>
+                    {% for role in record_a.roles %}
+                        {% if role.role in _included_roles %}
+                            {% set color = role_color.get(role.roleid_as_str, 'secondary') %}
+                            <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
+                                 style="background:var(--bs-body-bg); font-size:0.82em;">
+                                <div style="width:28px; height:28px; border-radius:50%;
+                                            background:var(--bs-{{ color }}-bg-subtle);
+                                            color:var(--bs-{{ color }}-text-emphasis);
+                                            display:flex; align-items:center; justify-content:center;
+                                            font-size:0.7em; font-weight:500; flex-shrink:0;">
+                                    {{ role.user.initials }}
+                                </div>
+                                <span style="flex:1;">{{ role.user.name }}</span>
+                                <span class="badge bg-{{ color }}-subtle text-{{ color }}-emphasis"
+                                      style="font-size:0.7em;">{{ role.role_as_str }}</span>
+                                {% if is_faculty or is_admin or is_root %}
+                                    {% for mr in role.marking_reports %}
+                                        <a href="{{ url_for('faculty.view_marking_report', report_id=mr.id,
+                                                            url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
+                                                            text='Similarity concern') }}"
+                                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none"
+                                           style="font-size:0.7em;">
+                                            <i class="fas fa-file-alt fa-xs me-1"></i>Marking record
+                                        </a>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                {# Row 5 — workflow links #}
+                <div>
+                    {% for sr in submitter_reports_a %}
+                        <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=sr.workflow_id,
+                                            url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
+                                            text='Similarity concern') }}"
+                           class="badge bg-info-subtle text-info-emphasis text-decoration-none me-1 mb-1">
+                            <i class="fas fa-list fa-xs me-1"></i>SubmitterReport #{{ sr.id }}
+                            <i class="fas fa-external-link-alt fa-xs ms-1"></i>
+                        </a>
+                    {% endfor %}
+                    {% for cr in conflation_reports_a %}
+                        <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=cr.marking_event_id,
+                                            url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
+                                            text='Similarity concern') }}"
+                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none me-1 mb-1">
+                            <i class="fas fa-layer-group fa-xs me-1"></i>Conflation #{{ cr.id }}
+                            <i class="fas fa-external-link-alt fa-xs ms-1"></i>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {# Row 6 — report download #}
+                <div>
+                    {% set display_asset_a = record_a.processed_report if record_a.processed_report else record_a.report %}
+                    {% if display_asset_a %}
+                        <div class="d-flex align-items-center gap-2">
+                            {% if display_asset_a.medium_thumbnail and not display_asset_a.medium_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset_a.get_type(),
+                                                     asset_id=display_asset_a.id, size='medium') }}"
+                                     style="max-width:36px; max-height:46px;" alt="">
+                            {% elif display_asset_a.small_thumbnail and not display_asset_a.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset_a.get_type(),
+                                                     asset_id=display_asset_a.id, size='small') }}"
+                                     style="max-width:36px; max-height:46px;" alt="">
+                            {% else %}
+                                <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                            {% endif %}
+                            <div>
+                                <div style="font-size:0.82em;">{{ display_asset_a.target_name or 'Report' }}</div>
+                                {% set wc_a = record_a.language_analysis_data.get('metrics', {}).get('word_count') %}
+                                {% if wc_a %}
+                                    <div class="text-body-secondary" style="font-size:0.75em;">{{ wc_a }} words</div>
+                                {% endif %}
+                                {% if record_a.processed_report %}
+                                    <a class="btn btn-sm btn-outline-secondary mt-1"
+                                       href="{{ url_for('admin.download_generated_asset', asset_id=record_a.processed_report.id) }}">
+                                        <i class="fas fa-download fa-xs me-1"></i>Download
+                                    </a>
+                                {% elif record_a.report %}
+                                    <a class="btn btn-sm btn-outline-secondary mt-1"
+                                       href="{{ url_for('admin.download_submitted_asset', asset_id=record_a.report.id) }}">
+                                        <i class="fas fa-download fa-xs me-1"></i>Download
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Row 7 — Turnitin (with top-border separator) #}
+                <div class="similarity-panel-divider">
+                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                       style="letter-spacing:0.04em; font-size:0.7em;">Turnitin</p>
+                    <div class="row g-2">
+                        {% for label, val in [
+                            ('Overall',     record_a.turnitin_score),
+                            ('Student',     record_a.turnitin_student_overlap),
+                            ('Web',         record_a.turnitin_web_overlap),
+                            ('Publication', record_a.turnitin_publication_overlap)
+                        ] %}
+                            <div class="col-3 text-center">
+                                <div class="bg-light rounded p-1">
+                                    {% if val is not none %}
+                                        <div class="fw-semibold {% if val >= 20 and loop.index <= 2 %}text-danger{% else %}text-body-secondary{% endif %}">
+                                            {{ val }}%
+                                        </div>
+                                    {% else %}
+                                        <div class="text-body-secondary">—</div>
+                                    {% endif %}
+                                    <div class="text-body-secondary" style="font-size:0.7em;">{{ label }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
-            </div>
 
-        </div>{# row #}
+                {# Row 8 — risk factors #}
+                <div>
+                    {% for key, factor in record_a.get_present_risk_factors() %}
+                        <div class="mb-1" style="font-size:0.8em;">
+                            <span>{{ record_a.RISK_FACTOR_LABELS.get(key, key) }}</span>
+                            {% if factor.get('resolved') %}
+                                <span class="badge bg-success-subtle text-success-emphasis ms-1">resolved</span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis ms-1">unresolved</span>
+                            {% endif %}
+                            {% if key in _ai_keys %}
+                                {% set m_a = record_a.language_analysis_data.get('metrics', {}) %}
+                                {% if m_a %}
+                                    <div class="text-body-secondary" style="font-size:0.9em;">
+                                        MATTR {{ "%.2f" | format(m_a.get('mattr', 0)) }}
+                                        &middot; MTLD {{ "%.1f" | format(m_a.get('mtld', 0)) }}
+                                        &middot; sentence CV {{ "%.2f" | format(m_a.get('sentence_cv', 0)) }}
+                                        &middot; B = {{ "%.2f" | format(m_a.get('b', 0)) }}
+                                    </div>
+                                {% endif %}
+                                {% set verdict_a = record_a.language_analysis_data.get('llm_result', {}).get('summary', '') %}
+                                {% if verdict_a %}
+                                    <div class="rounded px-2 py-1 mt-1"
+                                         style="font-size:0.82em;
+                                                background: {% if factor.get('resolved') %}var(--bs-success-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
+                                                color: {% if factor.get('resolved') %}var(--bs-success-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
+                                        {{ verdict_a }}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {# Row 9 — section text extract #}
+                <div>
+                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                       style="letter-spacing:0.04em; font-size:0.7em;">
+                        {{ concern.chunk_type | replace('_', ' ') | title }} section
+                    </p>
+                    {% if concern_chunks and concern_chunks.a %}
+                        <div class="border rounded p-3 bg-light"
+                             style="font-size:0.85em; line-height:1.65; max-height:300px; overflow-y:auto; white-space:pre-wrap;">{{ concern_chunks.a | e }}</div>
+                    {% else %}
+                        <p class="text-body-secondary fst-italic small">Section text not available.</p>
+                    {% endif %}
+                </div>
+
+            </div>{# /Student A panel #}
+
+            {# ============================================================ #}
+            {# Student B panel                                               #}
+            {# ============================================================ #}
+            <div class="similarity-panel" style="border-left: 3px solid var(--bs-info);">
+
+                {# Row 1 — header #}
+                <div class="similarity-panel-header">
+                    <div class="fw-semibold">
+                        {{ student_b.student.user.name }}
+                    </div>
+                    <div class="text-body-secondary small">
+                        {{ simple_label(student_b.student.exam_number_label) }}
+                        &middot; {{ record_b.period.config.project_class.name }}
+                        &middot; {{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }}
+                    </div>
+                </div>
+
+                {# Row 2 — project #}
+                <div>
+                    {% set project_b = record_b.project %}
+                    {% if project_b %}
+                        <div class="fw-semibold" style="font-size:0.85em;">{{ project_b.name }}</div>
+                        {% if project_b.owner %}
+                            <div class="text-body-secondary" style="font-size:0.78em;">
+                                Owner: {{ project_b.owner.user.name }}
+                                {% if project_b.owner.user.id not in record_b.supervisor_role_ids %}
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1"
+                                          style="font-size:0.7em;">not supervisor</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                {# Row 3 — convenor banner #}
+                <div>
+                    {% set convenor_b = record_b.period.config.convenor %}
+                    {% if convenor_b %}
+                        <div class="d-flex align-items-center gap-2 p-2 rounded"
+                             style="background:var(--bs-success-bg-subtle);
+                                    border:0.5px solid var(--bs-success-border-subtle);
+                                    font-size:0.78em; color:var(--bs-success-text-emphasis);">
+                            <i class="fas fa-user-check fa-sm"></i>
+                            Convenor ({{ record_b.period.config.year }}/{{ record_b.period.config.year + 1 }}):
+                            <strong>{{ convenor_b.user.name }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Row 4 — staff list #}
+                <div>
+                    {% for role in record_b.roles %}
+                        {% if role.role in _included_roles %}
+                            {% set color = role_color.get(role.roleid_as_str, 'secondary') %}
+                            <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
+                                 style="background:var(--bs-body-bg); font-size:0.82em;">
+                                <div style="width:28px; height:28px; border-radius:50%;
+                                            background:var(--bs-{{ color }}-bg-subtle);
+                                            color:var(--bs-{{ color }}-text-emphasis);
+                                            display:flex; align-items:center; justify-content:center;
+                                            font-size:0.7em; font-weight:500; flex-shrink:0;">
+                                    {{ role.user.initials }}
+                                </div>
+                                <span style="flex:1;">{{ role.user.name }}</span>
+                                <span class="badge bg-{{ color }}-subtle text-{{ color }}-emphasis"
+                                      style="font-size:0.7em;">{{ role.role_as_str }}</span>
+                                {% if is_faculty or is_admin or is_root %}
+                                    {% for mr in role.marking_reports %}
+                                        <a href="{{ url_for('faculty.view_marking_report', report_id=mr.id,
+                                                            url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
+                                                            text='Similarity concern') }}"
+                                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none"
+                                           style="font-size:0.7em;">
+                                            <i class="fas fa-file-alt fa-xs me-1"></i>Marking record
+                                        </a>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                {# Row 5 — workflow links #}
+                <div>
+                    {% for sr in submitter_reports_b %}
+                        <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=sr.workflow_id,
+                                            url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
+                                            text='Similarity concern') }}"
+                           class="badge bg-info-subtle text-info-emphasis text-decoration-none me-1 mb-1">
+                            <i class="fas fa-list fa-xs me-1"></i>SubmitterReport #{{ sr.id }}
+                            <i class="fas fa-external-link-alt fa-xs ms-1"></i>
+                        </a>
+                    {% endfor %}
+                    {% for cr in conflation_reports_b %}
+                        <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=cr.marking_event_id,
+                                            url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
+                                            text='Similarity concern') }}"
+                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none me-1 mb-1">
+                            <i class="fas fa-layer-group fa-xs me-1"></i>Conflation #{{ cr.id }}
+                            <i class="fas fa-external-link-alt fa-xs ms-1"></i>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {# Row 6 — report download #}
+                <div>
+                    {% set display_asset_b = record_b.processed_report if record_b.processed_report else record_b.report %}
+                    {% if display_asset_b %}
+                        <div class="d-flex align-items-center gap-2">
+                            {% if display_asset_b.medium_thumbnail and not display_asset_b.medium_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset_b.get_type(),
+                                                     asset_id=display_asset_b.id, size='medium') }}"
+                                     style="max-width:36px; max-height:46px;" alt="">
+                            {% elif display_asset_b.small_thumbnail and not display_asset_b.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset_b.get_type(),
+                                                     asset_id=display_asset_b.id, size='small') }}"
+                                     style="max-width:36px; max-height:46px;" alt="">
+                            {% else %}
+                                <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                            {% endif %}
+                            <div>
+                                <div style="font-size:0.82em;">{{ display_asset_b.target_name or 'Report' }}</div>
+                                {% set wc_b = record_b.language_analysis_data.get('metrics', {}).get('word_count') %}
+                                {% if wc_b %}
+                                    <div class="text-body-secondary" style="font-size:0.75em;">{{ wc_b }} words</div>
+                                {% endif %}
+                                {% if record_b.processed_report %}
+                                    <a class="btn btn-sm btn-outline-secondary mt-1"
+                                       href="{{ url_for('admin.download_generated_asset', asset_id=record_b.processed_report.id) }}">
+                                        <i class="fas fa-download fa-xs me-1"></i>Download
+                                    </a>
+                                {% elif record_b.report %}
+                                    <a class="btn btn-sm btn-outline-secondary mt-1"
+                                       href="{{ url_for('admin.download_submitted_asset', asset_id=record_b.report.id) }}">
+                                        <i class="fas fa-download fa-xs me-1"></i>Download
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Row 7 — Turnitin (with top-border separator) #}
+                <div class="similarity-panel-divider">
+                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                       style="letter-spacing:0.04em; font-size:0.7em;">Turnitin</p>
+                    <div class="row g-2">
+                        {% for label, val in [
+                            ('Overall',     record_b.turnitin_score),
+                            ('Student',     record_b.turnitin_student_overlap),
+                            ('Web',         record_b.turnitin_web_overlap),
+                            ('Publication', record_b.turnitin_publication_overlap)
+                        ] %}
+                            <div class="col-3 text-center">
+                                <div class="bg-light rounded p-1">
+                                    {% if val is not none %}
+                                        <div class="fw-semibold {% if val >= 20 and loop.index <= 2 %}text-danger{% else %}text-body-secondary{% endif %}">
+                                            {{ val }}%
+                                        </div>
+                                    {% else %}
+                                        <div class="text-body-secondary">—</div>
+                                    {% endif %}
+                                    <div class="text-body-secondary" style="font-size:0.7em;">{{ label }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# Row 8 — risk factors #}
+                <div>
+                    {% for key, factor in record_b.get_present_risk_factors() %}
+                        <div class="mb-1" style="font-size:0.8em;">
+                            <span>{{ record_b.RISK_FACTOR_LABELS.get(key, key) }}</span>
+                            {% if factor.get('resolved') %}
+                                <span class="badge bg-success-subtle text-success-emphasis ms-1">resolved</span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis ms-1">unresolved</span>
+                            {% endif %}
+                            {% if key in _ai_keys %}
+                                {% set m_b = record_b.language_analysis_data.get('metrics', {}) %}
+                                {% if m_b %}
+                                    <div class="text-body-secondary" style="font-size:0.9em;">
+                                        MATTR {{ "%.2f" | format(m_b.get('mattr', 0)) }}
+                                        &middot; MTLD {{ "%.1f" | format(m_b.get('mtld', 0)) }}
+                                        &middot; sentence CV {{ "%.2f" | format(m_b.get('sentence_cv', 0)) }}
+                                        &middot; B = {{ "%.2f" | format(m_b.get('b', 0)) }}
+                                    </div>
+                                {% endif %}
+                                {% set verdict_b = record_b.language_analysis_data.get('llm_result', {}).get('summary', '') %}
+                                {% if verdict_b %}
+                                    <div class="rounded px-2 py-1 mt-1"
+                                         style="font-size:0.82em;
+                                                background: {% if factor.get('resolved') %}var(--bs-success-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
+                                                color: {% if factor.get('resolved') %}var(--bs-success-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
+                                        {{ verdict_b }}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {# Row 9 — section text extract #}
+                <div>
+                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2"
+                       style="letter-spacing:0.04em; font-size:0.7em;">
+                        {{ concern.chunk_type | replace('_', ' ') | title }} section
+                    </p>
+                    {% if concern_chunks and concern_chunks.b %}
+                        <div class="border rounded p-3 bg-light"
+                             style="font-size:0.85em; line-height:1.65; max-height:300px; overflow-y:auto; white-space:pre-wrap;">{{ concern_chunks.b | e }}</div>
+                    {% else %}
+                        <p class="text-body-secondary fst-italic small">Section text not available.</p>
+                    {% endif %}
+                </div>
+
+            </div>{# /Student B panel #}
+
+        </div>{# /similarity-col2 #}
 
         {# ---- review history (if previously reviewed) ---- #}
         {% if concern.reviewed %}

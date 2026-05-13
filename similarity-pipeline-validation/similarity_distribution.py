@@ -54,7 +54,6 @@ CHUNK_SIMILARITY_THRESHOLD = {
 MODELS = {
     "minilm": "all-MiniLM-L6-v2",
     "mpnet": "all-mpnet-base-v2",
-    "specter2": "allenai/specter2_proximity",
 }
 
 
@@ -124,20 +123,6 @@ def load_model(key, model_str):
     from sentence_transformers import SentenceTransformer
 
     print(f"  Loading model [{key}] {model_str} ...", flush=True)
-
-    if "specter2" in model_str.lower():
-        # SPECTER2 adapter configs use an old PEFT format (no top-level peft_type) that is
-        # rejected by peft >= 0.10, and transformers 5.x removed the source= kwarg from
-        # load_adapter.  Load via PeftModel directly, then merge weights into the backbone
-        # so the rest of the pipeline sees a plain SentenceTransformer.
-        from peft import PeftModel
-
-        base = SentenceTransformer("allenai/specter2_base")
-        backbone = base[0].auto_model
-        peft_model = PeftModel.from_pretrained(backbone, model_str)
-        base[0].auto_model = peft_model.merge_and_unload()
-        return base
-
     return SentenceTransformer(model_str)
 
 

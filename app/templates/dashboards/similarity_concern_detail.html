@@ -41,17 +41,19 @@
                 <div class="card border-0 shadow-sm text-center py-3">
                     <div class="text-body-secondary small mb-1">Cosine similarity</div>
                     {% if concern.transformer_cosine is not none %}
-                        {% if concern.transformer_cosine >= 0.88 %}
+                        {% set ct_threshold = chunk_thresholds.get(concern.chunk_type, 0.80) %}
+                        {% if concern.transformer_cosine >= ct_threshold + 0.05 %}
                             <div class="fw-semibold fs-4 text-danger">{{ "%.3f" | format(concern.transformer_cosine) }}</div>
-                        {% elif concern.transformer_cosine >= 0.78 %}
+                        {% elif concern.transformer_cosine >= ct_threshold %}
                             <div class="fw-semibold fs-4" style="color: #b45309;">{{ "%.3f" | format(concern.transformer_cosine) }}</div>
                         {% else %}
                             <div class="fw-semibold fs-4 text-body-secondary">{{ "%.3f" | format(concern.transformer_cosine) }}</div>
                         {% endif %}
-                        {% if concern.chunk_type in chunk_thresholds %}
-                            <div class="text-body-secondary" style="font-size:0.75em;">
-                                threshold: {{ chunk_thresholds[concern.chunk_type] }}
-                            </div>
+                        <div class="text-body-secondary" style="font-size:0.75em;">
+                            threshold: {{ ct_threshold }}
+                        </div>
+                        {% if concern.embedding_model %}
+                            <div class="text-body-secondary" style="font-size:0.7em;">{{ concern.embedding_model }}</div>
                         {% endif %}
                     {% else %}
                         <div class="fw-semibold fs-4 text-body-secondary">—</div>
@@ -61,11 +63,16 @@
             <div class="col-6 col-md-3">
                 <div class="card border-0 shadow-sm text-center py-3">
                     <div class="text-body-secondary small mb-1">MinHash Jaccard</div>
-                    <div class="fw-semibold fs-4" style="color: var(--db-orange-600);">
-                        {% if concern.minhash_jaccard is not none %}
-                            {{ "%.3f" | format(concern.minhash_jaccard) }}
-                        {% else %}—{% endif %}
-                    </div>
+                    {% if concern.minhash_jaccard is not none %}
+                        {% if concern.jaccard_triggered %}
+                            <div class="fw-semibold fs-4" style="color: var(--db-orange-600);">{{ "%.3f" | format(concern.minhash_jaccard) }}</div>
+                        {% else %}
+                            <div class="fw-semibold fs-4 text-body-secondary">{{ "%.3f" | format(concern.minhash_jaccard) }}</div>
+                        {% endif %}
+                        <div class="text-body-secondary" style="font-size:0.75em;">threshold: 0.05</div>
+                    {% else %}
+                        <div class="fw-semibold fs-4 text-body-secondary">—</div>
+                    {% endif %}
                 </div>
             </div>
             <div class="col-6 col-md-3">

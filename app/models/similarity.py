@@ -9,7 +9,6 @@
 #
 
 from datetime import datetime
-from typing import Optional
 
 from ..database import db
 
@@ -49,6 +48,10 @@ class SimilarityConcern(db.Model):
 
     minhash_jaccard = db.Column(db.Float(), nullable=True)
     transformer_cosine = db.Column(db.Float(), nullable=True)
+
+    jaccard_triggered = db.Column(db.Boolean(), nullable=False, default=False)
+    cosine_triggered = db.Column(db.Boolean(), nullable=False, default=False)
+    embedding_model = db.Column(db.String(100, collation="utf8_bin"), nullable=True)
 
     created_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
 

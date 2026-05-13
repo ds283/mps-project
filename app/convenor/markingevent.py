@@ -64,6 +64,7 @@ from ..shared.forms.wtf_validators import (
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
+from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD
 from ..tasks.thumbnails import dispatch_thumbnail_task
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import convenor
@@ -1557,6 +1558,7 @@ def resolve_risk_factors(record_id):
         sim_factor=sim_factor,
         similarity_open_concerns=similarity_open_concerns,
         chunking_factor=chunking_factor,
+        chunk_thresholds=CHUNK_SIMILARITY_THRESHOLD,
     )
 
 

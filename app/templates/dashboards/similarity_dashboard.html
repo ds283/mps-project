@@ -114,13 +114,14 @@
                     {data: 'student_a', orderable: false, searchable: true},
                     {data: 'student_b', orderable: false, searchable: true},
                     {data: 'chunk_type', orderable: false, searchable: false},
+                    {data: 'jaccard', orderable: true, searchable: false},
                     {data: 'cosine', orderable: true, searchable: false},
                     {data: 'turnitin', orderable: false, searchable: false},
                     {data: 'year_gap', orderable: false, searchable: false},
                     {data: 'status', orderable: false, searchable: false},
                     {data: 'actions', orderable: false, searchable: false}
                 ],
-                order: [[3, 'desc']]
+                order: [[4, 'desc']]
             });
         });
     </script>
@@ -397,6 +398,7 @@
                         <th>Student A</th>
                         <th>Student B</th>
                         <th>Section</th>
+                        <th class="text-end">Jaccard</th>
                         <th class="text-end">Cosine sim.</th>
                         <th>Turnitin overlap</th>
                         <th>Year gap</th>

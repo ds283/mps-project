@@ -271,6 +271,48 @@ def get_similarity_chunks(record_id: int) -> dict | None:
         client.close()
 
 
+def store_embeddings(record_id: int, vectors: dict, model_name: str) -> bool:
+    """
+    Upsert sentence-transformer embedding vectors into the "similarity_chunks"
+    subdocument.
+
+    *vectors* maps chunk_type → list[float] (embedding vector).
+    Also writes "similarity_chunks.embedding_model" and
+    "similarity_chunks.embedding_computed_at".
+
+    Returns True on success, False if MongoDB is unconfigured or unavailable.
+    """
+    client, collection = _get_collection()
+    if collection is None:
+        current_app.logger.warning(
+            "scraped_text_store.store_embeddings: MongoDB not configured — skipping"
+        )
+        return False
+
+    try:
+        now = datetime.now()
+        collection.update_one(
+            {"submission_record_id": record_id},
+            {
+                "$set": {
+                    "similarity_chunks.embedding_vectors": vectors,
+                    "similarity_chunks.embedding_model": model_name,
+                    "similarity_chunks.embedding_computed_at": now,
+                }
+            },
+        )
+        return True
+
+    except Exception as exc:
+        current_app.logger.warning(
+            f"scraped_text_store.store_embeddings: failed for record #{record_id}: {exc}"
+        )
+        return False
+
+    finally:
+        client.close()
+
+
 def store_minhash_signatures(record_id: int, signatures: dict) -> bool:
     """
     Upsert MinHash signatures into the "similarity_chunks" subdocument.

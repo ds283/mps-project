@@ -60,6 +60,7 @@
                 <tr>
                     <th>Other student</th>
                     <th>Section</th>
+                    <th class="text-end">Jaccard</th>
                     <th class="text-end">Cosine sim.</th>
                     <th>Turnitin (student)</th>
                     <th>Year gap</th>
@@ -92,10 +93,22 @@
                             </span>
                         </td>
                         <td class="text-end">
+                            {% if concern.minhash_jaccard is not none %}
+                                {% if concern.jaccard_triggered %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis">{{ "%.2f" | format(concern.minhash_jaccard) }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ "%.2f" | format(concern.minhash_jaccard) }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-body-secondary">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
                             {% if concern.transformer_cosine is not none %}
-                                {% if concern.transformer_cosine >= 0.88 %}
+                                {% set ct_threshold = chunk_thresholds.get(concern.chunk_type, 0.80) %}
+                                {% if concern.transformer_cosine >= ct_threshold + 0.05 %}
                                     <span class="badge bg-danger-subtle text-danger-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
-                                {% elif concern.transformer_cosine >= 0.78 %}
+                                {% elif concern.transformer_cosine >= ct_threshold %}
                                     <span class="badge bg-warning-subtle text-warning-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>
                                 {% else %}
                                     <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ "%.2f" | format(concern.transformer_cosine) }}</span>

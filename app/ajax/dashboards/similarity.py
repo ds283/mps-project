@@ -12,6 +12,8 @@ from typing import List, Dict
 
 from flask import current_app, get_template_attribute, render_template, url_for
 
+from ...tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD
+
 
 # language=jinja2
 _student_cell = """
@@ -39,14 +41,31 @@ _chunk_type_cell = """
 # language=jinja2
 _cosine_cell = """
 {% if concern.transformer_cosine is not none %}
-    {% if concern.transformer_cosine >= 0.88 %}
+    {% set ct_threshold = chunk_thresholds.get(concern.chunk_type, 0.80) %}
+    {% if concern.transformer_cosine >= ct_threshold + 0.05 %}
         {% set cls = "bg-danger-subtle text-danger-emphasis" %}
-    {% elif concern.transformer_cosine >= 0.78 %}
+    {% elif concern.transformer_cosine >= ct_threshold %}
         {% set cls = "bg-warning-subtle text-warning-emphasis" %}
     {% else %}
         {% set cls = "bg-secondary-subtle text-secondary-emphasis" %}
     {% endif %}
     <span class="badge {{ cls }}">{{ "%.3f"|format(concern.transformer_cosine) }}</span>
+    {% if concern.embedding_model %}
+        <div class="text-muted" style="font-size:0.7em;">{{ concern.embedding_model }}</div>
+    {% endif %}
+{% else %}
+    <span class="text-muted">&mdash;</span>
+{% endif %}
+"""
+
+# language=jinja2
+_jaccard_cell = """
+{% if concern.minhash_jaccard is not none %}
+    {% if concern.jaccard_triggered %}
+        <span class="badge bg-warning-subtle text-warning-emphasis">{{ "%.3f"|format(concern.minhash_jaccard) }}</span>
+    {% else %}
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ "%.3f"|format(concern.minhash_jaccard) }}</span>
+    {% endif %}
 {% else %}
     <span class="text-muted">&mdash;</span>
 {% endif %}
@@ -128,6 +147,7 @@ def similarity_concern_data(concerns) -> List[Dict]:
     student_tmpl = env.from_string(_student_cell)
     chunk_type_tmpl = env.from_string(_chunk_type_cell)
     cosine_tmpl = env.from_string(_cosine_cell)
+    jaccard_tmpl = env.from_string(_jaccard_cell)
     turnitin_tmpl = env.from_string(_turnitin_cell)
     year_gap_tmpl = env.from_string(_year_gap_cell)
     status_tmpl = env.from_string(_status_cell)
@@ -143,7 +163,12 @@ def similarity_concern_data(concerns) -> List[Dict]:
                 "student_a": render_template(student_tmpl, record=concern.record_a, simple_label=simple_label),
                 "student_b": render_template(student_tmpl, record=concern.record_b, simple_label=simple_label),
                 "chunk_type": render_template(chunk_type_tmpl, concern=concern),
-                "cosine": render_template(cosine_tmpl, concern=concern),
+                "jaccard": render_template(jaccard_tmpl, concern=concern),
+                "cosine": render_template(
+                    cosine_tmpl,
+                    concern=concern,
+                    chunk_thresholds=CHUNK_SIMILARITY_THRESHOLD,
+                ),
                 "turnitin": render_template(turnitin_tmpl, concern=concern),
                 "year_gap": render_template(year_gap_tmpl, concern=concern),
                 "status": render_template(status_tmpl, concern=concern),

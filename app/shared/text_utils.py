@@ -61,6 +61,12 @@ _NUMBERED_SUB_HEADING = re.compile(r"^\s*\d+\.\d+")
 # Sentence-ending punctuation (excludes trailing period as allowed by spec)
 _SENTENCE_END_MID = re.compile(r"[.?!](?!\s*$)")
 
+# Table-of-contents heading: standalone "Contents" or "Table of Contents"
+_TOC_HEADING_RE = re.compile(
+    r"^\s*(table\s+of\s+)?contents\s*$",
+    re.IGNORECASE,
+)
+
 
 def _split_text(text: str) -> tuple[str, str]:
     """
@@ -158,6 +164,61 @@ def _strip_toc_lines(text: str) -> str:
     _TOC_LEADER_RE = re.compile(r"(?:\.\s){3,}|\.{4,}")
     lines = text.splitlines()
     return "\n".join(line for line in lines if not _TOC_LEADER_RE.search(line))
+
+
+def _strip_toc_block(text: str, max_toc_start_fraction: float = 0.25) -> str:
+    """
+    Remove a Table of Contents block from *text* before heading detection.
+
+    Searches for a standalone "Contents" or "Table of Contents" line within the
+    first *max_toc_start_fraction* of the document.  If found, removes from that
+    line until the block ends.  The end of the ToC block is identified as the
+    first occurrence of either:
+
+    - A numbered or chapter section heading (signals the start of a numbered
+      body section), or
+    - Two consecutive lines of ≥ 80 characters (characteristic of body prose).
+
+    This handles the common case where a PDF's ToC uses a page-per-line format
+    with no dot leaders — each ToC title appears as a short line surrounded by
+    blank lines, which satisfies ``_is_unnumbered_heading`` and pollutes heading
+    detection with spurious sections.
+
+    If no Contents heading is found within the search window, returns *text*
+    unchanged.
+    """
+    lines = text.splitlines()
+    n = len(lines)
+    max_start = max(1, int(n * max_toc_start_fraction))
+
+    toc_start = None
+    for i, line in enumerate(lines[:max_start]):
+        if _TOC_HEADING_RE.match(line):
+            toc_start = i
+            break
+
+    if toc_start is None:
+        return text
+
+    # Walk forward to find the end of the ToC block.
+    toc_end = n  # fallback: assume ToC extends to the end (safety cap below)
+    long_run = 0
+    for i in range(toc_start + 1, n):
+        stripped = lines[i].strip()
+        # A numbered or chapter heading marks the start of the body.
+        if _NUMBERED_TOP_HEADING.match(lines[i]) or _CHAPTER_HEADING.match(lines[i]):
+            toc_end = i
+            break
+        # Two consecutive long lines indicate body prose.
+        if len(stripped) >= 80:
+            long_run += 1
+            if long_run >= 2:
+                toc_end = i - 1  # the first long line belongs to the body
+                break
+        else:
+            long_run = 0
+
+    return "\n".join(lines[:toc_start] + lines[toc_end:])
 
 
 def _strip_math_lines(text: str) -> str:
@@ -285,15 +346,30 @@ def _strip_number_prefix(line: str) -> str:
     return line.strip()
 
 
-def _is_unnumbered_heading(line: str, prev_blank: bool, next_blank: bool) -> bool:
-    """Return True if *line* qualifies as an unnumbered short heading."""
+def _is_unnumbered_heading(
+    line: str,
+    prev_blank: bool,
+    next_blank: bool,
+    next_line: str = "",
+) -> bool:
+    """Return True if *line* qualifies as an unnumbered short heading.
+
+    A line qualifies when it:
+
+    - Is non-empty and ≤ 60 characters.
+    - Contains no mid-line sentence-ending punctuation.
+    - Does not match any numbered or chapter heading pattern.
+    - Has a blank line (or document boundary) immediately before it.
+    - Is *either* followed by a blank line (original strict rule) *or*
+      immediately followed by a long prose line (≥ 40 chars).  The second
+      condition catches body headings where the first paragraph runs on
+      without a blank separator, which is common in PDF extraction from
+      Word/LaTeX documents.
+    """
     stripped = line.strip()
     if not stripped:
         return False
     if len(stripped) > 60:
-        return False
-    # Must be surrounded by blank lines (or doc boundary)
-    if not prev_blank or not next_blank:
         return False
     # No sentence-ending punctuation except an optional trailing period
     if _SENTENCE_END_MID.search(stripped):
@@ -304,7 +380,15 @@ def _is_unnumbered_heading(line: str, prev_blank: bool, next_blank: bool) -> boo
     # Must not match chapter pattern
     if _CHAPTER_HEADING.match(line):
         return False
-    return True
+    # Must have a blank line (or doc boundary) before it
+    if not prev_blank:
+        return False
+    # Accept if followed by a blank line (strict rule) or by a long prose line
+    if next_blank:
+        return True
+    if len(next_line.strip()) >= 40:
+        return True
+    return False
 
 
 def _detect_top_level_sections(text: str) -> tuple[list[dict], str]:
@@ -363,7 +447,8 @@ def _detect_top_level_sections(text: str) -> tuple[list[dict], str]:
         # Unnumbered: check blank neighbours
         prev_blank = (i == 0) or (not lines[i - 1].strip())
         next_blank = (i == n - 1) or (not lines[i + 1].strip())
-        if _is_unnumbered_heading(line, prev_blank, next_blank):
+        next_line = lines[i + 1] if (i + 1 < n) else ""
+        if _is_unnumbered_heading(line, prev_blank, next_blank, next_line):
             categories.append(("unnumbered", ""))
             continue
 

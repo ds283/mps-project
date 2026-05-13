@@ -35,6 +35,7 @@ from ..shared.text_utils import (
     _split_document,
     _strip_code_blocks,
     _strip_math_lines,
+    _strip_toc_block,
 )
 from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_start
 
@@ -263,6 +264,7 @@ def register_similarity_analysis_tasks(celery):
         _core, _references, _appendices = _split_document(raw_text)
         clean_core = _strip_math_lines(_core)
         clean_core = _strip_code_blocks(clean_core)
+        clean_core = _strip_toc_block(clean_core)
         top_level_sections, heading_style = _detect_top_level_sections(clean_core)
 
         context_size: int = current_app.config.get(_CHUNK_EXTRACTION_CTX_KEY, _CHUNK_EXTRACTION_CTX_DEFAULT)

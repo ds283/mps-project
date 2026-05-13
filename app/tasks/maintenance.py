@@ -848,6 +848,8 @@ def register_maintenance_tasks(celery):
         storage = AssetCloudAdapter(
             thumbnail,
             thumbnails_store,
+            encryption_attr=None,
+            compressed_attr=None,
             audit_data=f"maintenance.thumbnail_test_lost (thumbnail id #{thumbnail_id})",
         )
 
@@ -915,6 +917,8 @@ def register_maintenance_tasks(celery):
                         adapter = AssetCloudAdapter(
                             thumbnail,
                             thumbnails_store,
+                            encryption_attr=None,
+                            compressed_attr=None,
                             audit_data=f"maintenance.thumbnail_cleanup_unattached (thumbnail id #{thumbnail_id})",
                         )
                         adapter.delete()
@@ -1253,6 +1257,8 @@ def register_maintenance_tasks(celery):
                     adapter = AssetCloudAdapter(
                         thumbnail,
                         thumbnails_store,
+                        encryption_attr=None,
+                        compressed_attr=None,
                         audit_data="maintenance.thumbnail_maintenance",
                     )
                     adapter.delete()

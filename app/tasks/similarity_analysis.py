@@ -42,7 +42,7 @@ from .pipeline_tracking import get_pipeline_redis, record_step_end, record_step_
 # Pipeline constants
 # ---------------------------------------------------------------------------
 
-CHUNK_EXTRACTION_PROMPT_VERSION = 3
+CHUNK_EXTRACTION_PROMPT_VERSION = 4
 
 CHUNK_TYPES = [
     "abstract",
@@ -65,6 +65,7 @@ CHUNK_SIMILARITY_THRESHOLD = {
 }
 
 MINHASH_JACCARD_CONCERN_THRESHOLD = 0.05
+MIN_CHUNK_WORDS = 20
 MINHASH_NUM_PERM = 128
 
 ST_MODEL_CONFIG_KEY = "SIMILARITY_ST_MODEL"
@@ -343,6 +344,12 @@ def register_similarity_analysis_tasks(celery):
             heading = section["heading"]
             assigned_type = parsed_result.get(heading)
             if assigned_type and assigned_type in CHUNK_TYPES:
+                if len(section["full_text"].split()) < MIN_CHUNK_WORDS:
+                    current_app.logger.debug(
+                        f"extract_chunks: section '{heading}' for record #{record_id} "
+                        f"has fewer than {MIN_CHUNK_WORDS} words — treating as absent"
+                    )
+                    continue
                 chunk_texts[assigned_type].append(section["full_text"])
 
         sections_out = {
@@ -451,10 +458,10 @@ def register_similarity_analysis_tasks(celery):
                     continue
                 try:
                     words = text.lower().split()
-                    if len(words) < 3:
+                    if len(words) < MIN_CHUNK_WORDS:
                         current_app.logger.debug(
                             f"compute_minhash: chunk '{chunk_type}' for record #{record_id} "
-                            f"has fewer than 3 words — skipping"
+                            f"has fewer than {MIN_CHUNK_WORDS} words — skipping MinHash"
                         )
                         continue
                     shingles = set()
@@ -509,6 +516,12 @@ def register_similarity_analysis_tasks(celery):
                     continue
                 text = section.get("text", "")
                 if not text:
+                    continue
+                if len(text.split()) < MIN_CHUNK_WORDS:
+                    current_app.logger.debug(
+                        f"compute_minhash: chunk '{chunk_type}' for record #{record_id} "
+                        f"has fewer than {MIN_CHUNK_WORDS} words — skipping embedding"
+                    )
                     continue
                 try:
                     vec = st_model.encode(text, convert_to_numpy=True)
@@ -670,6 +683,8 @@ def register_similarity_analysis_tasks(celery):
             current_section = current_sections.get(chunk_type, {})
             if not current_section.get("present", False):
                 continue
+            if len(current_section.get("text", "").split()) < MIN_CHUNK_WORDS:
+                continue
 
             # ---- Jaccard phase: exact MinHash Jaccard for all other records ----
             if chunk_type in current_sigs:
@@ -738,6 +753,9 @@ def register_similarity_analysis_tasks(celery):
                     continue
                 other_emb = (sc.get("embedding_vectors") or {}).get(chunk_type)
                 if other_emb is None:
+                    continue
+                other_text = (sc.get("sections") or {}).get(chunk_type, {}).get("text", "")
+                if len(other_text.split()) < MIN_CHUNK_WORDS:
                     continue
                 other_ids_with_emb.append(other_id)
                 other_vecs.append(np.array(other_emb, dtype=np.float32))

@@ -22,10 +22,44 @@
             display: grid;
             grid-row: 1 / -1;
             grid-template-rows: subgrid;
-            border: 0.5px solid var(--bs-border-color);
-            border-radius: 0.625rem;
             overflow: hidden;
+            border-radius: 0.625rem;
+            border-top:    1px solid var(--bs-border-color);
+            border-right:  1px solid var(--bs-border-color);
+            border-bottom: 1px solid var(--bs-border-color);
+            /* border-left set per-panel via inline style for the accent colour */
+            background-color: var(--bs-body-bg);
         }
+        .staff-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .staff-avatar-supervisor { background-color: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+        .staff-avatar-marker     { background-color: var(--bs-info-bg-subtle);    color: var(--bs-info-text-emphasis);    }
+        .staff-avatar-moderator  { background-color: var(--bs-secondary-bg-subtle); color: var(--bs-secondary-text-emphasis); }
+        .risk-wrap { background: var(--bs-tertiary-bg); border-radius: 0.4rem; padding: 0.375rem 0.5rem; }
+        .risk-row  { display: flex; align-items: flex-start; gap: 0.4rem; padding: 0.3rem 0;
+                     border-bottom: 1px solid var(--bs-border-color-translucent); }
+        .risk-row:first-child { padding-top: 0; }
+        .risk-row:last-child  { border-bottom: none; padding-bottom: 0; }
+        .risk-icon  { font-size: 0.9rem; flex-shrink: 0; margin-top: 1px; }
+        .risk-body  { flex: 1; min-width: 0; }
+        .risk-title { font-size: 0.8rem; font-weight: 500; }
+        .risk-desc  { font-size: 0.73rem; color: var(--bs-secondary-color); margin-top: 0.15rem; line-height: 1.5; }
+        .ai-box     { padding: 0.3rem 0.5rem; border-radius: 0.3rem; border: 0.5px solid;
+                      margin-top: 0.3rem; font-size: 0.73rem; line-height: 1.5; }
+        .ai-flagged { background: var(--bs-warning-bg-subtle); border-color: var(--bs-warning-border-subtle);
+                      color: var(--bs-warning-text-emphasis); }
+        .ai-ok      { background: var(--bs-success-bg-subtle); border-color: var(--bs-success-border-subtle);
+                      color: var(--bs-success-text-emphasis); }
         .similarity-panel > * {
             padding: 0.5rem 0.75rem;
             min-width: 0;
@@ -141,6 +175,17 @@
         } %}
         {% set _included_roles = [0, 1, 3, 6] %}
         {% set _ai_keys = ['ai_use', 'ai_compliance'] %}
+        {% set _avatar_class = {0: 'staff-avatar-supervisor', 1: 'staff-avatar-marker',
+                                 3: 'staff-avatar-moderator', 6: 'staff-avatar-supervisor'} %}
+        {% set _risk_icon = {
+            'ai_use':                     ('fas fa-robot',            'text-danger'),
+            'ai_compliance':              ('fas fa-robot',            'text-warning-emphasis'),
+            'word_count_discrepancy':     ('fas fa-file-word',        'text-warning-emphasis'),
+            'similarity_flagged':         ('fas fa-search',           'text-warning-emphasis'),
+            'similarity_chunking_failed': ('fas fa-search',           'text-warning-emphasis'),
+            'turnitin':                   ('fas fa-search',           'text-warning-emphasis'),
+            'document_length':            ('fas fa-file-word',        'text-warning-emphasis'),
+        } %}
 
         {# ---- side-by-side student panels (9-row subgrid) ---- #}
         <div class="similarity-col2">
@@ -201,11 +246,7 @@
                             {% set color = role_color.get(role.roleid_as_str, 'secondary') %}
                             <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
                                  style="background:var(--bs-body-bg); font-size:0.82em;">
-                                <div style="width:28px; height:28px; border-radius:50%;
-                                            background:var(--bs-{{ color }}-bg-subtle);
-                                            color:var(--bs-{{ color }}-text-emphasis);
-                                            display:flex; align-items:center; justify-content:center;
-                                            font-size:0.7em; font-weight:500; flex-shrink:0;">
+                                <div class="staff-avatar {{ _avatar_class.get(role.role, 'staff-avatar-moderator') }}">
                                     {{ role.user.initials }}
                                 </div>
                                 <span style="flex:1;">{{ role.user.name }}</span>
@@ -216,9 +257,12 @@
                                         <a href="{{ url_for('faculty.view_marking_report', report_id=mr.id,
                                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
                                                             text='Similarity concern') }}"
-                                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none"
-                                           style="font-size:0.7em;">
-                                            <i class="fas fa-file-alt fa-xs me-1"></i>Marking record
+                                           class="d-inline-flex align-items-center gap-1 px-2 py-1
+                                                  rounded text-decoration-none
+                                                  bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle"
+                                           style="font-size: 0.7rem;">
+                                            <i class="fas fa-file-alt fa-xs"></i>
+                                            Marking record
                                         </a>
                                     {% endfor %}
                                 {% endif %}
@@ -233,8 +277,12 @@
                         <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=sr.workflow_id,
                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
                                             text='Similarity concern') }}"
-                           class="badge bg-info-subtle text-info-emphasis text-decoration-none me-1 mb-1">
-                            <i class="fas fa-list fa-xs me-1"></i>SubmitterReport #{{ sr.id }}
+                           class="d-inline-flex align-items-center gap-1 px-2 py-1
+                                  rounded text-decoration-none me-1 mb-1
+                                  bg-info-subtle text-info-emphasis border border-info-subtle"
+                           style="font-size: 0.75rem;">
+                            <i class="fas fa-list fa-xs"></i>
+                            {{ sr.workflow.event.name ~ ' · ' if sr.workflow.event else '' }}{{ sr.workflow.name }} · SubmitterReport #{{ sr.id }}
                             <i class="fas fa-external-link-alt fa-xs ms-1"></i>
                         </a>
                     {% endfor %}
@@ -242,8 +290,12 @@
                         <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=cr.marking_event_id,
                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
                                             text='Similarity concern') }}"
-                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none me-1 mb-1">
-                            <i class="fas fa-layer-group fa-xs me-1"></i>Conflation #{{ cr.id }}
+                           class="d-inline-flex align-items-center gap-1 px-2 py-1
+                                  rounded text-decoration-none me-1 mb-1
+                                  bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle"
+                           style="font-size: 0.75rem;">
+                            <i class="fas fa-layer-group fa-xs"></i>
+                            {{ cr.marking_event.name }} · ConflationRecord #{{ cr.id }}
                             <i class="fas fa-external-link-alt fa-xs ms-1"></i>
                         </a>
                     {% endfor %}
@@ -316,36 +368,42 @@
 
                 {# Row 8 — risk factors #}
                 <div>
-                    {% for key, factor in record_a.get_present_risk_factors() %}
-                        <div class="mb-1" style="font-size:0.8em;">
-                            <span>{{ record_a.RISK_FACTOR_LABELS.get(key, key) }}</span>
-                            {% if factor.get('resolved') %}
-                                <span class="badge bg-success-subtle text-success-emphasis ms-1">resolved</span>
-                            {% else %}
-                                <span class="badge bg-warning-subtle text-warning-emphasis ms-1">unresolved</span>
-                            {% endif %}
-                            {% if key in _ai_keys %}
-                                {% set m_a = record_a.language_analysis_data.get('metrics', {}) %}
-                                {% if m_a %}
-                                    <div class="text-body-secondary" style="font-size:0.9em;">
-                                        MATTR {{ "%.2f" | format(m_a.get('mattr', 0)) }}
-                                        &middot; MTLD {{ "%.1f" | format(m_a.get('mtld', 0)) }}
-                                        &middot; sentence CV {{ "%.2f" | format(m_a.get('sentence_cv', 0)) }}
-                                        &middot; B = {{ "%.2f" | format(m_a.get('b', 0)) }}
+                    {% if record_a.get_present_risk_factors() %}
+                        <div class="risk-wrap">
+                            {% for key, factor in record_a.get_present_risk_factors() %}
+                                {% set _ri = _risk_icon.get(key, ('fas fa-exclamation-circle', 'text-secondary')) %}
+                                {% set _resolved = factor.get('resolved', false) %}
+                                <div class="risk-row">
+                                    <i class="{{ _ri[0] }} risk-icon {{ _ri[1] }}"></i>
+                                    <div class="risk-body">
+                                        <div class="risk-title">
+                                            {{ record_a.RISK_FACTOR_LABELS.get(key, key) }}
+                                            <span class="badge {{ 'bg-success-subtle text-success-emphasis' if _resolved else 'bg-warning-subtle text-warning-emphasis' }} ms-1"
+                                                  style="font-size:0.7em;">{{ 'resolved' if _resolved else 'unresolved' }}</span>
+                                        </div>
+                                        {% if key in _ai_keys %}
+                                            {% set _m = record_a.language_analysis_data.get('metrics', {}) %}
+                                            {% if _m %}
+                                                <div class="risk-desc">
+                                                    MATTR {{ "%.2f" | format(_m.get('mattr') or 0) }}
+                                                    &middot; MTLD {{ "%.1f" | format(_m.get('mtld') or 0) }}
+                                                    &middot; sentence CV {{ "%.2f" | format(_m.get('sentence_cv') or 0) }}
+                                                    &middot; B = {{ "%.2f" | format(_m.get('b') or 0) }}
+                                                </div>
+                                            {% endif %}
+                                            {% set _llm = record_a.language_analysis_data.get('llm_result', {}).get('summary', '') %}
+                                            {% if _llm %}
+                                                <div class="ai-box {{ 'ai-ok' if _resolved else 'ai-flagged' }}">
+                                                    <i class="{{ 'fas fa-check' if _resolved else 'fas fa-exclamation-triangle' }} fa-xs me-1"></i>
+                                                    <strong>LLM assessment:</strong> {{ _llm }}
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
-                                {% endif %}
-                                {% set verdict_a = record_a.language_analysis_data.get('llm_result', {}).get('summary', '') %}
-                                {% if verdict_a %}
-                                    <div class="rounded px-2 py-1 mt-1"
-                                         style="font-size:0.82em;
-                                                background: {% if factor.get('resolved') %}var(--bs-success-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
-                                                color: {% if factor.get('resolved') %}var(--bs-success-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
-                                        {{ verdict_a }}
-                                    </div>
-                                {% endif %}
-                            {% endif %}
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
 
                 {# Row 9 — section text extract #}
@@ -420,11 +478,7 @@
                             {% set color = role_color.get(role.roleid_as_str, 'secondary') %}
                             <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
                                  style="background:var(--bs-body-bg); font-size:0.82em;">
-                                <div style="width:28px; height:28px; border-radius:50%;
-                                            background:var(--bs-{{ color }}-bg-subtle);
-                                            color:var(--bs-{{ color }}-text-emphasis);
-                                            display:flex; align-items:center; justify-content:center;
-                                            font-size:0.7em; font-weight:500; flex-shrink:0;">
+                                <div class="staff-avatar {{ _avatar_class.get(role.role, 'staff-avatar-moderator') }}">
                                     {{ role.user.initials }}
                                 </div>
                                 <span style="flex:1;">{{ role.user.name }}</span>
@@ -435,9 +489,12 @@
                                         <a href="{{ url_for('faculty.view_marking_report', report_id=mr.id,
                                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
                                                             text='Similarity concern') }}"
-                                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none"
-                                           style="font-size:0.7em;">
-                                            <i class="fas fa-file-alt fa-xs me-1"></i>Marking record
+                                           class="d-inline-flex align-items-center gap-1 px-2 py-1
+                                                  rounded text-decoration-none
+                                                  bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle"
+                                           style="font-size: 0.7rem;">
+                                            <i class="fas fa-file-alt fa-xs"></i>
+                                            Marking record
                                         </a>
                                     {% endfor %}
                                 {% endif %}
@@ -452,8 +509,12 @@
                         <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=sr.workflow_id,
                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
                                             text='Similarity concern') }}"
-                           class="badge bg-info-subtle text-info-emphasis text-decoration-none me-1 mb-1">
-                            <i class="fas fa-list fa-xs me-1"></i>SubmitterReport #{{ sr.id }}
+                           class="d-inline-flex align-items-center gap-1 px-2 py-1
+                                  rounded text-decoration-none me-1 mb-1
+                                  bg-info-subtle text-info-emphasis border border-info-subtle"
+                           style="font-size: 0.75rem;">
+                            <i class="fas fa-list fa-xs"></i>
+                            {{ sr.workflow.event.name ~ ' · ' if sr.workflow.event else '' }}{{ sr.workflow.name }} · SubmitterReport #{{ sr.id }}
                             <i class="fas fa-external-link-alt fa-xs ms-1"></i>
                         </a>
                     {% endfor %}
@@ -461,8 +522,12 @@
                         <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=cr.marking_event_id,
                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
                                             text='Similarity concern') }}"
-                           class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none me-1 mb-1">
-                            <i class="fas fa-layer-group fa-xs me-1"></i>Conflation #{{ cr.id }}
+                           class="d-inline-flex align-items-center gap-1 px-2 py-1
+                                  rounded text-decoration-none me-1 mb-1
+                                  bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle"
+                           style="font-size: 0.75rem;">
+                            <i class="fas fa-layer-group fa-xs"></i>
+                            {{ cr.marking_event.name }} · ConflationRecord #{{ cr.id }}
                             <i class="fas fa-external-link-alt fa-xs ms-1"></i>
                         </a>
                     {% endfor %}
@@ -535,36 +600,42 @@
 
                 {# Row 8 — risk factors #}
                 <div>
-                    {% for key, factor in record_b.get_present_risk_factors() %}
-                        <div class="mb-1" style="font-size:0.8em;">
-                            <span>{{ record_b.RISK_FACTOR_LABELS.get(key, key) }}</span>
-                            {% if factor.get('resolved') %}
-                                <span class="badge bg-success-subtle text-success-emphasis ms-1">resolved</span>
-                            {% else %}
-                                <span class="badge bg-warning-subtle text-warning-emphasis ms-1">unresolved</span>
-                            {% endif %}
-                            {% if key in _ai_keys %}
-                                {% set m_b = record_b.language_analysis_data.get('metrics', {}) %}
-                                {% if m_b %}
-                                    <div class="text-body-secondary" style="font-size:0.9em;">
-                                        MATTR {{ "%.2f" | format(m_b.get('mattr', 0)) }}
-                                        &middot; MTLD {{ "%.1f" | format(m_b.get('mtld', 0)) }}
-                                        &middot; sentence CV {{ "%.2f" | format(m_b.get('sentence_cv', 0)) }}
-                                        &middot; B = {{ "%.2f" | format(m_b.get('b', 0)) }}
+                    {% if record_b.get_present_risk_factors() %}
+                        <div class="risk-wrap">
+                            {% for key, factor in record_b.get_present_risk_factors() %}
+                                {% set _ri = _risk_icon.get(key, ('fas fa-exclamation-circle', 'text-secondary')) %}
+                                {% set _resolved = factor.get('resolved', false) %}
+                                <div class="risk-row">
+                                    <i class="{{ _ri[0] }} risk-icon {{ _ri[1] }}"></i>
+                                    <div class="risk-body">
+                                        <div class="risk-title">
+                                            {{ record_b.RISK_FACTOR_LABELS.get(key, key) }}
+                                            <span class="badge {{ 'bg-success-subtle text-success-emphasis' if _resolved else 'bg-warning-subtle text-warning-emphasis' }} ms-1"
+                                                  style="font-size:0.7em;">{{ 'resolved' if _resolved else 'unresolved' }}</span>
+                                        </div>
+                                        {% if key in _ai_keys %}
+                                            {% set _m = record_b.language_analysis_data.get('metrics', {}) %}
+                                            {% if _m %}
+                                                <div class="risk-desc">
+                                                    MATTR {{ "%.2f" | format(_m.get('mattr') or 0) }}
+                                                    &middot; MTLD {{ "%.1f" | format(_m.get('mtld') or 0) }}
+                                                    &middot; sentence CV {{ "%.2f" | format(_m.get('sentence_cv') or 0) }}
+                                                    &middot; B = {{ "%.2f" | format(_m.get('b') or 0) }}
+                                                </div>
+                                            {% endif %}
+                                            {% set _llm = record_b.language_analysis_data.get('llm_result', {}).get('summary', '') %}
+                                            {% if _llm %}
+                                                <div class="ai-box {{ 'ai-ok' if _resolved else 'ai-flagged' }}">
+                                                    <i class="{{ 'fas fa-check' if _resolved else 'fas fa-exclamation-triangle' }} fa-xs me-1"></i>
+                                                    <strong>LLM assessment:</strong> {{ _llm }}
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
-                                {% endif %}
-                                {% set verdict_b = record_b.language_analysis_data.get('llm_result', {}).get('summary', '') %}
-                                {% if verdict_b %}
-                                    <div class="rounded px-2 py-1 mt-1"
-                                         style="font-size:0.82em;
-                                                background: {% if factor.get('resolved') %}var(--bs-success-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
-                                                color: {% if factor.get('resolved') %}var(--bs-success-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
-                                        {{ verdict_b }}
-                                    </div>
-                                {% endif %}
-                            {% endif %}
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
 
                 {# Row 9 — section text extract #}

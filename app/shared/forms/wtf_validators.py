@@ -754,24 +754,21 @@ def unique_or_original_supervision_event_template(unit_id, form, field):
     return globally_unique_supervision_event_template(unit_id, form, field)
 
 
-def make_unique_marking_event_in_period(period_id, name=None):
+def make_unique_marking_event_in_period(period_id, name=None, exclude_id=None):
     """
     Return a WTForms validator that checks MarkingEvent.name is unique within a
-    SubmissionPeriodRecord. If event is provided, the event's own current name is
-    allowed (edit case).
+    SubmissionPeriodRecord. If name is provided (edit case), the event's own current name is
+    allowed as a fast-path; exclude_id additionally excludes the record by primary key so the
+    check is robust to any string normalisation differences.
     """
 
     def validator(form, field):
         if name is not None and field.data == name:
             return
-        existing = (
-            db.session.query(MarkingEvent)
-            .filter(
-                MarkingEvent.period_id == period_id, MarkingEvent.name == field.data
-            )
-            .first()
-        )
-        if existing is not None:
+        q = db.session.query(MarkingEvent).filter(MarkingEvent.period_id == period_id, MarkingEvent.name == field.data)
+        if exclude_id is not None:
+            q = q.filter(MarkingEvent.id != exclude_id)
+        if q.first() is not None:
             raise ValidationError(
                 f'"{field.data}" is already used for a marking event in this submission period'
             )
@@ -779,24 +776,20 @@ def make_unique_marking_event_in_period(period_id, name=None):
     return validator
 
 
-def make_unique_marking_workflow_in_event(event_id, name=None):
+def make_unique_marking_workflow_in_event(event_id, name=None, exclude_id=None):
     """
     Return a WTForms validator that checks MarkingWorkflow.name is unique within a
-    MarkingEvent. If workflow is provided, the workflow's own current name is
-    allowed (edit case).
+    MarkingEvent. If name is provided (edit case), the workflow's own current name is
+    allowed as a fast-path; exclude_id additionally excludes the record by primary key.
     """
 
     def validator(form, field):
         if name is not None and field.data == name:
             return
-        existing = (
-            db.session.query(MarkingWorkflow)
-            .filter(
-                MarkingWorkflow.event_id == event_id, MarkingWorkflow.name == field.data
-            )
-            .first()
-        )
-        if existing is not None:
+        q = db.session.query(MarkingWorkflow).filter(MarkingWorkflow.event_id == event_id, MarkingWorkflow.name == field.data)
+        if exclude_id is not None:
+            q = q.filter(MarkingWorkflow.id != exclude_id)
+        if q.first() is not None:
             raise ValidationError(
                 f'"{field.data}" is already used for a marking workflow in this event'
             )
@@ -804,24 +797,20 @@ def make_unique_marking_workflow_in_event(event_id, name=None):
     return validator
 
 
-def make_unique_marking_workflow_key_in_event(event_id, key=None):
+def make_unique_marking_workflow_key_in_event(event_id, key=None, exclude_id=None):
     """
     Return a WTForms validator that checks MarkingWorkflow.key is unique within a
-    MarkingEvent. If workflow is provided, the workflow's own current key is
-    allowed (edit case).
+    MarkingEvent. If key is provided (edit case), the workflow's own current key is
+    allowed as a fast-path; exclude_id additionally excludes the record by primary key.
     """
 
     def validator(form, field):
         if key is not None and field.data == key:
             return
-        existing = (
-            db.session.query(MarkingWorkflow)
-            .filter(
-                MarkingWorkflow.event_id == event_id, MarkingWorkflow.key == field.data
-            )
-            .first()
-        )
-        if existing is not None:
+        q = db.session.query(MarkingWorkflow).filter(MarkingWorkflow.event_id == event_id, MarkingWorkflow.key == field.data)
+        if exclude_id is not None:
+            q = q.filter(MarkingWorkflow.id != exclude_id)
+        if q.first() is not None:
             raise ValidationError(
                 f'"{field.data}" is already used as a key for a marking workflow in this event'
             )
@@ -829,23 +818,21 @@ def make_unique_marking_workflow_key_in_event(event_id, key=None):
     return validator
 
 
-def make_unique_marking_scheme_in_pclass(pclass_id, name=None):
+def make_unique_marking_scheme_in_pclass(pclass_id, name=None, exclude_id=None):
     """
     Return a WTForms validator that checks MarkingScheme.name is unique within a
-    ProjectClass. If name is provided (edit case), the scheme's own current name is allowed.
+    ProjectClass. If name is provided (edit case), the scheme's own current name is allowed
+    as a fast-path; exclude_id additionally excludes the record by primary key so the check
+    is robust to any string normalisation differences.
     """
 
     def validator(form, field):
         if name is not None and field.data == name:
             return
-        existing = (
-            db.session.query(MarkingScheme)
-            .filter(
-                MarkingScheme.pclass_id == pclass_id, MarkingScheme.name == field.data
-            )
-            .first()
-        )
-        if existing is not None:
+        q = db.session.query(MarkingScheme).filter(MarkingScheme.pclass_id == pclass_id, MarkingScheme.name == field.data)
+        if exclude_id is not None:
+            q = q.filter(MarkingScheme.id != exclude_id)
+        if q.first() is not None:
             raise ValidationError(
                 f'"{field.data}" is already used as a marking scheme name in this project class'
             )

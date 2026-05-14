@@ -1983,7 +1983,7 @@ def edit_marking_scheme(scheme_id):
 
     form = EditMarkingSchemeForm(obj=scheme)
     form.name.validators.append(
-        make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name)
+        make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name, exclude_id=scheme.id)
     )
 
     if form.validate_on_submit():
@@ -2189,7 +2189,7 @@ def edit_marking_event(event_id):
 
     form = EditMarkingEventForm(obj=event)
     form.name.validators.append(
-        make_unique_marking_event_in_period(period.id, name=event.name)
+        make_unique_marking_event_in_period(period.id, name=event.name, exclude_id=event.id)
     )
     form.targets.validators.append(make_valid_marking_targets(fiducial))
 
@@ -2794,10 +2794,10 @@ def edit_marking_workflow(workflow_id):
         setattr(form.scheme, "pre_validate", lambda field: None)
 
     form.name.validators.append(
-        make_unique_marking_workflow_in_event(event.id, name=workflow.name)
+        make_unique_marking_workflow_in_event(event.id, name=workflow.name, exclude_id=workflow.id)
     )
     form.key.validators.append(
-        make_unique_marking_workflow_key_in_event(event.id, key=workflow.key)
+        make_unique_marking_workflow_key_in_event(event.id, key=workflow.key, exclude_id=workflow.id)
     )
 
     # On GET, pre-populate scheme with the parent MarkingScheme (not the LiveMarkingScheme snapshot),

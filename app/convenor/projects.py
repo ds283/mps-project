@@ -81,7 +81,6 @@ from ..shared.projects import (
     project_list_SQL_handler,
 )
 from ..shared.sqlalchemy import get_count
-from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     filter_assessors,
     get_convenor_filter_record,
@@ -97,6 +96,7 @@ from ..shared.validators import (
     validate_project_class,
     validate_view_project,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from .forms import (
     AddConvenorGenericTask,
@@ -2077,7 +2077,7 @@ def add_project(pclass_id):
             tags=tag_list,
             active=True,
             owner=form.owner.data,
-            generic=form.use_supervisor_pool.data,
+            use_supervisor_pool=form.use_supervisor_pool.data,
             ATAS_restricted=form.ATAS_restricted.data,
             group=form.group.data,
             project_classes=form.project_classes.data,
@@ -2338,7 +2338,7 @@ def duplicate_project(id):
             name=form.name.data,
             active=True,
             owner=form.owner.data,
-            generic=form.use_supervisor_pool.data,
+            use_supervisor_pool=form.use_supervisor_pool.data,
             ATAS_restricted=form.ATAS_restricted.data,
             tags=tag_list,
             group=form.group.data,

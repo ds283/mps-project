@@ -11,20 +11,20 @@ from typing import Optional, Union
 
 from flask import current_app, has_request_context
 from flask_security import current_user
-from sqlalchemy import or_, func
+from sqlalchemy import func, or_
 
 from ..database import db
 from ..models import (
-    Project,
-    LiveProject,
-    StudentData,
-    SelectingStudent,
-    SubmittingStudent,
-    ProjectClassConfig,
-    SubmissionRecord,
-    ProjectDescription,
     ConfirmRequest,
     CustomOffer,
+    LiveProject,
+    Project,
+    ProjectClassConfig,
+    ProjectDescription,
+    SelectingStudent,
+    StudentData,
+    SubmissionRecord,
+    SubmittingStudent,
 )
 from ..shared.journal import create_auto_journal_entry
 from ..shared.utils import get_current_year
@@ -103,7 +103,7 @@ def add_liveproject(
         number=number,
         name=item.name,
         owner_id=item.owner_id,
-        generic=item.use_supervisor_pool,
+        use_supervisor_pool=item.use_supervisor_pool,
         ATAS_restricted=item.ATAS_restricted,
         tags=item.tags,
         group_id=item.group_id,

@@ -1758,8 +1758,6 @@ class ProjectClassConfig(
             db.session.query(LiveProject, PopularityRecord)
             .select_from(LiveProject)
             .filter(LiveProject.config_id == self.id)
-            .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
-            .join(User, User.id == FacultyData.id, isouter=True)
             .join(
                 popularity_subq,
                 popularity_subq.c.popq_liveproject_id == LiveProject.id,

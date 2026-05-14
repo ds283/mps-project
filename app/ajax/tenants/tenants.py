@@ -37,6 +37,10 @@ _menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.recalculate_ai_concern', tenant_id=t.id) }}">
             <i class="fas fa-sync fa-fw"></i> Recalculate AI concern&hellip;
         </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.export_marking_data', tenant_id=t.id) }}">
+            <i class="fas fa-file-excel fa-fw"></i> Export marking data&hellip;
+        </a>
     </div>
 </div>
 """

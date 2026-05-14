@@ -51,3 +51,4 @@ from .llm_orchestration import register_llm_orchestration_tasks
 from .feedback_orchestration import register_feedback_orchestration_tasks
 from .marking_export import register_marking_export_tasks
 from .similarity_analysis import register_similarity_analysis_tasks
+from .data_export import register_data_export_tasks

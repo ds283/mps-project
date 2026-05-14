@@ -837,3 +837,33 @@ def recalculate_ai_concern(tenant_id):
         url=url_for("tenants.ai_calibrations", tenant_id=tenant_id),
         text="AI calibrations",
     )
+
+
+@tenants.route("/export_marking_data/<int:tenant_id>")
+@roles_required("root")
+def export_marking_data(tenant_id):
+    """
+    Queue an anonymised analytical marking data export for the given tenant.
+    The resulting Excel workbook is delivered to the requesting user's Download Centre.
+    """
+    tenant: Tenant = Tenant.query.get_or_404(tenant_id)
+
+    from ..task_queue import register_task
+
+    task_id = register_task(
+        f"Analytical marking data export — {tenant.name}",
+        owner=current_user,
+        description=f"Export anonymised marking data for tenant ‘{tenant.name}’",
+    )
+    if task_id is not None:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.data_export.export_tenant_marking_data_xlsx"]
+        task.apply_async(args=[task_id, tenant_id, current_user.id], task_id=task_id, queue="default")
+        flash(
+            "Export queued. You will be notified in your Download Centre when it is ready.",
+            "success",
+        )
+    else:
+        flash("Could not register export task. Please try again.", "error")
+
+    return redirect(url_for("tenants.edit_tenants"))

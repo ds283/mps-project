@@ -21,7 +21,7 @@ from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
 
 from ..database import db
 from ..shared.sqlalchemy import get_count
-from .associations import roles_to_users, mask_roles_to_users, tenant_to_users
+from .associations import mask_roles_to_users, roles_to_users, tenant_to_users
 from .choices import short_academic_titles_dict
 from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH
@@ -237,7 +237,7 @@ class User(db.Model, UserMixin):
 
     # build a name for this user
     @property
-    def name(self):
+    def name(self) -> str:
         prefix = ""
 
         if self.faculty_data is not None and self.faculty_data.use_academic_title:
@@ -251,12 +251,12 @@ class User(db.Model, UserMixin):
 
     # build a simplified name without prefixes
     @property
-    def simple_name(self):
+    def simple_name(self) -> str:
         return self.first_name + " " + self.last_name
 
     @property
     def initials(self) -> str:
-        name: str = self.name or ""
+        name: str = self.simple_name or ""
         tokens = [t for t in name.split() if t]
         if not tokens:
             return "?"
@@ -266,7 +266,7 @@ class User(db.Model, UserMixin):
         return first + tokens[-1][0].upper()
 
     @property
-    def name_and_username(self):
+    def name_and_username(self) -> str:
         return self.name + " (" + self.username + ")"
 
     @property

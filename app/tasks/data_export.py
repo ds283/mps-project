@@ -65,6 +65,7 @@ _SUBMISSIONS_COLUMNS = [
     "has_report",
     "has_supervisor",
     "has_presentation",
+    "is_historical",
     "grade_report",
     "grade_supervisor",
     "grade_presentation",
@@ -149,34 +150,43 @@ _EXPORT_READY_TMPL = """
 # ---------------------------------------------------------------------------
 
 
-def _build_event_lookups(event: MarkingEvent) -> tuple[dict, dict, list, object, list]:
-    """Build sr_lookup, mr_lookup, and classified workflow lists for one event.
+def _build_event_lookups(event: MarkingEvent) -> tuple[dict, dict, dict, list, object, list]:
+    """Build sr_lookup, mr_lookup, record_map, and classified workflow lists for one event.
 
     Returns:
         sr_lookup:          (workflow_id, record_id) -> SubmitterReport
         mr_lookup:          submitter_report_id -> [MarkingReport] sorted by id
+        record_map:         record_id -> SubmissionRecord (all records seen in any workflow)
         marker_wfs:         workflows with ROLE_MARKER
         supervisor_wf:      single workflow with ROLE_SUPERVISOR (or None)
         presentation_wfs:   workflows with ROLE_PRESENTATION_ASSESSOR
     """
     sr_lookup: dict[tuple[int, int], SubmitterReport] = {}
     mr_lookup: dict[int, list] = {}
+    record_map: dict[int, SubmissionRecord] = {}
 
     event_wfs = list(event.workflows)
     for wf in event_wfs:
         for sr in wf.submitter_reports:
             sr_lookup[(wf.id, sr.record_id)] = sr
             mr_lookup[sr.id] = sorted(sr.marking_reports.all(), key=lambda m: m.id)
+            if sr.record_id not in record_map:
+                record_map[sr.record_id] = sr.record
 
     marker_wfs = [wf for wf in event_wfs if wf.role == SubmissionRoleTypesMixin.ROLE_MARKER]
-    supervisor_wf = next(
-        (wf for wf in event_wfs if wf.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR), None
-    )
+    supervisor_wfs = [
+        wf
+        for wf in event_wfs
+        if wf.role in (
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        )
+    ]
     presentation_wfs = [
         wf for wf in event_wfs if wf.role == SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR
     ]
 
-    return sr_lookup, mr_lookup, marker_wfs, supervisor_wf, presentation_wfs
+    return sr_lookup, mr_lookup, record_map, marker_wfs, supervisor_wfs, presentation_wfs
 
 
 def _get_assessor_ab(wfs, record_id, sr_lookup, mr_lookup):
@@ -201,19 +211,20 @@ def _get_assessor_ab(wfs, record_id, sr_lookup, mr_lookup):
 
 def _build_submission_row(
     event: MarkingEvent,
-    cr: ConflationReport,
+    record: SubmissionRecord,
+    cr: "ConflationReport | None",
+    is_historical: bool,
     token_map: dict[int, str],
     sr_lookup: dict,
     mr_lookup: dict,
     marker_wfs: list,
-    supervisor_wf,
+    supervisor_wfs: list,
     presentation_wfs: list,
 ) -> dict:
-    record: SubmissionRecord = cr.submission_record
     rid = record.id
 
     targets = event.targets_as_dict
-    conflation = cr.conflation_report_as_dict
+    conflation = cr.conflation_report_as_dict if cr is not None else {}
 
     # --- ROLE_MARKER grades and moderation ---
     primary_marker_sr, mr_a, mr_b = _get_assessor_ab(marker_wfs, rid, sr_lookup, mr_lookup)
@@ -235,12 +246,10 @@ def _build_submission_row(
         else None
     )
 
-    # --- ROLE_SUPERVISOR grade and identity ---
-    supervisor_sr = sr_lookup.get((supervisor_wf.id, rid)) if supervisor_wf else None
-    supervisor_grade = supervisor_sr.grade if supervisor_sr else None
-
-    sup_role = record.roles.filter_by(role=SubmissionRoleTypesMixin.ROLE_SUPERVISOR).first()
-    supervisor_uuid = sup_role.user.uuid if sup_role else None
+    # --- ROLE_SUPERVISOR / ROLE_RESPONSIBLE_SUPERVISOR grade and identity ---
+    _, supervisor_mr, _ = _get_assessor_ab(supervisor_wfs, rid, sr_lookup, mr_lookup)
+    supervisor_grade = supervisor_mr.grade if supervisor_mr else None
+    supervisor_uuid = supervisor_mr.role.user.uuid if supervisor_mr else None
 
     # --- ROLE_PRESENTATION_ASSESSOR grades and moderation ---
     primary_presentation_sr, pa, pb = _get_assessor_ab(
@@ -304,6 +313,7 @@ def _build_submission_row(
         "has_report": "report" in targets,
         "has_supervisor": "supervisor" in targets,
         "has_presentation": "presentation" in targets,
+        "is_historical": is_historical,
         "grade_report": conflation.get("report"),
         "grade_supervisor": conflation.get("supervisor"),
         "grade_presentation": conflation.get("presentation"),
@@ -368,8 +378,10 @@ def register_data_export_tasks(celery):
         Export anonymised marking data for all MarkingEvents belonging to a tenant to
         an Excel workbook, upload it to MinIO, and notify the requesting user.
 
-        Only MarkingEvents with workflow_state >= READY_TO_GENERATE_FEEDBACK are included,
-        guaranteeing that ConflationReports exist for every included event.
+        All MarkingEvents that have at least one MarkingWorkflow are included, regardless
+        of workflow_state or academic cycle.  Events with no workflows are omitted.
+        ConflationReport data (conflated grades) is included where it exists; for events
+        where conflation has not yet been run those grade columns are null.
         """
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading records...", autocommit=True)
 
@@ -386,11 +398,9 @@ def register_data_export_tasks(celery):
                     SubmissionPeriodRecord.config_id == ProjectClassConfig.id,
                 )
                 .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
-                .filter(
-                    ProjectClass.tenant_id == tenant_id,
-                    MarkingEvent.workflow_state
-                    >= MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
-                )
+                .join(MarkingWorkflow, MarkingWorkflow.event_id == MarkingEvent.id)
+                .filter(ProjectClass.tenant_id == tenant_id)
+                .distinct()
                 .all()
             )
         except SQLAlchemyError as exc:
@@ -432,7 +442,7 @@ def register_data_export_tasks(celery):
             max_year: int | None = None
 
             for i, event in enumerate(events):
-                sr_lookup, mr_lookup, marker_wfs, supervisor_wf, presentation_wfs = (
+                sr_lookup, mr_lookup, event_record_map, marker_wfs, supervisor_wfs, presentation_wfs = (
                     _build_event_lookups(event)
                 )
 
@@ -443,22 +453,29 @@ def register_data_export_tasks(celery):
                     if max_year is None or year > max_year:
                         max_year = year
 
-                for cr in event.conflation_reports:
-                    record = cr.submission_record
-                    rid = record.id
+                # Index ConflationReports by record id for this event (may be empty).
+                cr_lookup = {
+                    cr.submission_record_id: cr for cr in event.conflation_reports
+                }
+                is_historical = not cr_lookup
 
+                # Iterate over every record that appears in any workflow for this event.
+                for rid, evt_record in event_record_map.items():
                     if rid not in token_map:
                         token_map[rid] = uuid.uuid4().hex
-                        record_map[rid] = record
+                        record_map[rid] = evt_record
 
+                    cr = cr_lookup.get(rid)  # None if conflation has not been run
                     row = _build_submission_row(
                         event,
+                        evt_record,
                         cr,
+                        is_historical,
                         token_map,
                         sr_lookup,
                         mr_lookup,
                         marker_wfs,
-                        supervisor_wf,
+                        supervisor_wfs,
                         presentation_wfs,
                     )
                     submission_rows.append(row)

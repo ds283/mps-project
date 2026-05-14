@@ -1917,9 +1917,8 @@ def add_marking_scheme(pclass_id):
     text = request.args.get("text", "Marking schemes")
 
     form = AddMarkingSchemeForm(request.form)
-    form.name.validators.append(make_unique_marking_scheme_in_pclass(pclass_id))
 
-    if form.validate_on_submit():
+    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass_id)]}):
         scheme = MarkingScheme(
             pclass_id=pclass_id,
             name=form.name.data,
@@ -1982,11 +1981,10 @@ def edit_marking_scheme(scheme_id):
     text = request.args.get("text", "Marking schemes")
 
     form = EditMarkingSchemeForm(obj=scheme)
-    form.name.validators.append(
-        make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name, exclude_id=scheme.id)
-    )
 
-    if form.validate_on_submit():
+    if form.validate_on_submit(
+        extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name, exclude_id=scheme.id)]}
+    ):
         scheme.name = form.name.data
         scheme.title = form.title.data
         scheme.rubric = form.rubric.data
@@ -2123,9 +2121,8 @@ def add_marking_event(period_id):
     text = request.args.get("text", "Marking events")
 
     form = AddMarkingEventForm(request.form)
-    form.name.validators.append(make_unique_marking_event_in_period(period_id))
 
-    if form.validate_on_submit():
+    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_event_in_period(period_id)]}):
         event = MarkingEvent(
             period_id=period_id,
             name=form.name.data,
@@ -2188,12 +2185,13 @@ def edit_marking_event(event_id):
     fiducial = {wf.key: 1.0 for wf in event.workflows}
 
     form = EditMarkingEventForm(obj=event)
-    form.name.validators.append(
-        make_unique_marking_event_in_period(period.id, name=event.name, exclude_id=event.id)
-    )
-    form.targets.validators.append(make_valid_marking_targets(fiducial))
 
-    if form.validate_on_submit():
+    if form.validate_on_submit(
+        extra_validators={
+            "name": [make_unique_marking_event_in_period(period.id, name=event.name, exclude_id=event.id)],
+            "targets": [make_valid_marking_targets(fiducial)],
+        }
+    ):
         event.name = form.name.data
         event.deadline = form.deadline.data
         event.targets = form.targets.data or None
@@ -2664,10 +2662,13 @@ def add_marking_workflow(event_id):
         pclass, scheme_locked=False, event=event
     )
     form = AddWorkflowForm(request.form)
-    form.name.validators.append(make_unique_marking_workflow_in_event(event_id))
-    form.key.validators.append(make_unique_marking_workflow_key_in_event(event_id))
 
-    if form.validate_on_submit():
+    if form.validate_on_submit(
+        extra_validators={
+            "name": [make_unique_marking_workflow_in_event(event_id)],
+            "key": [make_unique_marking_workflow_key_in_event(event_id)],
+        }
+    ):
         scheme_id = None
 
         try:
@@ -2793,19 +2794,17 @@ def edit_marking_workflow(workflow_id):
     if scheme_locked:
         setattr(form.scheme, "pre_validate", lambda field: None)
 
-    form.name.validators.append(
-        make_unique_marking_workflow_in_event(event.id, name=workflow.name, exclude_id=workflow.id)
-    )
-    form.key.validators.append(
-        make_unique_marking_workflow_key_in_event(event.id, key=workflow.key, exclude_id=workflow.id)
-    )
-
     # On GET, pre-populate scheme with the parent MarkingScheme (not the LiveMarkingScheme snapshot),
     # so it matches the choices in the QuerySelectField.
     if request.method == "GET":
         form.scheme.data = workflow.scheme.parent if workflow.scheme else None
 
-    if form.validate_on_submit():
+    if form.validate_on_submit(
+        extra_validators={
+            "name": [make_unique_marking_workflow_in_event(event.id, name=workflow.name, exclude_id=workflow.id)],
+            "key": [make_unique_marking_workflow_key_in_event(event.id, key=workflow.key, exclude_id=workflow.id)],
+        }
+    ):
         try:
             workflow.name = form.name.data
             workflow.key = form.key.data

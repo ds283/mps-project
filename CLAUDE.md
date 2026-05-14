@@ -147,6 +147,14 @@ and add new migrations at the tip. Do not create forks.
   available as a Jinja2 global. GET views that render a template containing a POST form should
   instantiate and pass the form object; POST views should instantiate the form and call
   `form.validate_on_submit()` rather than checking `request.method == "POST"` manually.
+- **Never mutate `field.validators` after form instantiation.** WTForms 3.x stores the
+  validators list by reference (not by copy) on the shared `UnboundField`, so
+  `form.field.validators.append(v)` permanently mutates the class-level list and accumulates
+  stale validators across requests. Instead, pass request-specific validators via
+  `form.validate_on_submit(extra_validators={"field_name": [v]})` or
+  `form.validate(extra_validators={"field_name": [v]})`. This applies to all static form
+  classes; factory-generated classes (e.g. from `MarkingWorkflowFormFactory`) create a fresh
+  class per call and are not affected, but should follow the same pattern for consistency.
 
 ### DateTime
 

@@ -947,8 +947,29 @@ def _make_schema_block_summaries(schema) -> list | None:
 
 
 # language=jinja2
+# language=jinja2
 _marking_scheme_name = """
 <div class="text-primary">{{ scheme.name }}</div>
+{% if scheme.created_by is not none %}
+    <div class="small text-muted mt-1">
+        <i class="fas fa-user fa-fw me-1"></i>Created by {{ scheme.created_by.name }}
+        {% if scheme.creation_timestamp is not none %}
+            &mdash; {{ scheme.creation_timestamp.strftime('%a %d %b %Y %H:%M') }}
+        {% endif %}
+    </div>
+{% endif %}
+{% if scheme.last_edited_by is not none %}
+    <div class="small text-muted mt-1">
+        <i class="fas fa-edit fa-fw me-1"></i>Last edited by {{ scheme.last_edited_by.name }}
+        {% if scheme.last_edit_timestamp is not none %}
+            &mdash; {{ scheme.last_edit_timestamp.strftime('%a %d %b %Y %H:%M') }}
+        {% endif %}
+    </div>
+{% elif scheme.created_by is not none %}
+    <div class="small text-muted mt-1">
+        <i class="fas fa-edit fa-fw me-1"></i>Not yet edited
+    </div>
+{% endif %}
 """
 
 # language=jinja2

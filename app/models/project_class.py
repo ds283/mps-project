@@ -1745,7 +1745,7 @@ class ProjectClassConfig(
                 PopularityRecord.liveproject_id.label("popq_liveproject_id"),
                 func.max(PopularityRecord.datestamp).label("popq_datestamp"),
             )
-            .filter(PopularityRecord.score_rank != None)
+            .filter(PopularityRecord.score_rank != None, PopularityRecord.config_id == self.id)
             .group_by(PopularityRecord.liveproject_id)
             .subquery()
         )

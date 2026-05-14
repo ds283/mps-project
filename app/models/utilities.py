@@ -1342,6 +1342,7 @@ class PopularityRecord(db.Model):
 
     __table_args__ = (
         db.Index("ix_popularity_record_liveproject_datestamp", "liveproject_id", "datestamp"),
+        db.Index("ix_popularity_record_config_liveproject_datestamp", "config_id", "liveproject_id", "datestamp"),
     )
 
     # unique id for this record

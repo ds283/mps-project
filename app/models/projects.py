@@ -214,7 +214,7 @@ def _Project_is_offerable(pid):
 
     # CONSTRAINT 2. The affiliated research group should be active, if this project is attached to any
     # classes that uses research groups
-    if project.use_supervisor_pool or project.group is None:
+    if project.owner is not None and project.group is None:
         if (
             get_count(
                 project.project_classes.filter(ProjectClass.advertise_research_group)

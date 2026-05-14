@@ -126,6 +126,8 @@ class User(db.Model, UserMixin):
 
     fs_webauthn_user_handle = db.Column(db.String(64), unique=True, nullable=True)
 
+    uuid = db.Column(db.String(36, collation="utf8_bin"), unique=True, nullable=False)
+
     # ROLES
 
     # assigned roles

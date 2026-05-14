@@ -52,6 +52,7 @@ def register_user(**kwargs):
     roles_step2 = [x for x in roles_step1 if x is not None]
     kwargs["roles"] = roles_step2
     kwargs["fs_uniquifier"] = uuid.uuid4().hex
+    kwargs["uuid"] = str(uuid.uuid4())
 
     user = User(**kwargs)
 

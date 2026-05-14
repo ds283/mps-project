@@ -23,35 +23,36 @@
     <div class="container-fluid bg-project">
         <br/>
         {% if form and not archived %}
-            <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int) }}" method="POST"
+            <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int) }}"
+                  method="POST"
                   name="selector_form">
-                {{ form.hidden_tag() }}
-                {% if show_selector %}
-                    <div class="card mt-3 mb-3 card-body bg-well">
-                        {{ on_click_selector_field(form.selector, true) }}
-                    </div>
-                {% else %}
-                    {% if is_approver %}
-                        {% if desc %}
-                            <div class="alert alert-warning">
-                                <div>
-                                    This description applies to the following project types:
-                                </div>
-                                <div>
-                                    <ul class="list-inline">
-                                        {% for pcl in desc.project_classes %}
-                                            <li>{{ simple_label(pcl.make_label()) }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
+            {{ form.hidden_tag() }}
+            {% if show_selector %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    {{ on_click_selector_field(form.selector, true) }}
+                </div>
+            {% else %}
+                {% if is_approver %}
+                    {% if desc %}
+                        <div class="alert alert-warning">
+                            <div>
+                                This description applies to the following project types:
                             </div>
-                        {% else %}
-                            <div class="alert alert-danger">
-                                No description provided.
+                            <div>
+                                <ul class="list-inline">
+                                    {% for pcl in desc.project_classes %}
+                                        <li>{{ simple_label(pcl.make_label()) }}</li>
+                                    {% endfor %}
+                                </ul>
                             </div>
-                        {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            No description provided.
+                        </div>
                     {% endif %}
                 {% endif %}
+            {% endif %}
         {% endif %}
         <div class="row">
             <div class="col-1"></div>
@@ -61,12 +62,15 @@
                         {{ title }}
                     </div>
                 </div>
-                {% if not project.use_supervisor_pool and project.owner %}
+                {% if project.owner %}
                     <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
                         <div>
                             <div class="project-owner-name">
-                                {{ project.owner.user.name }}
+                                <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
                             </div>
+                            {% if project.use_supervisor_pool %}
+                                <span class="ms-2 text-secondary">project organizer</span>
+                            {% endif %}
                             {% if project.owner.office %}
                                 <div>{{ project.owner.office }}</div>
                             {% endif %}
@@ -83,12 +87,20 @@
                         {% endif %}
                     </div>
                     <hr class="intro-divider">
-                {% else %}
+                {% endif %}
+                {% if project.use_supervisor_pool %}
                     <div class="alert alert-info">
                         {% call icon_block("info-circle") %}
-                            <div class="h5"><strong>This is a generic project.</strong></div>
+                            {% if project.owner %}
+                                <div class="h5"><strong>This project is organized by <i
+                                        class="fas fa-user"></i> {{ project.owner.user.name }}, but will be supervised
+                                    by another member of staff.</strong></div>
+                            {% else %}
+                                <div class="h5"><strong>This project does not have a single defined supervisor.</strong>
+                                </div>
+                            {% endif %}
                             <div class="mt-1">
-                                You will be allocated a suitable faculty supervisor.
+                                You will be allocated a suitable supervisor.
                             </div>
                             {% if desc and project.enforce_capacity and desc.capacity and desc.capacity > 0 %}
                                 <div class="mt-1">
@@ -104,18 +116,6 @@
                             {% endif %}
                         {% endcall %}
                     </div>
-                    {% if project.group %}
-                        <div class="mt-4 d-flex flex-row justify-content-end align-content-start">
-                            <div>
-                                <div class="research-group-banner">{{ project.group.name }}</div>
-                                {% if project.group.website and project.group.website is not none %}
-                                    <a class="research-group-webpage" href="{{ project.group.website }}">
-                                        Research group website <i class="fas fa-external-link"></i>
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endif %}
                 {% endif %}
 
                 {% if hidden %}
@@ -139,7 +139,8 @@
                                 This is an archived description that refers to a project offered
                                 for selection in
                                 {% if project.config is not none %}
-                                    academic year {{ project.config.select_year_a }}&ndash;{{ project.config.select_year_b }}.
+                                    academic year {{ project.config.select_year_a }}&ndash;
+                                    {{ project.config.select_year_b }}.
                                 {% else %}
                                     a previous academic year.
                                 {% endif %}
@@ -201,20 +202,24 @@
                                             <div class="col-3">Sign-up details</div>
                                             <div class="col-9">
                                                 <div class="sm-gap-below">
-                                                    {% if not project.use_supervisor_pool and project.owner is not none %}
+                                                    {% if project.owner is not none %}
                                                         {% if project.owner.sign_off_students and project.meeting_reqd == project.MEETING_REQUIRED %}
                                                             {% if project.is_confirmed(sel) %}
-                                                                <span class="badge bg-primary project-label"><i class="fas fa-check"></i> Meeting confirmed</span>
+                                                                <span class="badge bg-primary project-label"><i
+                                                                        class="fas fa-check"></i> Meeting confirmed</span>
                                                             {% else %}
-                                                                <span class="badge bg-danger project-label"><i class="fas fa-times"></i> Meeting required</span>
+                                                                <span class="badge bg-danger project-label"><i
+                                                                        class="fas fa-times"></i> Meeting required</span>
                                                             {% endif %}
                                                         {% elif project.owner.sign_off_students and project.meeting_reqd == project.MEETING_OPTIONAL %}
                                                             <span class="badge bg-warning text-dark project-label">Meeting optional</span>
                                                         {% else %}
-                                                            <span class="badge bg-secondary project-label"><i class="fas fa-check"></i> Meeting not required</span>
+                                                            <span class="badge bg-secondary project-label"><i
+                                                                    class="fas fa-check"></i> Meeting not required</span>
                                                         {% endif %}
                                                         {% if selections_open and project.is_available(sel) %}
-                                                            <span class="badge bg-success project-label"><i class="fas fa-check"></i> Available</span>
+                                                            <span class="badge bg-success project-label"><i
+                                                                    class="fas fa-check"></i> Available</span>
                                                         {% endif %}
                                                     {% endif %}
                                                 </div>
@@ -285,10 +290,13 @@
                                                     {% endfor %}
                                                     {% if sel and desc %}
                                                         {% if not sel.satisfies_recommended(desc) %}
-                                                            <p>This project has recommended modules that are not available
-                                                            on your programme. This does not prevent you from applying for
-                                                            the project, but you will need to discuss its suitability
-                                                            with the supervisor.</p>
+                                                            <p>This project has recommended modules that are not
+                                                                available
+                                                                on your programme. This does not prevent you from
+                                                                applying for
+                                                                the project, but you will need to discuss its
+                                                                suitability
+                                                                with the supervisor.</p>
                                                         {% endif %}
                                                     {% endif %}
                                                 </div>
@@ -388,22 +396,27 @@
                     {% endfor %}
                     {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
                         <div class="d-flex flex-row justify-content-end align-content-start mt-3 mb-3 gap-2">
-                            <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-sm btn-success">
+                            <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}"
+                               class="btn btn-sm btn-success">
                                 <i class="fas fa-check"></i> Approve
                             </a>
-                            <a href="{{ url_for('project_approver.reject', id=desc.id, url=url) }}" class="btn btn-sm btn-outline-danger">
+                            <a href="{{ url_for('project_approver.reject', id=desc.id, url=url) }}"
+                               class="btn btn-sm btn-outline-danger">
                                 <i class="fas fa-times"></i> Reject
                             </a>
                         </div>
                     {% elif desc.workflow_state == desc.WORKFLOW_APPROVAL_REJECTED %}
                         <div class="d-flex flex-row justify-content-end align-content-start mt-3 mb-3 gap-2">
-                            <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-sm btn-success">
+                            <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}"
+                               class="btn btn-sm btn-success">
                                 <i class="fas fa-check"></i> Approve
                             </a>
-                            <a href="{{ url_for('project_approver.requeue', id=desc.id, url=url) }}" class="btn btn-sm btn-outline-secondary">
+                            <a href="{{ url_for('project_approver.requeue', id=desc.id, url=url) }}"
+                               class="btn btn-sm btn-outline-secondary">
                                 <i class="fas fa-undo"></i> Re-queue
                             </a>
-                            <a href="{{ url_for('project_approver.return_to_owner', id=desc.id, url=url) }}" class="btn btn-sm btn-outline-danger">
+                            <a href="{{ url_for('project_approver.return_to_owner', id=desc.id, url=url) }}"
+                               class="btn btn-sm btn-outline-danger">
                                 <i class="fas fa-exclamation-circle"></i> Return to owner
                             </a>
                         </div>
@@ -423,11 +436,11 @@
                         <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
                            class="btn btn-sm {% if all_comments %}btn-outline-secondary{% else %}btn-primary{% endif %}">
                             Show comments only from this year
-                       </a>
+                        </a>
                         <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
                            class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Show comments from all years
-                       </a>
+                        </a>
                     </div>
                     {% for comment in comments %}
                         {% if comment.is_visible(current_user) %}
@@ -459,44 +472,55 @@
                                         <div class="row vertical-align">
                                             {% if comment.last_edit_timestamp and current_user.id == comment.owner_id %}
                                                 <div class="col-7">
-                                                    Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                    Last edited
+                                                    at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                                 <div class="col-5">
                                                     <div class="float-end">
                                                         {% if is_approver and approvals_team_only %}
-                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
+                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}"
+                                                               class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                         {% endif %}
-                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
-                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger btn-table-block">Delete</a>
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}"
+                                                           class="btn btn-sm btn-secondary btn-table-block">Edit</a>
+                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}"
+                                                           class="btn btn-sm btn-danger btn-table-block">Delete</a>
                                                     </div>
                                                 </div>
                                             {% elif comment.last_edit_timestamp and (is_approver and approvals_team_only) %}
                                                 <div class="col-7">
-                                                    Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                    Last edited
+                                                    at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                                 <div class="col-5">
                                                     <div class="float-end">
-                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
+                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}"
+                                                           class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                     </div>
                                                 </div>
                                             {% elif comment.last_edit_timestamp %}
                                                 <div class="col-12">
-                                                    Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                    Last edited
+                                                    at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                             {% elif current_user.id == comment.owner_id %}
                                                 <div class="col-12">
                                                     <div class="float-end">
                                                         {% if is_approver and approvals_team_only %}
-                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
+                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}"
+                                                               class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                         {% endif %}
-                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
-                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger btn-table-block">Delete</a>
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}"
+                                                           class="btn btn-sm btn-secondary btn-table-block">Edit</a>
+                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}"
+                                                           class="btn btn-sm btn-danger btn-table-block">Delete</a>
                                                     </div>
                                                 </div>
                                             {% elif is_approver and approvals_team_only %}
                                                 <div class="col-12">
                                                     <div class="float-end">
-                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
+                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}"
+                                                           class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                     </div>
                                                 </div>
                                             {% else %}
@@ -519,7 +543,8 @@
                             <div class="col-12">
                                 <div class="float-end">
                                     {% if desc and (current_user.has_role('admin') or current_user.has_role('root')) %}
-                                        <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}" class="btn btn-warning">Remove deleted comments</a>
+                                        <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}"
+                                           class="btn btn-warning">Remove deleted comments</a>
                                     {% endif %}
                                     {{ wtf.render_field(form.post_comment, button_map={'post_comment': 'primary'}) }}
                                 </div>

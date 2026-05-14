@@ -19,19 +19,19 @@ depends_on = None
 def upgrade():
     # Add column as nullable first so existing rows can be backfilled.
     op.add_column(
-        "user",
+        "users",
         sa.Column("uuid", sa.String(36, collation="utf8_bin"), nullable=True),
     )
 
     # Backfill existing rows using MySQL's UUID() function, which produces
     # the canonical xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx format.
-    op.execute("UPDATE user SET uuid = UUID()")
+    op.execute("UPDATE users SET uuid = UUID()")
 
     # Now enforce NOT NULL and add a unique index.
-    op.alter_column("user", "uuid", nullable=False)
-    op.create_index("ix_user_uuid", "user", ["uuid"], unique=True)
+    op.alter_column("users", "uuid", nullable=False)
+    op.create_index("ix_users_uuid", "users", ["uuid"], unique=True)
 
 
 def downgrade():
-    op.drop_index("ix_user_uuid", table_name="user")
-    op.drop_column("user", "uuid")
+    op.drop_index("ix_users_uuid", table_name="users")
+    op.drop_column("users", "uuid")

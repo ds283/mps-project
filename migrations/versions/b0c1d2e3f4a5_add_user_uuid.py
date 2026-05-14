@@ -28,7 +28,7 @@ def upgrade():
     op.execute("UPDATE users SET uuid = UUID()")
 
     # Now enforce NOT NULL and add a unique index.
-    op.alter_column("users", "uuid", nullable=False)
+    op.alter_column("users", "uuid", existing_type=sa.String(36, collation="utf8_bin"), nullable=False)
     op.create_index("ix_users_uuid", "users", ["uuid"], unique=True)
 
 

@@ -36,6 +36,7 @@ BLEACH_ALLOWED_TAGS = [
     "ul",
     "div",
     "span",
+    "hr",
 ]
 
 BLEACH_ALLOWED_ATTRIBUTES = {

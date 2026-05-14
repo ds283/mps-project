@@ -57,26 +57,28 @@
         <div class="row">
             <div class="col-1"></div>
             <div class="col-10">
-                <div class="d-flex flex-row justify-content-start align-content-start sm-gap-below">
+                <div class="d-flex flex-row justify-content-start align-items-start sm-gap-below">
                     <div class="project-title">
                         {{ title }}
                     </div>
                 </div>
                 {% if project.owner %}
-                    <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
-                        <div>
-                            <div class="project-owner-name">
-                                <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
+                    <div class="d-flex flex-row justify-content-between align-items-start sm-gap-below">
+                        <div class="d-flex flex-column justify-content-start align-items-start">
+                            <div class="d-flex flex-row justify-content-start align-items-baseline gap-3">
+                                <div class="project-owner-name">
+                                    <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
+                                </div>
+                                {% if project.use_supervisor_pool %}
+                                    <span class="ms-2 text-secondary">project organizer</span>
+                                {% endif %}
                             </div>
-                            {% if project.use_supervisor_pool %}
-                                <span class="ms-2 text-secondary">project organizer</span>
-                            {% endif %}
                             {% if project.owner.office %}
                                 <div>{{ project.owner.office }}</div>
                             {% endif %}
                         </div>
                         {% if project.group %}
-                            <div>
+                            <div class="d-flex flex-row justify-content-start align-items-baseline gap-3">
                                 <div class="research-group-banner">{{ project.group.name }}</div>
                                 {% if project.group.website and project.group.website is not none %}
                                     <a class="research-group-webpage" href="{{ project.group.website }}">

@@ -247,6 +247,7 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
     # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until all are resolved.
     if sr.record.has_unresolved_risk_factors:
         sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+        sr.convenor_intervention = True
         return
 
     scheme = sr.workflow.scheme
@@ -301,6 +302,7 @@ def advance_submitter_report(sr: SubmitterReport) -> None:
     # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until all are resolved.
     if sr.record.has_unresolved_risk_factors:
         sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+        sr.convenor_intervention = True
         return
 
     reports = sr.marking_reports.all()
@@ -436,6 +438,10 @@ def register_markingevent_tasks(celery):
                     record_id=record.id,
                     workflow_id=workflow.id,
                     workflow_state=initial_state,
+                    convenor_intervention=(
+                        initial_state
+                        == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    ),
                     grade=None,
                     grade_generated_by_id=None,
                     grade_generated_timestamp=None,
@@ -578,6 +584,7 @@ def register_markingevent_tasks(celery):
                         sr.workflow_state = (
                             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                         )
+                        sr.convenor_intervention = True
                     else:
                         sr.workflow_state = (
                             SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
@@ -628,6 +635,7 @@ def register_markingevent_tasks(celery):
                     sr.workflow_state = (
                         SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                     )
+                    sr.convenor_intervention = True
                     advanced += 1
 
             if advanced > 0:

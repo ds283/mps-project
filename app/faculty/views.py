@@ -3651,6 +3651,7 @@ def moderator_report_form(mod_report_id):
             sr.moderator_accepted_timestamp = datetime.now()
         else:
             sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+            sr.convenor_intervention = True
 
         advance_submitter_report(sr)
 

@@ -876,6 +876,10 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # Set by _check_tolerance_and_grade(); cleared if a convenor resets the workflow state.
     out_of_tolerance = db.Column(db.Boolean(), default=False, nullable=False)
 
+    # sticky audit flag: set True the first time this SubmitterReport enters
+    # REQUIRES_CONVENOR_INTERVENTION; never cleared.
+    convenor_intervention = db.Column(db.Boolean(), default=False, nullable=False)
+
     # which ModeratorReport was accepted (implicitly on first submission, or explicitly by a convenor)?
     # use_alter=True avoids circular FK dependency during table creation since ModeratorReport also
     # holds a FK back to SubmitterReport.

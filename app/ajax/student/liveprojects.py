@@ -9,19 +9,19 @@
 #
 from typing import List
 
-from flask import url_for, get_template_attribute, current_app, render_template
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, render_template, url_for
+from jinja2 import Environment, Template
 
 from ...models import (
-    SelectingStudent,
     LiveProject,
     ProjectClassConfig,
+    SelectingStudent,
     SubmittingStudent,
 )
 
 # language=jinja2
 _meeting = """
-{% if not project.use_supervisor_pool and project.owner is not none %}    
+{% if project.owner is not none %}    
     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
         {% if sel %}
             {% if project.is_confirmed(sel) %}

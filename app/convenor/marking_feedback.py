@@ -299,6 +299,9 @@ def do_close_period(id):
     period.closed_id = current_user.id
     period.closed_timestamp = datetime.now()
 
+    if config.submission_period < config.number_submissions:
+        config.submission_period += 1
+
     try:
         log_db_commit(
             f'Closed period for "{config.name}" / "{period.display_name}"',

@@ -1,106 +1,6 @@
 {% from "student/macros.html" import ranked_selection %}
 {% from "icon_block.html" import icon_block %}
 
-<style>
-/* Deadline pill in card header */
-.sel-deadline-pill {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-/* Notice rows */
-.sel-notice {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  border-radius: 0.5rem;
-  padding: 0.7rem 1rem;
-  margin-bottom: 0.75rem;
-}
-.sel-notice-info {
-  background-color: var(--db-blue-50);
-  border: 1px solid var(--db-blue-200);
-}
-.sel-notice-success {
-  background-color: var(--db-green-50);
-  border: 1px solid var(--db-green-200);
-}
-.sel-notice-icon {
-  font-size: 0.95rem;
-  margin-top: 0.1rem;
-  flex-shrink: 0;
-}
-.sel-notice-info .sel-notice-icon    { color: var(--db-blue-600); }
-.sel-notice-success .sel-notice-icon { color: var(--db-green-600); }
-.sel-notice-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 0.15rem;
-}
-.sel-notice-info .sel-notice-title    { color: var(--db-blue-800); }
-.sel-notice-success .sel-notice-title { color: var(--db-green-800); }
-.sel-notice-text {
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.sel-notice-info .sel-notice-text    { color: var(--db-blue-800); }
-.sel-notice-success .sel-notice-text { color: var(--db-green-800); }
-
-/* Numbered steps */
-.sel-steps { display: flex; flex-direction: column; gap: 0.45rem; margin: 0.5rem 0 0.75rem; }
-.sel-step  { display: flex; gap: 0.6rem; align-items: flex-start; }
-.sel-step-num {
-  width: 1.3rem; height: 1.3rem;
-  border-radius: 50%;
-  background-color: var(--db-blue-50);
-  color: var(--db-blue-800);
-  font-size: 0.7rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-}
-.sel-step-text { font-size: 0.8rem; color: #4B5563; line-height: 1.55; padding-top: 0.1rem; }
-
-/* Buttons */
-.btn-sel-ghost {
-  background: transparent;
-  border: 1px solid #D1D5DB;
-  color: #6B7280;
-}
-.btn-sel-ghost:hover { background: #F9FAFB; }
-
-.btn-outline-sel-blue {
-  background: transparent;
-  border: 1px solid var(--db-blue-600);
-  color: var(--db-blue-600);
-}
-.btn-outline-sel-blue:hover {
-  background: var(--db-blue-50);
-}
-
-.btn-sel-blue {
-  background: var(--db-blue-600);
-  border: 1px solid var(--db-blue-600);
-  color: #fff;
-}
-.btn-sel-blue:hover { background: var(--db-blue-800); border-color: var(--db-blue-800); }
-
-.btn-sel-green {
-  background: var(--db-green-600);
-  border: 1px solid var(--db-green-600);
-  color: #fff;
-}
-.btn-sel-green:hover { background: var(--db-green-800); border-color: var(--db-green-800); }
-.btn-sel-green.disabled, .btn-sel-green:disabled { opacity: 0.55; pointer-events: none; }
-</style>
-
 {% macro open_card(config, sel) %}
     {% set has_deadline = config.live_deadline is defined and config.live_deadline is not none %}
     {% set deadline_text = '' %}
@@ -317,7 +217,7 @@
             </div>
         </div>
     {% endif %}
-    <div class="d-flex justify-content-end align-items-start w-100">
+    <div class="d-flex gap-2 justify-content-end align-items-start w-100">
         {% if sel.has_submission_list %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                 Clear submission

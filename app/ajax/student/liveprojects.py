@@ -21,24 +21,24 @@ from ...models import (
 
 # language=jinja2
 _meeting = """
-{% if project.owner is not none %}    
+{% if project.owner is not none %}
     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
         {% if sel %}
             {% if project.is_confirmed(sel) %}
-                <span class="text-success"><i class="fas fa-check-circle"></i> Confirmed</span>
+                <span class="lp-meeting lp-meeting-confirmed"><i class="fas fa-check-circle"></i> Confirmed</span>
             {% else %}
-                <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Required</span>
+                <span class="lp-meeting lp-meeting-required"><i class="fas fa-exclamation-circle"></i> Required</span>
             {% endif %}
         {% else %}
-           <span class="text-secondary"><i class="fas fa-ban"></i> Not live</span>
+            <span class="lp-meeting lp-meeting-none"><i class="fas fa-ban"></i> Not live</span>
         {% endif %}
     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-        <span class="text-secondary"><i class="fas fa-info-circle"></i> Optional</span>
+        <span class="lp-meeting lp-meeting-optional"><i class="fas fa-info-circle"></i> Optional</span>
     {% else %}
-        <span class="text-secondary"><i class="fas fa-info-circle"></i> Not required</span>
+        <span class="lp-meeting lp-meeting-none"><i class="fas fa-minus-circle"></i> Not required</span>
     {% endif %}
 {% else %}
-    <span class="text-secondary"><i class="fas fa-info-circle"></i> Not required</span>
+    <span class="lp-meeting lp-meeting-none"><i class="fas fa-minus-circle"></i> Not required</span>
 {% endif %}
 """
 
@@ -174,33 +174,33 @@ _owner = """
 # language=jinja2
 _name = """
 {% if sel %}
-    <div><a class="link-primary text-decoration-none" href="{{ url_for("student.selector_view_project", sid=sel.id, pid=project.id) }}"><strong>{{ project.name }}</strong></a></div>
+    <div><a class="lp-title-link" href="{{ url_for("student.selector_view_project", sid=sel.id, pid=project.id) }}">{{ project.name }}</a></div>
 {% else %}
-    <div><strong>{{ project.name }}</strong></div>
+    <div style="font-weight:600;font-size:0.9rem;">{{ project.name }}</div>
 {% endif %}
 {% if is_live and sel and config.uses_selection %}
-    {% if project.is_available(sel) %}
-        <div class="text-success small mt-2"><i class="fas fa-check-circle"></i> Available to select</div>
-    {% else %}
-        {% if project.is_waiting(sel) %}
-            <div class="mt-2"><a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-danger">
-                <i class="fas fa-trash"></i> Cancel confirmation request
-            </a></div>
+    <div class="lp-chip-row">
+        {% if project.is_available(sel) %}
+            <span class="lp-chip lp-chip-available"><i class="fas fa-check-circle"></i> Available</span>
+        {% elif project.is_waiting(sel) %}
+            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-waiting">
+                <i class="fas fa-clock"></i> Awaiting confirmation &mdash; cancel
+            </a>
         {% else %}
-            <div class="mt-2"><a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-primary">
-                <i class="fas fa-plus"></i> Request confirmation
-            </a></div>
+            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-needs-meeting">
+                <i class="fas fa-exclamation-circle"></i> Request confirmation
+            </a>
         {% endif %}
-    {% endif %}
-    {% if sel.is_project_bookmarked(project) %}
-        <div class="mt-2"><a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-secondary">
-           <i class="fas fa-trash"></i> Remove bookmark
-        </a></div>
-    {% else %}
-        <div class="mt-2"><a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-secondarys">
-           <i class="fas fa-plus-circle"></i> Add bookmark
-        </a></div>
-    {% endif %}
+        {% if sel.is_project_bookmarked(project) %}
+            <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-bookmarked">
+                <i class="fas fa-bookmark"></i> Bookmarked
+            </a>
+        {% else %}
+            <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-add-bookmark">
+                <i class="fas fa-plus"></i> Bookmark
+            </a>
+        {% endif %}
+    </div>
 {% endif %}
 """
 
@@ -318,7 +318,7 @@ def submitter_liveprojects_data(sub: SubmittingStudent, projects: List[LiveProje
 
     def _process(p: LiveProject):
         return {
-            "name": '<a class="text-decoration-none" href="{url}">{name}</a>'.format(
+            "name": '<div><a class="lp-title-link" href="{url}">{name}</a></div>'.format(
                 name=p.name,
                 url=url_for("student.submitter_view_project", sid=sub.id, pid=p.id),
             ),

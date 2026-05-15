@@ -1,6 +1,106 @@
 {% from "student/macros.html" import ranked_selection %}
 {% from "icon_block.html" import icon_block %}
 
+<style>
+/* Deadline pill in card header */
+.sel-deadline-pill {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Notice rows */
+.sel-notice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.sel-notice-info {
+  background-color: var(--db-blue-50);
+  border: 1px solid var(--db-blue-200);
+}
+.sel-notice-success {
+  background-color: var(--db-green-50);
+  border: 1px solid var(--db-green-200);
+}
+.sel-notice-icon {
+  font-size: 0.95rem;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+.sel-notice-info .sel-notice-icon    { color: var(--db-blue-600); }
+.sel-notice-success .sel-notice-icon { color: var(--db-green-600); }
+.sel-notice-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+.sel-notice-info .sel-notice-title    { color: var(--db-blue-800); }
+.sel-notice-success .sel-notice-title { color: var(--db-green-800); }
+.sel-notice-text {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.sel-notice-info .sel-notice-text    { color: var(--db-blue-800); }
+.sel-notice-success .sel-notice-text { color: var(--db-green-800); }
+
+/* Numbered steps */
+.sel-steps { display: flex; flex-direction: column; gap: 0.45rem; margin: 0.5rem 0 0.75rem; }
+.sel-step  { display: flex; gap: 0.6rem; align-items: flex-start; }
+.sel-step-num {
+  width: 1.3rem; height: 1.3rem;
+  border-radius: 50%;
+  background-color: var(--db-blue-50);
+  color: var(--db-blue-800);
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.sel-step-text { font-size: 0.8rem; color: #4B5563; line-height: 1.55; padding-top: 0.1rem; }
+
+/* Buttons */
+.btn-sel-ghost {
+  background: transparent;
+  border: 1px solid #D1D5DB;
+  color: #6B7280;
+}
+.btn-sel-ghost:hover { background: #F9FAFB; }
+
+.btn-outline-sel-blue {
+  background: transparent;
+  border: 1px solid var(--db-blue-600);
+  color: var(--db-blue-600);
+}
+.btn-outline-sel-blue:hover {
+  background: var(--db-blue-50);
+}
+
+.btn-sel-blue {
+  background: var(--db-blue-600);
+  border: 1px solid var(--db-blue-600);
+  color: #fff;
+}
+.btn-sel-blue:hover { background: var(--db-blue-800); border-color: var(--db-blue-800); }
+
+.btn-sel-green {
+  background: var(--db-green-600);
+  border: 1px solid var(--db-green-600);
+  color: #fff;
+}
+.btn-sel-green:hover { background: var(--db-green-800); border-color: var(--db-green-800); }
+.btn-sel-green.disabled, .btn-sel-green:disabled { opacity: 0.55; pointer-events: none; }
+</style>
+
 {% macro open_card(config, sel) %}
     {% set has_deadline = config.live_deadline is defined and config.live_deadline is not none %}
     {% set deadline_text = '' %}
@@ -50,11 +150,7 @@
         {% endcall %}
         {% if has_custom_offers %}
             {% call icon_block("info-circle", extra_classes='mt-3') %}
-                {% if sel.has_submitted and sel.has_accepted_offers() %}
-                    <div><strong>You have accepted a custom offer.</strong></div>
-                {% else %}
-                    <div><strong>You have custom offers available.</strong></div>
-                {% endif %}
+                <div><strong>You have custom offers available.</strong></div>
                 <div class="mt-1">
                     Custom offers give you the option of a guaranteed
                     project and supervisor.
@@ -72,11 +168,11 @@
             {% endcall %}
         {% endif %}
         <div class="d-flex gap-2 justify-content-end align-items-start w-100 mt-3">
-            <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
+            <button type="button" class="btn btn-sm btn-sel-ghost video-btn" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
             {% if has_custom_offers %}
-                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-outline-secondary student-dashboard-button">Manage custom offers</a>
+                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-sm btn-outline-sel-blue">Manage custom offers</a>
             {% endif %}
-            <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">Show available projects...</a>
+            <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-sm btn-sel-blue">Show available projects...</a>
         </div>
     </div>
 
@@ -85,28 +181,34 @@
         {% if optional_text and optional_text|length > 0 %}
             {{ optional_text|markdown|bclean|blinkify|safe }}
         {% elif config.uses_selection %}
-            <ul>
-                <li class="text-danger"><strong>This project is optional for your degree programme.</strong></li>
-                <li>If you wish to participate, add bookmarks to keep track of the projects
-                    in which you are interested.</li>
-                <li>Drag-and-drop your bookmarks using the drag handle to rank them in order of preference.</li>
-                <li>
-                    Submit your ranked list when you are happy.
-                    {% if has_deadline and not deadline_is_past %}
-                        It will be possible to make changes up to {{ deadline_text }}.
-                    {% endif %}
-                </li>
-                <li>If you do not submit a selection by the deadline, we will
-                    assume that you do not wish to participate.</li>
-            </ul>
-        {% endif %}
-        {% if config.uses_selection %}
-            <ul>
-                <li>Some projects may require the project supervisor to confirm that
-                    a pre-selection meeting has taken place, or at least been arranged,
-                    before the project becomes available.
-                </li>
-            </ul>
+            <div class="sel-steps">
+                <div class="sel-step">
+                    <span class="sel-step-num">!</span>
+                    <span class="sel-step-text" style="color: var(--db-green-600);"><strong>This project is optional for your degree programme.</strong></span>
+                </div>
+                <div class="sel-step">
+                    <span class="sel-step-num">1</span>
+                    <span class="sel-step-text">If you wish to participate, add bookmarks to keep track of the projects in which you are interested.</span>
+                </div>
+                <div class="sel-step">
+                    <span class="sel-step-num">2</span>
+                    <span class="sel-step-text">Drag-and-drop your bookmarks using the drag handle to rank them in order of preference.</span>
+                </div>
+                <div class="sel-step">
+                    <span class="sel-step-num">3</span>
+                    <span class="sel-step-text">Submit your ranked list when you are happy.{% if has_deadline and not deadline_is_past %} It will be possible to make changes up to {{ deadline_text }}.{% endif %}</span>
+                </div>
+                <div class="sel-step">
+                    <span class="sel-step-num">4</span>
+                    <span class="sel-step-text">If you do not submit a selection by the deadline, we will assume that you do not wish to participate.</span>
+                </div>
+                {% if config.uses_selection %}
+                    <div class="sel-step">
+                        <span class="sel-step-num">5</span>
+                        <span class="sel-step-text">Some projects may require the project supervisor to confirm that a pre-selection meeting has taken place, or at least been arranged, before the project becomes available.</span>
+                    </div>
+                {% endif %}
+            </div>
         {% endif %}
     {% else %}
         {% if sel.is_initial_selection %}
@@ -115,21 +217,20 @@
                 {{ normal_text|markdown|bclean|blinkify|safe }}
             {% elif config.uses_selection %}
                 <h5>This project is mandatory for your degree programme</h5>
-                <ul>
-                    <li>Add bookmarks to keep track of the projects in which you are interested,
-                        then drag-and-drop to rank them in order of preference.
-                    </li>
-                    <li>
-                        Submit your ranked list when you are happy.
-                        {% if has_deadline and not deadline_is_past %}  {# can assume time has been set from above #}
-                            It will be possible to make changes up to {{ deadline_text }}.
-                        {% endif %}
-                    </li>
-                    <li>Some projects may require the project supervisor to confirm that
-                        a pre-selection meeting has taken place, or at least been arranged,
-                        before the project becomes available.
-                    </li>
-                </ul>
+                <div class="sel-steps">
+                    <div class="sel-step">
+                        <span class="sel-step-num">1</span>
+                        <span class="sel-step-text">Add bookmarks to keep track of the projects in which you are interested, then drag-and-drop to rank them in order of preference.</span>
+                    </div>
+                    <div class="sel-step">
+                        <span class="sel-step-num">2</span>
+                        <span class="sel-step-text">Submit your ranked list when you are happy.{% if has_deadline and not deadline_is_past %}  It will be possible to make changes up to {{ deadline_text }}.{% endif %}</span>
+                    </div>
+                    <div class="sel-step">
+                        <span class="sel-step-num">3</span>
+                        <span class="sel-step-text">Some projects may require the project supervisor to confirm that a pre-selection meeting has taken place, or at least been arranged, before the project becomes available.</span>
+                    </div>
+                </div>
             {% endif %}
         {% else %}
             {% set noninitial_text = config.card_text_noninitial %}
@@ -137,9 +238,12 @@
                 {{ noninitial_text|markdown|bclean|blinkify|safe }}
             {% else %}
                 <h5>If you wish to switch supervisors, add bookmarks for each project of interest</h5>
-                <ul>
-                    <li>Drag-and-drop your bookmarks to indicate your order of preference.</li>
-                </ul>
+                <div class="sel-steps">
+                    <div class="sel-step">
+                        <span class="sel-step-num">1</span>
+                        <span class="sel-step-text">Drag-and-drop your bookmarks to indicate your order of preference.</span>
+                    </div>
+                </div>
             {% endif %}
         {% endif %}
     {% endif %}
@@ -166,11 +270,12 @@
         {% set offers = sel.accepted_offers() %}
         {% for offer in offers %}
             {% set project = offer.liveproject %}
-            <div class="alert alert-success mt-3 mb-3">
-                {% call icon_block("check-circle") %}
-                    <div><strong>You have accepted a custom offer.</strong></div>
-                    {% if project is not none %}
-                        <div class="mt-1">
+            <div class="sel-notice sel-notice-success">
+                <i class="fas fa-check-circle sel-notice-icon"></i>
+                <div class="sel-notice-body">
+                    <div class="sel-notice-title">You have accepted a custom offer.</div>
+                    <div class="sel-notice-text">
+                        {% if project is not none %}
                             You have accepted an offer for the project
                             <a class="text-decoration-none"
                                href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.dashboard'), text='home dashboard') }}">
@@ -178,58 +283,53 @@
                             </a>
                             supervised by
                             <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}.
-                        </div>
-                        <div class="mt-1">
                             If you prefer to change your decision, you can decline this project
                             at any point up to the deadline.
-                        </div>
-                    {% else %}
-                        <div class="mt-1">
+                        {% else %}
                             We have detected an issue with your selection.
                             Please contact the project convenor.
-                        </div>
-                    {% endif %}
-                {% endcall %}
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         {% endfor %}
     {% endif %}
     {% if sel.has_submitted %}
-        <div class="alert alert-success mt-3 mb-3">
-            {% call icon_block("check-circle") %}
-                <div><strong>You have submitted a valid selection.</strong></div>
-                <div class="mt-1">
+        <div class="sel-notice sel-notice-success">
+            <i class="fas fa-check-circle sel-notice-icon"></i>
+            <div class="sel-notice-body">
+                <div class="sel-notice-title">You have submitted a valid selection.</div>
+                <div class="sel-notice-text">
                     You may continue to revise and resubmit your list up to the deadline.
-                    <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show
-                        selection...</a>
-                </div>
-                {% if sel.has_sumission_list and sel.submission_time %}
-                    <div class="mt-1">
-                        Last submission received at
+                    <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                    {% if sel.has_sumission_list and sel.submission_time %}
+                        <br>Last submission received at
                         <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
-                    </div>
-                {% endif %}
-            {% endcall %}
+                    {% endif %}
+                </div>
+            </div>
         </div>
     {% else %}
-        <div class="alert alert-secondary mt-3 mb-3">
-            {% call icon_block("info-circle") %}
-                <div><strong>You have not yet submitted your project preferences.</strong></div>
-            {% endcall %}
+        <div class="sel-notice sel-notice-info">
+            <i class="fas fa-info-circle sel-notice-icon"></i>
+            <div class="sel-notice-body">
+                <div class="sel-notice-title">You have not yet submitted your project preferences.</div>
+            </div>
         </div>
     {% endif %}
     <div class="d-flex justify-content-end align-items-start w-100">
         {% if sel.has_submission_list %}
-            <a class="btn btn-outline-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                 Clear submission
             </a>
         {% endif %}
         <a id="P{{ config.id }}-valid-button"
-           class="btn btn-outline-primary {% if not is_valid %}d-none{% endif %} student-dashboard-button"
+           class="btn btn-sm btn-sel-green {% if not is_valid %}d-none{% endif %}"
            href="{{ url_for('student.submit', sid=sel.id) }}">
             {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
         </a>
         <a id="P{{ config.id }}-invalid-button"
-           class="btn btn-outline-primary disabled {% if is_valid %}d-none{% endif %} student-dashboard-button">
+           class="btn btn-sm btn-sel-green disabled {% if is_valid %}d-none{% endif %}">
             {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
         </a>
     </div>
@@ -389,6 +489,17 @@
 
 
 {% macro selection_card(config, sel) %}
+    {% set has_deadline = config.live_deadline is defined and config.live_deadline is not none %}
+    {% set deadline_text = '' %}
+    {% set time_to_deadline_text = '' %}
+    {% set deadline_is_past = false %}
+    {% if has_deadline %}
+        {% set deadline_text = config.live_deadline.strftime("%a %d %b (%Y)") %}
+        {% set time_to_deadline_text = config.time_to_live_deadline %}
+        {% if time_to_deadline_text == 'in the past' %}
+            {% set deadline_is_past = true %}
+        {% endif %}
+    {% endif %}
     {% set ns = namespace(bgclass = '', borderclass = '', textclass = '') %}
     {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
         {% set ns.bgclass = 'bg-primary' %}
@@ -402,15 +513,23 @@
         {# no markup required; formerly panel-default #}
     {% endif %}
     <div class="card {{ ns.borderclass }} mt-3 mb-3">
-        <div class="card-header {{ ns.bgclass }} {{ ns.textclass }}">
-            {% if sub %}
-                <strong>Request to switch projects</strong>
-            {% else %}
-                {% if config.uses_selection %}
-                    <strong>Project selection</strong>
+        <div class="card-header {{ ns.bgclass }} {{ ns.textclass }} d-flex align-items-center justify-content-between">
+            <span>
+                {% if sub %}
+                    <strong>Request to switch projects</strong>
                 {% else %}
-                    <strong>Project list</strong>
+                    {% if config.uses_selection %}
+                        <strong>Project selection</strong>
+                    {% else %}
+                        <strong>Project list</strong>
+                    {% endif %}
                 {% endif %}
+            </span>
+            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and has_deadline and not deadline_is_past %}
+                <span class="sel-deadline-pill">
+                    <i class="fas fa-clock"></i>
+                    Closes {{ deadline_text }} &mdash; {{ time_to_deadline_text }}
+                </span>
             {% endif %}
         </div>
         <div class="card-body">
@@ -441,25 +560,23 @@
                                 <h5>Select at least {{ num_choices }} project{{ numpl }}</h5>
                             {% endif %}
                         {% endif %}
-                        <ul>
-                            <li>
-                                Although we make every effort,
-                                it is not possible to guarantee that you will be assigned
-                                your highest-ranked choice.
-                            </li>
-                        </ul>
+                        <div class="sel-steps">
+                            <div class="sel-step">
+                                <span class="sel-step-num">!</span>
+                                <span class="sel-step-text" style="color: var(--db-green-600);">Although we make every effort, it is not possible to guarantee that you will be assigned your highest-ranked choice.</span>
+                            </div>
+                        </div>
                      {% else %}
-                        <ul>
-                            <li><strong>
-                                If you wish to continue with your existing supervisor,
-                                there is no need to do anything.
-                            </strong> </li>
-                            <li>
-                                To change supervisor, select at least {{ num_choices }} project{{ numpl }} and ensure
-                                your list is
-                                submitted before the deadline.
-                            </li>
-                        </ul>
+                        <div class="sel-steps">
+                            <div class="sel-step">
+                                <span class="sel-step-num">!</span>
+                                <span class="sel-step-text" style="color: var(--db-green-600);"><strong>If you wish to continue with your existing supervisor, there is no need to do anything.</strong></span>
+                            </div>
+                            <div class="sel-step">
+                                <span class="sel-step-num">1</span>
+                                <span class="sel-step-text">To change supervisor, select at least {{ num_choices }} project{{ numpl }} and ensure your list is submitted before the deadline.</span>
+                            </div>
+                        </div>
                     {% endif %}
                 {% endif %}
                 {# render bookmarks #}

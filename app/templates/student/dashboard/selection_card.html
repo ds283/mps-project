@@ -14,16 +14,16 @@
             {% set deadline_is_past = true %}
         {% endif %}
     {% endif %}
-    <div class="alert alert-success">
-        {% call icon_block("info-circle") %}
+    <div class="sel-notice sel-notice-info">
+        <i class="fas fa-info-circle sel-notice-icon"></i>
+        <div class="sel-notice-body">
             {% if config.uses_selection %}
-                <div><strong>
+                <div class="sel-notice-title">
                     Project selection for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                     is now available.
-                </strong></div>
-                {# add data about deadline, if present #}
+                </div>
                 {% if has_deadline %}
-                    <div class="mt-1">You can submit your ranked preference list
+                    <div class="sel-notice-text mt-1">You can submit your ranked preference list
                         at any time up to the deadline
                         {{ deadline_text }}, which is
                         {% if deadline_is_past %}
@@ -33,46 +33,47 @@
                         {% endif %}
                     </div>
                 {% else %}
-                    <div class="mt-1">
+                    <div class="sel-notice-text mt-1">
                         You can submit your ranked preference list at any time.
                     </div>
                 {% endif %}
             {% else %}
-                <div><strong>
+                <div class="sel-notice-title">
                     The project list for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                     is now available.
-                </strong></div>
-                <div class="mt-1">
+                </div>
+                <div class="sel-notice-text mt-1">
                     This project list is for information only. You do not need to submit
                     a list of project choices using this website.
                 </div>
             {% endif %}
-        {% endcall %}
-        {% if has_custom_offers %}
-            {% call icon_block("info-circle", extra_classes='mt-3') %}
-                <div><strong>You have custom offers available.</strong></div>
-                <div class="mt-1">
-                    Custom offers give you the option of a guaranteed
-                    project and supervisor.
+            {% if has_custom_offers %}
+                <div class="sel-notice-title mt-3">You have custom offers available.</div>
+                <div class="sel-notice-text mt-1">
+                    Custom offers give you the option of a guaranteed project and supervisor.
                 </div>
-                <div class="mt-1">
-                    Use the <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}">Manage custom offers</a> button
+                <div class="sel-notice-text mt-1">
+                    Use the <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}">Manage custom
+                    offers</a> button
                     to accept or decline offers.
-                    You can only accept one offer, but you can change your mind
-                    up to the deadline.
+                    You can only accept one offer, but you can change your mind up to the deadline.
                 </div>
-                <div class="mt-1">
+                <div class="sel-notice-text mt-1">
                     If you prefer not to accept any custom offers, you can decline and
                     submit a list of ranked projects in the normal way.
                 </div>
-            {% endcall %}
-        {% endif %}
-        <div class="d-flex gap-2 justify-content-end align-items-start w-100 mt-3">
-            <button type="button" class="btn btn-sm btn-sel-ghost video-btn" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
-            {% if has_custom_offers %}
-                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-sm btn-outline-sel-blue">Manage custom offers</a>
             {% endif %}
-            <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-sm btn-sel-blue">Show available projects...</a>
+            <div class="d-flex gap-2 justify-content-end align-items-start w-100 mt-3">
+                <button type="button" class="btn btn-sm btn-sel-ghost video-btn" data-bs-toggle="modal"
+                        data-bs-target="#PanoptoModal">Show video help
+                </button>
+                {% if has_custom_offers %}
+                    <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}"
+                       class="btn btn-sm btn-outline-sel-blue">Manage custom offers</a>
+                {% endif %}
+                <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-sm btn-sel-blue">Show
+                    available projects...</a>
+            </div>
         </div>
     </div>
 
@@ -96,7 +97,9 @@
                 </div>
                 <div class="sel-step">
                     <span class="sel-step-num">3</span>
-                    <span class="sel-step-text">Submit your ranked list when you are happy.{% if has_deadline and not deadline_is_past %} It will be possible to make changes up to {{ deadline_text }}.{% endif %}</span>
+                    <span class="sel-step-text">Submit your ranked list when you are happy.
+                        {% if has_deadline and not deadline_is_past %} It will be possible to make changes up to
+                            {{ deadline_text }}.{% endif %}</span>
                 </div>
                 <div class="sel-step">
                     <span class="sel-step-num">4</span>
@@ -124,7 +127,9 @@
                     </div>
                     <div class="sel-step">
                         <span class="sel-step-num">2</span>
-                        <span class="sel-step-text">Submit your ranked list when you are happy.{% if has_deadline and not deadline_is_past %}  It will be possible to make changes up to {{ deadline_text }}.{% endif %}</span>
+                        <span class="sel-step-text">Submit your ranked list when you are happy.
+                            {% if has_deadline and not deadline_is_past %}  It will be possible to make changes up to
+                                {{ deadline_text }}.{% endif %}</span>
                     </div>
                     <div class="sel-step">
                         <span class="sel-step-num">3</span>
@@ -151,20 +156,24 @@
 
 {% macro show_submission_status(config, sel) %}
     {% set is_valid, messages = sel.is_valid_selection %}
-    <div class="vertical-top mt-3 mb-3">
-        <ul class="list-group w-100" id="P{{ config.id }}-status-list">
-            {% for message in messages %}
-                <li class="list-group-item {% if is_valid %}list-group-item-success{% else %}list-group-item-danger{% endif %}">
-                    {% if not is_valid %}
-                        {% call icon_block("exclamation-circle") %}
-                            <div>{{ message|safe }}</div>
-                        {% endcall %}
-                    {% else %}
-                        {{ message|safe }}
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
+    <div class="mt-3 mb-3" id="P{{ config.id }}-status-list">
+        {% for message in messages %}
+            {% if is_valid %}
+                <div class="sel-notice sel-notice-success mb-2">
+                    <i class="fas fa-check-circle sel-notice-icon"></i>
+                    <div class="sel-notice-body">
+                        <div class="sel-notice-title">{{ message|safe }}</div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="sel-notice sel-notice-danger mb-2">
+                    <i class="fas fa-exclamation-circle sel-notice-icon"></i>
+                    <div class="sel-notice-body">
+                        <div class="sel-notice-title">{{ message|safe }}</div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
     </div>
     {% if sel.has_accepted_offers() %}
         {% set offers = sel.accepted_offers() %}
@@ -201,7 +210,8 @@
                 <div class="sel-notice-title">You have submitted a valid selection.</div>
                 <div class="sel-notice-text">
                     You may continue to revise and resubmit your list up to the deadline.
-                    <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                    <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show
+                        selection...</a>
                     {% if sel.has_sumission_list and sel.submission_time %}
                         <br>Last submission received at
                         <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
@@ -229,7 +239,7 @@
             {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
         </a>
         <a id="P{{ config.id }}-invalid-button"
-           class="btn btn-sm btn-sel-green disabled {% if is_valid %}d-none{% endif %}">
+           class="btn btn-sm btn-sel-ghost disabled {% if is_valid %}d-none{% endif %}">
             {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
         </a>
     </div>
@@ -260,7 +270,8 @@
                     <ul>
                         <li>
                             Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.
-                            <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                            <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show
+                                selection...</a>
                         </li>
                     </ul>
                 {% else %}
@@ -283,12 +294,13 @@
         {% else %}
             <ul>
                 <li><strong>You did not submit a valid selection before the deadline.</strong></li>
-                <li>You will be allocated a project  after the main matching calculation has been performed.</li>
+                <li>You will be allocated a project after the main matching calculation has been performed.</li>
             </ul>
         {% endif %}
     {% endif %}
     <div class="d-flex justify-content-end mt-2">
-        <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">View project list...</a>
+        <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}"
+           class="btn btn-outline-success student-dashboard-button">View project list...</a>
     </div>
 {% endmacro %}
 
@@ -296,7 +308,7 @@
 {% macro render_bookmarks(config, sel) %}
     <div class="list-group" id="P{{ config.id }}-bookmarks">
         {% for bookmark in sel.ordered_bookmarks %}
-        {% set project = bookmark.liveproject %}
+            {% set project = bookmark.liveproject %}
             <div id="P{{ config.id }}-{{ project.id }}" data-id="{{ project.id }}"
                  class="row vertical-top list-group-item {% if config.uses_selection and (loop.index <= sel.number_choices) %}selected-project{% else %}deselected-project{% endif %}">
                 <div class="col-1">
@@ -343,7 +355,8 @@
                                         Meeting confirmation requested
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
                                             Cancel request
                                         </a>
                                     </div>
@@ -356,7 +369,8 @@
                                         Requires meeting confirmation
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
                                             Request confirmation
                                         </a>
                                     </div>
@@ -466,7 +480,7 @@
                                 <span class="sel-step-text" style="color: var(--db-green-600);">Although we make every effort, it is not possible to guarantee that you will be assigned your highest-ranked choice.</span>
                             </div>
                         </div>
-                     {% else %}
+                    {% else %}
                         <div class="sel-steps">
                             <div class="sel-step">
                                 <span class="sel-step-num">!</span>
@@ -493,9 +507,12 @@
                     {% call icon_block("info-circle") %}
                         <div>
                             {% if config.uses_selection %}
-                                <strong>Project selection for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} is not yet available.</strong>
+                                <strong>Project selection for
+                                    {{ config.select_year_a }}&ndash;{{ config.select_year_b }} is not yet
+                                    available.</strong>
                             {% else %}
-                                <strong>The project list for {{ config.select_year_a}}&ndash;{{ config.select_year_b }} is not yet available.</strong>
+                                <strong>The project list for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
+                                    is not yet available.</strong>
                             {% endif %}
                         </div>
                     {% endcall %}

@@ -17,6 +17,127 @@
 {% endblock %}
 
 {% block content %}
+<style>
+/* Page title */
+.sp-title {
+    font-size: 2rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--bs-body-color);
+    margin-bottom: 1rem;
+}
+
+/* Owner row */
+.sp-owner-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.35rem;
+}
+.sp-owner-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--db-blue-50);
+    color: var(--db-blue-800);
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--db-blue-200);
+}
+.sp-owner-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--bs-body-color);
+}
+.sp-role-pill {
+    background: var(--db-blue-50);
+    color: var(--db-blue-800);
+    border: 1px solid var(--db-blue-200);
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.55rem;
+}
+.sp-group-chip {
+    background: var(--db-green-50);
+    color: var(--db-green-800);
+    border: 1px solid var(--db-green-200);
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.2rem 0.65rem;
+}
+.sp-group-link {
+    font-size: 0.78rem;
+    color: var(--db-blue-600);
+    text-decoration: none;
+}
+.sp-group-link:hover { text-decoration: underline; }
+
+/* Key facts card */
+.sp-details-section { margin-top: 1.5rem; margin-bottom: 1rem; }
+.sp-keyfacts-card {
+    border: 1px solid var(--db-blue-200);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+.sp-keyfacts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    background: var(--db-blue-100);
+    border-bottom: 1px solid var(--db-blue-200);
+}
+.sp-keyfacts-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--db-blue-800);
+}
+.sp-keyfacts-actions { display: flex; gap: 0.5rem; }
+.sp-facts-table { padding: 0.25rem 1rem 0.5rem; }
+.sp-fact-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--db-blue-100);
+}
+.sp-fact-row:last-child { border-bottom: none; }
+.sp-fact-label {
+    min-width: 12rem;
+    width: 12rem;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--db-blue-800);
+    font-weight: 500;
+    padding-top: 0.15rem;
+}
+.sp-fact-value { flex: 1; font-size: 0.85rem; }
+
+/* Description section */
+.sp-description-section { margin-top: 1.5rem; }
+.sp-resources-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--db-green-800);
+    border-top: 1px solid var(--db-green-200);
+    padding-top: 0.75rem;
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+/* Return link */
+.sp-return-link-a {
+    font-size: 0.85rem;
+    color: var(--db-blue-600);
+}
+</style>
     {% set is_approver = current_user.has_role('project_approver') %}
     {% set lifecycle = sel.config.selector_lifecycle if sel is defined and sel is not none else none %}
     {% set selections_open = (lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) if lifecycle is defined and lifecycle is not none else false %}
@@ -58,86 +179,79 @@
             <div class="col-1"></div>
             <div class="col-10">
                 <div class="d-flex flex-row justify-content-start align-items-start sm-gap-below">
-                    <div class="project-title">
+                    <div class="project-title sp-title">
                         {{ title }}
                     </div>
                 </div>
                 {% if project.owner %}
-                    <div class="d-flex flex-row justify-content-between align-items-start sm-gap-below">
-                        <div class="d-flex flex-column justify-content-start align-items-start">
-                            <div class="d-flex flex-row justify-content-start align-items-baseline gap-3">
-                                <div class="project-owner-name">
-                                    <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
-                                </div>
-                                {% if project.use_supervisor_pool %}
-                                    <span class="ms-2 text-secondary">project organizer</span>
-                                {% endif %}
-                            </div>
-                            {% if project.owner.office %}
-                                <div>{{ project.owner.office }}</div>
-                            {% endif %}
-                        </div>
-                        {% if project.group %}
-                            <div class="d-flex flex-row justify-content-start align-items-baseline gap-3">
-                                <div class="research-group-banner">{{ project.group.name }}</div>
-                                {% if project.group.website and project.group.website is not none %}
-                                    <a class="research-group-webpage" href="{{ project.group.website }}">
-                                        Research group website <i class="fas fa-external-link"></i>
-                                    </a>
-                                {% endif %}
-                            </div>
+                    <div class="sp-owner-row">
+                        <div class="sp-owner-avatar">{{ project.owner.user.initials }}</div>
+                        <span class="sp-owner-name">{{ project.owner.user.name }}</span>
+                        {% if project.use_supervisor_pool %}
+                            <span class="sp-role-pill">project organizer</span>
                         {% endif %}
                     </div>
+                    {% if project.owner.office %}
+                        <div class="mb-1">{{ project.owner.office }}</div>
+                    {% endif %}
+                    {% if project.group %}
+                        <div class="d-flex flex-row justify-content-start align-items-baseline gap-3 mb-2">
+                            <span class="sp-group-chip">{{ project.group.name }}</span>
+                            {% if project.group.website and project.group.website is not none %}
+                                <a class="sp-group-link" href="{{ project.group.website }}">
+                                    Research group website <i class="fas fa-external-link"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                     <hr class="intro-divider">
                 {% endif %}
                 {% if project.use_supervisor_pool %}
-                    <div class="alert alert-info">
-                        {% call icon_block("info-circle") %}
+                    <div class="sel-notice sel-notice-info">
+                        <i class="fas fa-info-circle sel-notice-icon"></i>
+                        <div class="sel-notice-body">
                             {% if project.owner %}
-                                <div class="h5"><strong>This project is organized by <i
-                                        class="fas fa-user"></i> {{ project.owner.user.name }}, but will be supervised
-                                    by another member of staff.</strong></div>
+                                <div class="sel-notice-title">This project is organized by <i class="fas fa-user"></i> {{ project.owner.user.name }}, but will be supervised by another member of staff.</div>
                             {% else %}
-                                <div class="h5"><strong>This project does not have a single defined supervisor.</strong>
-                                </div>
+                                <div class="sel-notice-title">This project does not have a single defined supervisor.</div>
                             {% endif %}
-                            <div class="mt-1">
+                            <div class="sel-notice-text mt-1">
                                 You will be allocated a suitable supervisor.
                             </div>
                             {% if desc and project.enforce_capacity and desc.capacity and desc.capacity > 0 %}
-                                <div class="mt-1">
+                                <div class="sel-notice-text mt-1">
                                     You may be supervised together with a group of up
                                     to {{ desc.capacity }} students
                                     working on the same project.
                                 </div>
                             {% else %}
-                                <div class="mt-1">
+                                <div class="sel-notice-text mt-1">
                                     You may be supervised together with a group of other students
                                     working on the same project.
                                 </div>
                             {% endif %}
-                        {% endcall %}
+                        </div>
                     </div>
                 {% endif %}
 
                 {% if hidden %}
-                    <div class="alert alert-danger mt-1 mb-1">
-                        {% call icon_block("exclamation-circle") %}
-                            <div><strong>
-                                This project is not available for selection.
-                            </strong></div>
-                            <div class="mt-1">
+                    <div class="sel-notice sel-notice-danger mt-1 mb-1">
+                        <i class="fas fa-exclamation-circle sel-notice-icon"></i>
+                        <div class="sel-notice-body">
+                            <div class="sel-notice-title">This project is not available for selection.</div>
+                            <div class="sel-notice-text mt-1">
                                 This project has been marked as unavailable by the convenor.
                                 Please do not bookmark or select it.
                             </div>
-                        {% endcall %}
+                        </div>
                     </div>
                 {% endif %}
 
                 {% if archived %}
-                    <div class="alert alert-warning mt-1 mb-1">
-                        {% call icon_block("info-circle") %}
-                            <div><strong>
+                    <div class="sel-notice sel-notice-warning mt-1 mb-1">
+                        <i class="fas fa-clock sel-notice-icon"></i>
+                        <div class="sel-notice-body">
+                            <div class="sel-notice-title">
                                 This is an archived description that refers to a project offered
                                 for selection in
                                 {% if project.config is not none %}
@@ -146,213 +260,205 @@
                                 {% else %}
                                     a previous academic year.
                                 {% endif %}
-                            </strong></div>
-                            <div class="mt-1">
+                            </div>
+                            <div class="sel-notice-text mt-1">
                                 In the current academic year the project might no longer be offered,
                                 or its description and content may have changed.
                             </div>
-                        {% endcall %}
+                        </div>
                     </div>
                 {% endif %}
 
-                <div class="card border-primary mt-3 mb-3">
-                    <div class="card-header bg-primary text-white">Project details</div>
-                    <div class="card-body">
-                        <div class="card mt-3 mb-3 ataglance-background">
-                            <div class="card-header">
-                                <div class="row vertical-align">
-                                    <div class="col-4">
-                                        Key facts
-                                    </div>
-                                    <div class="col-8">
-                                        {% if not hidden and sel and selections_open %}
-                                            <div class="float-end">
-                                                {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
-                                                    <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-                                                       class="btn btn-secondary btn-sm">
-                                                        Remove bookmark
-                                                    </a>
-                                                {% else %}
-                                                    <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-                                                       class="btn btn-secondary btn-sm">
-                                                        Add bookmark
-                                                    </a>
-                                                {% endif %}
-                                                {% if not project.is_available(sel) %}
-                                                    {% if project.is_waiting(sel) %}
-                                                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}"
-                                                           class="btn btn-warning btn-sm">
-                                                            Cancel meeting confirmation request
-                                                        </a>
-                                                    {% else %}
-                                                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}"
-                                                           class="btn btn-success btn-sm">
-                                                            Request meeting confirmation
-                                                        </a>
-                                                    {% endif %}
-                                                {% endif %}
-                                            </div>
+                <div class="sp-details-section">
+                    <div class="sp-keyfacts-card">
+                        <div class="sp-keyfacts-header">
+                            <span class="sp-keyfacts-title">Key facts</span>
+                            <div class="sp-keyfacts-actions">
+                                {% if not hidden and sel and selections_open %}
+                                    {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
+                                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
+                                           class="btn btn-outline-sel-blue btn-sm">
+                                            Remove bookmark
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
+                                           class="btn btn-outline-sel-blue btn-sm">
+                                            Add bookmark
+                                        </a>
+                                    {% endif %}
+                                    {% if not project.is_available(sel) %}
+                                        {% if project.is_waiting(sel) %}
+                                            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}"
+                                               class="btn btn-sel-ghost btn-sm">
+                                                Cancel meeting confirmation request
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}"
+                                               class="btn btn-sel-green btn-sm">
+                                                Request meeting confirmation
+                                            </a>
                                         {% endif %}
-                                    </div>
-                                </div>
+                                    {% endif %}
+                                {% endif %}
                             </div>
-                            <div class="card-body">
-                                <div class="container-fluid">
-                                    {# show sign-up details if being viewed by a live student #}
-                                    {% if sel %}
-                                        <div class="row vertical-top">
-                                            <div class="col-3">Sign-up details</div>
-                                            <div class="col-9">
-                                                <div class="sm-gap-below">
-                                                    {% if project.owner is not none %}
-                                                        {% if project.owner.sign_off_students and project.meeting_reqd == project.MEETING_REQUIRED %}
-                                                            {% if project.is_confirmed(sel) %}
-                                                                <span class="badge bg-primary project-label"><i
-                                                                        class="fas fa-check"></i> Meeting confirmed</span>
-                                                            {% else %}
-                                                                <span class="badge bg-danger project-label"><i
-                                                                        class="fas fa-times"></i> Meeting required</span>
-                                                            {% endif %}
-                                                        {% elif project.owner.sign_off_students and project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                                            <span class="badge bg-warning text-dark project-label">Meeting optional</span>
-                                                        {% else %}
-                                                            <span class="badge bg-secondary project-label"><i
-                                                                    class="fas fa-check"></i> Meeting not required</span>
-                                                        {% endif %}
-                                                        {% if selections_open and project.is_available(sel) %}
-                                                            <span class="badge bg-success project-label"><i
-                                                                    class="fas fa-check"></i> Available</span>
-                                                        {% endif %}
+                        </div>
+                        <div class="sp-facts-table">
+                            {# show sign-up details if being viewed by a live student #}
+                            {% if sel %}
+                                <div class="sp-fact-row">
+                                    <div class="sp-fact-label">Sign-up details</div>
+                                    <div class="sp-fact-value">
+                                        <div class="sm-gap-below">
+                                            {% if project.owner is not none %}
+                                                {% if project.owner.sign_off_students and project.meeting_reqd == project.MEETING_REQUIRED %}
+                                                    {% if project.is_confirmed(sel) %}
+                                                        <span class="badge bg-primary project-label"><i
+                                                                class="fas fa-check"></i> Meeting confirmed</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger project-label"><i
+                                                                class="fas fa-times"></i> Meeting required</span>
                                                     {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if selections_open and project.show_popularity_data %}
-                                        <div class="row sm-gap-below vertical-top">
-                                            <div class="col-3">Popularity</div>
-                                            <div class="col-9">
-                                                {{ simple_label(project.format_popularity_label(), user_classes='project-label') }}
-                                                {{ simple_label(project.format_bookmarks_label(), user_classes='project-label') }}
-                                                {{ simple_label(project.format_selections_label(), user_classes='project-label') }}
-                                            </div>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if project.tags and project.tags.first() %}
-                                        <div class="row sm-gap-below vertical-top">
-                                            <div class="col-3">Subject keywords</div>
-                                            <div class="col-9">
-                                                {% for tag in project.ordered_tags %}
-                                                    {% if tag.is_active %}
-                                                        {{ simple_label(tag.make_label(), user_classes="project-label") }}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if project.skills and project.skills.first() %}
-                                        <div class="row sm-gap-below vertical-top">
-                                            <div class="col-3">Transferable skills</div>
-                                            <div class="col-9">
-                                                {% for skill in project.ordered_skills %}
-                                                    {% if skill.is_active %}
-                                                        {{ simple_label(skill.make_label(), user_classes="project-label") }}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if project.programmes and project.programmes.first() %}
-                                        <div class="row sm-gap-below vertical-top">
-                                            <div class="col-3">Prefer degree programmes</div>
-                                            <div class="col-9">
-                                                {% for programme in project.ordered_programmes %}
-                                                    {% if programme.active %}
-                                                        {{ simple_label(programme.make_label(), user_classes="project-label") }}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if desc %}
-                                        {% set modules = desc.ordered_modules.all() if desc is not none else none %}
-                                        {% if modules and modules|length > 0 %}
-                                            <div class="row sm-gap-below vertical-top">
-                                                <div class="col-3">Recommended modules</div>
-                                                <div class="col-9">
-                                                    {% for module in modules %}
-                                                        {% if module.active %}
-                                                            {{ simple_label(module.make_label(), user_classes="project-label") }}
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    {% if sel and desc %}
-                                                        {% if not sel.satisfies_recommended(desc) %}
-                                                            <p>This project has recommended modules that are not
-                                                                available
-                                                                on your programme. This does not prevent you from
-                                                                applying for
-                                                                the project, but you will need to discuss its
-                                                                suitability
-                                                                with the supervisor.</p>
-                                                        {% endif %}
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        {% endif %}
-                                    {% endif %}
-
-                                    <div class="row vertical-top">
-                                        <div class="col-3">Supervision team</div>
-                                        <div class="col-9">
-                                            {% if desc %}
-                                                {% for role in desc.team %}
-                                                    {% set style = role.make_CSS_style() %}
-                                                    <span class="badge bg-secondary project-label"
-                                                          {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
-                                                {% endfor %}
+                                                {% elif project.owner.sign_off_students and project.meeting_reqd == project.MEETING_OPTIONAL %}
+                                                    <span class="badge bg-warning text-dark project-label">Meeting optional</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary project-label"><i
+                                                            class="fas fa-check"></i> Meeting not required</span>
+                                                {% endif %}
+                                                {% if selections_open and project.is_available(sel) %}
+                                                    <span class="badge bg-success project-label"><i
+                                                            class="fas fa-check"></i> Available</span>
+                                                {% endif %}
                                             {% endif %}
                                         </div>
                                     </div>
                                 </div>
+                            {% endif %}
+
+                            {% if selections_open and project.show_popularity_data %}
+                                <div class="sp-fact-row">
+                                    <div class="sp-fact-label">Popularity</div>
+                                    <div class="sp-fact-value">
+                                        {{ simple_label(project.format_popularity_label(), user_classes='project-label') }}
+                                        {{ simple_label(project.format_bookmarks_label(), user_classes='project-label') }}
+                                        {{ simple_label(project.format_selections_label(), user_classes='project-label') }}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if project.tags and project.tags.first() %}
+                                <div class="sp-fact-row">
+                                    <div class="sp-fact-label">Subject keywords</div>
+                                    <div class="sp-fact-value">
+                                        {% for tag in project.ordered_tags %}
+                                            {% if tag.is_active %}
+                                                {{ simple_label(tag.make_label(), user_classes="project-label") }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if project.skills and project.skills.first() %}
+                                <div class="sp-fact-row">
+                                    <div class="sp-fact-label">Transferable skills</div>
+                                    <div class="sp-fact-value">
+                                        {% for skill in project.ordered_skills %}
+                                            {% if skill.is_active %}
+                                                {{ simple_label(skill.make_label(), user_classes="project-label") }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if project.programmes and project.programmes.first() %}
+                                <div class="sp-fact-row">
+                                    <div class="sp-fact-label">Prefer degree programmes</div>
+                                    <div class="sp-fact-value">
+                                        {% for programme in project.ordered_programmes %}
+                                            {% if programme.active %}
+                                                {{ simple_label(programme.make_label(), user_classes="project-label") }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if desc %}
+                                {% set modules = desc.ordered_modules.all() if desc is not none else none %}
+                                {% if modules and modules|length > 0 %}
+                                    <div class="sp-fact-row">
+                                        <div class="sp-fact-label">Recommended modules</div>
+                                        <div class="sp-fact-value">
+                                            {% for module in modules %}
+                                                {% if module.active %}
+                                                    {{ simple_label(module.make_label(), user_classes="project-label") }}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if sel and desc %}
+                                                {% if not sel.satisfies_recommended(desc) %}
+                                                    <p>This project has recommended modules that are not
+                                                        available
+                                                        on your programme. This does not prevent you from
+                                                        applying for
+                                                        the project, but you will need to discuss its
+                                                        suitability
+                                                        with the supervisor.</p>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+
+                            <div class="sp-fact-row">
+                                <div class="sp-fact-label">Supervision team</div>
+                                <div class="sp-fact-value">
+                                    {% if desc %}
+                                        {% for role in desc.team %}
+                                            {% set style = role.make_CSS_style() %}
+                                            <span class="badge bg-secondary project-label"
+                                                  {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        {% if desc.review_only %}
-                            <div class="alert alert-info mt-3 mb-3">
-                                {% call icon_block("info-circle") %}
-                                    <div><strong>This project is a literature review.</strong></div>
-                                    <div class="mt-1">
-                                        Literature reviews are marked in the same way as conventional projects.
-                                        An outstanding original literature review will attract the same credit
-                                        as any other outstanding project.
-                                    </div>
-                                    <div class="mt-1">
-                                        However,
-                                        depending on the technicality of the subject,
-                                        it may be more challenging to produce a review at the
-                                        required level.
-                                    </div>
-                                    <div class="mt-1">
-                                        Marks for literature
-                                        review projects are <strong>not capped</strong>
-                                        as a matter of principle.
-                                    </div>
-                                {% endcall %}
+                    {% if desc.review_only %}
+                        <div class="sel-notice sel-notice-info mt-3 mb-3">
+                            <i class="fas fa-info-circle sel-notice-icon"></i>
+                            <div class="sel-notice-body">
+                                <div class="sel-notice-title">This project is a literature review.</div>
+                                <div class="sel-notice-text mt-1">
+                                    Literature reviews are marked in the same way as conventional projects.
+                                    An outstanding original literature review will attract the same credit
+                                    as any other outstanding project.
+                                </div>
+                                <div class="sel-notice-text mt-1">
+                                    However,
+                                    depending on the technicality of the subject,
+                                    it may be more challenging to produce a review at the
+                                    required level.
+                                </div>
+                                <div class="sel-notice-text mt-1">
+                                    Marks for literature
+                                    review projects are <strong>not capped</strong>
+                                    as a matter of principle.
+                                </div>
                             </div>
-                        {% endif %}
+                        </div>
+                    {% endif %}
 
-                        <h4>Description</h4>
+                    <div class="sp-description-section">
                         {% if desc %}
                             <div class="project-description">{{ desc.description|latextomarkdown|markdown|bclean|blinkify|safe }}</div>
 
                             {% if desc.reading and desc.reading is not none %}
-                                <hr class="intro-divider">
-                                <p><strong>Recommended resources</strong></p>
+                                <div class="sp-resources-header">
+                                    <i class="fas fa-book-open" aria-hidden="true"></i> Recommended resources
+                                </div>
                                 {{ desc.reading|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% endif %}
                         {% else %}
@@ -555,9 +661,11 @@
                     </div>
                 {% endif %}
                 {% if text and url %}
-                    <a class="text-decoration-none" href="{{ url }}">
-                        <i class="fas fa-backward"></i> Return to {{ text }}
-                    </a>
+                    <div class="sp-return-link mt-3">
+                        <a class="text-decoration-none sp-return-link-a" href="{{ url }}">
+                            <i class="fas fa-backward"></i> Return to {{ text }}
+                        </a>
+                    </div>
                 {% endif %}
             </div>
             <div class="col-1"></div>

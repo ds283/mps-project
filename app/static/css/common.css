@@ -558,17 +558,26 @@ p.copyright {
   padding: 0.7rem 1rem;
   margin-bottom: 0.75rem;
 }
-.sel-notice-info    { background-color: var(--db-blue-50);  border: 1px solid var(--db-blue-200); }
-.sel-notice-success { background-color: var(--db-green-50); border: 1px solid var(--db-green-200); }
+.sel-notice-info    { background-color: var(--db-blue-50);   border: 1px solid var(--db-blue-200); }
+.sel-notice-success { background-color: var(--db-green-50);  border: 1px solid var(--db-green-200); }
+.sel-notice-danger  { background-color: var(--db-orange-50); border: 1px solid var(--db-orange-200); }
+.sel-notice-warning { background-color: var(--bs-warning-bg-subtle); border: 1px solid var(--bs-warning-border-subtle); }
 .sel-notice-icon { font-size: 0.95rem; margin-top: 0.1rem; flex-shrink: 0; }
 .sel-notice-info .sel-notice-icon    { color: var(--db-blue-600); }
 .sel-notice-success .sel-notice-icon { color: var(--db-green-600); }
+.sel-notice-danger .sel-notice-icon  { color: var(--db-orange-600); }
+.sel-notice-warning .sel-notice-icon { color: var(--bs-warning-text-emphasis); }
+.sel-notice-body { flex: 1; min-width: 0; }
 .sel-notice-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.15rem; }
 .sel-notice-info .sel-notice-title    { color: var(--db-blue-800); }
 .sel-notice-success .sel-notice-title { color: var(--db-green-800); }
+.sel-notice-danger .sel-notice-title  { color: var(--db-orange-800); }
+.sel-notice-warning .sel-notice-title { color: var(--bs-warning-text-emphasis); }
 .sel-notice-text { font-size: 0.8rem; line-height: 1.5; }
 .sel-notice-info .sel-notice-text    { color: var(--db-blue-800); }
 .sel-notice-success .sel-notice-text { color: var(--db-green-800); }
+.sel-notice-danger .sel-notice-text  { color: var(--db-orange-800); }
+.sel-notice-warning .sel-notice-text { color: var(--bs-warning-text-emphasis); }
 
 /* Numbered steps */
 .sel-steps { display: flex; flex-direction: column; gap: 0.45rem; margin: 0.5rem 0 0.75rem; }
@@ -592,8 +601,13 @@ p.copyright {
 .btn-outline-sel-blue:hover { background: var(--db-blue-50); }
 .btn-sel-blue { background: var(--db-blue-600); border: 1px solid var(--db-blue-600); color: #fff; }
 .btn-sel-blue:hover { background: var(--db-blue-800); border-color: var(--db-blue-800); }
-.btn-sel-green { background: var(--db-green-600); border: 1px solid var(--db-green-600); color: #fff; }
-.btn-sel-green:hover { background: var(--db-green-800); border-color: var(--db-green-800); }
+.btn-sel-green {
+  --bs-btn-bg: var(--db-green-600); --bs-btn-border-color: var(--db-green-600); --bs-btn-color: #fff;
+  --bs-btn-hover-bg: var(--db-green-800); --bs-btn-hover-border-color: var(--db-green-800); --bs-btn-hover-color: #fff;
+  --bs-btn-active-bg: var(--db-green-800); --bs-btn-active-border-color: var(--db-green-800);
+  background-color: var(--db-green-600); border-color: var(--db-green-600); color: #fff;
+}
+.btn-sel-green:hover { background-color: var(--db-green-800); border-color: var(--db-green-800); color: #fff; }
 .btn-sel-green.disabled, .btn-sel-green:disabled { opacity: 0.55; pointer-events: none; }
 
 /* ===== Student browse-projects table ===== */

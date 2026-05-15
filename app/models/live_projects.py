@@ -110,7 +110,9 @@ class LiveProject(
     id = db.Column(db.Integer(), primary_key=True)
 
     # key to ProjectClassConfig record that identifies the year and pclass
-    config_id = db.Column(db.Integer(), db.ForeignKey("project_class_config.id"), index=True)
+    config_id = db.Column(
+        db.Integer(), db.ForeignKey("project_class_config.id"), index=True
+    )
     config = db.relationship(
         "ProjectClassConfig",
         uselist=False,
@@ -161,8 +163,8 @@ class LiveProject(
         if self.hidden:
             return False
 
-        # generic projects are always available
-        if self.use_supervisor_pool:
+        # generic projects (owned by the convenor) are always available
+        if self.owner is None:
             return True
 
         # if student doesn't satisfy recommended modules, sign-off is required by default (whether or not

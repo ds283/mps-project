@@ -13,6 +13,9 @@
             <div class="mt-1">
                 {{ report_status(period) }}
             </div>
+            <div class="mt-2 small text-body-secondary">
+                <i class="fas fa-lock fa-fw me-1"></i>Period closure is not available while marking events are active.
+            </div>
         {% endcall %}
     </div>
 {% endmacro %}

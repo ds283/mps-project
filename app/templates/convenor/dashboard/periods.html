@@ -26,7 +26,7 @@
 
                     <div class="card mt-3 mb-3 {% if is_current %}border-primary{% else %}border-secondary{% endif %}">
                         <div class="card-header d-flex flex-row justify-content-between align-items-center py-2
-                             {% if is_current %}bg-primary text-white{% endif %}">
+                             {% if is_current %}bg-primary-subtle{% endif %}">
                             <span class="fw-semibold">
                                 {% if period %}{{ period.display_name|safe }}{% else %}Period {{ n+1 }}{% endif %}
                             </span>

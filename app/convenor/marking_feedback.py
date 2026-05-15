@@ -208,6 +208,24 @@ def close_period(id):
         )
         return request.referrer
 
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
+
+    canvas_warning = ""
+    if period is not None and period.canvas_enabled:
+        n = period.number_submitters_canvas_report_available
+        if n > 0:
+            s = "s" if n != 1 else ""
+            are = "are" if n != 1 else "is"
+            reports = "reports" if n != 1 else "a report"
+            these = "these reports" if n != 1 else "this report"
+            canvas_warning = (
+                f"<p><strong>Note:</strong> There {are} {n} submitter{s} with Canvas "
+                f"{reports} available to pull. Consider pulling {these} before closing "
+                f"the period.</p>"
+            )
+
     url = request.args.get("url", None)
     if url is None:
         url = redirect_url()
@@ -219,9 +237,10 @@ def close_period(id):
     message = (
         "<p>Are you sure that you wish to close this submission period for project class "
         "<strong>{name}</strong>?</p>"
+        "{canvas_warning}"
         "<p>After closure, no immediate action is taken automatically by the platform, "
         "but no further edits can be made.</p>"
-        "<p>This action cannot be undone.</p>".format(name=config.name)
+        "<p>This action cannot be undone.</p>".format(name=config.name, canvas_warning=canvas_warning)
     )
     submit_label = "Close period"
 

@@ -1,7 +1,7 @@
 body {
     width: 100%;
     height: 100%;
-    background-color: lightgrey;
+    background-color: var(--bs-gray-100);
 }
 
 .ataglance-background {

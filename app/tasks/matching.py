@@ -1407,6 +1407,25 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 )
                 return None
 
+            if len(assessors) < additional_needed:
+                short_msg = f'Failed because LiveProject "{sub.project.name}" has too few active assessors'
+                if len(short_msg) > 255:
+                    short_msg = short_msg[:252] + "..."
+                long_msg = (
+                    f'Failed to populate markers because LiveProject "{sub.project.name}" has only '
+                    f"{len(assessors)} active assessor(s) but {additional_needed} additional "
+                    f"marker(s) are required. Please add more assessors to the project or reduce "
+                    f"the number of markers required for this period."
+                )
+                progress_update(
+                    task_id, TaskRecord.FAILURE, 100, short_msg, autocommit=True
+                )
+                user.post_message(long_msg, "error", autocommit=True)
+                self.update_state(
+                    "FAILURE", meta={"msg": "LiveProject assessor pool too small"}
+                )
+                return None
+
             for marker in assessors:
                 marker: FacultyData
 
@@ -3502,7 +3521,7 @@ def _execute_marker_problem(
                         role = SubmissionRole.build_(
                             role=SubmissionRole.ROLE_MARKER,
                             submission_id=sub.id,
-                            user_id=marker.user_id,
+                            user_id=marker.id,
                             weight=1.0 / float(period.number_markers),
                             creator_id=user.id,
                             creation_timestamp=now,
@@ -4089,7 +4108,9 @@ def register_matching_tasks(celery):
                 student: StudentData = sub.student
                 owner: User = student.user
 
-                marker_roles = [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]
+                marker_roles = [
+                    r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER
+                ]
                 removed_markers = []
                 for role in marker_roles:
                     marker_user: User = role.user

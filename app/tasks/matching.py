@@ -1331,7 +1331,7 @@ def _compute_existing_mark_CATS(record, fac_data):
 
 
 def _enumerate_submissions_for_markers(
-    self, config, task_id, user: User, baseline_cats: Optional[Dict[int, float]] = None
+    self, configs: List[ProjectClassConfig], task_id, user: User, baseline_cats: Optional[Dict[int, float]] = None
 ):
     number_to_marker = {}
     marker_to_number = {}
@@ -1352,93 +1352,94 @@ def _enumerate_submissions_for_markers(
         autocommit=True,
     )
 
-    # loop through all submissions in all periods
-    for period in config.periods:
-        period: SubmissionPeriodRecord
-        markers_needed = period.number_markers
+    # loop through all submissions in all periods across all configs
+    for config in configs:
+        for period in config.periods:
+            period: SubmissionPeriodRecord
+            markers_needed = period.number_markers
 
-        for sub in period.submissions:
-            sub: SubmissionRecord
+            for sub in period.submissions:
+                sub: SubmissionRecord
 
-            # do nothing if project not assigned (no assessor pool)
-            if sub.project is None:
-                continue
+                # do nothing if project not assigned (no assessor pool)
+                if sub.project is None:
+                    continue
 
-            # check how many marker SubmissionRole instances are already present
-            existing_markers = len(sub.marker_roles)
+                # check how many marker SubmissionRole instances are already present
+                existing_markers = len(sub.marker_roles)
 
-            # safety guard — markers removed before this step, but skip if somehow already fully assigned
-            if existing_markers >= markers_needed:
-                continue
+                # safety guard — markers removed before this step, but skip if somehow already fully assigned
+                if existing_markers >= markers_needed:
+                    continue
 
-            # number of markers to assign to this submission
-            markers_to_assign = markers_needed - existing_markers
+                # number of markers to assign to this submission
+                markers_to_assign = markers_needed - existing_markers
 
-            # store this submission record in the submitter dictionary
-            if sub in submit_to_number:
-                raise RuntimeError(
-                    "Non-unique submitter when enumerating submissions for marker assignment"
-                )
+                # store this submission record in the submitter dictionary
+                if sub in submit_to_number:
+                    raise RuntimeError(
+                        "Non-unique submitter when enumerating submissions for marker assignment"
+                    )
 
-            number_to_submit[num_submitters] = sub
-            submit_to_number[sub] = num_submitters
-            valence[num_submitters] = markers_to_assign
-            num_submitters += 1
+                number_to_submit[num_submitters] = sub
+                submit_to_number[sub] = num_submitters
+                valence[num_submitters] = markers_to_assign
+                num_submitters += 1
 
-            # loop through markers in the assessor pool for this project
-            # note - LiveProject.assessor_list will only return a list of assessors who are
-            # currently enrolled as active markers
-            assessors = sub.project.assessor_list
-            if len(assessors) == 0:
-                progress_update(
-                    task_id,
-                    TaskRecord.FAILURE,
-                    100,
-                    'Failed because LiveProject "{name}" has no '
-                    "active assessors".format(name=sub.project.name),
-                    autocommit=True,
-                )
-                user.post_message(
-                    'Failed to populate markers because LiveProject "{name}" has no active '
-                    "assessors.".format(name=sub.project.name),
-                    "error",
-                    autocommit=True,
-                )
-                self.update_state(
-                    "FAILURE", meta={"msg": "LiveProject did not have active assessors"}
-                )
-                return None
+                # loop through markers in the assessor pool for this project
+                # note - LiveProject.assessor_list will only return a list of assessors who are
+                # currently enrolled as active markers
+                assessors = sub.project.assessor_list
+                if len(assessors) == 0:
+                    progress_update(
+                        task_id,
+                        TaskRecord.FAILURE,
+                        100,
+                        'Failed because LiveProject "{name}" has no '
+                        "active assessors".format(name=sub.project.name),
+                        autocommit=True,
+                    )
+                    user.post_message(
+                        'Failed to populate markers because LiveProject "{name}" has no active '
+                        "assessors.".format(name=sub.project.name),
+                        "error",
+                        autocommit=True,
+                    )
+                    self.update_state(
+                        "FAILURE", meta={"msg": "LiveProject did not have active assessors"}
+                    )
+                    return None
 
-            if len(assessors) < markers_to_assign:
-                short_msg = f'Failed because LiveProject "{sub.project.name}" has too few active assessors'
-                if len(short_msg) > 255:
-                    short_msg = short_msg[:252] + "..."
-                long_msg = (
-                    f'Failed to populate markers because LiveProject "{sub.project.name}" has only '
-                    f"{len(assessors)} active assessor(s) but {markers_to_assign} "
-                    f"marker(s) are required. Please add more assessors to the project or reduce "
-                    f"the number of markers required for this period."
-                )
-                progress_update(
-                    task_id, TaskRecord.FAILURE, 100, short_msg, autocommit=True
-                )
-                user.post_message(long_msg, "error", autocommit=True)
-                self.update_state(
-                    "FAILURE", meta={"msg": "LiveProject assessor pool too small"}
-                )
-                return None
+                if len(assessors) < markers_to_assign:
+                    short_msg = f'Failed because LiveProject "{sub.project.name}" has too few active assessors'
+                    if len(short_msg) > 255:
+                        short_msg = short_msg[:252] + "..."
+                    long_msg = (
+                        f'Failed to populate markers because LiveProject "{sub.project.name}" has only '
+                        f"{len(assessors)} active assessor(s) but {markers_to_assign} "
+                        f"marker(s) are required. Please add more assessors to the project or reduce "
+                        f"the number of markers required for this period."
+                    )
+                    progress_update(
+                        task_id, TaskRecord.FAILURE, 100, short_msg, autocommit=True
+                    )
+                    user.post_message(long_msg, "error", autocommit=True)
+                    self.update_state(
+                        "FAILURE", meta={"msg": "LiveProject assessor pool too small"}
+                    )
+                    return None
 
-            for marker in assessors:
-                marker: FacultyData
+                for marker in assessors:
+                    marker: FacultyData
 
-                if marker not in marker_to_number:
-                    number_to_marker[num_markers] = marker
-                    marker_to_number[marker] = num_markers
-                    if baseline_cats is not None and marker.id in baseline_cats:
-                        CATS_dict[num_markers] = baseline_cats[marker.id]
-                    else:
-                        CATS_dict[num_markers] = sum(marker.CATS_assignment(config))
-                    num_markers += 1
+                    if marker not in marker_to_number:
+                        number_to_marker[num_markers] = marker
+                        marker_to_number[marker] = num_markers
+                        if baseline_cats is not None and marker.id in baseline_cats:
+                            CATS_dict[num_markers] = baseline_cats[marker.id]
+                        else:
+                            CATS_dict[num_markers] = sum(marker.total_CATS_assignment())
+                        num_markers += 1
 
     return MarkerPopulationEnumeration(
         number_markers=num_markers,
@@ -3994,7 +3995,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def populate_markers(
         self,
-        config_id,
+        config_ids: List[int],
         user_id,
         task_id,
         mode: int = 2,
@@ -4005,25 +4006,33 @@ def register_matching_tasks(celery):
         self.update_state(
             state="STARTED",
             meta={
-                "msg": "Looking up ProjectClassConfig record for id={id}".format(
-                    id=config_id
+                "msg": "Looking up ProjectClassConfig records for ids={ids}".format(
+                    ids=config_ids
                 )
             },
         )
 
         try:
-            config = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            configs = (
+                db.session.query(ProjectClassConfig)
+                .filter(ProjectClassConfig.id.in_(config_ids))
+                .all()
             )
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if config is None:
-            msg = "Could not load ProjectClassConfig record from database"
+        if not configs:
+            msg = "Could not load any ProjectClassConfig records from database"
             current_app.logger.error(msg)
             raise Exception(msg)
+
+        missing = set(config_ids) - {c.id for c in configs}
+        if missing:
+            current_app.logger.warning(
+                "populate_markers: could not load ProjectClassConfig ids {ids}".format(ids=missing)
+            )
 
         if user is None:
             msg = "Could not load User record from database"
@@ -4042,20 +4051,21 @@ def register_matching_tasks(celery):
             autocommit=True,
         )
         try:
-            for period in config.periods:
-                period: SubmissionPeriodRecord
-                _feedback_open = (
-                    period.marking_events.filter(
-                        _ME.workflow_state >= _MEWS.OPEN,
-                        _ME.workflow_state < _MEWS.CLOSED,
-                    ).count()
-                    > 0
-                )
-                if period.retired or period.closed or _feedback_open:
-                    continue
-                for rec in period.submissions:
-                    for role in [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]:
-                        db.session.delete(role)
+            for config in configs:
+                for period in config.periods:
+                    period: SubmissionPeriodRecord
+                    _feedback_open = (
+                        period.marking_events.filter(
+                            _ME.workflow_state >= _MEWS.OPEN,
+                            _ME.workflow_state < _MEWS.CLOSED,
+                        ).count()
+                        > 0
+                    )
+                    if period.retired or period.closed or _feedback_open:
+                        continue
+                    for rec in period.submissions:
+                        for role in [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]:
+                            db.session.delete(role)
             db.session.flush()
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -4146,12 +4156,12 @@ def register_matching_tasks(celery):
 
         with Timer() as create_time:
             enum_data: MarkerPopulationEnumeration = _enumerate_submissions_for_markers(
-                self, config, task_id, user, baseline_cats=resolved_cats
+                self, configs, task_id, user, baseline_cats=resolved_cats
             )
 
             if enum_data is None:
                 raise Exception(
-                    "Marker enumeration failed: a project in this configuration has no active assessors"
+                    "Marker enumeration failed: a project in one of the selected configurations has no active assessors"
                 )
 
             progress_update(
@@ -4163,7 +4173,7 @@ def register_matching_tasks(celery):
             )
 
             pulp_problem: MarkerPuLPProblem = _create_marker_PuLP_problem(
-                enum_data, config
+                enum_data, configs[0]
             )
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))

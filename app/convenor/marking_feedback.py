@@ -109,7 +109,7 @@ def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[P
         return (
             db.session.query(ProjectClassConfig)
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
-            .filter(ProjectClass.tenant_id == tenant_id, ProjectClassConfig.year == current_year)
+            .filter(ProjectClass.tenant_id == tenant_id, ProjectClassConfig.year == current_year, ProjectClassConfig.uses_marker == True)
             .all()
         )
     else:
@@ -122,7 +122,7 @@ def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[P
         return (
             db.session.query(ProjectClassConfig)
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
-            .filter(ProjectClass.id.in_(pclass_ids), ProjectClassConfig.year == current_year)
+            .filter(ProjectClass.id.in_(pclass_ids), ProjectClassConfig.year == current_year, ProjectClassConfig.uses_marker == True)
             .all()
         )
 
@@ -862,25 +862,29 @@ def populate_markers(configid):
         celery = current_app.extensions["celery"]
         populate = celery.tasks["app.tasks.matching.populate_markers"]
 
-        for cfg in selected_configs:
-            tk_name = 'Populate markers for "{proj}"'.format(proj=cfg.name)
-            uuid = register_task(
-                tk_name,
-                owner=current_user,
-                description='Populate marker assignments for "{proj}"'.format(proj=cfg.name),
-            )
-            populate.apply_async(
-                args=(cfg.id, current_user.id, uuid),
-                kwargs=dict(
-                    mode=mode,
-                    tmp_asset_id=tmp_asset_id,
-                    file_ext=file_ext,
-                    baseline_cats=baseline_cats,
-                ),
-                task_id=uuid,
-            )
+        if len(selected_configs) == 1:
+            tk_name = 'Populate markers for "{proj}"'.format(proj=selected_configs[0].name)
+            tk_desc = 'Populate marker assignments for "{proj}"'.format(proj=selected_configs[0].name)
+        else:
+            names = ", ".join('"{}"'.format(c.name) for c in selected_configs)
+            tk_name = "Populate markers for {names}".format(names=names)
+            tk_desc = "Populate marker assignments for {names}".format(names=names)
 
-        return redirect(redirect_url())
+        uuid = register_task(tk_name, owner=current_user, description=tk_desc)
+
+        config_ids = [c.id for c in selected_configs]
+        populate.apply_async(
+            args=(config_ids, current_user.id, uuid),
+            kwargs=dict(
+                mode=mode,
+                tmp_asset_id=tmp_asset_id,
+                file_ext=file_ext,
+                baseline_cats=baseline_cats,
+            ),
+            task_id=uuid,
+        )
+
+        return redirect(url_for("convenor.submitters", id=config.project_class.id))
 
     # GET: pre-select the anchor config
     form.project_classes.data = [config]
@@ -937,7 +941,7 @@ def remove_markers(configid):
             ).on_error(error.si(uuid, tk_name, current_user.id))
             seq.apply_async(task_id=uuid)
 
-        return redirect(redirect_url())
+        return redirect(url_for("convenor.submitters", id=config.project_class.id))
 
     # GET: pre-select the anchor config
     form.project_classes.data = [config]

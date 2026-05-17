@@ -63,7 +63,15 @@
 
 {% block bodyblock %}
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Students enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></div>
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span>Students enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></span>
+            <a href="{{ url_for('convenor.export_allocation', configid=config.id) }}"
+               class="btn btn-sm btn-light"
+               data-bs-toggle="tooltip"
+               title="Export current supervisor and marker assignments to Excel">
+                <i class="fas fa-file-excel"></i> Export allocation
+            </a>
+        </div>
         <div class="card-body">
             <div class="card mt-3 mb-3 card-body bg-well">
                 {% set needs_rule = false %}
@@ -217,7 +225,7 @@
                         <i class="fas fa-envelope"></i> Email matching submitters
                     </a>
                 {% endif %}
-                {% if not config.all_markers_assigned %}
+                {% if config.project_class.uses_marker %}
                     <a href="{{ url_for('convenor.populate_markers', configid=config.id) }}" class="btn btn-sm btn-outline-primary top-row-button">
                         <i class="fas fa-wrench"></i> Populate markers
                     </a>

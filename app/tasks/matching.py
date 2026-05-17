@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from os import path
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Optional
 
 import pulp
 import pulp.apis as pulp_apis
@@ -174,7 +174,7 @@ MarkerPopulationEnumeration = namedtuple(
         "number_submitters",  # int: total submissions still needing markers
         "submit_to_number",  # Dict[SubmissionRecord, int]
         "number_to_submit",  # Dict[int, SubmissionRecord]
-        "valence",  # Dict[int, int]: how many MORE markers each submission still needs
+        "valence",  # Dict[int, int]: how many markers each submission needs
     ],
 )
 
@@ -1330,7 +1330,9 @@ def _compute_existing_mark_CATS(record, fac_data):
     return CATS
 
 
-def _enumerate_missing_markers(self, config, task_id, user: User):
+def _enumerate_submissions_for_markers(
+    self, config, task_id, user: User, baseline_cats: Optional[Dict[int, float]] = None
+):
     number_to_marker = {}
     marker_to_number = {}
     CATS_dict = {}
@@ -1346,11 +1348,11 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
         task_id,
         TaskRecord.RUNNING,
         10,
-        "Enumerating submission records with missing markers...",
+        "Enumerating submission records for marker assignment...",
         autocommit=True,
     )
 
-    # loop through all submissions in all periods to capture all those with missing markers
+    # loop through all submissions in all periods
     for period in config.periods:
         period: SubmissionPeriodRecord
         markers_needed = period.number_markers
@@ -1365,22 +1367,22 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
             # check how many marker SubmissionRole instances are already present
             existing_markers = len(sub.marker_roles)
 
-            # do nothing if enough markers are already assigned
+            # safety guard — markers removed before this step, but skip if somehow already fully assigned
             if existing_markers >= markers_needed:
                 continue
 
-            # number of additional markers still required for this submission
-            additional_needed = markers_needed - existing_markers
+            # number of markers to assign to this submission
+            markers_to_assign = markers_needed - existing_markers
 
             # store this submission record in the submitter dictionary
             if sub in submit_to_number:
                 raise RuntimeError(
-                    "Non-unique submitter when enumerating missing markers"
+                    "Non-unique submitter when enumerating submissions for marker assignment"
                 )
 
             number_to_submit[num_submitters] = sub
             submit_to_number[sub] = num_submitters
-            valence[num_submitters] = additional_needed
+            valence[num_submitters] = markers_to_assign
             num_submitters += 1
 
             # loop through markers in the assessor pool for this project
@@ -1407,13 +1409,13 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 )
                 return None
 
-            if len(assessors) < additional_needed:
+            if len(assessors) < markers_to_assign:
                 short_msg = f'Failed because LiveProject "{sub.project.name}" has too few active assessors'
                 if len(short_msg) > 255:
                     short_msg = short_msg[:252] + "..."
                 long_msg = (
                     f'Failed to populate markers because LiveProject "{sub.project.name}" has only '
-                    f"{len(assessors)} active assessor(s) but {additional_needed} additional "
+                    f"{len(assessors)} active assessor(s) but {markers_to_assign} "
                     f"marker(s) are required. Please add more assessors to the project or reduce "
                     f"the number of markers required for this period."
                 )
@@ -1432,7 +1434,10 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 if marker not in marker_to_number:
                     number_to_marker[num_markers] = marker
                     marker_to_number[marker] = num_markers
-                    CATS_dict[num_markers] = sum(marker.CATS_assignment(config))
+                    if baseline_cats is not None and marker.id in baseline_cats:
+                        CATS_dict[num_markers] = baseline_cats[marker.id]
+                    else:
+                        CATS_dict[num_markers] = sum(marker.CATS_assignment(config))
                     num_markers += 1
 
     return MarkerPopulationEnumeration(
@@ -2958,7 +2963,7 @@ def _create_marker_PuLP_problem(
         prob += sum(Y[(i, j)] for j in range(number_submitters)) <= max_assigned
 
     # CONSTRAINT: CORRECT NUMBER OF MARKERS ASSIGNED PER SUBMITTER
-    # valence[j] is the number of additional marker slots still needed for submission j
+    # valence[j] is the number of markers to assign to submission j
 
     for j in range(number_submitters):
         prob += sum(Y[(i, j)] for i in range(number_markers)) == enum_data.valence[j]
@@ -3534,7 +3539,7 @@ def _execute_marker_problem(
                 user=user,
             )
             user.post_message(
-                "Populated {num} missing marker assignments".format(
+                "Populated {num} marker assignments".format(
                     num=number_populated
                 ),
                 "success",
@@ -3987,7 +3992,16 @@ def register_matching_tasks(celery):
             return soln
 
     @celery.task(bind=True, default_retry_delay=30)
-    def populate_markers(self, config_id, user_id, task_id):
+    def populate_markers(
+        self,
+        config_id,
+        user_id,
+        task_id,
+        mode: int = 2,
+        tmp_asset_id: Optional[int] = None,
+        file_ext: str = ".csv",
+        baseline_cats: Optional[Dict[str, float]] = None,
+    ):
         self.update_state(
             state="STARTED",
             meta={
@@ -4016,9 +4030,123 @@ def register_matching_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
+        # Remove existing marker assignments before re-populating
+        from ..models.markingevent import MarkingEvent as _ME
+        from ..models.markingevent import MarkingEventWorkflowStates as _MEWS
+
+        progress_update(
+            task_id,
+            TaskRecord.RUNNING,
+            5,
+            "Removing existing marker assignments...",
+            autocommit=True,
+        )
+        try:
+            for period in config.periods:
+                period: SubmissionPeriodRecord
+                _feedback_open = (
+                    period.marking_events.filter(
+                        _ME.workflow_state >= _MEWS.OPEN,
+                        _ME.workflow_state < _MEWS.CLOSED,
+                    ).count()
+                    > 0
+                )
+                if period.retired or period.closed or _feedback_open:
+                    continue
+                for rec in period.submissions:
+                    for role in [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]:
+                        db.session.delete(role)
+            db.session.flush()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError removing markers", exc_info=e)
+            raise self.retry()
+
+        # Build baseline CATS dict from Mode 1 spreadsheet or use pre-computed Mode 2 data
+        resolved_cats: Optional[Dict[int, float]] = None
+
+        if mode == 1 and tmp_asset_id is not None:
+            progress_update(
+                task_id,
+                TaskRecord.RUNNING,
+                8,
+                "Parsing CATS spreadsheet...",
+                autocommit=True,
+            )
+            try:
+                import pandas as pd
+
+                tmp_asset = (
+                    db.session.query(TemporaryAsset).filter_by(id=tmp_asset_id).first()
+                )
+                if tmp_asset is not None:
+                    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+                    storage = AssetCloudAdapter(
+                        tmp_asset,
+                        object_store,
+                        audit_data=f"populate_markers.parse_cats (asset #{tmp_asset_id})",
+                    )
+                    with storage.download_to_scratch() as scratch:
+                        if file_ext in (".xlsx", ".xls"):
+                            df = pd.read_excel(scratch.path)
+                        else:
+                            df = pd.read_csv(scratch.path)
+
+                    # normalise column headers
+                    df.columns = [c.strip().lower() for c in df.columns]
+
+                    resolved_cats = {}
+                    for _, row in df.iterrows():
+                        # handle (Last name, First name) or (Name as "Last, First") columns
+                        if "last name" in df.columns and "first name" in df.columns:
+                            last = str(row.get("last name", "")).strip()
+                            first = str(row.get("first name", "")).strip()
+                        elif "name" in df.columns:
+                            raw = str(row.get("name", "")).strip()
+                            if "," in raw:
+                                parts = raw.split(",", 1)
+                                last, first = parts[0].strip(), parts[1].strip()
+                            else:
+                                last, first = raw, ""
+                        else:
+                            continue
+
+                        cats_val = row.get("total cats", None)
+                        if cats_val is None:
+                            continue
+                        try:
+                            cats_float = float(cats_val)
+                        except (ValueError, TypeError):
+                            continue
+
+                        # look up FacultyData by name
+                        matched = (
+                            db.session.query(FacultyData)
+                            .join(FacultyData.user)
+                            .filter_by(last_name=last, first_name=first)
+                            .all()
+                        )
+                        if len(matched) == 1:
+                            resolved_cats[matched[0].id] = cats_float
+                        elif len(matched) == 0:
+                            current_app.logger.warning(
+                                f"populate_markers: no faculty match for '{last}, {first}' in CATS spreadsheet"
+                            )
+                        else:
+                            current_app.logger.warning(
+                                f"populate_markers: ambiguous faculty match for '{last}, {first}' in CATS spreadsheet"
+                            )
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError parsing CATS spreadsheet", exc_info=e)
+                # fall back to default CATS computation rather than failing the whole task
+
+        elif mode == 2 and baseline_cats is not None:
+            # Deserialise JSON string keys → int
+            resolved_cats = {int(k): float(v) for k, v in baseline_cats.items()}
+
         with Timer() as create_time:
-            enum_data: MarkerPopulationEnumeration = _enumerate_missing_markers(
-                self, config, task_id, user
+            enum_data: MarkerPopulationEnumeration = _enumerate_submissions_for_markers(
+                self, config, task_id, user, baseline_cats=resolved_cats
             )
 
             if enum_data is None:

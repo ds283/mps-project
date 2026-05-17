@@ -9,8 +9,10 @@
 #
 
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
+from pathlib import Path
+from typing import List
 
 from celery import chain
 from flask import (
@@ -53,8 +55,10 @@ from ..models import (
     SubmittingStudent,
     SupervisionEvent,
     SupervisionEventTemplate,
+    TemporaryAsset,
     User,
 )
+from ..shared.asset_tools import AssetUploadManager
 from ..models.markingevent import ConflationReport, MarkingEventWorkflowStates
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
@@ -82,6 +86,8 @@ from .forms import (
     EditSubmissionPeriodUnitFormFactory,
     EditSupervisionEventTemplateFormFactory,
     ManualAssignFormFactory,
+    PopulateMarkersFormFactory,
+    RemoveMarkersFormFactory,
 )
 
 
@@ -93,6 +99,32 @@ def _period_has_open_marking_event(period) -> bool:
         ).count()
         > 0
     )
+
+
+def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[ProjectClassConfig]:
+    """Return the list of ProjectClassConfig instances in scope for the given user."""
+    tenant_id = anchor_config.project_class.tenant_id
+    current_year = get_current_year()
+    if user.has_role("root") or user.has_role("admin"):
+        return (
+            db.session.query(ProjectClassConfig)
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+            .filter(ProjectClass.tenant_id == tenant_id, ProjectClassConfig.year == current_year)
+            .all()
+        )
+    else:
+        fac = user.faculty_data
+        if fac is None:
+            return [anchor_config]
+        pclass_ids = {pc.id for pc in fac.convenor_list if pc.tenant_id == tenant_id}
+        if not pclass_ids:
+            return [anchor_config]
+        return (
+            db.session.query(ProjectClassConfig)
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+            .filter(ProjectClass.id.in_(pclass_ids), ProjectClassConfig.year == current_year)
+            .all()
+        )
 
 
 @convenor.route("/audit_matches/<int:pclass_id>")
@@ -754,7 +786,7 @@ def unpublish_all_assignments(id):
     return redirect(redirect_url())
 
 
-@convenor.route("/populate_markers/<int:configid>")
+@convenor.route("/populate_markers/<int:configid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def populate_markers(configid):
     # configid is a ProjectClassConfig
@@ -764,23 +796,103 @@ def populate_markers(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    uuid = register_task(
-        'Populate markers for "{proj}"'.format(proj=config.name),
-        owner=current_user,
-        description='Populate missing marker assignments for "{proj}"'.format(
-            proj=config.name
-        ),
+    scoped = _get_scoped_configs(config, current_user)
+    PopulateMarkersForm = PopulateMarkersFormFactory(scoped)
+    form = PopulateMarkersForm(request.form)
+
+    if form.validate_on_submit():
+        selected_configs = form.project_classes.data or []
+        # defence in depth: drop any config the user is not a convenor for
+        selected_configs = [
+            c for c in selected_configs if validate_is_convenor(c.project_class, message=False)
+        ]
+
+        if not selected_configs:
+            flash("No project classes were selected.", "warning")
+            return redirect(redirect_url())
+
+        mode = int(form.cats_mode.data)
+        tmp_asset_id = None
+        file_ext = ".csv"
+        baseline_cats = None
+
+        if mode == 1:
+            uploaded_file = request.files.get("cats_file")
+            if uploaded_file is None or not uploaded_file.filename:
+                flash("Please upload a CATS spreadsheet when using Mode 1.", "error")
+                form.project_classes.data = [config]
+                return render_template_context(
+                    "convenor/marking/populate_markers.html",
+                    form=form,
+                    config=config,
+                    pclass=config.project_class,
+                )
+            file_ext = Path(uploaded_file.filename).suffix.lower() or ".csv"
+            now = datetime.now()
+            tmp_asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+            with AssetUploadManager(
+                tmp_asset,
+                data=uploaded_file.stream.read(),
+                storage=object_store,
+                audit_data="populate_markers.cats_spreadsheet",
+                length=uploaded_file.content_length,
+            ):
+                pass
+            db.session.add(tmp_asset)
+            db.session.commit()
+            tmp_asset_id = tmp_asset.id
+
+        elif mode == 2:
+            # Collect unique FacultyData objects across all selected configs' assessor pools
+            seen_faculty = {}
+            for cfg in selected_configs:
+                for period in cfg.periods:
+                    for sub in period.submissions:
+                        if sub.project is None:
+                            continue
+                        for fac in sub.project.assessor_list:
+                            if fac.id not in seen_faculty:
+                                seen_faculty[fac.id] = fac
+            baseline_cats = {
+                str(fac_id): float(sum(fac.total_CATS_assignment()))
+                for fac_id, fac in seen_faculty.items()
+            }
+
+        celery = current_app.extensions["celery"]
+        populate = celery.tasks["app.tasks.matching.populate_markers"]
+
+        for cfg in selected_configs:
+            tk_name = 'Populate markers for "{proj}"'.format(proj=cfg.name)
+            uuid = register_task(
+                tk_name,
+                owner=current_user,
+                description='Populate marker assignments for "{proj}"'.format(proj=cfg.name),
+            )
+            populate.apply_async(
+                args=(cfg.id, current_user.id, uuid),
+                kwargs=dict(
+                    mode=mode,
+                    tmp_asset_id=tmp_asset_id,
+                    file_ext=file_ext,
+                    baseline_cats=baseline_cats,
+                ),
+                task_id=uuid,
+            )
+
+        return redirect(redirect_url())
+
+    # GET: pre-select the anchor config
+    form.project_classes.data = [config]
+    return render_template_context(
+        "convenor/marking/populate_markers.html",
+        form=form,
+        config=config,
+        pclass=config.project_class,
     )
 
-    celery = current_app.extensions["celery"]
-    populate = celery.tasks["app.tasks.matching.populate_markers"]
 
-    populate.apply_async(args=(config.id, current_user.id, uuid), task_id=uuid)
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/remove_markers/<int:configid>")
+@convenor.route("/remove_markers/<int:configid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def remove_markers(configid):
     # configid is a ProjectClassConfig
@@ -790,65 +902,83 @@ def remove_markers(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
+    scoped = _get_scoped_configs(config, current_user)
+    RemoveMarkersForm = RemoveMarkersFormFactory(scoped)
+    form = RemoveMarkersForm(request.form)
 
-    title = "Remove all markers"
-    panel_title = "Remove all markers"
+    if form.validate_on_submit():
+        selected_configs = form.project_classes.data or []
+        # defence in depth: drop any config the user is not a convenor for
+        selected_configs = [
+            c for c in selected_configs if validate_is_convenor(c.project_class, message=False)
+        ]
 
-    action_url = url_for("convenor.do_remove_markers", configid=configid, url=url)
-    message = (
-        "<p>Are you sure that you wish to remove all marker assignments?</p>"
-        "<p>This action cannot be undone.</p>"
-    )
-    submit_label = "Remove markers"
+        if not selected_configs:
+            flash("No project classes were selected.", "warning")
+            return redirect(redirect_url())
 
+        celery = current_app.extensions["celery"]
+        remove_task = celery.tasks["app.tasks.matching.remove_markers"]
+        init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+        final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+        error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+        for cfg in selected_configs:
+            tk_name = 'Remove markers for "{proj}"'.format(proj=cfg.name)
+            uuid = register_task(
+                tk_name,
+                owner=current_user,
+                description='Remove marker assignments for "{proj}"'.format(proj=cfg.name),
+            )
+            seq = chain(
+                init.si(uuid, tk_name),
+                remove_task.si(cfg.id, current_user.id, uuid),
+                final.si(uuid, tk_name, current_user.id),
+            ).on_error(error.si(uuid, tk_name, current_user.id))
+            seq.apply_async(task_id=uuid)
+
+        return redirect(redirect_url())
+
+    # GET: pre-select the anchor config
+    form.project_classes.data = [config]
     return render_template_context(
-        "admin/danger_confirm.html",
-        title=title,
-        panel_title=panel_title,
-        action_url=action_url,
-        message=message,
-        submit_label=submit_label,
+        "convenor/marking/remove_markers.html",
+        form=form,
+        config=config,
+        pclass=config.project_class,
     )
 
 
-@convenor.route("/do_remove_markers/<int:configid>")
+@convenor.route("/export_allocation/<int:configid>")
 @roles_accepted("faculty", "admin", "root")
-def do_remove_markers(configid):
-    # configid is a ProjectClassConfig
+def export_allocation(configid):
     config = ProjectClassConfig.query.get_or_404(configid)
 
-    # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
+    config_ids = [c.id for c in _get_scoped_configs(config, current_user)]
 
-    tk_name = 'Remove markers for "{proj}"'.format(proj=config.name)
-    uuid = register_task(
-        tk_name,
-        owner=current_user,
-        description='Remove marker assignments for "{proj}"'.format(proj=config.name),
-    )
+    tk_name = 'Export allocation for "{proj}"'.format(proj=config.name)
+    uuid = register_task(tk_name, owner=current_user, description=tk_name)
 
     celery = current_app.extensions["celery"]
-    remove_task = celery.tasks["app.tasks.matching.remove_markers"]
-    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
-    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
-    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
-
     seq = chain(
-        init.si(uuid, tk_name),
-        remove_task.si(config.id, current_user.id, uuid),
-        final.si(uuid, tk_name, current_user.id),
-    ).on_error(error.si(uuid, tk_name, current_user.id))
+        celery.tasks["app.tasks.user_launch.mark_user_task_started"].si(uuid, tk_name),
+        celery.tasks["app.tasks.allocation_export.export_allocation_xlsx"].si(
+            config_ids, current_user.id, uuid
+        ),
+        celery.tasks["app.tasks.user_launch.mark_user_task_ended"].si(
+            uuid, tk_name, current_user.id
+        ),
+    ).on_error(
+        celery.tasks["app.tasks.user_launch.mark_user_task_failed"].si(
+            uuid, tk_name, current_user.id
+        )
+    )
     seq.apply_async(task_id=uuid)
 
-    return redirect(url)
+    return redirect(redirect_url())
 
 
 @convenor.route("/view_feedback/", methods=["GET", "POST"])

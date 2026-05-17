@@ -1,0 +1,55 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $(document).ready(function () {
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select project classes...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Remove markers
+{% endblock %}
+
+{% block card_classes %}border-danger{% endblock %}
+
+{% block card_header_classes %}bg-danger text-white{% endblock %}
+
+{% block formtitle %}
+    Remove markers &mdash; {{ pclass.name }}
+{% endblock %}
+
+{% block form_content %}
+    <div class="alert alert-danger mb-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> This will permanently remove all marker assignments for the selected
+        project classes. This action cannot be undone.
+    </div>
+
+    <form action="{{ url_for('convenor.remove_markers', configid=config.id) }}" method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.project_classes.label }}</label>
+            {{ form.project_classes(id="project_classes", class="form-select") }}
+            <div class="form-text">Select the project classes from which markers should be removed.</div>
+        </div>
+
+        <div class="d-flex flex-row gap-2 mt-3">
+            {{ form.submit(class="btn btn-danger btn-sm") }}
+            <a href="{{ url_for('convenor.submitters', id=pclass.id) }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

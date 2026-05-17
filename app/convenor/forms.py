@@ -16,8 +16,10 @@ from wtforms import (
     BooleanField,
     DateTimeField,
     DecimalField,
+    FileField,
     FloatField,
     IntegerField,
+    RadioField,
     SelectField,
     StringField,
     SubmitField,
@@ -1620,3 +1622,44 @@ def build_resolve_risk_factors_form():
         )
         fields[f"annotation_{factor_type}"] = TextAreaField("Annotation", validators=[Optional()])
     return type("ResolveRiskFactorsForm", (Form,), fields)
+
+
+def PopulateMarkersFormFactory(scoped_configs: List[ProjectClassConfig]):
+    get_configs = partial(lambda cfgs: cfgs, scoped_configs)
+
+    class PopulateMarkersForm(Form):
+        project_classes = QuerySelectMultipleField(
+            "Project classes",
+            query_factory=get_configs,
+            get_pk=lambda c: c.id,
+            get_label=lambda c: c.name,
+        )
+
+        cats_mode = RadioField(
+            "CATS baseline mode",
+            choices=[(2, "Auto-compute from current assignments"), (1, "Upload a CATS spreadsheet")],
+            default=2,
+            coerce=int,
+        )
+
+        cats_file = FileField("CATS spreadsheet (CSV or Excel)")
+
+        submit = SubmitField("Populate markers")
+
+    return PopulateMarkersForm
+
+
+def RemoveMarkersFormFactory(scoped_configs: List[ProjectClassConfig]):
+    get_configs = partial(lambda cfgs: cfgs, scoped_configs)
+
+    class RemoveMarkersForm(Form):
+        project_classes = QuerySelectMultipleField(
+            "Project classes",
+            query_factory=get_configs,
+            get_pk=lambda c: c.id,
+            get_label=lambda c: c.name,
+        )
+
+        submit = SubmitField("Remove markers")
+
+    return RemoveMarkersForm

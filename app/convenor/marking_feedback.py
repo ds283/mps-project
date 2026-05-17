@@ -982,6 +982,11 @@ def export_allocation(configid):
     )
     seq.apply_async(task_id=uuid)
 
+    flash(
+        f'Export of allocation for "{config.name}" has been queued. '
+        f"The spreadsheet will be available in your Download Centre when complete.",
+        "info",
+    )
     return redirect(redirect_url())
 
 

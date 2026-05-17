@@ -828,16 +828,25 @@ def do_remove_markers(configid):
     if url is None:
         url = redirect_url()
 
+    tk_name = 'Remove markers for "{proj}"'.format(proj=config.name)
     uuid = register_task(
-        'Remove markers for "{proj}"'.format(proj=config.name),
+        tk_name,
         owner=current_user,
         description='Remove marker assignments for "{proj}"'.format(proj=config.name),
     )
 
     celery = current_app.extensions["celery"]
-    populate = celery.tasks["app.tasks.matching.remove_markers"]
+    remove_task = celery.tasks["app.tasks.matching.remove_markers"]
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    populate.apply_async(args=(config.id, current_user.id, uuid), task_id=uuid)
+    seq = chain(
+        init.si(uuid, tk_name),
+        remove_task.si(config.id, current_user.id, uuid),
+        final.si(uuid, tk_name, current_user.id),
+    ).on_error(error.si(uuid, tk_name, current_user.id))
+    seq.apply_async(task_id=uuid)
 
     return redirect(url)
 

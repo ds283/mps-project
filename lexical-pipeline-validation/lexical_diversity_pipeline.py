@@ -126,9 +126,9 @@ OUTPUT_DIR = "pipeline_outputs"
 
 # Cohort definitions
 PRE_LLM_YEARS = ["2019/2020", "2020/2021", "2021/2022"]
-POST_LLM_YEARS = ["2023/2024", "2024/2025"]
+POST_LLM_YEARS = ["2023/2024", "2024/2025", "2025/2026"]
 TRANS_YEARS = ["2022/2023"]
-EXCLUDE_YEARS = ["2025/2026"]  # too small; add to POST_LLM_YEARS when complete
+EXCLUDE_YEARS = []  # too small; add to POST_LLM_YEARS when complete
 
 # Year display order and labels
 YEAR_ORDER = [
@@ -138,8 +138,17 @@ YEAR_ORDER = [
     "2022/2023",
     "2023/2024",
     "2024/2025",
+    "2025/2026",
 ]
-YEAR_LABELS = ["2019/20", "2020/21", "2021/22", "2022/23", "2023/24", "2024/25"]
+YEAR_LABELS = [
+    "2019/20",
+    "2020/21",
+    "2021/22",
+    "2022/23",
+    "2023/24",
+    "2024/25",
+    "2025/26",
+]
 
 # Human academic normal ranges (from metric documentation)
 HUMAN_NORMAL = {
@@ -246,7 +255,7 @@ def parse_args():
         choices=["lexical", "full"],
         dest="calibration_type",
         help="Feature set to use from the calibration: lexical (3-D) or full (4-D) "
-             "[default: lexical]",
+        "[default: lexical]",
     )
     cal.add_argument(
         "--calibration-llm",
@@ -388,7 +397,9 @@ def load_production_calibration(
         if n == 0:
             n = 4  # fallback for very old exports that lack feature_i columns
     _full_labels = ["MATTR", "MTLD", "sentence_cv", "mean_nll", "nll_cv"]
-    expected_labels = ["MATTR", "MTLD", "sentence_cv"] if cal_type == "lexical" else _full_labels[:n]
+    expected_labels = (
+        ["MATTR", "MTLD", "sentence_cv"] if cal_type == "lexical" else _full_labels[:n]
+    )
 
     for i, exp in enumerate(expected_labels):
         got = str(row.get(f"feature_{i}", ""))
@@ -407,7 +418,9 @@ def load_production_calibration(
     n_samples = int(row.get("n_samples", 0))
     calibrated_at = str(row.get("calibrated_at", "unknown"))
     print(f"\nProduction calibration loaded from {cal_file!r}:")
-    print(f"  feature_set={cal_type!r}  n_samples={n_samples}  calibrated_at={calibrated_at}")
+    print(
+        f"  feature_set={cal_type!r}  n_samples={n_samples}  calibrated_at={calibrated_at}"
+    )
     print(f"  mu = {mu}")
     print(f"  sigma_inv shape = {sigma_inv.shape}")
     print(
@@ -588,9 +601,7 @@ def plot_violin_box(student_main, output_dir):
 # =============================================================================
 
 
-def plot_mahal_histograms(
-    student_main, mahal_fn, thresh_05, thresh_01, output_dir
-):
+def plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_dir):
     """Plot per-year Mahalanobis distance histograms.
 
     *mahal_fn* is a callable (df) → np.ndarray of σ values; it is either the
@@ -598,15 +609,14 @@ def plot_mahal_histograms(
     depending on whether --calibration-file was supplied.
     """
     all_vals = [
-        mahal_fn(student_main[student_main["Academic Year"] == yr])
-        for yr in YEAR_ORDER
+        mahal_fn(student_main[student_main["Academic Year"] == yr]) for yr in YEAR_ORDER
     ]
     global_max = max(v.max() for v in all_vals)
     x_max = global_max * 1.08
     x_ref = np.linspace(0, x_max, 400)
     chi_pdf = stats.chi.pdf(x_ref, df=3)
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+    fig, axes = plt.subplots(3, 3, figsize=(15, 9))
     fig.patch.set_facecolor("#fafafa")
     axes = axes.flatten()
 
@@ -1026,7 +1036,7 @@ def plot_scatters(
     # Student-only legend: strip the per-control marker entries from the middle.
     # Structure: [4 region/contour patches] [2 student patches] [N control markers] [2 tail entries]
     n_fixed_top = 6  # region patches (4) + student patches (2)
-    leg_no_controls = leg[:n_fixed_top] + leg[n_fixed_top + len(controls):]
+    leg_no_controls = leg[:n_fixed_top] + leg[n_fixed_top + len(controls) :]
     # Control-only legend: keep region/contour patches and tail, drop student patches.
     leg_ctrl_only = leg[:4] + leg[n_fixed_top:]
 
@@ -1173,28 +1183,43 @@ def plot_custom_scatter(
         if name in controls:
             included_controls[name] = controls[name]
         else:
-            print(f"  WARNING: --scatter token '{name}' not found in loaded sheets; skipping")
+            print(
+                f"  WARNING: --scatter token '{name}' not found in loaded sheets; skipping"
+            )
 
     if not include_students and not included_controls:
-        print(f"  WARNING: --scatter '{spec_str}' resolved to no valid datasets; skipping")
+        print(
+            f"  WARNING: --scatter '{spec_str}' resolved to no valid datasets; skipping"
+        )
         return
 
     e05, e01 = build_ellipses(corr_3, thresh_05, thresh_01)
 
-    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(2)
-    x_norm_hi = ((0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]) / np.sqrt(2)
+    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(
+        2
+    )
+    x_norm_hi = (
+        (0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]
+    ) / np.sqrt(2)
     z_cv_lo = (0.55 - mean_3[2]) / std_3[2]
     z_cv_hi = (0.85 - mean_3[2]) / std_3[2]
 
     base_kw = dict(
-        mean_3=mean_3, std_3=std_3, inv_corr=inv_corr,
-        thresh_05=thresh_05, thresh_01=thresh_01,
+        mean_3=mean_3,
+        std_3=std_3,
+        inv_corr=inv_corr,
+        thresh_05=thresh_05,
+        thresh_01=thresh_01,
     )
     ell_kw = dict(
-        e05=e05, e01=e01,
-        x_norm_lo=x_norm_lo, x_norm_hi=x_norm_hi,
-        z_cv_lo=z_cv_lo, z_cv_hi=z_cv_hi,
-        thresh_05=thresh_05, thresh_01=thresh_01,
+        e05=e05,
+        e01=e01,
+        x_norm_lo=x_norm_lo,
+        x_norm_hi=x_norm_hi,
+        z_cv_lo=z_cv_lo,
+        z_cv_hi=z_cv_hi,
+        thresh_05=thresh_05,
+        thresh_01=thresh_01,
     )
 
     # Gather all x/y values to determine axis limits
@@ -1203,10 +1228,12 @@ def plot_custom_scatter(
     if include_students:
         all_students = pd.concat([pre, post])
         xs, ys, _ = display_coords(all_students, mean_3, std_3, inv_corr)
-        all_x.append(xs); all_y.append(ys)
+        all_x.append(xs)
+        all_y.append(ys)
     for df in included_controls.values():
         xc, yc, _ = display_coords(df, mean_3, std_3, inv_corr)
-        all_x.append(xc); all_y.append(yc)
+        all_x.append(xc)
+        all_y.append(yc)
     all_x = np.concatenate(all_x)
     all_y = np.concatenate(all_y)
     xlim = (all_x.min() - pad, all_x.max() + pad)
@@ -1219,20 +1246,43 @@ def plot_custom_scatter(
     if include_students:
         n_pre = len(pre.dropna(subset=["MATTR", "MTLD", "CV"]))
         n_post = len(post.dropna(subset=["MATTR", "MTLD", "CV"]))
-        _plot_scatter_points(ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw)
-        _plot_scatter_points(ax, post, POST_COL, "o", 0.75, 36, f"Post-LLM students (n={n_post})", **base_kw)
+        _plot_scatter_points(
+            ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw
+        )
+        _plot_scatter_points(
+            ax,
+            post,
+            POST_COL,
+            "o",
+            0.75,
+            36,
+            f"Post-LLM students (n={n_post})",
+            **base_kw,
+        )
 
     for name, df in included_controls.items():
-        _plot_scatter_points(ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw)
+        _plot_scatter_points(
+            ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw
+        )
 
     ax.text(
-        x_norm_lo + 0.1, ylim[1] - 0.25,
-        "human-normal\nMATTR+MTLD", fontsize=7.5, color=HN_COL,
-        style="italic", va="top", zorder=10,
+        x_norm_lo + 0.1,
+        ylim[1] - 0.25,
+        "human-normal\nMATTR+MTLD",
+        fontsize=7.5,
+        color=HN_COL,
+        style="italic",
+        va="top",
+        zorder=10,
     )
     ax.text(
-        xlim[0] + 0.15, z_cv_lo + 0.12,
-        "human-normal CV", fontsize=7.5, color=HN_COL, style="italic", zorder=10,
+        xlim[0] + 0.15,
+        z_cv_lo + 0.12,
+        "human-normal CV",
+        fontsize=7.5,
+        color=HN_COL,
+        style="italic",
+        zorder=10,
     )
 
     ax.set_title(f"Custom scatter: {', '.join(tokens)}", fontsize=10, fontweight="bold")
@@ -1243,8 +1293,13 @@ def plot_custom_scatter(
         leg = leg[:4] + leg[n_fixed_top:]
 
     fig.legend(
-        handles=leg, loc="lower center", ncol=4, fontsize=8.5,
-        bbox_to_anchor=(0.5, -0.08), framealpha=0.95, edgecolor="#cccccc",
+        handles=leg,
+        loc="lower center",
+        ncol=4,
+        fontsize=8.5,
+        bbox_to_anchor=(0.5, -0.08),
+        framealpha=0.95,
+        edgecolor="#cccccc",
     )
     plt.tight_layout(rect=[0, 0.09, 1, 1])
 
@@ -1530,9 +1585,11 @@ def main():
             cal_type=args.calibration_type,
             cal_llm=args.calibration_llm,
         )
+
         def mahal_fn(df):  # noqa: E306
             return mahal_dist_production(df, cal_mu, cal_sigma_inv)
     else:
+
         def mahal_fn(df):  # noqa: E306
             return mahal_dist(df, mean_3, std_3, inv_corr)
 

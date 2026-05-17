@@ -4060,8 +4060,6 @@ def register_matching_tasks(celery):
             "Sorting SubmittingStudent records...",
             autocommit=True,
         )
-        payload = {}
-
         payload_data = []
         for period in config.periods:
             period: SubmissionPeriodRecord
@@ -4081,7 +4079,7 @@ def register_matching_tasks(celery):
             )
             if period.retired or period.closed or _feedback_open:
                 period_data.update({"action": "ignore"})
-                payload.update(period_data)
+                payload_data.append(period_data)
                 continue
 
             submissions_data = []
@@ -4091,23 +4089,20 @@ def register_matching_tasks(celery):
                 student: StudentData = sub.student
                 owner: User = student.user
 
+                marker_roles = [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]
                 removed_markers = []
-                for role in rec.roles:
-                    role: SubmissionRole
-
-                    if role.role == SubmissionRole.ROLE_MARKER:
-                        user: User = role.user
-                        if user is not None:
-                            removed_markers.append(
-                                {
-                                    "id": user.id,
-                                    "last_name": user.last_name,
-                                    "first_name": user.first_name,
-                                    "full_name": user.name,
-                                }
-                            )
-
-                        db.session.delete(role)
+                for role in marker_roles:
+                    marker_user: User = role.user
+                    if marker_user is not None:
+                        removed_markers.append(
+                            {
+                                "id": marker_user.id,
+                                "last_name": marker_user.last_name,
+                                "first_name": marker_user.first_name,
+                                "full_name": marker_user.name,
+                            }
+                        )
+                    db.session.delete(role)
 
                 record_data = {
                     "id": rec.id,
@@ -4128,13 +4123,6 @@ def register_matching_tasks(celery):
             payload_data.append(period_data)
 
         try:
-            progress_update(
-                task_id,
-                TaskRecord.SUCCESS,
-                100,
-                "Finishing remove markers task...",
-                autocommit=False,
-            )
             log_db_commit(
                 f"Removed marker assignments for project class '{config.project_class.name}'",
                 user=user,

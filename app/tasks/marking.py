@@ -16,7 +16,7 @@ import jinja2
 import markdown
 from celery import group
 from dateutil import parser
-from flask import current_app
+from flask import current_app, url_for
 from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
 from weasyprint import CSS, HTML
@@ -398,6 +398,12 @@ def register_marking_tasks(celery):
                 }
             ]
 
+        marking_form_url = (
+            url_for("faculty.marking_form", report_id=marking_report_id, _external=True)
+            if marking_report_id is not None
+            else None
+        )
+
         return EmailWorkflowItem.build_(
             subject_payload=encode_email_payload(
                 {
@@ -419,6 +425,7 @@ def register_marking_tasks(celery):
                     "student": student,
                     "record": record,
                     "deadline": deadline,
+                    "marking_form_url": marking_form_url,
                 }
             ),
             recipient_list=recipient_list,
@@ -485,6 +492,12 @@ def register_marking_tasks(celery):
                 }
             ]
 
+        marking_form_url = (
+            url_for("faculty.marking_form", report_id=marking_report_id, _external=True)
+            if marking_report_id is not None
+            else None
+        )
+
         return EmailWorkflowItem.build_(
             subject_payload=encode_email_payload(
                 {
@@ -506,6 +519,7 @@ def register_marking_tasks(celery):
                     "student": student,
                     "record": record,
                     "deadline": deadline,
+                    "marking_form_url": marking_form_url,
                 }
             ),
             recipient_list=recipient_list,

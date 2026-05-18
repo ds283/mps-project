@@ -396,6 +396,7 @@
                             <i class="fas fa-comment fa-fw me-1"></i> Feedback to student
                         </div>
                         <div class="card-body">
+                            {# TEMPORARILY DISABLED (not in use this year)
                             {% if llm_feedback_positive %}
                                 <div class="card border-secondary mb-2">
                                     <div class="card-header d-flex justify-content-between align-items-center py-2"
@@ -418,9 +419,11 @@
                                     </div>
                                 </div>
                             {% endif %}
+                            #}
                             <div class="mb-3">
                                 {{ wtf.render_field(form.feedback_positive, label=False) }}
                             </div>
+                            {# TEMPORARILY DISABLED (not in use this year)
                             {% if llm_feedback_improvements %}
                                 <div class="card border-secondary mb-2">
                                     <div class="card-header d-flex justify-content-between align-items-center py-2"
@@ -443,6 +446,7 @@
                                     </div>
                                 </div>
                             {% endif %}
+                            #}
                             <div class="mb-3">
                                 {{ wtf.render_field(form.feedback_improvement, label=False) }}
                             </div>

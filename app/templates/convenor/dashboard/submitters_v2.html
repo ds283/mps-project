@@ -1,0 +1,1012 @@
+{% extends "convenor/dashboard/submitter_nav.html" %}
+{% from "labels.html" import label_text, simple_label %}
+
+{% if cohort_filter is not defined or cohort_filter is none %}{% set cohort_filter = 'all' %}{% endif %}
+{% if prog_filter is not defined or prog_filter is none %}{% set prog_filter = 'all' %}{% endif %}
+{% if year_filter is not defined or year_filter is none %}{% set year_filter = 'all' %}{% endif %}
+{% if state_filter is not defined or state_filter is none %}{% set state_filter = 'all' %}{% endif %}
+{% if data_display is not defined or data_display is none %}{% set data_display = 'name' %}{% endif %}
+{% if name_filter is not defined or name_filter is none %}{% set name_filter = '' %}{% endif %}
+{% if page is not defined or page is none %}{% set page = 1 %}{% endif %}
+{% if per_page is not defined or per_page is none %}{% set per_page = 10 %}{% endif %}
+{% if total_submitters is not defined or total_submitters is none %}{% set total_submitters = 0 %}{% endif %}
+
+{% block scripts %}
+    {{ super() }}
+    <style>
+      /* ── Outer chrome ── */
+      .sv2-chrome { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius-lg); overflow: hidden; margin-bottom: 1.5rem; font-size: 0.875rem; }
+      .sv2-chrome-header { background: var(--bs-primary); color: #fff; padding: .75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+      .sv2-chrome-header .sv2-title { font-size: 0.875rem; }
+      .sv2-chrome-header strong { font-weight: 600; }
+      .sv2-btn-chrome { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); color: #fff; font-size: 0.8rem; padding: 0.25rem 0.75rem; border-radius: var(--bs-border-radius); cursor: pointer; display: inline-flex; align-items: center; gap: 0.3125rem; text-decoration: none; }
+      .sv2-btn-chrome:hover { color: #fff; background: rgba(255,255,255,.28); }
+
+      /* ── Filter toggle ── */
+      .sv2-filter-toggle { background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); padding: .4rem 1.25rem; display: flex; align-items: center; gap: 0.375rem; font-size: 0.8rem; color: var(--bs-primary); cursor: pointer; user-select: none; }
+
+      /* ── Filters ── */
+      .sv2-filters-body { background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); padding: .7rem 1.25rem; }
+      .sv2-filter-label { font-size: 0.75rem; font-weight: 700; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .05em; }
+      .sv2-fbtn { font-size: 0.8rem; padding: 0.1875rem 0.6875rem; border-radius: 20px; border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); text-decoration: none; white-space: nowrap; display: inline-block; }
+      .sv2-fbtn.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+      .sv2-fbtn:hover:not(.active) { border-color: var(--bs-secondary-color); color: var(--bs-body-color); }
+      .sv2-search-input { font-size: 0.8rem; padding: 0.1875rem 0.6875rem 0.1875rem 1.6rem; border-radius: 20px; border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); outline: none; min-width: 220px; }
+      .sv2-search-input:focus { border-color: var(--bs-primary); }
+      .sv2-per-page-select { font-size: 0.8rem; padding: 0.1875rem 0.5rem; border-radius: 20px; border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); outline: none; cursor: pointer; appearance: auto; }
+      .sv2-per-page-select:focus { border-color: var(--bs-primary); }
+      .sv2-search-wrap { position: relative; display: inline-flex; align-items: center; }
+      .sv2-search-icon { position: absolute; left: 0.6rem; color: var(--bs-secondary-color); font-size: 0.7rem; pointer-events: none; }
+      .sv2-filter-table { border-collapse: separate; border-spacing: 0 0.3rem; width: 100%; }
+      .sv2-filter-table td:first-child { white-space: nowrap; vertical-align: middle; padding-right: 0.75rem; width: 1%; }
+      .sv2-filter-table td:last-child { vertical-align: middle; }
+
+      /* ── Toolbar ── */
+      .sv2-toolbar { padding: .45rem 1.25rem; display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; border-bottom: 1px solid var(--bs-border-color); background: var(--bs-body-bg); }
+      .sv2-tbtn { font-size: 0.8rem; padding: 0.25rem 0.625rem; border-radius: var(--bs-border-radius); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+      .sv2-tbtn:hover { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+      .sv2-tbtn.danger { border-color: var(--bs-danger-border-subtle); color: var(--bs-danger-text-emphasis); }
+      .sv2-tbtn.danger:hover { background: var(--bs-danger-bg-subtle); }
+      .sv2-toolbar-sep { width: 1px; height: 22px; background: var(--bs-border-color); margin: 0 0.125rem; flex-shrink: 0; }
+
+      /* ── Card list ── */
+      .sv2-card-list { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.625rem; }
+
+      /* ── Student card ── */
+      .sv2-student-card { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius-lg); overflow: hidden; background: var(--bs-body-bg); }
+
+      /* Card header */
+      .sv2-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: .65rem .9rem; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); }
+      .sv2-card-head-left { display: flex; align-items: flex-start; gap: 0.625rem; }
+      .sv2-status-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 0.3125rem; flex-shrink: 0; }
+      .sv2-dot-green { background: var(--bs-success); }
+      .sv2-dot-amber { background: var(--bs-warning); }
+      .sv2-stud-name { font-size: 1.05rem; font-weight: 600; color: var(--bs-primary); text-decoration: none; }
+      .sv2-stud-name:hover { text-decoration: underline; }
+      .sv2-stud-meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.1875rem; flex-wrap: wrap; }
+      .sv2-stud-meta-text { font-size: 0.875rem; color: var(--bs-secondary-color); white-space: nowrap; }
+      .sv2-stud-meta-sep { font-size: 0.75rem; color: var(--bs-border-color-translucent); }
+
+      /* Status pills */
+      .sv2-pill { display: inline-flex; align-items: center; gap: 0.1875rem; font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+      .sv2-pill-pub  { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+      .sv2-pill-unp  { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+      .sv2-pill-warn { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); border: 1px solid var(--bs-warning-border-subtle); }
+      .sv2-pill-err  { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis); }
+
+      /* Card header actions */
+      .sv2-card-head-actions { display: flex; align-items: center; gap: 0.3125rem; flex-shrink: 0; padding-top: 0.125rem; }
+      .sv2-act-btn { font-size: 0.8rem; padding: 0.25rem 0.625rem; border-radius: var(--bs-border-radius); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+      .sv2-act-btn:hover { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+      .sv2-act-btn.primary { border-color: var(--bs-primary-border-subtle); color: var(--bs-primary-text-emphasis); }
+
+      /* ── Period tabs ── */
+      .sv2-period-tabs { display: flex; border-bottom: 1px solid var(--bs-border-color); background: var(--bs-body-bg); padding: 0 .9rem; }
+      .sv2-ptab { font-size: 0.8rem; padding: .45rem .85rem; border: none; background: none; color: var(--bs-secondary-color); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 0.3125rem; white-space: nowrap; }
+      .sv2-ptab:hover { color: var(--bs-body-color); }
+      .sv2-ptab.active { color: var(--bs-primary); border-bottom-color: var(--bs-primary); font-weight: 600; }
+      .sv2-tab-alert { width: 7px; height: 7px; border-radius: 50%; background: var(--bs-danger);  display: inline-block; }
+      .sv2-tab-warn  { width: 7px; height: 7px; border-radius: 50%; background: var(--bs-warning); display: inline-block; }
+      .sv2-tab-sim   { width: 7px; height: 7px; border-radius: 50%; background: var(--db-orange-400); display: inline-block; }
+
+      /* ── Period panel ── */
+      .sv2-period-panel { padding: .75rem .9rem; display: none; background: var(--bs-body-bg); }
+      .sv2-period-panel.active { display: block; }
+
+      /* Project title row */
+      .sv2-proj-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.375rem; }
+      .sv2-proj-title { font-size: 1rem; font-weight: 600; color: var(--bs-body-color); text-decoration: none; }
+      .sv2-proj-title:hover { text-decoration: underline; }
+      .sv2-proj-meta { font-size: 0.75rem; color: var(--bs-secondary-color); display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; }
+      .sv2-proj-meta a { color: var(--bs-primary); text-decoration: none; }
+      .sv2-proj-meta a:hover { text-decoration: underline; }
+      .sv2-xs-btn { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: var(--bs-border-radius-sm); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); text-decoration: none; display: inline-flex; align-items: center; gap: 0.1875rem; white-space: nowrap; }
+      .sv2-xs-btn:hover { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+      .sv2-xs-btn.info { border-color: var(--bs-primary-border-subtle); color: var(--bs-primary-text-emphasis); }
+
+      /* ── Metric capsules ── */
+      .sv2-metrics-row { display: flex; gap: 0.5rem; margin: 0.5rem 0; flex-wrap: wrap; }
+      .sv2-metric-cap { border-radius: var(--bs-border-radius); overflow: hidden; border: 1px solid; flex-shrink: 0; }
+      .sv2-metric-cap.attendance { border-color: var(--bs-info-border-subtle); }
+      .sv2-metric-cap.grades     { border-color: var(--bs-success-border-subtle); }
+      .sv2-metric-cap-label { font-size: 0.7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 0.1875rem 0.625rem 0.125rem; }
+      .sv2-metric-cap.attendance .sv2-metric-cap-label { color: var(--bs-info-text-emphasis); background: var(--bs-info-bg-subtle); border-bottom: 1px solid var(--bs-info-border-subtle); }
+      .sv2-metric-cap.grades     .sv2-metric-cap-label { color: var(--bs-success-text-emphasis); background: var(--bs-success-bg-subtle); border-bottom: 1px solid var(--bs-success-border-subtle); }
+      .sv2-metric-cap-body { display: flex; }
+      .sv2-metric-cap.attendance .sv2-metric-cap-body { background: var(--bs-info-bg-subtle); }
+      .sv2-metric-cap.grades     .sv2-metric-cap-body { background: var(--bs-success-bg-subtle); }
+      .sv2-m-item { text-align: center; padding: 0.25rem 0.75rem 0.3125rem; }
+      .sv2-m-sep { width: 1px; align-self: stretch; margin: 0.25rem 0; }
+      .sv2-metric-cap.attendance .sv2-m-sep { background: var(--bs-info-border-subtle); }
+      .sv2-metric-cap.grades     .sv2-m-sep { background: var(--bs-success-border-subtle); }
+      .sv2-m-lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; line-height: 1.2; }
+      .sv2-metric-cap.attendance .sv2-m-lbl { color: var(--bs-info-text-emphasis); }
+      .sv2-metric-cap.grades     .sv2-m-lbl { color: var(--bs-success-text-emphasis); }
+      .sv2-m-val { font-size: 1.4rem; font-weight: 600; line-height: 1.3; }
+      .sv2-mv-ok   { color: var(--bs-success-text-emphasis); }
+      .sv2-mv-warn { color: var(--bs-danger-text-emphasis); }
+      .sv2-mv-dim  { color: var(--bs-border-color); }
+
+      /* ── Status strip ── */
+      .sv2-status-strip { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; padding: 0.3125rem 0; border-top: 1px solid var(--bs-border-color-translucent); margin-top: 0.375rem; font-size: 0.8rem; color: var(--bs-secondary-color); }
+      .sv2-report-ok   { color: var(--bs-success-text-emphasis); display: inline-flex; align-items: center; gap: 0.1875rem; }
+      .sv2-report-miss { color: var(--bs-secondary-color); display: inline-flex; align-items: center; gap: 0.1875rem; }
+      .sv2-llm-chip { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 0.625rem; background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); font-weight: 500; }
+      .sv2-llm-chip.pending { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+      .sv2-strip-actions { margin-left: auto; display: flex; gap: 0.3125rem; }
+
+      /* Similarity strip — orange ramp for visual unity with similarity dashboard */
+      .sv2-sim-strip { display: flex; align-items: center; gap: 0.4375rem; flex-wrap: wrap; margin-top: 0.3125rem; padding: 0.3125rem 0.5625rem; border-radius: var(--bs-border-radius); background-color: var(--db-orange-50); border: 1px solid var(--db-orange-200); font-size: 0.8rem; }
+      .sv2-sim-lbl   { font-weight: 600; color: var(--db-orange-800); }
+
+      /* Risk button */
+      .sv2-risk-btn { display: inline-flex; align-items: center; gap: 0.3125rem; font-size: 0.75rem; padding: 0.1875rem 0.625rem; border-radius: var(--bs-border-radius-sm); background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); border: 1px solid var(--bs-danger-border-subtle); text-decoration: none; margin-top: 0.3125rem; }
+      .sv2-risk-btn:hover { color: var(--bs-danger-text-emphasis); filter: brightness(.95); }
+
+      /* ── Roles grid ── */
+      .sv2-roles-grid { display: flex; gap: 1.5rem; margin-top: 0.5rem; padding-top: 0.4375rem; border-top: 1px solid var(--bs-border-color-translucent); flex-wrap: wrap; }
+      .sv2-role-hd { font-size: 0.7rem; font-weight: 700; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 0.1875rem; }
+      .sv2-role-name { font-size: 0.875rem; color: var(--bs-primary); text-decoration: none; display: block; }
+      .sv2-role-name:hover { text-decoration: underline; }
+      .sv2-role-grade { font-size: 0.75rem; color: var(--bs-secondary-color); margin-left: 0.1875rem; }
+      .sv2-pres-info { font-size: 0.875rem; color: var(--bs-secondary-color); }
+      .sv2-stud-number-link { text-decoration: none; color: var(--bs-primary); }
+      .sv2-stud-number-link:hover { text-decoration: underline; color: var(--bs-primary); }
+
+      /* ── Pager ── */
+      .sv2-pager { display: flex; align-items: center; justify-content: space-between; padding: .5rem 1.25rem; font-size: 0.8rem; color: var(--bs-secondary-color); border-top: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg); }
+      .sv2-pager-btn { font-size: 0.8rem; padding: 0.1875rem 0.5625rem; border-radius: var(--bs-border-radius-sm); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); text-decoration: none; display: inline-block; }
+      .sv2-pager-btn:hover { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+      .sv2-pager-btn.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+      .sv2-pager-btn.disabled { pointer-events: none; opacity: .45; }
+      .sv2-pager-btns { display: flex; gap: 0.25rem; }
+    </style>
+    <script>
+      var SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+      function toggleFilters() {
+        var body = document.getElementById('sv2-filters-body');
+        var lbl  = document.getElementById('sv2-filter-toggle-label');
+        var chev = document.getElementById('sv2-filter-chevron');
+        var hidden = body.style.display === 'none';
+        body.style.display = hidden ? '' : 'none';
+        lbl.textContent = hidden ? 'Hide filters' : 'Show filters';
+        chev.className  = hidden ? 'fas fa-chevron-up fa-fw' : 'fas fa-chevron-down fa-fw';
+      }
+
+      function switchTab(sid, panelIdx, btn) {
+        var tabContainer = document.getElementById('sv2-tabs-' + sid);
+        if (tabContainer) {
+          tabContainer.querySelectorAll('.sv2-ptab').forEach(function(t) { t.classList.remove('active'); });
+        }
+        btn.classList.add('active');
+        var prefix = 'sv2-' + sid + '-panel-';
+        document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) {
+          p.style.display = 'none';
+          p.classList.remove('active');
+        });
+        var target = document.getElementById(prefix + panelIdx);
+        if (target) { target.style.display = 'block'; target.classList.add('active'); }
+      }
+
+      function sv2ToggleSimMore(rid, extraCount, btn) {
+        var el = document.getElementById('sv2-sim-more-' + rid);
+        var expanded = el.style.display !== 'none';
+        el.style.display = expanded ? 'none' : '';
+        btn.innerHTML = expanded
+          ? '<i class="fas fa-chevron-down fa-fw"></i> ' + extraCount + ' more concern' + (extraCount !== 1 ? 's' : '') + '…'
+          : '<i class="fas fa-chevron-up fa-fw"></i> Show fewer';
+      }
+
+      // LLM polling — poll every 12 s; reload page when any analysis leaves in_progress state
+      (function() {
+        var pollers = {};
+        document.querySelectorAll('.sv2-llm-in-progress[data-sid]').forEach(function(el) {
+          var sid = el.dataset.sid;
+          if (sid && !pollers[sid]) {
+            pollers[sid] = setInterval(function() {
+              fetch(SCRIPT_ROOT + '/documents/analysis_status/' + sid)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                  if (data.status !== 'in_progress') {
+                    clearInterval(pollers[sid]);
+                    delete pollers[sid];
+                    window.location.reload();
+                  }
+                });
+            }, 12000);
+          }
+        });
+      })();
+    </script>
+{% endblock %}
+
+{% block bodyblock %}
+{% set _back_url = url_for('convenor.submitters', id=pclass.id) %}
+
+{# ── Compute pagination metadata ── #}
+{% set total_pages = ((total_submitters - 1) // per_page + 1) if total_submitters > 0 else 1 %}
+{% set page_start_idx = (page - 1) * per_page + 1 %}
+{% set page_end_idx = [page * per_page, total_submitters] | min %}
+
+{# ── Helper macro: build a filter URL preserving all current params ── #}
+{# Individual filter rows pass overrides as needed; page is always reset to 1 on filter change #}
+
+<div class="sv2-chrome mt-3 mb-3">
+
+  {# ════════════════ HEADER ════════════════ #}
+  <div class="sv2-chrome-header">
+    <span class="sv2-title">Students enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></span>
+    <a href="{{ url_for('convenor.export_allocation', configid=config.id) }}" class="sv2-btn-chrome"
+       data-bs-toggle="tooltip" title="Export current supervisor and marker assignments to Excel">
+      <i class="fas fa-file-excel fa-fw"></i> Export allocation
+    </a>
+  </div>
+
+  {# ════════════════ FILTER TOGGLE ════════════════ #}
+  <div class="sv2-filter-toggle" onclick="toggleFilters()">
+    <i class="fas fa-filter fa-fw" style="font-size:12px"></i>
+    <span id="sv2-filter-toggle-label">Hide filters</span>
+    <i class="fas fa-chevron-up fa-fw" id="sv2-filter-chevron" style="font-size:11px"></i>
+  </div>
+
+  {# ════════════════ FILTERS ════════════════ #}
+  <div class="sv2-filters-body" id="sv2-filters-body">
+    <table role="presentation" class="sv2-filter-table">
+      <tbody>
+
+        {# Search row — server-side name filter #}
+        <tr>
+          <td><strong class="sv2-filter-label" style="color:var(--bs-body-color)">Search</strong></td>
+          <td>
+            <form method="GET" action="{{ url_for('convenor.submitters', id=pclass.id) }}"
+                  style="display:inline-flex;align-items:center;gap:0.25rem">
+              <input type="hidden" name="cohort_filter" value="{{ cohort_filter or '' }}">
+              <input type="hidden" name="prog_filter"   value="{{ prog_filter or '' }}">
+              <input type="hidden" name="state_filter"  value="{{ state_filter or '' }}">
+              <input type="hidden" name="year_filter"   value="{{ year_filter or '' }}">
+              <input type="hidden" name="data_display"  value="{{ data_display or 'name' }}">
+              <input type="hidden" name="page"          value="1">
+              <div class="sv2-search-wrap">
+                <i class="fas fa-search sv2-search-icon"></i>
+                <input type="text" name="name_filter" value="{{ name_filter }}"
+                       class="sv2-search-input" placeholder="Search students…" autocomplete="off">
+              </div>
+              <select name="per_page" class="sv2-per-page-select" onchange="this.form.submit()">
+                {% for n in [5, 10, 15, 20] %}
+                  <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }} per page</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="sv2-xs-btn">Search</button>
+              {% if name_filter %}
+                <a href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, page=1, per_page=per_page) }}"
+                   class="sv2-xs-btn" style="color:var(--bs-secondary-color)">&times;</a>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+
+        {# Cohort row — only when more than one cohort present #}
+        {% if cohorts and cohorts|length > 1 %}
+          <tr>
+            <td><span class="sv2-filter-label">Cohort</span></td>
+            <td>
+              <a class="sv2-fbtn{% if cohort_filter is none or cohort_filter == 'all' %} active{% endif %}"
+                 href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter='all', prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=1, per_page=per_page) }}">All</a>
+              {% for cohort in cohorts %}
+                <a class="sv2-fbtn{% if cohort_filter == cohort|string %} active{% endif %}"
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=1, per_page=per_page) }}">{{ cohort }}</a>
+              {% endfor %}
+            </td>
+          </tr>
+        {% endif %}
+
+        {# Programme row — only when more than one programme present #}
+        {% if progs and progs|length > 1 %}
+          <tr>
+            <td><span class="sv2-filter-label">Programme</span></td>
+            <td>
+              <a class="sv2-fbtn{% if prog_filter is none or prog_filter == 'all' %} active{% endif %}"
+                 href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter='all', state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=1, per_page=per_page) }}">All</a>
+              {% for prog in progs %}
+                <a class="sv2-fbtn{% if prog_filter == prog.id|string %} active{% endif %}"
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog.id, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=1, per_page=per_page) }}">{{ label_text(prog.short_label) }}</a>
+              {% endfor %}
+            </td>
+          </tr>
+        {% endif %}
+
+        {# State row #}
+        <tr>
+          <td><span class="sv2-filter-label">State</span></td>
+          <td>
+            {% for val, label in [('all','All'), ('published','Published'), ('unpublished','Unpublished'),
+                                  ('report','Report uploaded'), ('no-report','Report not uploaded'),
+                                  ('attachments','Has attachments'), ('no-attachments','No attachments'),
+                                  ('twd','TWD')] %}
+              <a class="sv2-fbtn{% if state_filter == val or (val == 'all' and (state_filter is none or state_filter == 'all')) %} active{% endif %}"
+                 href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=val, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=1, per_page=per_page) }}">{{ label }}</a>
+            {% endfor %}
+          </td>
+        </tr>
+
+        {# Display row #}
+        <tr>
+          <td><span class="sv2-filter-label">Display</span></td>
+          <td>
+            {% for val, label in [('name','Name'), ('number','Candidate number'), ('both-number','Number + name')] %}
+              <a class="sv2-fbtn{% if data_display == val or (val == 'name' and (data_display is none or data_display == 'name')) %} active{% endif %}"
+                 href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=val, name_filter=name_filter, page=1, per_page=per_page) }}">{{ label }}</a>
+            {% endfor %}
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>{# /filters-body #}
+
+  {# ════════════════ TOOLBAR ════════════════ #}
+  <div class="sv2-toolbar">
+
+    {# Email dropdown #}
+    <div class="dropdown">
+      <a class="sv2-tbtn dropdown-toggle" data-bs-toggle="dropdown" href="#">
+        <i class="fas fa-envelope fa-fw"></i> Email
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark">
+        <li>
+          <a class="dropdown-item d-flex gap-2"
+             href="mailto:{{ submitter_emails|join(',') }}"
+             data-bs-toggle="tooltip" title="Opens your local mail client with filtered addresses pre-filled">
+            <i class="fas fa-envelope fa-fw"></i> Email via local client
+          </a>
+        </li>
+        {% if is_admin or is_root or is_emailer %}
+          <li>
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.email_submitters', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}">
+              <i class="fas fa-envelope-open fa-fw"></i> Send email
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="sv2-toolbar-sep"></div>
+
+    {# Publish dropdown #}
+    {% if pclass.publish %}
+      <div class="dropdown">
+        <a class="sv2-tbtn dropdown-toggle" data-bs-toggle="dropdown" href="#">
+          <i class="fas fa-eye fa-fw"></i> Publish
+        </a>
+        <ul class="dropdown-menu dropdown-menu-dark">
+          <li>
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.publish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}">
+              <i class="fas fa-eye fa-fw"></i> Publish all
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.unpublish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}">
+              <i class="fas fa-eye-slash fa-fw"></i> Unpublish all
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="sv2-toolbar-sep"></div>
+    {% endif %}
+
+    {# Markers dropdown #}
+    <div class="dropdown">
+      <a class="sv2-tbtn dropdown-toggle" data-bs-toggle="dropdown" href="#">
+        <i class="fas fa-user-tag fa-fw"></i> Markers
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark">
+        {% if config.project_class.uses_marker %}
+          <li>
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.populate_markers', configid=config.id) }}">
+              <i class="fas fa-wrench fa-fw"></i> Populate
+            </a>
+          </li>
+        {% endif %}
+        <li>
+          <a class="dropdown-item d-flex gap-2"
+             href="{{ url_for('convenor.remove_markers', configid=config.id) }}">
+            <i class="fas fa-minus-circle fa-fw"></i> Remove
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sv2-toolbar-sep"></div>
+
+    {# Pipeline dropdown #}
+    <div class="dropdown">
+      <a class="sv2-tbtn dropdown-toggle" data-bs-toggle="dropdown" href="#">
+        <i class="fas fa-robot fa-fw"></i> Pipeline
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark">
+        <li>
+          <a class="dropdown-item d-flex gap-2"
+             href="{{ url_for('convenor.submit_missing_llm', configid=config.id) }}">
+            <i class="fas fa-upload fa-fw"></i> Submit missing to pipeline
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item d-flex gap-2"
+             href="{{ url_for('convenor.clear_and_resubmit_llm', configid=config.id) }}"
+             onclick="return confirm('This will delete all existing analysis results for this project class and resubmit every report. Are you sure?')">
+            <i class="fas fa-sync-alt fa-fw"></i> Clear &amp; resubmit all
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sv2-toolbar-sep"></div>
+
+    {# Destructive #}
+    <a href="{{ url_for('convenor.delete_all_submitters', configid=config.id) }}"
+       class="sv2-tbtn danger">
+      <i class="fas fa-trash fa-fw"></i> Delete all
+    </a>
+
+  </div>{# /toolbar #}
+
+  {# ════════════════ CARD LIST ════════════════ #}
+  <div class="sv2-card-list">
+    {% if submitters %}
+      {% for sub in submitters %}
+        {% set recs = sub.ordered_assignments.all() %}
+        {% set sid = sub.id %}
+        {% set is_published = sub.published and pclass.publish %}
+        {% set sub_errors = sub.errors %}
+        {% set sub_warnings = sub.warnings %}
+
+        <div class="sv2-student-card">
+
+          {# ── Card header ── #}
+          <div class="sv2-card-head">
+            <div class="sv2-card-head-left">
+              <div class="sv2-status-dot {% if is_published %}sv2-dot-green{% else %}sv2-dot-amber{% endif %}"
+                   title="{% if is_published %}Published{% else %}Unpublished{% endif %}"></div>
+              <div>
+                {# Student name / identifier #}
+                {% if data_display == 'number' %}
+                  {% if is_admin or is_root %}
+                    <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=_back_url) }}"
+                       class="sv2-stud-name">#{{ sub.student.exam_number }}</a>
+                  {% else %}
+                    <span class="sv2-stud-name">#{{ sub.student.exam_number }}</span>
+                  {% endif %}
+                {% else %}
+                  <a href="mailto:{{ sub.student.user.email }}" class="sv2-stud-name">{{ sub.student.user.name }}</a>
+                {% endif %}
+
+                {# Meta line #}
+                <div class="sv2-stud-meta">
+                  {{ simple_label(sub.student.programme.short_label) }}
+                  <span class="sv2-stud-meta-sep">·</span>
+                  {{ simple_label(sub.academic_year_label(show_details=False)) }}
+                  {# Show exam number alongside name when display mode includes both #}
+                  {% if data_display == 'both-number' %}
+                    <span class="sv2-stud-meta-sep">·</span>
+                    {% if is_admin or is_root %}
+                      <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=_back_url) }}"
+                         class="sv2-stud-number-link">#{{ sub.student.exam_number }}</a>
+                    {% else %}
+                      <span class="sv2-stud-meta-text">#{{ sub.student.exam_number }}</span>
+                    {% endif %}
+                  {% endif %}
+                  <span class="sv2-stud-meta-sep">·</span>
+                  {# Published/unpublished pill #}
+                  {% if is_published %}
+                    <span class="sv2-pill sv2-pill-pub"><i class="fas fa-eye" style="font-size:9px"></i> Published</span>
+                  {% else %}
+                    <span class="sv2-pill sv2-pill-unp"><i class="fas fa-eye-slash" style="font-size:9px"></i> Unpublished</span>
+                  {% endif %}
+                  {# Error / warning pills #}
+                  {% if sub_errors|length > 0 %}
+                    <span class="sv2-pill sv2-pill-err">
+                      <i class="fas fa-times-circle" style="font-size:9px"></i>
+                      {{ sub_errors|length }} error{{ 's' if sub_errors|length != 1 }}
+                    </span>
+                  {% endif %}
+                  {% if sub_warnings|length > 0 %}
+                    <span class="sv2-pill sv2-pill-warn">
+                      <i class="fas fa-exclamation-triangle" style="font-size:9px"></i>
+                      {{ sub_warnings|length }} warning{{ 's' if sub_warnings|length != 1 }}
+                    </span>
+                  {% endif %}
+                  {# Task badge #}
+                  {% set num_tasks = sub.number_available_tasks %}
+                  {% if num_tasks > 0 %}
+                    <a href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=_back_url) }}"
+                       class="sv2-pill" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">
+                      <i class="fas fa-tasks" style="font-size:9px"></i>
+                      {{ num_tasks }} task{{ 's' if num_tasks != 1 }}
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {# Action buttons #}
+            <div class="sv2-card-head-actions">
+              <a href="{{ url_for('convenor.student_journal_inspector', student_id=sub.student_id, url=_back_url, text='submitters view') }}"
+                 class="sv2-act-btn primary">
+                <i class="fas fa-book fa-fw"></i> Journal
+              </a>
+              {% if sub.student.has_timeline %}
+                <a href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=_back_url) }}"
+                   class="sv2-act-btn">
+                  <i class="fas fa-history fa-fw"></i> History
+                </a>
+              {% endif %}
+              <a href="{{ url_for('convenor.edit_roles', sub_id=sub.id, text='submitters view', url=_back_url) }}"
+                 class="sv2-act-btn">
+                <i class="fas fa-user-circle fa-fw"></i> Roles
+              </a>
+              <div class="dropdown">
+                <a class="sv2-act-btn dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                  <i class="fas fa-ellipsis-h fa-fw"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                  {% if is_admin or is_root %}
+                    <li>
+                      <a class="dropdown-item d-flex gap-2"
+                         href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=_back_url) }}">
+                        <i class="fas fa-pencil-alt fa-fw"></i> Edit student
+                      </a>
+                    </li>
+                  {% endif %}
+                  <li>
+                    <a class="dropdown-item d-flex gap-2"
+                       href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=_back_url) }}">
+                      <i class="fas fa-tasks fa-fw"></i> Tasks
+                    </a>
+                  </li>
+                  <li>
+                    {% if is_published %}
+                      <a class="dropdown-item d-flex gap-2"
+                         href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
+                        <i class="fas fa-eye-slash fa-fw"></i> Unpublish
+                      </a>
+                    {% elif pclass.publish %}
+                      <a class="dropdown-item d-flex gap-2"
+                         href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
+                        <i class="fas fa-eye fa-fw"></i> Publish
+                      </a>
+                    {% else %}
+                      <a class="dropdown-item d-flex gap-2 disabled">
+                        <i class="fas fa-eye-slash fa-fw"></i> Cannot publish
+                      </a>
+                    {% endif %}
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  {% if allow_delete %}
+                    <li>
+                      <a class="dropdown-item d-flex gap-2 text-danger"
+                         href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
+                        <i class="fas fa-trash fa-fw"></i> Delete
+                      </a>
+                    </li>
+                  {% else %}
+                    <li>
+                      <a class="dropdown-item d-flex gap-2 disabled">
+                        <i class="fas fa-trash fa-fw"></i> Delete disabled
+                      </a>
+                    </li>
+                  {% endif %}
+                </ul>
+              </div>
+            </div>
+          </div>{# /card-head #}
+
+          {# ── Period tabs (multi-period only) ── #}
+          {% if config.number_submissions > 1 %}
+            <div class="sv2-period-tabs" id="sv2-tabs-{{ sid }}">
+              {% for r in recs %}
+                {% set rec_errors = r.errors %}
+                {% set rec_warnings = r.warnings %}
+                <button class="sv2-ptab{% if loop.first %} active{% endif %}"
+                        onclick="switchTab({{ sid }}, {{ loop.index0 }}, this)">
+                  {{ r.period.display_name }}
+                  {% if rec_errors|length > 0 %}
+                    <span class="sv2-tab-alert"></span>
+                  {% elif rec_warnings|length > 0 %}
+                    <span class="sv2-tab-warn"></span>
+                  {% elif r.inline_similarity_concerns %}
+                    <span class="sv2-tab-sim"></span>
+                  {% endif %}
+                </button>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {# ── Period panels ── #}
+          {% for r in recs %}
+            {% set period = r.period %}
+            <div class="sv2-period-panel{% if loop.first %} active{% endif %}"
+                 id="sv2-{{ sid }}-panel-{{ loop.index0 }}">
+
+              {% if r.project is not none %}
+
+                {# Project title row #}
+                <div class="sv2-proj-row">
+                  <div>
+                    {% set proj_name = r.project.name if r.project.name|length <= 70 else r.project.name[0:70] + '…' %}
+                    <a href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=_back_url) }}"
+                       class="sv2-proj-title">{{ proj_name }}</a>
+                    {% if r.has_issues %}
+                      {% set rec_errors = r.errors %}
+                      <i class="fas fa-exclamation-triangle ms-1"
+                         style="font-size:12px;color:{% if rec_errors|length > 0 %}var(--bs-danger){% else %}var(--bs-warning){% endif %}"
+                         title="{% if rec_errors|length > 0 %}Has errors{% else %}Has warnings{% endif %}"></i>
+                    {% endif %}
+                  </div>
+                  <div class="sv2-proj-meta">
+                    {% if r.project.owner is not none %}
+                      <span>Owner: <a href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a></span>
+                    {% endif %}
+                    {# Change dropdown #}
+                    <div class="dropdown">
+                      <a class="dropdown-toggle" data-bs-toggle="dropdown" href="#"
+                         style="color:var(--bs-primary);text-decoration:none;font-size:11px">Change</a>
+                      <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                        {% if period.has_active_marking_event %}
+                          <li>
+                            <a class="dropdown-item d-flex gap-2 disabled">
+                              <i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project
+                            </a>
+                          </li>
+                        {% else %}
+                          <li>
+                            <a class="dropdown-item d-flex gap-2"
+                               href="{{ url_for('convenor.manual_assign', id=r.id, text='convenor submitters view', url=_back_url) }}">
+                              <i class="fas fa-folder fa-fw"></i> Assign project…
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item d-flex gap-2"
+                               href="{{ url_for('convenor.deassign_project', id=r.id) }}">
+                              <i class="fas fa-times fa-fw"></i> Deassign project
+                            </a>
+                          </li>
+                        {% endif %}
+                        <li>
+                          <a class="dropdown-item d-flex gap-2"
+                             href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=_back_url) }}">
+                            <i class="fas fa-user-circle fa-fw"></i> Edit roles…
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                    <a href="{{ url_for('projecthub.hub', subid=r.id, text='convenor submitters view', url=_back_url) }}"
+                       class="sv2-xs-btn info">
+                      <i class="fas fa-external-link-alt" style="font-size:10px"></i> Project page
+                    </a>
+                  </div>
+                </div>
+
+                {# Metric capsules #}
+                {% set attendance_data = r.get_attendance_data() %}
+                {% set grade_data = r.grade_display_data() %}
+                {# Determine if attendance capsule should be shown #}
+                {% set show_attendance = attendance_data and attendance_data['total'] > 0 %}
+                {# Determine if grades capsule should be shown — show if any relevant grade field exists #}
+                {% set show_grades = grade_data|length > 0 %}
+
+                {% if show_attendance or show_grades %}
+                  <div class="sv2-metrics-row">
+
+                    {# Attendance capsule #}
+                    {% if show_attendance %}
+                      {% set att_missing = attendance_data['missing'] %}
+                      {% set att_recorded = attendance_data['recorded'] %}
+                      {% set att_rate = attendance_data['attendance'] %}
+                      <div class="sv2-metric-cap attendance">
+                        <div class="sv2-metric-cap-label">Attendance</div>
+                        <div class="sv2-metric-cap-body">
+                          <div class="sv2-m-item">
+                            <div class="sv2-m-lbl">Recorded</div>
+                            <div class="sv2-m-val {% if att_missing == 0 %}sv2-mv-ok{% else %}sv2-mv-warn{% endif %}">{{ att_recorded }}</div>
+                          </div>
+                          <div class="sv2-m-sep"></div>
+                          <div class="sv2-m-item">
+                            <div class="sv2-m-lbl">Missing</div>
+                            <div class="sv2-m-val {% if att_missing == 0 %}sv2-mv-ok{% else %}sv2-mv-warn{% endif %}">{{ att_missing }}</div>
+                          </div>
+                          <div class="sv2-m-sep"></div>
+                          <div class="sv2-m-item">
+                            <div class="sv2-m-lbl">Rate</div>
+                            {% if att_rate is not none and att_rate >= 0 %}
+                              <div class="sv2-m-val sv2-mv-ok">{{ att_rate|round(0)|int }}%</div>
+                            {% else %}
+                              <div class="sv2-m-val sv2-mv-dim">&mdash;</div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    {% endif %}
+
+                    {# Grades capsule #}
+                    {% if show_grades %}
+                      {# Filter grade items relevant to this project class #}
+                      {% set visible_grades = [] %}
+                      {% for g in grade_data %}
+                        {% if g.label != 'Presentation' or pclass.uses_presentations %}
+                          {% if visible_grades.append(g) %}{% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {% if visible_grades|length > 0 %}
+                        <div class="sv2-metric-cap grades">
+                          <div class="sv2-metric-cap-label">Grades</div>
+                          <div class="sv2-metric-cap-body">
+                            {% for g in visible_grades %}
+                              {% if not loop.first %}
+                                <div class="sv2-m-sep"></div>
+                              {% endif %}
+                              <div class="sv2-m-item">
+                                <div class="sv2-m-lbl">{{ g.label }}</div>
+                                {% if g.grade is not none %}
+                                  <div class="sv2-m-val sv2-mv-ok">{{ "%.1f"|format(g.grade) }}%</div>
+                                {% else %}
+                                  <div class="sv2-m-val sv2-mv-dim">&mdash;</div>
+                                {% endif %}
+                              </div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% endif %}
+
+                  </div>{# /metrics-row #}
+                {% endif %}
+
+                {# Compute risk factor summary once for both the flag chip and CTA button #}
+                {% set rf = r.risk_factors_ui_summary() if r.language_analysis_complete else none %}
+
+                {# Status strip #}
+                <div class="sv2-status-strip">
+
+                  {# Report status #}
+                  {% if r.report is not none %}
+                    <span class="sv2-report-ok"><i class="fas fa-check-circle"></i> Report uploaded</span>
+                  {% else %}
+                    <span class="sv2-report-miss"><i class="fas fa-times-circle"></i> No report</span>
+                  {% endif %}
+
+                  {# Attachment count #}
+                  {% set num_att = r.number_attachments %}
+                  {% if num_att > 0 %}
+                    <span class="sv2-stud-meta-sep">·</span>
+                    <span style="font-size:11px;color:var(--bs-secondary-color)">{{ num_att }} attachment{{ 's' if num_att != 1 }}</span>
+                  {% endif %}
+
+                  {# Risk factor badges + LLM classification (analysis complete) or pending spinner #}
+                  {% if r.language_analysis_complete %}
+                    {% set la_llm = r.language_analysis_data.get('llm_result', {}) if r.language_analysis_data else {} %}
+                    <span class="sv2-stud-meta-sep">·</span>
+                    {% if rf is not none and rf.has_any_present %}
+                      {% for f in rf.factors %}
+                        {% if f.present %}
+                          {% if f.resolved %}
+                            <span class="badge bg-success-subtle text-success-emphasis">
+                              <i class="fas fa-check-circle fa-fw"></i> {{ f.label }}
+                            </span>
+                          {% else %}
+                            <span class="badge bg-danger-subtle text-danger-emphasis">
+                              <i class="fas fa-exclamation-triangle fa-fw"></i> {{ f.label }}
+                            </span>
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                    {% elif rf is not none %}
+                      <span class="badge bg-secondary-subtle text-secondary-emphasis">No risk factors</span>
+                    {% endif %}
+                    {% if la_llm.get('classification') %}
+                      <span class="sv2-llm-chip">
+                        <i class="fas fa-robot" style="font-size:11px"></i> {{ la_llm['classification'] }}
+                      </span>
+                    {% endif %}
+                  {% elif r.language_analysis_started %}
+                    <span class="sv2-stud-meta-sep">·</span>
+                    <span class="sv2-llm-chip pending sv2-llm-in-progress" data-sid="{{ r.id }}">
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width:.7em;height:.7em;border-width:.1em"></span>
+                      Analysing…
+                    </span>
+                  {% endif %}
+
+                  {# Document / Analyse / LLM report buttons #}
+                  <span class="sv2-strip-actions">
+                    <a href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=_back_url) }}"
+                       class="sv2-xs-btn">
+                      <i class="fas fa-folder-open" style="font-size:10px"></i> Documents
+                    </a>
+                    {% if r.report is not none and not r.language_analysis_started %}
+                      <a href="{{ url_for('documents.launch_language_analysis', sid=r.id, url=_back_url) }}"
+                         class="sv2-xs-btn">
+                        <i class="fas fa-flask" style="font-size:10px"></i> Analyse
+                      </a>
+                    {% endif %}
+                    {% if r.language_analysis_complete %}
+                      <a href="{{ url_for('documents.llm_report', record_id=r.id, url=_back_url, text='convenor submitters view') }}"
+                         class="sv2-xs-btn">
+                        <i class="fas fa-chart-bar" style="font-size:10px"></i> LLM report
+                      </a>
+                    {% endif %}
+                  </span>
+
+                </div>{# /status-strip #}
+
+                {# Canvas pull (if available and report not yet uploaded) #}
+                {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available %}
+                  <div style="margin-top:5px">
+                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=_back_url) }}"
+                       class="sv2-xs-btn" style="color:var(--bs-success-text-emphasis);border-color:var(--bs-success-border-subtle)">
+                      <i class="fas fa-download" style="font-size:10px"></i> Pull report from Canvas
+                    </a>
+                  </div>
+                {% endif %}
+
+                {# Similarity strips — show first 2; collapse remainder #}
+                {% set inline_concerns = r.inline_similarity_concerns %}
+                {% if inline_concerns %}
+                  {% set concern_count = inline_concerns|length %}
+                  {% for concern in inline_concerns %}
+                    {% set other = concern.record_b if concern.record_a_id == r.id else concern.record_a %}
+                    {% if loop.index == 3 and concern_count > 2 %}<div id="sv2-sim-more-{{ r.id }}" style="display:none">{% endif %}
+                    <div class="sv2-sim-strip">
+                      <i class="fas fa-search fa-fw" style="color:var(--db-orange-600)"></i>
+                      <span class="sv2-sim-lbl">{{ other.owner.student.user.name }}</span>
+                      <span class="badge" style="background-color:var(--db-orange-100);color:var(--db-orange-800)">{{ concern.chunk_type|replace('_', ' ') }}</span>
+                      {% if concern.transformer_cosine >= SIMILARITY_DANGER_COSINE %}
+                        <span class="badge bg-danger-subtle text-danger-emphasis">{{ "%.2f"|format(concern.transformer_cosine) }}</span>
+                      {% else %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ "%.2f"|format(concern.transformer_cosine) }}</span>
+                      {% endif %}
+                      <a href="{{ url_for('dashboards.similarity_concern_detail', concern_id=concern.id) }}#review"
+                         class="btn btn-xs btn-outline-db-orange ms-auto">
+                        Review <i class="fas fa-arrow-right ms-1"></i>
+                      </a>
+                    </div>
+                    {% if loop.last and concern_count > 2 %}</div>{% endif %}
+                  {% endfor %}
+                  {% if concern_count > 2 %}
+                    {% set extra = concern_count - 2 %}
+                    <a class="btn btn-xs btn-outline-db-orange mt-1"
+                       onclick="sv2ToggleSimMore({{ r.id }}, {{ extra }}, this); return false;" href="#">
+                      <i class="fas fa-chevron-down fa-fw"></i>
+                      {{ extra }} more concern{{ 's' if extra != 1 }}&hellip;
+                    </a>
+                  {% endif %}
+                {% endif %}
+
+                {# Risk factor call-to-action #}
+                {% if rf is not none and rf.has_unresolved %}
+                  <a href="{{ url_for('convenor.resolve_risk_factors', record_id=r.id, url=_back_url, text='convenor submitters view') }}"
+                     class="sv2-risk-btn">
+                    <i class="fas fa-shield-alt"></i>
+                    Resolve {{ rf.unresolved_count }} risk factor{{ 's' if rf.unresolved_count != 1 }}&hellip;
+                  </a>
+                {% endif %}
+
+                {# Roles grid #}
+                <div class="sv2-roles-grid">
+                  {% if config.uses_supervisor %}
+                    <div>
+                      <div class="sv2-role-hd">Supervisor</div>
+                      {% for role in r.supervisor_roles %}
+                        <a href="mailto:{{ role.user.email }}" class="sv2-role-name">{{ role.user.name }}</a>
+                        {% if role.grade %}
+                          <span class="sv2-role-grade">{{ "%.1f"|format(role.grade) }}%</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="sv2-role-name" style="color:var(--bs-secondary-color)">None assigned</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  {% if config.uses_marker %}
+                    <div>
+                      <div class="sv2-role-hd">Markers</div>
+                      {% for role in r.marker_roles %}
+                        <a href="mailto:{{ role.user.email }}" class="sv2-role-name">
+                          {{ role.user.name }}
+                          {% if role.grade %}
+                            <span class="sv2-role-grade">{{ "%.1f"|format(role.grade) }}%</span>
+                          {% endif %}
+                        </a>
+                      {% else %}
+                        <span class="sv2-role-name" style="color:var(--bs-secondary-color)">None assigned</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  {% if config.uses_moderator %}
+                    <div>
+                      <div class="sv2-role-hd">Moderator</div>
+                      {% for role in r.moderator_roles %}
+                        <a href="mailto:{{ role.user.email }}" class="sv2-role-name">{{ role.user.name }}</a>
+                      {% else %}
+                        <span class="sv2-role-name" style="color:var(--bs-secondary-color)">None assigned</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  {% if config.uses_presentations and period.has_presentation %}
+                    <div>
+                      <div class="sv2-role-hd">Presentation</div>
+                      {% if period.has_deployed_schedule %}
+                        {% set slots_and_roles = r.presentation_assessor_roles_by_slot() %}
+                        {% if slots_and_roles %}
+                          {% for slot, slot_roles in slots_and_roles %}
+                            <div class="sv2-pres-info">{{ slot.session.label_as_string }}</div>
+                            {% for role in slot_roles %}
+                              <a href="mailto:{{ role.user.email }}" class="sv2-role-name">{{ role.user.name }}</a>
+                            {% endfor %}
+                          {% endfor %}
+                        {% else %}
+                          <span class="sv2-pres-info" style="color:var(--bs-danger-text-emphasis)">Not attending</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="sv2-pres-info">Awaiting scheduling</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </div>{# /roles-grid #}
+
+              {% else %}
+                {# No project allocated #}
+                <div style="padding:.5rem 0">
+                  <a href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=_back_url) }}"
+                     class="sv2-pill sv2-pill-err">
+                    <i class="fas fa-folder-open" style="font-size:9px"></i> No project allocated — assign now
+                  </a>
+                </div>
+              {% endif %}
+
+            </div>{# /period-panel #}
+          {% endfor %}{# periods #}
+
+        </div>{# /student-card #}
+      {% endfor %}{# submitters #}
+    {% else %}
+      <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:14px">
+        <i class="fas fa-users fa-2x mb-2" style="display:block;opacity:.35"></i>
+        No submitters match the current filters.
+      </div>
+    {% endif %}
+  </div>{# /card-list #}
+
+  {# ════════════════ PAGER ════════════════ #}
+  <div class="sv2-pager">
+    <span>
+      {% if total_submitters == 0 %}
+        No entries
+      {% elif total_submitters == 1 %}
+        Showing 1 entry
+      {% else %}
+        Showing {{ page_start_idx }}&ndash;{{ page_end_idx }} of {{ total_submitters }} entries
+      {% endif %}
+    </span>
+    {% if total_pages > 1 %}
+      <div class="sv2-pager-btns">
+        <a class="sv2-pager-btn{% if page <= 1 %} disabled{% endif %}"
+           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=page-1, per_page=per_page) }}">
+          Previous
+        </a>
+        {% for p in range(1, total_pages + 1) %}
+          <a class="sv2-pager-btn{% if p == page %} active{% endif %}"
+             href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=p, per_page=per_page) }}">{{ p }}</a>
+        {% endfor %}
+        <a class="sv2-pager-btn{% if page >= total_pages %} disabled{% endif %}"
+           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=page+1, per_page=per_page) }}">
+          Next
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+</div>{# /chrome #}
+{% endblock %}

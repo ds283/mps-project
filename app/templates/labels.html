@@ -50,6 +50,25 @@
     {%- endif -%}
 {% endmacro %}
 
+{# label_text: extract the plain-text label from label_data without any badge or span wrapper.
+   Handles a mapping (dict with 'label' key), a list of mappings/strings, or a plain string.
+   Use this wherever label_data must appear as inline text rather than a badge, e.g. inside
+   filter pill buttons or plain-text metadata lines. #}
+{% macro label_text(label_data) -%}
+    {%- if label_data is mapping -%}
+        {{- (label_data['label'] if 'label' in label_data else '')|safe -}}
+    {%- elif label_data is iterable and label_data is not string -%}
+        {%- for item in label_data -%}
+            {%- if item is mapping -%}{{- (item['label'] if 'label' in item else '')|safe -}}
+            {%- elif item is not none -%}{{- item|safe -}}
+            {%- endif -%}
+            {%- if not loop.last %} {% endif -%}
+        {%- endfor -%}
+    {%- elif label_data is not none -%}
+        {{- label_data|safe -}}
+    {%- endif -%}
+{%- endmacro %}
+
 {% macro unformatted_label_impl(label_data, user_classes=none, popover_text=none, popover_as_tooltip=false, tag='span', prefix=none, suffix=none) %}
     {% if label_data is mapping %}
         {%- set label = label_data['label'] if 'label' in label_data else none %}

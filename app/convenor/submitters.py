@@ -92,6 +92,7 @@ def submitters(id):
     state_filter = request.args.get("state_filter")
     year_filter = request.args.get("year_filter")
     data_display = request.args.get("data_display")
+    name_filter = request.args.get("name_filter", "").strip()
 
     # get current academic year
     current_year = get_current_year()
@@ -200,6 +201,9 @@ def submitters(id):
     ]:
         data_display = "name"
 
+    if data_display == "both-name":
+        data_display = "name"
+
     if data_display is not None:
         session["convenor_submitters_data_display"] = data_display
 
@@ -207,12 +211,40 @@ def submitters(id):
     submitters = build_submitters_data(
         config, cohort_filter, prog_filter, state_filter, year_filter
     )
+    if name_filter:
+        name_lower = name_filter.lower()
+        submitters = [s for s in submitters if name_lower in s.student.user.name.lower()]
+
+    if data_display in ("number", "both-number"):
+        submitters.sort(key=lambda s: s.student.exam_number if s.student.exam_number is not None else "")
+    else:
+        submitters.sort(key=lambda s: (
+            (s.student.user.last_name or "").lower(),
+            (s.student.user.first_name or "").lower(),
+        ))
+
     emails = [s.student.user.email for s in submitters]
+
+    page = request.args.get("page", 1, type=int)
+    _ALLOWED_PER_PAGE = {5, 10, 15, 20}
+    _per_page_raw = request.args.get("per_page", 10, type=int)
+    per_page = _per_page_raw if _per_page_raw in _ALLOWED_PER_PAGE else 10
+    total_submitters = len(submitters)
+    page_start = (page - 1) * per_page
+    paged_submitters = submitters[page_start : page_start + per_page]
+    allow_delete = (
+        config.submitter_lifecycle <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    )
 
     data = get_convenor_dashboard_data(pclass, config)
 
+    template = (
+        "convenor/dashboard/submitters_v2.html"
+        if current_app.config.get("SUBMITTERS_V2", False)
+        else "convenor/dashboard/submitters.html"
+    )
     return render_template_context(
-        "convenor/dashboard/submitters.html",
+        template,
         pane="submitters",
         subpane="list",
         pclass=pclass,
@@ -228,6 +260,12 @@ def submitters(id):
         state_filter=state_filter,
         year_filter=year_filter,
         data_display=data_display,
+        name_filter=name_filter,
+        submitters=paged_submitters,
+        page=page,
+        total_submitters=total_submitters,
+        per_page=per_page,
+        allow_delete=allow_delete,
     )
 
 

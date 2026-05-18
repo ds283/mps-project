@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submitters Inspector — Card Layout Mockup</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bs-secondary-bg); font-size: 14px; }
+  .page-wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+
+  /* ── Outer chrome ── */
+  .chrome { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius-lg); overflow: hidden; margin-bottom: 1.5rem; }
+  .chrome-header { background: var(--bs-primary); color: #fff; padding: .75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+  .chrome-header .title { font-size: 14px; }
+  .chrome-header strong { font-weight: 600; }
+  .btn-chrome { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); color: #fff; font-size: 12px; padding: 4px 12px; border-radius: var(--bs-border-radius); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+
+  /* ── Filter toggle ── */
+  .filter-toggle { background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); padding: .4rem 1.25rem; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bs-primary); cursor: pointer; user-select: none; }
+
+  /* ── Filters ── */
+  .filters-body { background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); padding: .7rem 1.25rem; }
+  .filter-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+  .filter-row:last-child { margin-bottom: 0; }
+  .filter-label { font-size: 11px; font-weight: 700; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .05em; min-width: 64px; }
+  .fbtn { font-size: 12px; padding: 3px 11px; border-radius: 20px; border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); cursor: pointer; white-space: nowrap; }
+  .fbtn.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+  .fbtn:hover:not(.active) { border-color: var(--bs-secondary-color); }
+
+  /* ── Toolbar ── */
+  .toolbar { padding: .45rem 1.25rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--bs-border-color); background: var(--bs-body-bg); }
+  .tbtn { font-size: 12px; padding: 4px 10px; border-radius: var(--bs-border-radius); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .tbtn:hover { background: var(--bs-tertiary-bg); }
+  .tbtn.danger { border-color: var(--bs-danger-border-subtle); color: var(--bs-danger-text-emphasis); }
+  .tbtn.danger:hover { background: var(--bs-danger-bg-subtle); }
+  .toolbar-sep { width: 1px; height: 22px; background: var(--bs-border-color); margin: 0 2px; flex-shrink: 0; }
+
+  /* ── Card list ── */
+  .card-list { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Student card ── */
+  .student-card { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius-lg); overflow: hidden; background: var(--bs-body-bg); }
+
+  /* Card header: student identity + actions */
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: .65rem .9rem; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); }
+  .card-head-left { display: flex; align-items: flex-start; gap: 10px; }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .dot-green { background: var(--bs-success); }
+  .dot-amber { background: var(--bs-warning); }
+  .stud-name { font-size: 14px; font-weight: 600; color: var(--bs-primary); text-decoration: none; }
+  .stud-name:hover { text-decoration: underline; }
+  .stud-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+  .stud-meta-text { font-size: 12px; color: var(--bs-secondary-color); white-space: nowrap; }
+  .stud-meta-sep { font-size: 11px; color: var(--bs-border-color-translucent); }
+
+  /* Status pills — only pub/unpub/warn/err */
+  .pill { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .pill-pub  { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+  .pill-unp  { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+  .pill-warn { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); border: 1px solid var(--bs-warning-border-subtle); }
+  .pill-err  { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis); }
+
+  .card-head-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding-top: 2px; }
+  .act-btn { font-size: 12px; padding: 4px 10px; border-radius: var(--bs-border-radius); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .act-btn:hover { background: var(--bs-tertiary-bg); }
+  .act-btn.primary { border-color: var(--bs-primary-border-subtle); color: var(--bs-primary-text-emphasis); }
+
+  /* ── Period tabs ── */
+  .period-tabs { display: flex; border-bottom: 1px solid var(--bs-border-color); background: var(--bs-body-bg); padding: 0 .9rem; }
+  .ptab { font-size: 12px; padding: .45rem .85rem; border: none; background: none; color: var(--bs-secondary-color); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .ptab:hover { color: var(--bs-body-color); }
+  .ptab.active { color: var(--bs-primary); border-bottom-color: var(--bs-primary); font-weight: 600; }
+  .ptab .tab-alert { width: 7px; height: 7px; border-radius: 50%; background: var(--bs-danger);  display: inline-block; }
+  .ptab .tab-warn  { width: 7px; height: 7px; border-radius: 50%; background: var(--bs-warning); display: inline-block; }
+
+  /* ── Period panel ── */
+  .period-panel { padding: .75rem .9rem; display: none; }
+  .period-panel.active { display: block; }
+
+  /* Project title row */
+  .proj-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .proj-title { font-size: 13px; font-weight: 600; color: var(--bs-body-color); text-decoration: none; }
+  .proj-title:hover { text-decoration: underline; }
+  .proj-meta { font-size: 11px; color: var(--bs-secondary-color); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .proj-meta a { color: var(--bs-primary); text-decoration: none; }
+  .proj-meta a:hover { text-decoration: underline; }
+  .xs-btn { font-size: 11px; padding: 2px 8px; border-radius: var(--bs-border-radius-sm); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .xs-btn:hover { background: var(--bs-tertiary-bg); }
+  .xs-btn.info { border-color: var(--bs-primary-border-subtle); color: var(--bs-primary-text-emphasis); }
+
+  /* ── Metric capsules ── */
+  .metrics-row { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+  .metric-cap { border-radius: var(--bs-border-radius); overflow: hidden; border: 1px solid; flex-shrink: 0; }
+  .metric-cap.attendance { border-color: var(--bs-info-border-subtle); }
+  .metric-cap.grades     { border-color: var(--bs-success-border-subtle); }
+  .metric-cap-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px 2px; }
+  .metric-cap.attendance .metric-cap-label { color: var(--bs-info-text-emphasis); background: var(--bs-info-bg-subtle); border-bottom: 1px solid var(--bs-info-border-subtle); }
+  .metric-cap.grades     .metric-cap-label { color: var(--bs-success-text-emphasis); background: var(--bs-success-bg-subtle); border-bottom: 1px solid var(--bs-success-border-subtle); }
+  .metric-cap-body { display: flex; }
+  .metric-cap.attendance .metric-cap-body { background: var(--bs-info-bg-subtle); }
+  .metric-cap.grades     .metric-cap-body { background: var(--bs-success-bg-subtle); }
+  .m-item { text-align: center; padding: 4px 12px 5px; }
+  .m-sep { width: 1px; align-self: stretch; margin: 4px 0; }
+  .metric-cap.attendance .m-sep { background: var(--bs-info-border-subtle); }
+  .metric-cap.grades     .m-sep { background: var(--bs-success-border-subtle); }
+  .m-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; line-height: 1.2; }
+  .metric-cap.attendance .m-lbl { color: var(--bs-info-text-emphasis); }
+  .metric-cap.grades     .m-lbl { color: var(--bs-success-text-emphasis); }
+  .m-val { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .mv-ok   { color: var(--bs-success-text-emphasis); }
+  .mv-warn { color: var(--bs-danger-text-emphasis); }
+  .mv-dim  { color: var(--bs-border-color); }
+
+  /* ── Status strip ── */
+  .status-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 0; border-top: 1px solid var(--bs-border-color-translucent); margin-top: 6px; font-size: 12px; color: var(--bs-secondary-color); }
+  .report-ok   { color: var(--bs-success-text-emphasis); display: inline-flex; align-items: center; gap: 3px; }
+  .report-miss { color: var(--bs-secondary-color); display: inline-flex; align-items: center; gap: 3px; }
+  .llm-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); font-weight: 500; }
+  .llm-chip.pending { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+  .llm-chip.none    { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+  .flag-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .flag-ok     { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+  .flag-warn   { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); border: 1px solid var(--bs-warning-border-subtle); }
+  .flag-danger { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis);  border: 1px solid var(--bs-danger-border-subtle); }
+
+  /* Similarity strip */
+  .sim-strip { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 5px; padding: 5px 9px; border-radius: var(--bs-border-radius); background: var(--bs-warning-bg-subtle); border: 1px solid var(--bs-warning-border-subtle); font-size: 12px; }
+  .sim-lbl   { font-weight: 600; color: var(--bs-warning-text-emphasis); }
+  .sim-score { font-size: 11px; padding: 1px 7px; border-radius: 8px; background: var(--bs-warning-border-subtle); color: var(--bs-warning-text-emphasis); }
+  .risk-btn  { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border-radius: var(--bs-border-radius-sm); background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); border: 1px solid var(--bs-danger-border-subtle); cursor: pointer; margin-top: 5px; }
+
+  /* ── Roles grid ── */
+  .roles-grid { display: flex; gap: 24px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--bs-border-color-translucent); flex-wrap: wrap; }
+  .role-col {}
+  .role-hd { font-size: 10px; font-weight: 700; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+  .role-name { font-size: 12px; color: var(--bs-primary); text-decoration: none; display: block; }
+  .role-name:hover { text-decoration: underline; }
+  .role-grade { font-size: 11px; color: var(--bs-secondary-color); margin-left: 3px; }
+  .pres-info { font-size: 12px; color: var(--bs-secondary-color); }
+
+  /* ── Pager ── */
+  .pager { display: flex; align-items: center; justify-content: space-between; padding: .5rem 1.25rem; font-size: 12px; color: var(--bs-secondary-color); border-top: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg); }
+  .pager-btn { font-size: 12px; padding: 3px 9px; border-radius: var(--bs-border-radius-sm); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-body-color); cursor: pointer; }
+  .pager-btn.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+  .pager-btns { display: flex; gap: 4px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+<div class="chrome">
+
+  <!-- Header -->
+  <div class="chrome-header">
+    <span class="title">Students enrolled as <strong>submitters</strong> for <strong>Mathematical Physics Project</strong></span>
+    <button class="btn-chrome"><i class="fas fa-file-excel fa-fw"></i> Export allocation</button>
+  </div>
+
+  <!-- Filter toggle -->
+  <div class="filter-toggle" onclick="toggleFilters()">
+    <i class="fas fa-filter fa-fw" style="font-size:12px"></i>
+    <span id="filter-toggle-label">Hide filters</span>
+    <i class="fas fa-chevron-up fa-fw" id="filter-chevron" style="font-size:11px"></i>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-body" id="filters-body">
+    <div class="filter-row">
+      <span class="filter-label">Cohort</span>
+      <button class="fbtn active">All</button>
+      <button class="fbtn">2022</button>
+      <button class="fbtn">2023</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Programme</span>
+      <button class="fbtn active">All</button>
+      <button class="fbtn">Th Phys MPhys</button>
+      <button class="fbtn">Phys+Astro MPhys</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">State</span>
+      <button class="fbtn active">All</button>
+      <button class="fbtn">Published</button>
+      <button class="fbtn">Unpublished</button>
+      <button class="fbtn">Report uploaded</button>
+      <button class="fbtn">Report not uploaded</button>
+      <button class="fbtn">TWD</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Display</span>
+      <button class="fbtn active">Name</button>
+      <button class="fbtn">Candidate number</button>
+      <button class="fbtn">Name + number</button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="tbtn"><i class="fas fa-envelope fa-fw"></i> Email filtered</button>
+    <button class="tbtn"><i class="fas fa-envelope-open fa-fw"></i> Email all</button>
+    <div class="toolbar-sep"></div>
+    <button class="tbtn"><i class="fas fa-eye fa-fw"></i> Publish all</button>
+    <button class="tbtn"><i class="fas fa-eye-slash fa-fw"></i> Unpublish all</button>
+    <button class="tbtn"><i class="fas fa-wrench fa-fw"></i> Populate markers</button>
+    <button class="tbtn"><i class="fas fa-minus-circle fa-fw"></i> Remove markers</button>
+    <div class="toolbar-sep"></div>
+    <div class="dropdown">
+      <button class="tbtn dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-robot fa-fw"></i> Pipeline</button>
+      <ul class="dropdown-menu dropdown-menu-dark">
+        <li><a class="dropdown-item" href="#"><i class="fas fa-upload fa-fw me-2"></i>Submit missing to pipeline</a></li>
+        <li><a class="dropdown-item" href="#"><i class="fas fa-sync-alt fa-fw me-2"></i>Clear &amp; resubmit all</a></li>
+      </ul>
+    </div>
+    <div class="toolbar-sep"></div>
+    <button class="tbtn danger"><i class="fas fa-trash fa-fw"></i> Delete all</button>
+  </div>
+
+  <!-- Card list -->
+  <div class="card-list">
+
+    <!-- ═══════════════════════════════════════════════
+         STUDENT 1: Louis Irish — MPhys, 2 periods
+         Period 1 (Autumn): no issues, report uploaded, LLM ok
+         Period 2 (Spring): warning, no grades yet
+    ══════════════════════════════════════════════════ -->
+    <div class="student-card">
+
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="status-dot dot-green" title="Published"></div>
+          <div>
+            <a href="#" class="stud-name">Louis Irish</a>
+            <div class="stud-meta">
+              <span class="stud-meta-text">Th Phys MPhys</span>
+              <span class="stud-meta-sep">·</span>
+              <span class="stud-meta-text">2023 cohort · Y3</span>
+              <span class="stud-meta-sep">·</span>
+              <span class="pill pill-pub"><i class="fas fa-eye" style="font-size:9px"></i> Published</span>
+              <span class="pill pill-warn"><i class="fas fa-exclamation-triangle" style="font-size:9px"></i> 1 warning</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-head-actions">
+          <button class="act-btn primary"><i class="fas fa-book fa-fw"></i> Journal</button>
+          <button class="act-btn"><i class="fas fa-history fa-fw"></i> History</button>
+          <button class="act-btn"><i class="fas fa-user-circle fa-fw"></i> Roles</button>
+          <div class="dropdown">
+            <button class="act-btn dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h fa-fw"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+              <li><a class="dropdown-item" href="#"><i class="fas fa-pencil-alt fa-fw me-2"></i>Edit student</a></li>
+              <li><a class="dropdown-item" href="#"><i class="fas fa-tasks fa-fw me-2"></i>Tasks</a></li>
+              <li><a class="dropdown-item" href="#"><i class="fas fa-eye fa-fw me-2"></i>Publish</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash fa-fw me-2"></i>Delete</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs: two periods -->
+      <div class="period-tabs" id="tabs-louis">
+        <button class="ptab active" onclick="switchTab('louis', 0, this)">
+          Autumn 2025
+        </button>
+        <button class="ptab" onclick="switchTab('louis', 1, this)">
+          Spring 2026 <span class="tab-warn"></span>
+        </button>
+      </div>
+
+      <!-- Period 0: Autumn 2025 -->
+      <div class="period-panel active" id="louis-panel-0">
+        <div class="proj-row">
+          <a href="#" class="proj-title">Numerical evaluation of loop amplitudes using tree-loop duality</a>
+          <div class="proj-meta">
+            <span>Owner: <a href="#">Dr Jonas Lindert</a></span>
+            <a href="#">Change</a>
+            <button class="xs-btn info"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Project page</button>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-cap attendance">
+            <div class="metric-cap-label">Attendance</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Recorded</div><div class="m-val mv-warn">3</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Missing</div><div class="m-val mv-warn">8</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Rate</div><div class="m-val mv-ok">100%</div></div>
+            </div>
+          </div>
+          <div class="metric-cap grades">
+            <div class="metric-cap-label">Grades</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Supervision</div><div class="m-val mv-dim">—</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Report</div><div class="m-val mv-ok">75.2%</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Presentation</div><div class="m-val mv-dim">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span class="report-ok"><i class="fas fa-check-circle"></i> Report uploaded</span>
+          <span style="color:#9ca3af">·</span>
+          <span style="font-size:11px;color:#6b7280">2 attachments</span>
+          <span style="color:#9ca3af">·</span>
+          <span class="llm-chip"><i class="fas fa-robot" style="font-size:11px"></i> LLM 2.1</span>
+          <span class="flag-chip flag-ok"><i class="fas fa-shield-alt" style="font-size:10px"></i> No risk factors</span>
+          <span style="margin-left:auto;display:flex;gap:5px">
+            <button class="xs-btn"><i class="fas fa-folder-open" style="font-size:10px"></i> Documents</button>
+            <button class="xs-btn"><i class="fas fa-chart-bar" style="font-size:10px"></i> LLM report</button>
+          </span>
+        </div>
+
+        <div class="roles-grid">
+          <div class="role-col">
+            <div class="role-hd">Supervisor</div>
+            <a href="#" class="role-name">Dr Jonas Lindert</a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Markers</div>
+            <a href="#" class="role-name">Prof David Seery</a>
+            <a href="#" class="role-name">Prof Stephan Huber</a>
+            <a href="#" class="role-name">Dr Manuel Reichert</a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Presentation</div>
+            <div class="pres-info">1330–1500 · 11/02/2026 afternoon</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Period 1: Spring 2026 -->
+      <div class="period-panel" id="louis-panel-1">
+        <div class="proj-row">
+          <div style="display:flex;align-items:center;gap:7px">
+            <a href="#" class="proj-title">Atom–photon interactions</a>
+            <i class="fas fa-exclamation-triangle" style="color:#d97706;font-size:12px" title="Has warnings"></i>
+          </div>
+          <div class="proj-meta">
+            <span>Owner: <a href="#">Prof Barry Garraway</a></span>
+            <a href="#">Change</a>
+            <button class="xs-btn info"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Project page</button>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-cap grades">
+            <div class="metric-cap-label">Grades</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Supervision</div><div class="m-val mv-dim">—</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Report</div><div class="m-val mv-dim">—</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Presentation</div><div class="m-val mv-dim">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span class="report-ok"><i class="fas fa-check-circle"></i> Report uploaded</span>
+          <span style="color:#9ca3af">·</span>
+          <span style="font-size:11px;color:#6b7280">1 attachment</span>
+          <span style="color:#9ca3af">·</span>
+          <span class="llm-chip"><i class="fas fa-robot" style="font-size:11px"></i> LLM 2.1</span>
+          <span class="flag-chip flag-ok"><i class="fas fa-shield-alt" style="font-size:10px"></i> No risk factors</span>
+          <span style="margin-left:auto;display:flex;gap:5px">
+            <button class="xs-btn"><i class="fas fa-folder-open" style="font-size:10px"></i> Documents</button>
+            <button class="xs-btn"><i class="fas fa-chart-bar" style="font-size:10px"></i> LLM report</button>
+          </span>
+        </div>
+
+        <div class="roles-grid">
+          <div class="role-col">
+            <div class="role-hd">Supervisor</div>
+            <a href="#" class="role-name">Prof Barry Garraway</a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Markers</div>
+            <a href="#" class="role-name">Prof Daniel Litim</a>
+            <a href="#" class="role-name">Prof Andrea Banfi</a>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /student-card Louis -->
+
+
+    <!-- ═══════════════════════════════════════════════
+         STUDENT 2: Dimitri Verai — MPhys, 2 periods
+         Period 1 (Autumn): grade set, similarity + word-count flag
+         Period 2 (Spring): word-count flag, risk factor
+    ══════════════════════════════════════════════════ -->
+    <div class="student-card">
+
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="status-dot dot-green" title="Published"></div>
+          <div>
+            <a href="#" class="stud-name">Dimitri Verai</a>
+            <div class="stud-meta">
+              <span class="stud-meta-text">Th Phys MPhys</span>
+              <span class="stud-meta-sep">·</span>
+              <span class="stud-meta-text">2023 cohort · Y3</span>
+              <span class="stud-meta-sep">·</span>
+              <span class="pill pill-pub"><i class="fas fa-eye" style="font-size:9px"></i> Published</span>
+              <span class="pill pill-warn"><i class="fas fa-exclamation-triangle" style="font-size:9px"></i> 1 warning</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-head-actions">
+          <button class="act-btn primary"><i class="fas fa-book fa-fw"></i> Journal</button>
+          <button class="act-btn"><i class="fas fa-history fa-fw"></i> History</button>
+          <button class="act-btn"><i class="fas fa-user-circle fa-fw"></i> Roles</button>
+          <div class="dropdown">
+            <button class="act-btn dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h fa-fw"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+              <li><a class="dropdown-item" href="#"><i class="fas fa-pencil-alt fa-fw me-2"></i>Edit student</a></li>
+              <li><a class="dropdown-item" href="#"><i class="fas fa-tasks fa-fw me-2"></i>Tasks</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash fa-fw me-2"></i>Delete</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="period-tabs" id="tabs-dimitri">
+        <button class="ptab active" onclick="switchTab('dimitri', 0, this)">
+          Autumn 2025 <span class="tab-warn"></span>
+        </button>
+        <button class="ptab" onclick="switchTab('dimitri', 1, this)">
+          Spring 2026 <span class="tab-alert"></span>
+        </button>
+      </div>
+
+      <!-- Period 0: Autumn 2025 -->
+      <div class="period-panel active" id="dimitri-panel-0">
+        <div class="proj-row">
+          <a href="#" class="proj-title">Theoretical Aspects of Black Holes</a>
+          <div class="proj-meta">
+            <span>Owner: <a href="#">Prof Xavier Calmet</a></span>
+            <a href="#">Change</a>
+            <button class="xs-btn info"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Project page</button>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-cap attendance">
+            <div class="metric-cap-label">Attendance</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Recorded</div><div class="m-val mv-warn">0</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Missing</div><div class="m-val mv-warn">11</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Rate</div><div class="m-val mv-dim">—</div></div>
+            </div>
+          </div>
+          <div class="metric-cap grades">
+            <div class="metric-cap-label">Grades</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Supervision</div><div class="m-val mv-dim">—</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Report</div><div class="m-val mv-ok">91.5%</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Presentation</div><div class="m-val mv-dim">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span class="report-ok"><i class="fas fa-check-circle"></i> Report uploaded</span>
+          <span style="color:#9ca3af">·</span>
+          <span style="font-size:11px;color:#6b7280">2 attachments</span>
+          <span style="color:#9ca3af">·</span>
+          <span class="llm-chip"><i class="fas fa-robot" style="font-size:11px"></i> LLM 2.1</span>
+          <span class="flag-chip flag-warn"><i class="fas fa-align-left" style="font-size:10px"></i> Word count discrepancy</span>
+          <span class="flag-chip flag-warn"><i class="fas fa-search" style="font-size:10px"></i> Similarity concern</span>
+          <span style="margin-left:auto;display:flex;gap:5px">
+            <button class="xs-btn"><i class="fas fa-folder-open" style="font-size:10px"></i> Documents</button>
+            <button class="xs-btn"><i class="fas fa-chart-bar" style="font-size:10px"></i> LLM report</button>
+          </span>
+        </div>
+
+        <div class="sim-strip">
+          <i class="fas fa-search" style="font-size:12px;color:#92400e"></i>
+          <span class="sim-lbl">Similarity: Keziah Bayes</span>
+          <span class="sim-score">abstract · 0.87</span>
+          <button class="xs-btn" style="margin-left:auto;border-color:#fbbf24;color:#92400e"><i class="fas fa-arrow-right" style="font-size:10px"></i> Review</button>
+        </div>
+
+        <div class="roles-grid">
+          <div class="role-col">
+            <div class="role-hd">Supervisor</div>
+            <a href="#" class="role-name">Prof Xavier Calmet</a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Markers</div>
+            <a href="#" class="role-name">Prof David Seery</a>
+            <a href="#" class="role-name">Prof Stephan Huber</a>
+            <a href="#" class="role-name">Dr Manuel Reichert</a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Presentation</div>
+            <div class="pres-info">1330–1500 · 11/02/2026 afternoon</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Period 1: Spring 2026 -->
+      <div class="period-panel" id="dimitri-panel-1">
+        <div class="proj-row">
+          <div style="display:flex;align-items:center;gap:7px">
+            <a href="#" class="proj-title">Quantum mechanics and path integrals</a>
+            <i class="fas fa-exclamation-triangle" style="color:#dc2626;font-size:12px" title="Has errors"></i>
+          </div>
+          <div class="proj-meta">
+            <span>Owner: <a href="#">Prof Sebastian Jaeger</a></span>
+            <a href="#">Change</a>
+            <button class="xs-btn info"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Project page</button>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-cap grades">
+            <div class="metric-cap-label">Grades</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Supervision</div><div class="m-val mv-dim">—</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Report</div><div class="m-val mv-dim">—</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Presentation</div><div class="m-val mv-dim">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span class="report-ok"><i class="fas fa-check-circle"></i> Report uploaded</span>
+          <span style="color:#9ca3af">·</span>
+          <span style="font-size:11px;color:#6b7280">1 attachment</span>
+          <span style="color:#9ca3af">·</span>
+          <span class="llm-chip"><i class="fas fa-robot" style="font-size:11px"></i> LLM 2.1</span>
+          <span class="flag-chip flag-warn"><i class="fas fa-align-left" style="font-size:10px"></i> Word count discrepancy</span>
+          <span style="margin-left:auto;display:flex;gap:5px">
+            <button class="xs-btn"><i class="fas fa-folder-open" style="font-size:10px"></i> Documents</button>
+            <button class="xs-btn"><i class="fas fa-chart-bar" style="font-size:10px"></i> LLM report</button>
+          </span>
+        </div>
+
+        <button class="risk-btn"><i class="fas fa-shield-alt"></i> Resolve 1 risk factor&hellip;</button>
+
+        <div class="roles-grid">
+          <div class="role-col">
+            <div class="role-hd">Supervisor</div>
+            <a href="#" class="role-name">Prof Sebastian Jaeger</a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Markers</div>
+            <a href="#" class="role-name">Dr Jonas Lindert</a>
+            <a href="#" class="role-name">Prof Xavier Calmet</a>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /student-card Dimitri -->
+
+
+    <!-- ═══════════════════════════════════════════════
+         STUDENT 3: Cameron Carr — single period BSc
+         All grades set, clean
+    ══════════════════════════════════════════════════ -->
+    <div class="student-card">
+
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="status-dot dot-green" title="Published"></div>
+          <div>
+            <a href="#" class="stud-name">Cameron Carr</a>
+            <div class="stud-meta">
+              <span class="stud-meta-text">Phys+Astro BSc</span>
+              <span class="stud-meta-sep">·</span>
+              <span class="stud-meta-text">2023 cohort · Y3</span>
+              <span class="stud-meta-sep">·</span>
+              <span class="pill pill-pub"><i class="fas fa-eye" style="font-size:9px"></i> Published</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-head-actions">
+          <button class="act-btn primary"><i class="fas fa-book fa-fw"></i> Journal</button>
+          <button class="act-btn"><i class="fas fa-history fa-fw"></i> History</button>
+          <button class="act-btn"><i class="fas fa-user-circle fa-fw"></i> Roles</button>
+          <div class="dropdown">
+            <button class="act-btn dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h fa-fw"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+              <li><a class="dropdown-item" href="#"><i class="fas fa-pencil-alt fa-fw me-2"></i>Edit student</a></li>
+              <li><a class="dropdown-item" href="#"><i class="fas fa-tasks fa-fw me-2"></i>Tasks</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash fa-fw me-2"></i>Delete</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Single period: no tab bar rendered -->
+      <div class="period-panel active" id="cameron-panel-0" style="display:block">
+        <div class="proj-row">
+          <a href="#" class="proj-title">Topics in early universe cosmology</a>
+          <div class="proj-meta">
+            <span>Owner: <a href="#">Prof David Seery</a></span>
+            <a href="#">Change</a>
+            <button class="xs-btn info"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Project page</button>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-cap attendance">
+            <div class="metric-cap-label">Attendance</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Recorded</div><div class="m-val mv-ok">22</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Missing</div><div class="m-val mv-ok">0</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Rate</div><div class="m-val mv-ok">95%</div></div>
+            </div>
+          </div>
+          <div class="metric-cap grades">
+            <div class="metric-cap-label">Grades</div>
+            <div class="metric-cap-body">
+              <div class="m-item"><div class="m-lbl">Supervision</div><div class="m-val mv-ok">68.0%</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Report</div><div class="m-val mv-ok">72.5%</div></div>
+              <div class="m-sep"></div>
+              <div class="m-item"><div class="m-lbl">Presentation</div><div class="m-val mv-ok">71.0%</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span class="report-ok"><i class="fas fa-check-circle"></i> Report uploaded</span>
+          <span style="color:#9ca3af">·</span>
+          <span style="font-size:11px;color:#6b7280">1 attachment</span>
+          <span style="color:#9ca3af">·</span>
+          <span class="llm-chip"><i class="fas fa-robot" style="font-size:11px"></i> LLM 2.1</span>
+          <span class="flag-chip flag-ok"><i class="fas fa-shield-alt" style="font-size:10px"></i> No risk factors</span>
+          <span style="margin-left:auto;display:flex;gap:5px">
+            <button class="xs-btn"><i class="fas fa-folder-open" style="font-size:10px"></i> Documents</button>
+            <button class="xs-btn"><i class="fas fa-chart-bar" style="font-size:10px"></i> LLM report</button>
+          </span>
+        </div>
+
+        <div class="roles-grid">
+          <div class="role-col">
+            <div class="role-hd">Supervisor</div>
+            <a href="#" class="role-name">Prof David Seery</a>
+            <span class="role-grade">68.0%</span>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Markers</div>
+            <a href="#" class="role-name">Dr Clark Griffins <span class="role-grade">72.5%</span></a>
+            <a href="#" class="role-name">Dr Jon Loveday <span class="role-grade">72.5%</span></a>
+          </div>
+          <div class="role-col">
+            <div class="role-hd">Presentation</div>
+            <div class="pres-info">0930–1100 · 04/02/2026 morning</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /student-card Cameron -->
+
+  </div><!-- /card-list -->
+
+  <div class="pager">
+    <span>Showing 1–3 of 3 entries</span>
+    <div class="pager-btns">
+      <button class="pager-btn">Previous</button>
+      <button class="pager-btn active">1</button>
+      <button class="pager-btn">Next</button>
+    </div>
+  </div>
+
+</div><!-- /chrome -->
+</div><!-- /page-wrap -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleFilters() {
+  var body = document.getElementById('filters-body');
+  var lbl  = document.getElementById('filter-toggle-label');
+  var chev = document.getElementById('filter-chevron');
+  var hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  lbl.textContent   = hidden ? 'Hide filters' : 'Show filters';
+  chev.className    = hidden ? 'fas fa-chevron-up fa-fw' : 'fas fa-chevron-down fa-fw';
+}
+
+function switchTab(studentId, panelIndex, clickedBtn) {
+  // deactivate all tabs for this student
+  var tabContainer = document.getElementById('tabs-' + studentId);
+  tabContainer.querySelectorAll('.ptab').forEach(function(t) { t.classList.remove('active'); });
+  clickedBtn.classList.add('active');
+
+  // hide all panels whose id starts with studentId-panel
+  var prefix = studentId + '-panel-';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) {
+    p.style.display = 'none';
+    p.classList.remove('active');
+  });
+
+  // show chosen panel
+  var target = document.getElementById(prefix + panelIndex);
+  if (target) { target.style.display = 'block'; target.classList.add('active'); }
+}
+
+// filter pill toggle
+document.querySelectorAll('.filter-row').forEach(function(row) {
+  row.querySelectorAll('.fbtn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      row.querySelectorAll('.fbtn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
+});
+</script>
+</body>
+</html>

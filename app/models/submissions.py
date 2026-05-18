@@ -1531,6 +1531,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         for role in self.roles:
             if role.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR:
                 slot = role.schedule_slot
+                if slot is None:
+                    continue
                 if slot not in groups:
                     groups[slot] = []
                     slot_order.append(slot)

@@ -222,7 +222,7 @@
 {% endblock %}
 
 {% block bodyblock %}
-{% set _back_url = url_for('convenor.submitters', id=pclass.id) %}
+{% set _back_url = url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter, year_filter=year_filter, data_display=data_display, name_filter=name_filter, page=page, per_page=per_page) %}
 
 {# ── Compute pagination metadata ── #}
 {% set total_pages = ((total_submitters - 1) // per_page + 1) if total_submitters > 0 else 1 %}

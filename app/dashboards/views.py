@@ -2327,6 +2327,12 @@ def marking_register(event_id: int):
         flash("You do not have permission to view this marks register.", "error")
         return redirect(url_for("dashboards.marking_dashboard"))
 
+    show_student_names = (
+        current_user.has_role("faculty")
+        and current_user.faculty_data is not None
+        and pclass in current_user.faculty_data.convenor_list
+    )
+
     # GET parameters
     try:
         page = max(1, int(request.args.get("page", 1)))
@@ -2483,6 +2489,7 @@ def marking_register(event_id: int):
         back_year=back_year,
         back_sort_order=back_sort_order,
         back_include_closed=back_include_closed,
+        show_student_names=show_student_names,
     )
 
 

@@ -171,6 +171,12 @@ tbody tr:hover { background: #EBF3FB; }
 <table>
 <thead>
   <tr>
+    <!--
+      Student column: candidate number is always shown.
+      Student name is shown ONLY when the viewer has a convenor role on this project class.
+      Root/admin users who are not convenors for this pclass see only the candidate number,
+      displayed larger (13px bold) to fill the visual space the name would have occupied.
+    -->
     <th class="h1" rowspan="2" style="min-width:120px">Student</th>
     <th class="h1" rowspan="2" style="min-width:105px">Conflation</th>
     <!-- MarkingWorkflow group: "Supervisor marking" (2 MarkingReports max) -->
@@ -194,6 +200,10 @@ tbody tr:hover { background: #EBF3FB; }
 <tbody>
 
   <!-- ── Row 1: complete, conflated, moderator report accepted ── -->
+  <!--
+    Convenor view: name + candidate number shown.
+    Non-convenor view would show only "Cand. 10042" at 13px bold (see Row 2 below).
+  -->
   <tr>
     <td>
       <div class="sname">Amara Okafor</div>
@@ -241,10 +251,13 @@ tbody tr:hover { background: #EBF3FB; }
   </tr>
 
   <!-- ── Row 2: supervisor in progress, second marker not ready ── -->
+  <!--
+    Non-convenor view: name NOT shown. Candidate number promoted to 13px bold
+    to fill the visual space the name would have occupied.
+  -->
   <tr>
     <td>
-      <div class="sname">Ben Cartwright</div>
-      <div class="cnum">Cand. 10019</div>
+      <div class="sname" style="font-size:13px;">Cand. 10019</div>
     </td>
     <td>
       <div class="sr-row muted"><span class="dot dm" style="margin-right:3px"></span>Not conflated</div>

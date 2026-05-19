@@ -56,7 +56,7 @@
         <div class="bg-white border-bottom px-4 py-2 d-flex align-items-center gap-3 flex-wrap">
             <form method="GET" class="d-flex align-items-center gap-2">
                 <input type="text" name="q" class="form-control form-control-sm"
-                       placeholder="Filter by student name…"
+                       placeholder="{{ 'Filter by student name…' if show_student_names else 'Filter by candidate number…' }}"
                        value="{{ q_filter }}"
                        style="width:220px">
                 <button type="submit" class="btn btn-db-green btn-sm">Filter</button>
@@ -111,11 +111,21 @@
                         <tr>
                             {# ── Student cell ── #}
                             <td>
-                                <div class="fw-semibold">{{ row.student_user.name }}</div>
-                                {% if row.student_data.exam_number is not none %}
-                                    <div class="text-body-secondary" style="font-size:10px;">
-                                        Cand.&nbsp;{{ row.student_data.exam_number }}
-                                    </div>
+                                {% if show_student_names %}
+                                    <div class="fw-semibold">{{ row.student_user.name }}</div>
+                                    {% if row.student_data.exam_number is not none %}
+                                        <div class="text-body-secondary" style="font-size:10px;">
+                                            Cand.&nbsp;{{ row.student_data.exam_number }}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    {% if row.student_data.exam_number is not none %}
+                                        <div class="fw-semibold" style="font-size:13px;">
+                                            Cand.&nbsp;{{ row.student_data.exam_number }}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-body-secondary small">—</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
 

@@ -75,7 +75,7 @@ holidays==0.92
 html2text==2025.4.15
 htmlmin2==0.1.13
 humanize==4.15.0
-idna==3.11
+idna==3.15
 importlib_resources==6.5.2
 infinity==1.5
 intervals==0.9.2

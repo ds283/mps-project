@@ -86,7 +86,7 @@ def _collect_marking_attachments(
     attachments = []
 
     # Optionally add the processed report
-    if workflow.requires_report and record.processed_report is not None:
+    if record.processed_report is not None:
         attachments.append(
             EmailWorkflowItemAttachment.build_(
                 name=report_name,

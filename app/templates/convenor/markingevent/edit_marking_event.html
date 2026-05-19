@@ -59,6 +59,14 @@
     </style>
 {% endblock %}
 
+{% block header %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+    </div>
+{% endblock %}
+
 {% block title %}
     {{ title }}
 {% endblock %}

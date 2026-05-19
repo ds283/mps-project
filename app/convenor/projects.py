@@ -72,6 +72,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.convenor import (
     add_liveproject,
 )
@@ -1262,6 +1263,7 @@ def delete_live_project(pid):
     )
     submit_label = "Delete live project"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1269,10 +1271,11 @@ def delete_live_project(pid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_delete_live_project/<int:pid>")
+@convenor.route("/perform_delete_live_project/<int:pid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_live_project(pid):
     """

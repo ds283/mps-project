@@ -44,7 +44,7 @@ from ..models import (
 )
 from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.global_context import render_template_context
-from ..shared.forms.forms import ChooseEmailTemplateForm
+from ..shared.forms.forms import ChooseEmailTemplateForm, ConfirmActionForm
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
@@ -237,6 +237,7 @@ def delete_assessment(id):
     )
     submit_label = "Delete assessment"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -244,10 +245,11 @@ def delete_assessment(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_delete_assessment/<int:id>")
+@admin.route("/perform_delete_assessment/<int:id>", methods=["POST"])
 @roles_required("root")
 def perform_delete_assessment(id):
     """
@@ -330,6 +332,7 @@ def close_assessment(id):
     )
     submit_label = "Close assessment"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -337,10 +340,11 @@ def close_assessment(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_close_assessment/<int:id>")
+@admin.route("/perform_close_assessment/<int:id>", methods=["POST"])
 @roles_required("root")
 def perform_close_assessment(id):
     """

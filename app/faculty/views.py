@@ -71,6 +71,7 @@ from ..shared.actions import (
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
 from ..shared.utils import (
@@ -732,6 +733,7 @@ def delete_project(id):
     )
     submit_label = "Delete project"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -739,10 +741,11 @@ def delete_project(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@faculty.route("/perform_delete_project/<int:id>")
+@faculty.route("/perform_delete_project/<int:id>", methods=["POST"])
 @roles_required("faculty")
 def perform_delete_project(id):
     # get project details

@@ -62,7 +62,7 @@ from ..shared.validators import (
 from ..task_queue import progress_update, register_task
 from . import admin
 from .actions import pair_slots
-from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm
+from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm, ConfirmActionForm
 from ..shared.forms.queries import GetWorkflowTemplates
 from .forms import (
     CompareScheduleFormFactory,
@@ -496,6 +496,7 @@ def terminate_schedule(id):
     )
     submit_label = "Terminate job"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -503,10 +504,11 @@ def terminate_schedule(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_terminate_schedule/<int:id>")
+@admin.route("/perform_terminate_schedule/<int:id>", methods=["POST"])
 @roles_required("root")
 def perform_terminate_schedule(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
@@ -622,6 +624,7 @@ def delete_schedule(id):
 
     submit_label = "Delete schedule"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -629,10 +632,11 @@ def delete_schedule(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_delete_schedule/<int:id>")
+@admin.route("/perform_delete_schedule/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_schedule(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
@@ -750,6 +754,7 @@ def revert_schedule(id):
     )
     submit_label = "Revert schedule"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -757,10 +762,11 @@ def revert_schedule(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_revert_schedule/<int:id>")
+@admin.route("/perform_revert_schedule/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_revert_schedule(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)

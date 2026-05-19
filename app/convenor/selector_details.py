@@ -41,6 +41,7 @@ from ..models import (
     TransferableSkill,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.journal import create_auto_journal_entry
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
@@ -199,6 +200,7 @@ def delete_student_bookmark(sid, bid):
     )
     submit_label = "Delete bookmark"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -206,10 +208,11 @@ def delete_student_bookmark(sid, bid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_delete_student_bookmark/<int:sid>/<int:bid>")
+@convenor.route("/perform_delete_student_bookmark/<int:sid>/<int:bid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_student_bookmark(sid, bid):
     # sid is a SelectingStudent
@@ -517,6 +520,7 @@ def delete_student_choice(sid, cid):
     )
     submit_label = "Delete ranking"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -524,10 +528,11 @@ def delete_student_choice(sid, cid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_delete_student_choice/<int:sid>/<int:cid>")
+@convenor.route("/perform_delete_student_choice/<int:sid>/<int:cid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_student_choice(sid, cid):
     # sid is a SelectingStudent

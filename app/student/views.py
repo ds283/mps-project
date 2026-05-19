@@ -56,6 +56,7 @@ from ..models import (
 from ..models.emails import encode_email_payload
 from ..models.markingevent import ConflationReport, MarkingEventWorkflowStates
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.utils import (
     get_count,
     get_current_year,
@@ -1118,6 +1119,7 @@ def clear_submission(sid):
     )
     submit_label = "Clear submitted preferences"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1125,10 +1127,11 @@ def clear_submission(sid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@student.route("/do_clear_submission/<int:sid>")
+@student.route("/do_clear_submission/<int:sid>", methods=["POST"])
 @roles_required("student")
 def do_clear_submission(sid):
     sel = SelectingStudent.query.get_or_404(sid)

@@ -46,6 +46,7 @@ from ..models import (
     SubmittingStudent,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.sqlalchemy import clone_model, get_count
 from ..shared.utils import (
     home_dashboard_url,
@@ -411,6 +412,7 @@ def delete_task(tid):
     action_url = url_for("convenor.do_delete_task", tid=tid, url=url)
     submit_label = "Delete task"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -418,10 +420,11 @@ def delete_task(tid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/do_delete_task/<int:tid>")
+@convenor.route("/do_delete_task/<int:tid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def do_delete_task(tid):
     task_types = with_polymorphic(

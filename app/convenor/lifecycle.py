@@ -73,7 +73,7 @@ from ..shared.validators import (
 )
 from ..student.actions import store_selection
 from ..task_queue import register_task
-from ..shared.forms.forms import ChooseEmailTemplateForm
+from ..shared.forms.forms import ChooseEmailTemplateForm, ConfirmActionForm
 from ..shared.forms.queries import GetWorkflowTemplates
 from .forms import (
     ChangeDeadlineFormFactory,
@@ -1097,6 +1097,7 @@ def confirm_go_live(id):
     )
     submit_label = "Go Live"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1104,10 +1105,11 @@ def confirm_go_live(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_go_live/<int:id>")
+@convenor.route("/perform_go_live/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_go_live(id):
     # get details for current pclass configuration
@@ -1330,6 +1332,7 @@ def adjust_selection_deadline(configid):
             )
             submit_label = "Close selections"
 
+            form = ConfirmActionForm()
             return render_template_context(
                 "admin/danger_confirm.html",
                 title=title,
@@ -1337,12 +1340,13 @@ def adjust_selection_deadline(configid):
                 action_url=action_url,
                 message=message,
                 submit_label=submit_label,
+                form=form,
             )
 
     return redirect(url_for("convenor.status", id=config.pclass_id))
 
 
-@convenor.route("/perform_close_selections/<int:configid>")
+@convenor.route("/perform_close_selections/<int:configid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_close_selections(configid):
     # config id is a ProjectClassConfig
@@ -2315,6 +2319,7 @@ def confirm_rollover(id):
     else:
         submit_label = "Rollover to {yr}".format(yr=year)
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -2322,10 +2327,11 @@ def confirm_rollover(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/rollover/<int:id>")
+@convenor.route("/rollover/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def rollover(id):
     # pid is a ProjectClass
@@ -2446,6 +2452,7 @@ def reset_popularity_data(id):
     )
     submit_label = "Delete data"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -2453,10 +2460,11 @@ def reset_popularity_data(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_reset_popularity_data/<int:id>")
+@convenor.route("/perform_reset_popularity_data/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_reset_popularity_data(id):
     # id is a ProjectClassConfig

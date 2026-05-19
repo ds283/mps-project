@@ -24,6 +24,7 @@ from ..models import EmailWorkflow, EmailWorkflowItem, User
 from ..models.emails import EmailTemplate
 from ..shared.context.global_context import render_template_context
 from ..shared.email_templates import clone_email_template
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tasks.email_workflow import decode_email_payload
@@ -175,6 +176,7 @@ def confirm_delete_workflow(id):
         f"Any in-progress sends will be cancelled.</p>"
     )
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -182,10 +184,11 @@ def confirm_delete_workflow(id):
         action_url=url_for("emailworkflow.delete_workflow", id=id, url=url),
         message=message,
         submit_label="Delete workflow",
+        form=form,
     )
 
 
-@emailworkflow.route("/delete_workflow/<int:id>")
+@emailworkflow.route("/delete_workflow/<int:id>", methods=["POST"])
 @roles_accepted(*_ROLES)
 def delete_workflow(id):
     workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
@@ -544,6 +547,7 @@ def confirm_delete_item(id):
         f"If the item has not yet been sent, the email will never be delivered.</p>"
     )
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -551,10 +555,11 @@ def confirm_delete_item(id):
         action_url=url_for("emailworkflow.delete_item", id=id, url=url, text=text),
         message=message,
         submit_label="Delete item",
+        form=form,
     )
 
 
-@emailworkflow.route("/delete_item/<int:id>")
+@emailworkflow.route("/delete_item/<int:id>", methods=["POST"])
 @roles_accepted(*_ROLES)
 def delete_item(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)

@@ -62,6 +62,7 @@ from ..shared.forms.wtf_validators import (
     make_unique_marking_workflow_key_in_event,
     make_valid_marking_targets,
 )
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
@@ -2248,6 +2249,7 @@ def delete_marking_event(event_id):
     )
     text = request.args.get("text", "Marking events")
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title="Delete marking event",
@@ -2263,10 +2265,11 @@ def delete_marking_event(event_id):
             text=text,
         ),
         submit_label="Delete marking event",
+        form=form,
     )
 
 
-@convenor.route("/confirm_delete_marking_event/<int:event_id>")
+@convenor.route("/confirm_delete_marking_event/<int:event_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def confirm_delete_marking_event(event_id):
     """Permanently delete a MarkingEvent and all its child records (admin/root only)"""
@@ -2332,6 +2335,7 @@ def close_marking_event_confirm(event_id):
     )
     text = request.args.get("text", "Marking events")
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title="Close marking event",
@@ -2345,10 +2349,11 @@ def close_marking_event_confirm(event_id):
             "convenor.close_marking_event", event_id=event_id, url=url, text=text
         ),
         submit_label="Close marking event",
+        form=form,
     )
 
 
-@convenor.route("/close_marking_event/<int:event_id>")
+@convenor.route("/close_marking_event/<int:event_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def close_marking_event(event_id):
     """
@@ -2906,6 +2911,7 @@ def delete_marking_workflow(workflow_id):
     )
     text = request.args.get("text", "Marking workflows")
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title="Delete marking workflow",
@@ -2921,10 +2927,11 @@ def delete_marking_workflow(workflow_id):
             text=text,
         ),
         submit_label="Delete marking workflow",
+        form=form,
     )
 
 
-@convenor.route("/confirm_delete_marking_workflow/<int:workflow_id>")
+@convenor.route("/confirm_delete_marking_workflow/<int:workflow_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def confirm_delete_marking_workflow(workflow_id):
     """Permanently delete a MarkingWorkflow and all its child records"""
@@ -3353,6 +3360,7 @@ def open_marking_event(event_id):
     )
     submit_label = "Open event and send notifications"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -3360,6 +3368,7 @@ def open_marking_event(event_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 

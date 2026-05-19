@@ -64,7 +64,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
 from ..shared.context.global_context import render_template_context
-from ..shared.forms.forms import SelectSubmissionRecordFormFactory
+from ..shared.forms.forms import ConfirmActionForm, SelectSubmissionRecordFormFactory
 from ..shared.utils import (
     build_submitters_data,
     get_current_year,
@@ -276,6 +276,7 @@ def close_period(id):
     )
     submit_label = "Close period"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -283,10 +284,11 @@ def close_period(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/do_close_period/<int:id>")
+@convenor.route("/do_close_period/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def do_close_period(id):
     # id is a ProjectClassConfig

@@ -14,6 +14,12 @@ from wtforms import SubmitField
 from wtforms.validators import DataRequired
 from wtforms_alchemy import QuerySelectField
 
+
+class ConfirmActionForm(Form):
+    """Minimal form providing CSRF protection for single-button confirm actions."""
+
+    pass
+
 from .mixins import PeriodSelectorMixinFactory
 from .queries import BuildWorkflowTemplateLabel
 from ...models import ProjectClassConfig

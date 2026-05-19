@@ -69,7 +69,7 @@ from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.scraped_text_store import delete_scraped_text
-from ..shared.forms.forms import SelectSubmissionRecordFormFactory
+from ..shared.forms.forms import ConfirmActionForm, SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
@@ -651,6 +651,7 @@ def delete_submitter_report(sid):
     )
     submit_label = "Remove report"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -658,10 +659,11 @@ def delete_submitter_report(sid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@documents.route("/perform_delete_submitter_report/<int:sid>")
+@documents.route("/perform_delete_submitter_report/<int:sid>", methods=["POST"])
 @login_required
 def perform_delete_submitter_report(sid):
     # sid is a SubmissionRecord id
@@ -1245,6 +1247,7 @@ def delete_submitter_attachment(aid):
     )
     submit_label = "Remove attachment"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1252,10 +1255,11 @@ def delete_submitter_attachment(aid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@documents.route("/perform_delete_submitter_attachment/<int:aid>/<int:sid>")
+@documents.route("/perform_delete_submitter_attachment/<int:aid>/<int:sid>", methods=["POST"])
 @login_required
 def perform_delete_submitter_attachment(aid, sid):
     # aid is a SubmissionAttachment id

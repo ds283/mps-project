@@ -52,6 +52,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.convenor import (
     add_blank_submitter,
 )
@@ -865,6 +866,7 @@ def delete_all_submitters(configid):
     )
     submit_label = "Delete all submitters"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -872,10 +874,11 @@ def delete_all_submitters(configid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/do_delete_all_submitters/<int:configid>")
+@convenor.route("/do_delete_all_submitters/<int:configid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def do_delete_all_submitters(configid):
     """
@@ -1136,6 +1139,7 @@ def delete_role(role_id):
 
     submit_label = "Delete role"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1143,10 +1147,11 @@ def delete_role(role_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_delete_role/<int:role_id>")
+@convenor.route("/perform_delete_role/<int:role_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_role(role_id):
     # role_id is a SubmissionRole

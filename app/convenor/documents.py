@@ -39,6 +39,7 @@ from ..models import (
 from ..models.model_mixins import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
     redirect_url,
@@ -375,6 +376,7 @@ def delete_period_attachment(aid):
     )
     submit_label = "Remove attachment"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -382,10 +384,11 @@ def delete_period_attachment(aid):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@convenor.route("/perform_delete_period_attachment/<int:aid>")
+@convenor.route("/perform_delete_period_attachment/<int:aid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_period_attachment(aid):
     # aid is a PeriodAttachment id

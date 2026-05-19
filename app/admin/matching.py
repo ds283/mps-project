@@ -50,7 +50,7 @@ from ..models import (
     TaskRecord,
     User,
 )
-from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm
+from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm, ConfirmActionForm
 from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.global_context import render_template_context
 from ..shared.context.matching import (
@@ -496,6 +496,7 @@ def terminate_match(id):
     )
     submit_label = "Terminate job"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -503,10 +504,11 @@ def terminate_match(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_terminate_match/<int:id>")
+@admin.route("/perform_terminate_match/<int:id>", methods=["POST"])
 @roles_required("root")
 def perform_terminate_match(id):
     record: MatchingRecord = MatchingAttempt.query.get_or_404(id)
@@ -618,6 +620,7 @@ def delete_match(id):
     )
     submit_label = "Delete match"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -625,10 +628,11 @@ def delete_match(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_delete_match/<int:id>")
+@admin.route("/perform_delete_match/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_delete_match(id):
     attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
@@ -739,6 +743,7 @@ def clean_up_match(id):
     )
     submit_label = "Clean up match"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -746,10 +751,11 @@ def clean_up_match(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_clean_up_match/<int:id>")
+@admin.route("/perform_clean_up_match/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_clean_up_match(id):
     attempt = MatchingAttempt.query.get_or_404(id)
@@ -860,6 +866,7 @@ def revert_match(id):
     )
     submit_label = "Revert match"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -867,10 +874,11 @@ def revert_match(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_revert_match/<int:id>")
+@admin.route("/perform_revert_match/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def perform_revert_match(id):
     record = MatchingAttempt.query.get_or_404(id)
@@ -2904,7 +2912,7 @@ def unpublish_match(id):
     return redirect(redirect_url())
 
 
-@admin.route("/select_match/<int:id>")
+@admin.route("/select_match/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def select_match(id):
     record = MatchingAttempt.query.get_or_404(id)
@@ -2965,6 +2973,7 @@ def select_match(id):
         )
         submit_label = "Force selection"
 
+        form = ConfirmActionForm()
         return render_template_context(
             "admin/danger_confirm.html",
             title=title,
@@ -2972,6 +2981,7 @@ def select_match(id):
             action_url=action_url,
             message=message,
             submit_label=submit_label,
+            form=form,
         )
 
     # determine whether any already-selected projects have allocations for a pclass we own
@@ -3149,6 +3159,7 @@ def populate_submitters_from_match(match_id, config_id):
     )
     submit_label = "Populate submitters"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -3156,10 +3167,11 @@ def populate_submitters_from_match(match_id, config_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/do_populate_submitters_from_match/<int:match_id>/<int:config_id>")
+@admin.route("/do_populate_submitters_from_match/<int:match_id>/<int:config_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def do_populate_submitters_from_match(match_id, config_id):
     record: MatchingAttempt = MatchingAttempt.query.get_or_404(match_id)

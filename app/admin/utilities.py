@@ -81,6 +81,7 @@ from ..tasks.thumbnails import (
     dispatch_force_regenerate_thumbnail_task,
 )
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
+from ..shared.forms.forms import ConfirmActionForm
 from ..tools.ServerSideProcessing import FakeQuery
 from . import admin
 from .forms import (
@@ -1599,6 +1600,7 @@ def delete_global_email_template(id):
     )
     submit_label = "Delete template"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1606,10 +1608,11 @@ def delete_global_email_template(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_delete_global_email_template/<int:id>")
+@admin.route("/perform_delete_global_email_template/<int:id>", methods=["POST"])
 @roles_required("root")
 def perform_delete_global_email_template(id):
     """

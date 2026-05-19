@@ -20,6 +20,7 @@ from .forms import EditCommentForm
 from ..database import db
 from ..models import ProjectDescription, DescriptionComment, EnrollmentRecord
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     build_project_approval_queues,
@@ -241,6 +242,7 @@ def delete_comment(id):
     )
     submit_label = "Delete comment"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -248,10 +250,11 @@ def delete_comment(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@project_approver.route("/perform_delete_comment/<int:id>")
+@project_approver.route("/perform_delete_comment/<int:id>", methods=["POST"])
 @login_required
 def perform_delete_comment(id):
     # id is a DescriptionComment

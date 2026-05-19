@@ -54,6 +54,7 @@ from ..models import (
 )
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.workflow_logging import log_db_commit
 from ..shared.conversions import is_boolean, is_integer
 from ..shared.sqlalchemy import func
@@ -1182,6 +1183,7 @@ def delete_faculty_batch(batch_id):
     )
     submit_label = "Delete"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1189,10 +1191,11 @@ def delete_faculty_batch(batch_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@manage_users.route("/perform_delete_faculty_batch/<int:batch_id>")
+@manage_users.route("/perform_delete_faculty_batch/<int:batch_id>", methods=["POST"])
 @roles_accepted("manage_users", "root")
 def perform_delete_faculty_batch(batch_id):
     record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
@@ -1270,6 +1273,7 @@ def terminate_faculty_batch(batch_id):
     )
     submit_label = "Terminate import"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1277,10 +1281,11 @@ def terminate_faculty_batch(batch_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@manage_users.route("/perform_terminate_faculty_batch/<int:batch_id>")
+@manage_users.route("/perform_terminate_faculty_batch/<int:batch_id>", methods=["POST"])
 @roles_accepted("manage_users", "root")
 def perform_terminate_faculty_batch(batch_id):
     record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
@@ -1368,6 +1373,7 @@ def terminate_student_batch(batch_id):
     )
     submit_label = "Terminate import"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1375,10 +1381,11 @@ def terminate_student_batch(batch_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@manage_users.route("/perform_terminate_batch/<int:batch_id>")
+@manage_users.route("/perform_terminate_batch/<int:batch_id>", methods=["POST"])
 @roles_accepted("manage_users", "root")
 def perform_terminate_student_batch(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
@@ -1465,6 +1472,7 @@ def delete_student_batch(batch_id):
     )
     submit_label = "Delete"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1472,10 +1480,11 @@ def delete_student_batch(batch_id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@manage_users.route("/perform_delete_batch/<int:batch_id>")
+@manage_users.route("/perform_delete_batch/<int:batch_id>", methods=["POST"])
 @roles_accepted("manage_users", "root")
 def perform_delete_student_batch(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)

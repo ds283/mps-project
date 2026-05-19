@@ -83,6 +83,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_admin_or_convenor,
 )
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 from ..tools import ServerSideSQLHandler
@@ -150,6 +151,7 @@ def confirm_global_rollover():
         yra=next_year, yrb=next_year + 1
     )
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -157,10 +159,11 @@ def confirm_global_rollover():
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/perform_global_rollover")
+@admin.route("/perform_global_rollover", methods=["POST"])
 @roles_required("root")
 def perform_global_rollover():
     """
@@ -370,6 +373,7 @@ def confirm_delete_all_emails():
     )
     submit_label = "Delete all"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -377,10 +381,11 @@ def confirm_delete_all_emails():
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/delete_all_emails")
+@admin.route("/delete_all_emails", methods=["POST"])
 @roles_required("root")
 def delete_all_emails():
     """
@@ -434,6 +439,7 @@ def confirm_delete_email_cutoff(cutoff):
     )
     submit_label = "Delete"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -441,10 +447,11 @@ def confirm_delete_email_cutoff(cutoff):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/delete_email_cutoff/<int:cutoff>")
+@admin.route("/delete_email_cutoff/<int:cutoff>", methods=["POST"])
 @roles_required("root")
 def delete_email_cutoff(cutoff):
     """
@@ -597,6 +604,7 @@ def delete_notification(eid):
     )
     submit_label = "Delete"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -605,10 +613,11 @@ def delete_notification(eid):
         message=message,
         submit_label=submit_label,
         url=url,
+        form=form,
     )
 
 
-@admin.route("/do_delete_notification/<int:eid>")
+@admin.route("/do_delete_notification/<int:eid>", methods=["POST"])
 @roles_accepted("root", "view_email")
 def do_delete_notification(eid):
     """
@@ -1654,6 +1663,7 @@ def confirm_delete_all_backups():
     message = "<p>Please confirm that you wish to delete all backups.</p><p>Locked backups are not deleted.</p><p>This action cannot be undone.</p>"
     submit_label = "Delete all"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1661,10 +1671,11 @@ def confirm_delete_all_backups():
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/delete_all_backups")
+@admin.route("/delete_all_backups", methods=["POST"])
 @roles_required("root")
 def delete_all_backups():
     """
@@ -1720,6 +1731,7 @@ def confirm_delete_backup_cutoff(cutoff):
     )
     submit_label = "Delete"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1727,10 +1739,11 @@ def confirm_delete_backup_cutoff(cutoff):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/delete_backup_cutoff/<int:cutoff>")
+@admin.route("/delete_backup_cutoff/<int:cutoff>", methods=["POST"])
 @roles_required("root")
 def delete_backup_cutoff(cutoff):
     """
@@ -1804,6 +1817,7 @@ def confirm_delete_backup(id):
     )
     submit_label = "Delete"
 
+    form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
         title=title,
@@ -1811,10 +1825,11 @@ def confirm_delete_backup(id):
         action_url=action_url,
         message=message,
         submit_label=submit_label,
+        form=form,
     )
 
 
-@admin.route("/delete_backup/<int:id>")
+@admin.route("/delete_backup/<int:id>", methods=["POST"])
 @roles_required("root")
 def delete_backup(id):
     # backup_id is a BackupRecord instance

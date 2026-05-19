@@ -1,7 +1,5 @@
 {% extends "base_form.html" %}
 
-{% import "bootstrap/form.html" as wtf %}
-
 {% block title %}
     {{ title|safe }}
 {% endblock %}
@@ -21,7 +19,10 @@
                     <div class="row vertical-bottom">
                         <div class="col-12">
                             <div class="float-end">
-                                <a href="{{ action_url }}" class="btn btn-danger">{{ submit_label|safe }}</a>
+                                <form method="POST" action="{{ action_url }}">
+                                    {{ form.hidden_tag() }}
+                                    <button type="submit" class="btn btn-danger">{{ submit_label|safe }}</button>
+                                </form>
                             </div>
                         </div>
                     </div>

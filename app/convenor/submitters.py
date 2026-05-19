@@ -1217,7 +1217,7 @@ def perform_delete_role(role_id):
                             report_submitted=False,
                             feedback_submitted=False,
                             grade=None,
-                            weight=replacement_role.weight,
+                            weight=1,
                             feedback_positive=None,
                             feedback_improvement=None,
                             signed_off_id=None,
@@ -1274,17 +1274,10 @@ def add_role(record_id):
     form._record = record
 
     if form.validate_on_submit():
-        weight = 1.0
-        role = form.role.data
-
-        if role in [SubmissionRole.ROLE_MARKER]:
-            weight = 1.0 / float(period.number_markers)
-
         role = SubmissionRole.build_(
-            role=role,
+            role=form.role.data,
             user=form.user.data.user,
             submission_id=record.id,
-            weight=weight,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
         )
@@ -1339,7 +1332,7 @@ def add_role(record_id):
                             report_submitted=False,
                             feedback_submitted=False,
                             grade=None,
-                            weight=role.weight,
+                            weight=1,
                             feedback_positive=None,
                             feedback_improvement=None,
                             signed_off_id=None,
@@ -1368,7 +1361,7 @@ def add_role(record_id):
                             report_submitted=False,
                             feedback_submitted=False,
                             grade=None,
-                            weight=role.weight,
+                            weight=1,
                             feedback_positive=None,
                             feedback_improvement=None,
                             signed_off_id=None,
@@ -1434,18 +1427,6 @@ def edit_role(role_id):
 
     if form.validate_on_submit():
         role.role = form.role.data
-
-        # only update marking-related fields for supervisor/responsible supervisor roles
-        if form.role.data in [
-            SubmissionRole.ROLE_SUPERVISOR,
-            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-        ]:
-            role.grade = form.grade.data
-            role.weight = form.weight.data
-            role.justification = (
-                form.justification.data if form.justification.data else None
-            )
-
         role.last_edit_id = current_user.id
         role.last_edit_timestamp = datetime.now()
 

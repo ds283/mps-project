@@ -1054,8 +1054,7 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     grade_submitted_timestamp = db.Column(db.DateTime(), nullable=True)
 
     # weight assigned to this marking report when computing the weighted average grade.
-    # Initialised from the parent SubmissionRole.weight when the MarkingReport is created,
-    # but can be edited independently via the properties editor.
+    # Defaults to 1 at creation; can be edited independently via the properties editor.
     weight = db.Column(db.Numeric(8, 3), nullable=True)
 
     # FEEDBACK TO STUDENT

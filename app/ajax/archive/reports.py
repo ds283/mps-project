@@ -105,11 +105,6 @@ _records = """
             {% for role in roles %}
                 <span class="small">
                     <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
-                    {% if role.grade is not none %}
-                        <span class="ms-1 {% if role.signed_off %}text-primary{% else %}text-secondary{% endif %}">
-                            {{ role.grade }}%
-                        </span>
-                    {% endif %}
                 </span>
             {% endfor %}
         </div>

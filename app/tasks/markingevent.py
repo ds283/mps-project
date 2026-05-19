@@ -561,7 +561,7 @@ def register_markingevent_tasks(celery):
                         report_submitted=False,
                         feedback_submitted=False,
                         grade=None,
-                        weight=role.weight,
+                        weight=1,
                         feedback_positive=None,
                         feedback_improvement=None,
                         signed_off_id=None,

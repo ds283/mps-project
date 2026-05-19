@@ -901,9 +901,6 @@
                       <div class="sv2-role-hd">Supervisor</div>
                       {% for role in r.supervisor_roles %}
                         <a href="mailto:{{ role.user.email }}" class="sv2-role-name">{{ role.user.name }}</a>
-                        {% if role.grade %}
-                          <span class="sv2-role-grade">{{ "%.1f"|format(role.grade) }}%</span>
-                        {% endif %}
                       {% else %}
                         <span class="sv2-role-name" style="color:var(--bs-secondary-color)">None assigned</span>
                       {% endfor %}
@@ -913,12 +910,7 @@
                     <div>
                       <div class="sv2-role-hd">Markers</div>
                       {% for role in r.marker_roles %}
-                        <a href="mailto:{{ role.user.email }}" class="sv2-role-name">
-                          {{ role.user.name }}
-                          {% if role.grade %}
-                            <span class="sv2-role-grade">{{ "%.1f"|format(role.grade) }}%</span>
-                          {% endif %}
-                        </a>
+                        <a href="mailto:{{ role.user.email }}" class="sv2-role-name">{{ role.user.name }}</a>
                       {% else %}
                         <span class="sv2-role-name" style="color:var(--bs-secondary-color)">None assigned</span>
                       {% endfor %}

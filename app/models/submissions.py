@@ -237,19 +237,6 @@ class SubmissionRole(
         db.String(DEFAULT_STRING_LENGTH), default=None, nullable=True
     )
 
-    # MARKING WORKFLOW
-
-    # returned mark, interpreted as out of 100%
-    grade = db.Column(db.Integer(), default=None)
-
-    # resolved weight for this score
-    weight = db.Column(db.Numeric(8, 3), default=None)
-
-    # justification for score
-    justification = db.Column(db.Text(), default=None)
-
-    # marking sign off (interpreted as approval if responsible supervisor is not writing the supervision report)
-    signed_off = db.Column(db.DateTime(), default=False)
 
     # FACTORY FUNCTION
     @classmethod
@@ -268,10 +255,6 @@ class SubmissionRole(
             "regular_meeting_weekday": None,
             "regular_meeting_time": None,
             "regular_meeting_location": None,
-            "grade": None,
-            "weight": 1.0,
-            "justification": None,
-            "signed_off": None,
             "last_edit_id": None,
             "last_edit_timestamp": None,
         }

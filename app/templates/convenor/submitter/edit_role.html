@@ -15,27 +15,6 @@
                 theme: 'bootstrap-5',
                 placeholder: 'Select a role...'
             });
-
-            var SUPERVISOR_ROLES = [{{ role.ROLE_SUPERVISOR }}, {{ role.ROLE_RESPONSIBLE_SUPERVISOR }}];
-
-            function updateSupervisorFields() {
-                var selectedRole = parseInt($('#role').val());
-                var isSupervisor = SUPERVISOR_ROLES.indexOf(selectedRole) !== -1;
-                var $supervisorSection = $('#supervisor-fields-section');
-                if (isSupervisor) {
-                    $supervisorSection.show();
-                } else {
-                    $supervisorSection.hide();
-                }
-            }
-
-            // Run on page load
-            updateSupervisorFields();
-
-            // Run when role changes
-            $('#role').on('change', function () {
-                updateSupervisorFields();
-            });
         });
     </script>
 {% endblock %}
@@ -60,17 +39,6 @@
                         {{ form.hidden_tag() }}
 
                         {{ wtf.render_field(form.role) }}
-
-                        <div id="supervisor-fields-section">
-                            <hr/>
-                            <p class="text-body-secondary small">
-                                The following fields apply only to supervisor and responsible supervisor roles.
-                            </p>
-
-                            {{ wtf.render_field(form.grade) }}
-                            {{ wtf.render_field(form.weight) }}
-                            {{ wtf.render_field(form.justification) }}
-                        </div>
 
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>

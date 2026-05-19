@@ -27,6 +27,7 @@ from ..models import (
     AssetLicense,
     ConflationReport,
     EmailLog,
+    EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
     EmailWorkflowItemAttachment,
@@ -118,6 +119,20 @@ _SUPERVISOR_ROLES = frozenset(
 )
 
 
+def _resolve_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass):
+    """Return the best-matching active EmailTemplate for this workflow+pclass, or None."""
+    if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
+        template_type = EmailTemplate.MARKING_MARKER
+    elif workflow.role in _SUPERVISOR_ROLES:
+        template_type = EmailTemplate.MARKING_SUPERVISOR
+    else:
+        return None
+    try:
+        return EmailTemplate.find_template_(template_type, pclass=pclass)
+    except RuntimeError:
+        return None
+
+
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
@@ -146,9 +161,11 @@ def register_marking_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        if workflow.template is None:
+        pclass: ProjectClass = workflow.event.pclass
+        resolved_template = _resolve_workflow_template(workflow, pclass)
+        if resolved_template is None:
             current_app.logger.warning(
-                f"send_marking_emails: MarkingWorkflow id={workflow_id} has no email template assigned; skipping"
+                f"send_marking_emails: no active email template for workflow id={workflow_id}; skipping"
             )
             return
 
@@ -186,10 +203,9 @@ def register_marking_tasks(celery):
         if test_email is not None:
             print(f"-- working in test mode: emails being sent to sink={test_email}")
 
-        pclass: ProjectClass = workflow.event.pclass
         email_wf = EmailWorkflow.build_(
             name=f"Marking notification: {workflow.name}",
-            template=workflow.template,
+            template=resolved_template,
             defer=timedelta(minutes=15),
             pclasses=[pclass],
             max_attachment_size=max_attachment,
@@ -251,7 +267,9 @@ def register_marking_tasks(celery):
 
         eligible_triples = []  # (sr_id, deadline_str, email_workflow_id)
         for workflow in event.workflows:
-            if workflow.template is None:
+            pclass: ProjectClass = workflow.event.pclass
+            resolved_template = _resolve_workflow_template(workflow, pclass)
+            if resolved_template is None:
                 continue
             deadline_str = (
                 workflow.effective_deadline.isoformat()
@@ -271,10 +289,9 @@ def register_marking_tasks(celery):
             if not workflow_sr_ids:
                 continue
 
-            pclass: ProjectClass = workflow.event.pclass
             email_wf = EmailWorkflow.build_(
                 name=f"Marking notification: {workflow.name}",
-                template=workflow.template,
+                template=resolved_template,
                 defer=timedelta(minutes=15),
                 pclasses=[pclass],
                 max_attachment_size=max_attachment,
@@ -793,9 +810,16 @@ def register_marking_tasks(celery):
         role: SubmissionRole = mr.role
         is_supervisor = role.role in _SUPERVISOR_ROLES
 
+        resolved_template = _resolve_workflow_template(workflow, pclass)
+        if resolved_template is None:
+            current_app.logger.warning(
+                f"dispatch_emails: no active email template for workflow id={workflow.id}; skipping"
+            )
+            return {"sent": 0}
+
         email_wf = EmailWorkflow.build_(
             name=f"Marking notification (single): {workflow.name} — {student.user.name}",
-            template=workflow.template,
+            template=resolved_template,
             defer=timedelta(minutes=15),
             pclasses=[pclass],
             max_attachment_size=max_attachment,

@@ -64,6 +64,7 @@ from ..shared.forms.wtf_validators import (
 )
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
+from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
 from ..shared.workflow_logging import log_db_commit
 from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD
 from ..tasks.thumbnails import dispatch_thumbnail_task
@@ -86,31 +87,6 @@ from .forms import (
     build_resolve_risk_factors_form,
 )
 
-
-def _assign_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass) -> None:
-    """
-    Auto-assign an email template to a MarkingWorkflow based on its role.
-    Called at workflow creation time. Only assigns for ROLE_MARKER, ROLE_SUPERVISOR, and
-    ROLE_RESPONSIBLE_SUPERVISOR; other roles are left without a template.
-    """
-    from ..models.submissions import SubmissionRoleTypesMixin
-
-    supervisor_roles = frozenset(
-        {
-            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-        }
-    )
-    if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
-        template_type = EmailTemplate.MARKING_MARKER
-    elif workflow.role in supervisor_roles:
-        template_type = EmailTemplate.MARKING_SUPERVISOR
-    else:
-        return  # no template for other roles
-
-    template = EmailTemplate.find_template_(template_type, pclass=pclass)
-    if template is not None:
-        workflow.template = template
 
 
 @convenor.route("/marking_events_inspector/<int:pclass_id>")
@@ -2734,9 +2710,6 @@ def add_marking_workflow(event_id):
                 form.notify_on_validation_failure.data
             )
 
-            # Auto-assign email template based on role
-            _assign_workflow_template(workflow, pclass)
-
             db.session.add(workflow)
             db.session.flush()
             workflow_id = workflow.id
@@ -3278,7 +3251,7 @@ def send_marking_emails_for_workflow(workflow_id):
             kwargs={
                 "workflow_id": workflow_id,
                 "cc_convenor": True,
-                "max_attachment": 10,
+                "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
                 "test_user_id": None,
                 "convenor_id": current_user.id,
             }
@@ -3320,7 +3293,7 @@ def send_marking_emails_for_event(event_id):
             kwargs={
                 "event_id": event_id,
                 "cc_convenor": True,
-                "max_attachment": 10,
+                "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
                 "test_user_id": None,
                 "convenor_id": current_user.id,
             }
@@ -3438,7 +3411,7 @@ def do_open_marking_event(event_id):
             kwargs={
                 "event_id": event_id,
                 "cc_convenor": True,
-                "max_attachment": 10,
+                "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
                 "test_user_id": None,
                 "convenor_id": current_user.id,
             }
@@ -3489,7 +3462,7 @@ def test_marking_event(event_id):
                 kwargs={
                     "event_id": event_id,
                     "cc_convenor": True,
-                    "max_attachment": 10,
+                    "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
                     "test_user_id": test_user_id,
                     "convenor_id": current_user.id,
                 }

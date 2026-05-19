@@ -10,7 +10,7 @@
 import random
 from datetime import datetime, timedelta
 
-from flask import current_app
+from flask import current_app, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -146,12 +146,42 @@ def _emit_moderation_required_emails(sr: SubmitterReport) -> None:
         )
 
 
-def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) -> None:
+def _emit_moderator_assignment_email(
+    sr: SubmitterReport,
+    role: SubmissionRole,
+    mod_report: ModeratorReport,
+) -> None:
     """Generate a MARKING_MODERATOR email to the newly assigned moderator."""
     from pathlib import Path
 
     workflow = sr.workflow
+    record = sr.record
     pclass = workflow.event.pclass
+    config = workflow.event.config
+    period = workflow.event.period
+    student = sr.student
+    submitter = sr.submitter
+    project = record.project
+    deadline = workflow.effective_deadline
+
+    all_roles = list(record.roles)
+    supervisors = [
+        r for r in all_roles
+        if r.role in (
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        )
+    ]
+    markers = [
+        r for r in all_roles
+        if r.role == SubmissionRoleTypesMixin.ROLE_MARKER
+    ]
+
+    moderator_form_url = url_for(
+        "faculty.moderator_report_form",
+        mod_report_id=mod_report.id,
+        _external=True,
+    )
 
     try:
         tmpl = EmailTemplate.find_template_(
@@ -168,13 +198,11 @@ def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) 
         return
 
     try:
-        record = sr.record
-        student = sr.student
-        config = pclass.most_recent_config
-
         asset = record.processed_report
         if asset is not None:
-            ext = Path(asset.target_name if hasattr(asset, "target_name") else asset.filename).suffix.lower()
+            ext = Path(
+                asset.target_name if hasattr(asset, "target_name") else asset.filename
+            ).suffix.lower()
         else:
             ext = ".pdf"
 
@@ -200,9 +228,29 @@ def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) 
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"student": sr.student}),
+            subject_payload=encode_email_payload(
+                {
+                    "abbv": pclass.abbreviation,
+                    "number": student.exam_number,
+                    "deadline": deadline.strftime("%a %d %b") if deadline is not None else "",
+                }
+            ),
             body_payload=encode_email_payload(
-                {"submitter_report": sr, "workflow": workflow, "pclass": pclass}
+                {
+                    "role": role,
+                    "config": config,
+                    "pclass": pclass,
+                    "period": period,
+                    "markers": markers,
+                    "supervisors": supervisors,
+                    "submitter": submitter,
+                    "project": project,
+                    "student": student,
+                    "record": record,
+                    "deadline": deadline,
+                    "scheme": workflow.scheme,
+                    "moderator_form_url": moderator_form_url,
+                }
             ),
             recipient_list=[role.user.email],
             attachments=attachments,
@@ -233,8 +281,9 @@ def _assign_moderator(sr: SubmitterReport, role: SubmissionRole) -> None:
         creation_timestamp=datetime.now(),
     )
     db.session.add(mod_report)
+    db.session.flush()
 
-    _emit_moderator_assignment_email(sr, role)
+    _emit_moderator_assignment_email(sr, role, mod_report)
     sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT
 
 

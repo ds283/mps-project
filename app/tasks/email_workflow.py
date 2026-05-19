@@ -34,6 +34,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import (
     AssessorAttendanceData,
+    ConflationReport,
     ConfirmRequest,
     DescriptionComment,
     EmailLog,
@@ -43,7 +44,9 @@ from ..models import (
     EmailWorkflow,
     EmailWorkflowItem,
     FacultyData,
+    LiveMarkingScheme,
     LiveProject,
+    MarkingReport,
     MatchingAttempt,
     MatchingRecord,
     PresentationAssessment,
@@ -58,6 +61,7 @@ from ..models import (
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmissionRole,
+    SubmitterReport,
     SubmittingStudent,
     SupervisionEvent,
     User,
@@ -84,11 +88,14 @@ _BACKOFF_MAX_SECONDS: int = 7200   # 2 hours (cap)
 # ---------------------------------------------------------------------------
 _MODEL_REGISTRY: Dict[str, type] = {
     "AssessorAttendanceData": AssessorAttendanceData,
+    "ConflationReport": ConflationReport,
     "ConfirmRequest": ConfirmRequest,
     "DescriptionComment": DescriptionComment,
     "EmailNotification": EmailNotification,
     "FacultyData": FacultyData,
+    "LiveMarkingScheme": LiveMarkingScheme,
     "LiveProject": LiveProject,
+    "MarkingReport": MarkingReport,
     "MatchingAttempt": MatchingAttempt,
     "MatchingRecord": MatchingRecord,
     "PresentationAssessment": PresentationAssessment,
@@ -103,6 +110,7 @@ _MODEL_REGISTRY: Dict[str, type] = {
     "SubmissionPeriodRecord": SubmissionPeriodRecord,
     "SubmissionRecord": SubmissionRecord,
     "SubmissionRole": SubmissionRole,
+    "SubmitterReport": SubmitterReport,
     "SubmittingStudent": SubmittingStudent,
     "SupervisionEvent": SupervisionEvent,
     "User": User,

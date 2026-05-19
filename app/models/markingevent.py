@@ -535,17 +535,6 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     # optional sub-deadline for this workflow; if set, must be <= event.deadline
     deadline = db.Column(db.DateTime(), nullable=True)
 
-    # email template to use when sending marking notifications for this workflow;
-    # auto-assigned at creation time based on the workflow role
-    template_id = db.Column(
-        db.Integer(), db.ForeignKey("email_templates.id"), nullable=True
-    )
-    template = db.relationship(
-        "EmailTemplate",
-        foreign_keys=[template_id],
-        uselist=False,
-    )
-
     # attachments (already uploaded by the convenor as SubmissionPeriod attachments)
     # that should be included with this workflow
     attachments = db.relationship(

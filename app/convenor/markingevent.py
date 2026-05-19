@@ -50,6 +50,7 @@ from ..models.markingevent import (
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..models.similarity import SimilarityConcern
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
@@ -1387,6 +1388,28 @@ def submitter_reports_inspector(workflow_id):
     )
     any_completed = can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
 
+    # Compute warning counts for CTA blocks
+    _supervisor_role_types = frozenset(
+        {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+    )
+    wf_role = workflow.role
+
+    multi_mr_count = 0
+    if wf_role in _supervisor_role_types:
+        multi_mr_count = sum(
+            1 for sr in workflow.submitter_reports if sr.marking_reports.count() > 1
+        )
+
+    wrong_weight_count = 0
+    if wf_role == SubmissionRoleTypesMixin.ROLE_MARKER:
+        expected = float(workflow.event.period.number_markers)
+        wrong_weight_count = sum(
+            1 for sr in workflow.submitter_reports
+            if abs(
+                sum(float(mr.weight) for mr in sr.marking_reports if mr.weight is not None) - expected
+            ) > 0.001
+        )
+
     return render_template_context(
         "convenor/markingevent/submitter_reports_inspector.html",
         workflow=workflow,
@@ -1401,6 +1424,8 @@ def submitter_reports_inspector(workflow_id):
         any_completed=any_completed,
         complete_all_form=ActionForm(),
         return_all_form=ActionForm(),
+        multi_mr_count=multi_mr_count,
+        wrong_weight_count=wrong_weight_count,
     )
 
 

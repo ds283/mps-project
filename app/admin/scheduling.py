@@ -1586,6 +1586,35 @@ def undeploy_schedule(id):
             "error",
         )
 
+    # Guard: block undeploy if any active (non-closed) marking event has MarkingReport rows
+    # linked to ROLE_PRESENTATION_ASSESSOR roles from this schedule's slots.
+    from ..models import MarkingReport, MarkingWorkflow, MarkingEvent, SubmissionRole, SubmitterReport
+    from ..models.markingevent import MarkingEventWorkflowStates
+
+    slot_ids = [slot.id for slot in record.slots]
+    if slot_ids:
+        active_marking = (
+            db.session.query(MarkingReport)
+            .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
+            .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+            .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+            .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
+            .filter(
+                SubmissionRole.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+                SubmissionRole.schedule_slot_id.in_(slot_ids),
+                MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
+            )
+            .count()
+        )
+        if active_marking > 0:
+            flash(
+                f'Cannot undeploy schedule "{record.name}" because one or more presentation '
+                "marking events that use this schedule are still active. Close those marking "
+                "events before undeploying.",
+                "error",
+            )
+            return redirect(redirect_url())
+
     try:
         record.deployed = False
         log_db_commit(

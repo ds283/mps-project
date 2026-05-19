@@ -16,6 +16,7 @@ from ...models.markingevent import (
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
+from ...models.submissions import SubmissionRoleTypesMixin
 from ...shared.forms.wtf_validators import SchemaValidationError, parse_schema
 
 # Convenience dict injected into every render_template call so Jinja2 templates can
@@ -531,7 +532,28 @@ _submitter_report_risk_factors = """
 _submitter_report_reports = """
 {%- set marking_reports = report.marking_reports.all() -%}
 {%- set moderator_reports = report.moderator_reports.all() -%}
+{%- set wf_role = report.workflow.role -%}
 <div class="d-flex flex-column gap-2">
+    {%- if wf_role == ROLE_SUPERVISOR or wf_role == ROLE_RESPONSIBLE_SUPERVISOR -%}
+        {%- if marking_reports | length > 1 -%}
+            <div class="alert alert-danger p-1 mb-1 small">
+                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                <strong>{{ marking_reports | length }} supervisor reports</strong> &mdash; should be exactly 1
+            </div>
+        {%- endif -%}
+    {%- elif wf_role == ROLE_MARKER -%}
+        {%- set ns = namespace(weight_sum=0.0) -%}
+        {%- for mr in marking_reports -%}
+            {%- if mr.weight is not none -%}{%- set ns.weight_sum = ns.weight_sum + mr.weight | float -%}{%- endif -%}
+        {%- endfor -%}
+        {%- set expected = report.workflow.event.period.number_markers | float -%}
+        {%- if (ns.weight_sum - expected) | abs > 0.001 -%}
+            <div class="alert alert-danger p-1 mb-1 small">
+                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                <strong>Weight mismatch</strong> ({{ "%.3f" | format(ns.weight_sum) }}&thinsp;/&thinsp;{{ expected | int }})
+            </div>
+        {%- endif -%}
+    {%- endif -%}
     {% for mr in marking_reports %}
         <div class="bg-light p-2 mb-2">
             <div class="d-flex flex-column justify-content-start align-items-start gap-1">
@@ -844,6 +866,9 @@ def submitter_report_data(reports):
         "is_root": "root" in _roles,
         "is_admin": "admin" in _roles,
         "csrf_token": generate_csrf,
+        "ROLE_SUPERVISOR": SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+        "ROLE_RESPONSIBLE_SUPERVISOR": SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        "ROLE_MARKER": SubmissionRoleTypesMixin.ROLE_MARKER,
     }
 
     event_is_closed = (
@@ -855,7 +880,7 @@ def submitter_report_data(reports):
         {
             "student": render_template(student_tmpl, report=report),
             "project": render_template(project_tmpl, report=report),
-            "reports": render_template(reports_tmpl, report=report),
+            "reports": render_template(reports_tmpl, report=report, **state_ctx),
             "grade": render_template(grade_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
             "risk_factors": render_template(risk_factors_tmpl, report=report, event_is_closed=event_is_closed),

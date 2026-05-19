@@ -142,6 +142,32 @@
         </div>
     {% endif %}
 
+    {# Danger: multiple supervisor MarkingReports on a single SubmitterReport #}
+    {% if multi_mr_count > 0 %}
+        <div class="alert alert-danger d-flex flex-row align-items-center gap-3 mt-3 mb-2">
+            <div class="flex-grow-1">
+                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                <strong>{{ multi_mr_count }} record{% if multi_mr_count != 1 %}s{% endif %}</strong>
+                have more than one supervisor marking report assigned.
+                Each supervisor workflow record should have exactly one marking report.
+                Please review the highlighted rows and remove duplicate assignments.
+            </div>
+        </div>
+    {% endif %}
+
+    {# Danger: marker weight sum does not equal number_markers #}
+    {% if wrong_weight_count > 0 %}
+        <div class="alert alert-danger d-flex flex-row align-items-center gap-3 mt-3 mb-2">
+            <div class="flex-grow-1">
+                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                <strong>{{ wrong_weight_count }} record{% if wrong_weight_count != 1 %}s{% endif %}</strong>
+                have marker weights that do not sum to the expected value
+                ({{ workflow.event.period.number_markers }}).
+                Please review the highlighted rows and correct the marker assignments.
+            </div>
+        </div>
+    {% endif %}
+
     {# Admin/root: return all completed reports to convenor #}
     {% if any_completed and (is_root or is_admin) %}
         <div class="d-flex flex-row justify-content-end mt-2 mb-2">

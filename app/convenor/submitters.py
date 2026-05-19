@@ -35,6 +35,7 @@ from ..models import (
     GeneratedAsset,
     MarkingEvent,
     MarkingReport,
+    MarkingWorkflow,
     ProjectClass,
     ProjectClassConfig,
     StudentData,
@@ -1076,7 +1077,63 @@ def delete_role(role_id):
     panel_title = f'Delete {role.role_as_str} role for <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>'
 
     action_url = url_for("convenor.perform_delete_role", role_id=role_id, url=url)
-    message = f'<p>Please confirm that you wish to delete the {role.role_as_str} role for <i class="fas fa-user-circle"></i> <strong>{role_user.name}</strong> belonging to submitter <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>.</p><p>This action cannot be undone.</p>'
+
+    # Determine whether deleting a ROLE_SUPERVISOR forces a responsible-supervisor fallback
+    # or leaves a SubmitterReport fully unassigned.
+    will_need_fallback = False
+    will_be_orphaned = False
+    if role.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR:
+        active_mr_count = (
+            db.session.query(MarkingReport)
+            .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+            .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+            .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
+            .filter(
+                MarkingReport.role_id == role.id,
+                MarkingWorkflow.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
+            )
+            .count()
+        )
+        if active_mr_count > 0:
+            other_supervisors = [
+                r for r in record.roles
+                if r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR and r.id != role.id
+            ]
+            if not other_supervisors:
+                has_responsible = any(
+                    r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
+                    for r in record.roles
+                )
+                if has_responsible:
+                    will_need_fallback = True
+                else:
+                    will_be_orphaned = True
+
+    base = (
+        f'<p>Please confirm that you wish to delete the {role.role_as_str} role for '
+        f'<i class="fas fa-user-circle"></i> <strong>{role_user.name}</strong> '
+        f'belonging to submitter <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>.</p>'
+    )
+    if will_be_orphaned:
+        extra = (
+            '<p class="text-danger"><strong>Warning:</strong> Deleting this supervisor role will leave '
+            "one or more active marking workflows with no marking assignment at all — there is no "
+            "alternative supervisor or responsible supervisor on this record to fall back to. "
+            "The affected submitter reports will remain in an incomplete state until a new supervisor "
+            "role is added. If this is not intended, add a replacement supervisor role first.</p>"
+        )
+    elif will_need_fallback:
+        extra = (
+            '<p class="text-danger"><strong>Warning:</strong> Deleting this supervisor role will leave '
+            "one or more active marking workflows without a supervisor assignment. A responsible "
+            "supervisor will automatically be assigned as a fallback. If this is not intended, "
+            "add an alternative supervisor role first.</p>"
+        )
+    else:
+        extra = ""
+    message = base + extra + "<p>This action cannot be undone.</p>"
+
     submit_label = "Delete role"
 
     return render_template_context(
@@ -1109,12 +1166,67 @@ def perform_delete_role(role_id):
     if url is None:
         url = url_for("convenor.edit_roles", sub_id=sub.id, record_id=record.id)
 
+    deleted_role_type = role.role
+
     try:
         # Sync: remove any MarkingReports linked to this role before deleting it
         for mr in db.session.query(MarkingReport).filter_by(role_id=role.id).all():
             db.session.delete(mr)
 
         db.session.delete(role)
+        db.session.flush()  # exclude deleted role from record.roles before rebuild
+
+        # Sync: if a supervisor role was deleted, rebuild any SubmitterReports that are now
+        # left with no MarkingReport, using the same precedence as initialize_marking_workflow.
+        _supervisor_role_types = frozenset(
+            {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+        )
+        if deleted_role_type in _supervisor_role_types:
+            for event in period.marking_events.filter(
+                MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED
+            ).all():
+                for workflow in event.workflows.filter(
+                    MarkingWorkflow.role.in_(list(_supervisor_role_types))
+                ).all():
+                    sr = db.session.query(SubmitterReport).filter_by(
+                        record_id=record.id, workflow_id=workflow.id
+                    ).first()
+                    if sr is None or sr.marking_reports.count() > 0:
+                        continue  # still has assignment(s); nothing to do
+
+                    all_roles = record.roles.all()
+                    has_supervisor = any(
+                        r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR for r in all_roles
+                    )
+                    has_responsible = any(
+                        r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR for r in all_roles
+                    )
+                    if has_supervisor:
+                        eligible = [r for r in all_roles if r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR]
+                    elif has_responsible:
+                        eligible = [r for r in all_roles if r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR]
+                    else:
+                        eligible = []
+
+                    for replacement_role in eligible:
+                        mr = MarkingReport(
+                            role_id=replacement_role.id,
+                            submitter_report_id=sr.id,
+                            report="{}",
+                            distributed=False,
+                            report_submitted=False,
+                            feedback_submitted=False,
+                            grade=None,
+                            weight=replacement_role.weight,
+                            feedback_positive=None,
+                            feedback_improvement=None,
+                            signed_off_id=None,
+                            signed_off_timestamp=None,
+                            feedback_timestamp=None,
+                            creator_id=current_user.id,
+                            creation_timestamp=datetime.now(),
+                        )
+                        db.session.add(mr)
 
         log_db_commit(
             "Deleted submission role from submission record",
@@ -1181,8 +1293,13 @@ def add_role(record_id):
             db.session.add(role)
             db.session.flush()  # materialise role.id before creating MarkingReports
 
-            # Sync: for each active (non-closed) MarkingWorkflow in this period,
-            # create a MarkingReport if the new role matches the workflow's target role.
+            # Sync: for each active (non-closed) MarkingWorkflow in this period, create a
+            # MarkingReport if the new role should be assigned.
+            #
+            # For supervisor/responsible-supervisor workflows: create a MarkingReport for the
+            # new role only when no ROLE_SUPERVISOR MarkingReport already exists for that
+            # SubmitterReport (matching the precedence logic in initialize_marking_workflow).
+            # For other workflow types: require an exact role match.
             _supervisor_roles = frozenset(
                 {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
             )
@@ -1191,33 +1308,76 @@ def add_role(record_id):
             ).all():
                 for workflow in event.workflows.all():
                     wf_role = workflow.role
-                    if wf_role in _supervisor_roles:
-                        matches = role.role in _supervisor_roles
-                    else:
-                        matches = role.role == wf_role
 
-                    if matches:
+                    if wf_role in _supervisor_roles:
+                        if role.role not in _supervisor_roles:
+                            continue
+
                         sr = db.session.query(SubmitterReport).filter_by(
                             record_id=record.id, workflow_id=workflow.id
                         ).first()
-                        if sr is not None:
-                            mr = MarkingReport(
-                                role_id=role.id,
-                                submitter_report_id=sr.id,
-                                report="{}",
-                                distributed=False,
-                                report_submitted=False,
-                                feedback_submitted=False,
-                                grade=None,
-                                feedback_positive=None,
-                                feedback_improvement=None,
-                                signed_off_id=None,
-                                signed_off_timestamp=None,
-                                feedback_timestamp=None,
-                                creator_id=current_user.id,
-                                creation_timestamp=datetime.now(),
+                        if sr is None:
+                            continue
+
+                        existing_supervisor_mr = (
+                            db.session.query(MarkingReport)
+                            .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
+                            .filter(
+                                MarkingReport.submitter_report_id == sr.id,
+                                SubmissionRole.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
                             )
-                            db.session.add(mr)
+                            .first()
+                        )
+                        if existing_supervisor_mr is not None:
+                            continue  # already optimal; leave it in place
+
+                        mr = MarkingReport(
+                            role_id=role.id,
+                            submitter_report_id=sr.id,
+                            report="{}",
+                            distributed=False,
+                            report_submitted=False,
+                            feedback_submitted=False,
+                            grade=None,
+                            weight=role.weight,
+                            feedback_positive=None,
+                            feedback_improvement=None,
+                            signed_off_id=None,
+                            signed_off_timestamp=None,
+                            feedback_timestamp=None,
+                            creator_id=current_user.id,
+                            creation_timestamp=datetime.now(),
+                        )
+                        db.session.add(mr)
+
+                    else:
+                        if role.role != wf_role:
+                            continue
+
+                        sr = db.session.query(SubmitterReport).filter_by(
+                            record_id=record.id, workflow_id=workflow.id
+                        ).first()
+                        if sr is None:
+                            continue
+
+                        mr = MarkingReport(
+                            role_id=role.id,
+                            submitter_report_id=sr.id,
+                            report="{}",
+                            distributed=False,
+                            report_submitted=False,
+                            feedback_submitted=False,
+                            grade=None,
+                            weight=role.weight,
+                            feedback_positive=None,
+                            feedback_improvement=None,
+                            signed_off_id=None,
+                            signed_off_timestamp=None,
+                            feedback_timestamp=None,
+                            creator_id=current_user.id,
+                            creation_timestamp=datetime.now(),
+                        )
+                        db.session.add(mr)
 
             log_db_commit(
                 "Added new submission role to submission record",

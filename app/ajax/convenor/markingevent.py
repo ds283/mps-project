@@ -1167,7 +1167,7 @@ _period_marking_event_menu = """
                     <i class="fas fa-play fa-fw"></i> Open event&hellip;
                 </a>
             {% else %}
-                <span class="dropdown-item d-flex gap-2 disabled text-muted">
+                <span class="dropdown-item d-flex gap-2 pe-none" style="opacity: 0.5">
                     <i class="fas fa-play fa-fw"></i> Open event&hellip;
                 </span>
             {% endif %}

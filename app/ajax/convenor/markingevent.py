@@ -193,10 +193,14 @@ _marking_workflow_distribution = """
         {% if workflow.event.workflow_state >= OPEN and workflow.event.workflow_state != CLOSED %}
             <div class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ not_distributed }} not distributed</div>
             <div class="mt-1">
-                <a href="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
-                   class="btn btn-xs btn-outline-secondary">
-                    <i class="fas fa-envelope fa-fw"></i> Send notifications
-                </a>
+                <form method="POST"
+                      action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
+                      style="display:contents">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-xs btn-outline-secondary" type="submit">
+                        <i class="fas fa-envelope fa-fw"></i> Send notifications
+                    </button>
+                </form>
             </div>
         {% else %}
             <div class="text-muted"><i class="fas fa-clock fa-fw"></i> {{ not_distributed }} pending opening</div>
@@ -1270,7 +1274,7 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "scheme": render_template(scheme_tmpl, workflow=workflow),
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow, **_EVENT_STATES),
+            "distribution": render_template(distribution_tmpl, workflow=workflow, csrf_token=generate_csrf, **_EVENT_STATES),
             "menu": render_template(
                 menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit
             ),

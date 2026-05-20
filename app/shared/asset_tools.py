@@ -165,8 +165,11 @@ class AssetCloudAdapter:
         return self._asset
 
     def exists(self) -> bool:
-        blobs = self._storage.list(audit_data=self._audit_data)
-        return self._key in blobs
+        try:
+            self._storage.head(self._key, audit_data=self._audit_data)
+            return True
+        except FileNotFoundError:
+            return False
 
     def get(self):
         if self._encryption == encryptions.ENCRYPTION_NONE:

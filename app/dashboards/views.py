@@ -745,7 +745,7 @@ def _aggregate_records(records: List[SubmissionRecord], inflight_ids: set = None
                 pass
 
         ai_use = record.risk_factors_data.get(record.RISK_AI_USE, {})
-        if ai_use.get("present", False) and not ai_use.get("resolved", False):
+        if ai_use.get("present", False):
             n_ai_flagged += 1
 
     def _stats(values: List[float]) -> Optional[Dict]:

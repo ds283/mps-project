@@ -143,7 +143,7 @@
                                             <td>
                                                 <div class="small">
                                                     <div>
-                                                        Size: {{ asset.human_file_size() if asset else 'Unknown' }}</div>
+                                                        Size: {{ asset.human_file_size if asset else 'Unknown' }}</div>
                                                     <div>Bucket: <span
                                                             class="badge bg-secondary">{{ asset.bucket if asset else 'Unknown' }}</span>
                                                     </div>

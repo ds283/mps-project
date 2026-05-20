@@ -10,7 +10,7 @@
 
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Union, List, Optional, Mapping, Type
+from typing import Dict, Set, Union, List, Optional, Mapping, Type
 from urllib.parse import urlsplit, SplitResult
 from zlib import compress as zlib_compress
 from zlib import decompress as zlib_decompress
@@ -126,6 +126,11 @@ class Driver:
     def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
         raise NotImplementedError(
             "The list() method should be implemented by concrete Driver instances"
+        )
+
+    def list_keys(self, prefix: Optional[PathLike] = None) -> Set[str]:
+        raise NotImplementedError(
+            "The list_keys() method should be implemented by concrete Driver instances"
         )
 
     def copy(self, src: PathLike, dst: PathLike) -> None:
@@ -392,6 +397,20 @@ class ObjectStore:
                     bucket=self._bucket_name,
                     host_uri=self._host_uri,
                 )
+
+        return data
+
+    def list_keys(self, audit_data: str, prefix: Optional[PathLike] = None) -> Set[str]:
+        data = self._driver.list_keys(prefix=prefix)
+
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record(
+                "list",
+                audit_data,
+                driver=self._driver_name,
+                bucket=self._bucket_name,
+                host_uri=self._host_uri,
+            )
 
         return data
 

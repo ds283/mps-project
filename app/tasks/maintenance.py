@@ -611,12 +611,9 @@ def register_maintenance_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def asset_check_lost(self, notify_email):
-        # previously we checked for lost assets at the same time as garbage collection, but in the context of
-        # a cloud object store this generates a huge number of API calls for which we are billed! e.g., on
-        # Google Cloud Storate this was the number of API calls was the single biggest contributor to the
-        # storage bill in August 2023. We need to generate many fewer API calls by using them more intelligently.
-        # At a minimum, this means that checking for lost assets should be done in a separate job that can be
-        # scheduled much more infrequently.
+        # Use a bulk list-and-compare strategy: list each bucket's keys once (O(bucket_pages)
+        # API calls) and compare against all DB records in memory.  This avoids the previous
+        # fan-out of one Celery task per asset record and the associated per-record HEAD call.
         generated_records = _collect_all_assets(self, GeneratedAsset)
         temporary_records = _collect_all_assets(self, TemporaryAsset)
         submitted_records = _collect_all_assets(self, SubmittedAsset)
@@ -627,20 +624,53 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        tasks = (
-            [asset_test_lost.s(r.id, GeneratedAsset) for r in generated_records]
-            + [asset_test_lost.s(r.id, TemporaryAsset) for r in temporary_records]
-            + [asset_test_lost.s(r.id, SubmittedAsset) for r in submitted_records]
-            + [thumbnail_test_lost.s(r.id) for r in thumbnail_records]
+        all_records = (
+            [(r, r.unique_name) for r in thumbnail_records]
+            + [
+                (r, r.target_name if hasattr(r, "target_name") and r.target_name is not None else r.unique_name)
+                for r in generated_records + temporary_records + submitted_records
+            ]
         )
 
-        return self.replace(
-            group(*tasks)
-            | issue_asset_report.s(
-                EmailTemplate.MAINTENANCE_LOST_ASSETS,
-                notify_email,
-            )
-        )
+        # Build a key-set for each distinct bucket used by these records (one list() call per bucket).
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        bucket_keys: dict = {}
+        for record, _ in all_records:
+            bucket_type = record.bucket
+            if bucket_type not in bucket_keys and bucket_type in bucket_map:
+                storage: ObjectStore = bucket_map[bucket_type]
+                try:
+                    bucket_keys[bucket_type] = storage.list_keys(
+                        audit_data=f"maintenance.asset_check_lost (bucket type {bucket_type})"
+                    )
+                except Exception as e:
+                    current_app.logger.exception("Error listing bucket keys", exc_info=e)
+                    raise self.retry()
+
+        lost_assets = []
+        for record, asset_name in all_records:
+            bucket_type = record.bucket
+            if bucket_type not in bucket_keys:
+                continue
+            if asset_name in bucket_keys[bucket_type]:
+                continue
+
+            print(f'** Detected lost asset "{asset_name}" (id={record.id}, type={type(record).__name__})')
+            record.lost = True
+            lost_assets.append({"type": type(record).__name__, "id": record.id, "name": asset_name})
+
+        if lost_assets:
+            try:
+                log_db_commit(
+                    f"Marked {len(lost_assets)} asset(s) as lost",
+                    endpoint=self.name,
+                )
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        issue_asset_report.delay(lost_assets, EmailTemplate.MAINTENANCE_LOST_ASSETS, notify_email)
 
     @celery.task(bind=True, default_retry_delay=30)
     def asset_check_unattached(self, notify_email):
@@ -745,55 +775,6 @@ def register_maintenance_tasks(celery):
         return asset_name
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
-    def asset_test_lost(self, id, RecordType):
-        try:
-            record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if record is None:
-            return
-
-        if hasattr(record, "target_name"):
-            asset_name = (
-                record.target_name
-                if record.target_name is not None
-                else record.unique_name
-            )
-        else:
-            asset_name = record.unique_name
-
-        asset_type = RecordType.get_type()
-
-        bucket_type = record.bucket
-        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
-        if bucket_type not in bucket_map:
-            raise RuntimeError(
-                f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store"
-            )
-
-        storage = AssetCloudAdapter(
-            record,
-            bucket_map[bucket_type],
-            audit_data=f'maintenance.asset_test_lost (record type="{asset_type}", record id #{id})',
-        )
-
-        # check if asset exists in the object store
-        if storage.exists():
-            return
-
-        try:
-            record.lost = True
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        print(f'** Detected lost {asset_type} object "{asset_name}" (id={record.id})')
-        return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
-
-    @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
     def asset_test_attached(self, id, RecordType):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
@@ -822,56 +803,6 @@ def register_maintenance_tasks(celery):
             f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})'
         )
         return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def thumbnail_test_lost(self, thumbnail_id):
-        """
-        Check whether a ThumbnailAsset's physical file exists. If missing, mark lost=True.
-        Returns a dict for the lost-asset report if the file is missing.
-        """
-        try:
-            thumbnail: ThumbnailAsset = (
-                db.session.query(ThumbnailAsset).filter_by(id=thumbnail_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if thumbnail is None:
-            return
-
-        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
-        thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
-        if thumbnails_store is None:
-            return
-
-        storage = AssetCloudAdapter(
-            thumbnail,
-            thumbnails_store,
-            encryption_attr=None,
-            compressed_attr=None,
-            audit_data=f"maintenance.thumbnail_test_lost (thumbnail id #{thumbnail_id})",
-        )
-
-        if storage.exists():
-            return
-
-        print(
-            f'** Detected lost ThumbnailAsset "{thumbnail.unique_name}" (id={thumbnail.id})'
-        )
-
-        try:
-            thumbnail.lost = True
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        return {
-            "type": "ThumbnailAsset",
-            "id": thumbnail.id,
-            "name": thumbnail.unique_name,
-        }
 
     @celery.task(bind=True, default_retry_delay=30)
     def thumbnail_cleanup_unattached(self):

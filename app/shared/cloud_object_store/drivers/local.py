@@ -10,7 +10,7 @@
 
 from mimetypes import guess_type
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Set
 from urllib.parse import SplitResult
 
 from ..meta import ObjectMeta
@@ -138,6 +138,12 @@ class LocalFileSystemDriver:
                 data[str(key)] = meta
 
         return data
+
+    def list_keys(self, prefix: Path = None) -> Set[str]:
+        abs_prefix: Path = _check_prefix_ok(self._root, prefix)
+        if not abs_prefix.exists():
+            return set()
+        return {str(item.relative_to(self._root)) for item in abs_prefix.rglob("*") if item.is_file()}
 
     def head(self, key: Path) -> ObjectMeta:
         abs_path: Path = _check_is_object(self._root, key)

@@ -10,7 +10,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Set
 from urllib.parse import SplitResult
 
 from google.cloud.exceptions import NotFound
@@ -97,6 +97,10 @@ class GoogleCloudStorageDriver:
 
         data = {str(blob.name): self.head(blob.name) for blob in blobs}
         return data
+
+    def list_keys(self, prefix: Path = None) -> Set[str]:
+        blobs = self._bucket.list_blobs(prefix=str(prefix) if prefix is not None else None)
+        return {str(blob.name) for blob in blobs}
 
     def head(self, key: Path) -> ObjectMeta:
         try:

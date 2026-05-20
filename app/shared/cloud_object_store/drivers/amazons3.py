@@ -10,7 +10,7 @@
 
 from io import BytesIO
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Set
 from urllib.parse import SplitResult
 
 import boto3
@@ -171,6 +171,24 @@ class AmazonS3CloudStorageDriver:
         data.mimetype = response["ContentType"]
 
         return data
+
+    def list_keys(self, prefix: Path = None) -> Set[str]:
+        prefix_str = str(prefix) if prefix is not None else None
+        keys = set()
+        continuation_token = None
+        while True:
+            extra_args = {}
+            if prefix_str is not None:
+                extra_args["Prefix"] = prefix_str
+            if continuation_token is not None:
+                extra_args["ContinuationToken"] = continuation_token
+            response = self._storage.list_objects_v2(Bucket=self._bucket_name, **extra_args)
+            for obj in response.get("Contents", []):
+                keys.add(str(obj["Key"]))
+            if not response["IsTruncated"]:
+                break
+            continuation_token = response["NextContinuationToken"]
+        return keys
 
     def get_url(self, key: Path) -> str:
         if self._endpoint_url is not None:

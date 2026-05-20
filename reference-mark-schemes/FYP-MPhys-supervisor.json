@@ -1,0 +1,18 @@
+{
+  "scheme": [
+    {
+      "title": "Supervisor observations grade",
+      "background": "primary",
+      "fields": [
+        {
+          "key": "grade",
+          "text": "Assigned grade (expressed as a percentage)",
+          "field_type": {
+            "type": "percent"
+          }
+        }
+      ]
+    }
+  ],
+  "conflation_rule": "grade"
+}

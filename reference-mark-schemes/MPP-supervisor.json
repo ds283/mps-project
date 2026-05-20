@@ -1,7 +1,8 @@
 {
   "scheme": [
     {
-      "title": "Preamble",
+      "title": "Declarations",
+      "background": "danger",
       "fields": [
         {
           "key": "conflict",
@@ -21,6 +22,7 @@
     },
     {
       "title": "Marking report",
+      "background": "primary",
       "fields": [
         {
           "key": "understanding",
@@ -57,16 +59,31 @@
             "min": 0,
             "max": 10
           }
+        },
+        {
+          "key": "justification",
+          "text": "Please enter a short justification or explanation for your assignment of marks. This may be reviewed by the exam board or the external examiners.",
+          "field_type": {
+            "type": "text"
+          }
         }
       ]
     }
   ],
   "validation": [
     {
-      "test": "not conflict",
+      "test": "conflict",
       "action": [
         "prevent_submit"
-      ]
+      ],
+      "message": "Thanks for letting us know that you have a conflict of interest. You will not be able submit this form. Please contact the convenor so that a new examiner can be appointed."
+    },
+    {
+      "test": "send",
+      "action": [
+        "prevent_submit"
+      ],
+      "message": "Please review the University documentation on marking submissions with reasonable adjustments. If you have questions or concerns, please contact the convenor."
     }
   ],
   "conflation_rule": "2.5*(understanding + time + technical + student)"

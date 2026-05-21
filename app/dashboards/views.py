@@ -2318,6 +2318,7 @@ def marking_register(event_id: int):
     if not (
         current_user.has_role("root")
         or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_marking")
         or (
             current_user.has_role("faculty")
             and current_user.faculty_data is not None
@@ -2506,6 +2507,7 @@ def export_marking_excel(event_id: int):
     if not (
         current_user.has_role("root")
         or current_user.has_role("admin")
+        or current_user.has_role("data_dashboard_marking")
         or (
             current_user.has_role("faculty")
             and current_user.faculty_data is not None

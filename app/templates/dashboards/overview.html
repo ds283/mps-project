@@ -99,33 +99,6 @@
             {% endcall %}
             {% endif %}
 
-            {# ---- Marking Dashboard card ---- #}
-            {% if is_root or is_admin or is_data_dashboard_marking or is_convenor %}
-            {% call(slot) dashboard_card(
-                icon_class="fas fa-clipboard-check fa-2x text-success",
-                icon_bg_style="background-color: var(--db-green-50);",
-                title="Marking Dashboard",
-                description="Workflow health, progress indicators, and at-risk flags across all marking events. Covers distribution, submission, moderation, and grade consistency.",
-                open_url=url_for('dashboards.marking_dashboard'),
-                open_label="Open dashboard",
-                open_btn_class="btn-db-green"
-            ) %}
-                {% if slot == 'badges' %}
-                    {% if marking_summary.n_events > 1 %}
-                        <span class="badge bg-secondary">
-                            <i class="fas fa-calendar-check me-1"></i>{{ marking_summary.n_events }} marking events
-                        </span>
-                    {% elif marking_summary.n_events == 1 %}
-                        <span class="badge bg-secondary">
-                            <i class="fas fa-calendar-check me-1"></i>1 marking event
-                        </span>
-                    {% else %}
-                        <span class="badge bg-secondary text-body-secondary">No marking events</span>
-                    {% endif %}
-                {% endif %}
-            {% endcall %}
-            {% endif %}
-
             {# ---- Similarity Dashboard card ---- #}
             {% if similarity_summary is not none and (is_root or is_admin or is_data_dashboard_similarity or is_convenor) %}
             {% call(slot) dashboard_card(
@@ -151,6 +124,33 @@
                         <span class="badge bg-secondary">
                             <i class="fas fa-database me-1"></i>{{ similarity_summary.n_indexed }} indexed
                         </span>
+                    {% endif %}
+                {% endif %}
+            {% endcall %}
+            {% endif %}
+
+            {# ---- Marking Dashboard card ---- #}
+            {% if is_root or is_admin or is_data_dashboard_marking or is_convenor %}
+            {% call(slot) dashboard_card(
+                icon_class="fas fa-clipboard-check fa-2x text-success",
+                icon_bg_style="background-color: var(--db-green-50);",
+                title="Marking Dashboard",
+                description="Workflow health, progress indicators, and at-risk flags across all marking events. Covers distribution, submission, moderation, and grade consistency.",
+                open_url=url_for('dashboards.marking_dashboard'),
+                open_label="Open dashboard",
+                open_btn_class="btn-db-green"
+            ) %}
+                {% if slot == 'badges' %}
+                    {% if marking_summary.n_events > 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-calendar-check me-1"></i>{{ marking_summary.n_events }} marking events
+                        </span>
+                    {% elif marking_summary.n_events == 1 %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-calendar-check me-1"></i>1 marking event
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary text-body-secondary">No marking events</span>
                     {% endif %}
                 {% endif %}
             {% endcall %}

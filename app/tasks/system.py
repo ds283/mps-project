@@ -75,6 +75,7 @@ def register_system_tasks(celery):
         self.update_state(state="STARTED")
 
         try:
+            db.session.query(Notification).filter(Notification.type == Notification.TASK_PROGRESS).delete()
             db.session.query(TaskRecord).delete()
             log_db_commit("Delete all background task records", endpoint=self.name)
 

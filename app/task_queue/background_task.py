@@ -163,6 +163,19 @@ def reconcile_background_tasks(app):
 
             task.last_updated = now
 
+            if task.owner is not None:
+                task.owner.post_task_update(
+                    task.id,
+                    {
+                        "task": task.name,
+                        "state": task.status,
+                        "progress": 100,
+                        "message": task.message,
+                    },
+                    remove_on_load=True,
+                    autocommit=False,
+                )
+
         try:
             db.session.commit()
             app.logger.info(f"reconcile_background_tasks: reconciliation complete")

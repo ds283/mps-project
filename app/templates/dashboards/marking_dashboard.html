@@ -41,13 +41,13 @@
         MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:     ("bg-warning-subtle text-warning-emphasis",     "Ready to push"),
         MarkingEventWorkflowStates.CLOSED:                     ("bg-dark-subtle text-dark-emphasis",           "Closed"),
     } %}
-    {% set _state_border = {
-        MarkingEventWorkflowStates.WAITING:                    "border-secondary",
-        MarkingEventWorkflowStates.OPEN:                       "border-primary",
-        MarkingEventWorkflowStates.READY_TO_CONFLATE:          "border-success",
-        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK: "border-warning",
-        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:     "border-warning",
-        MarkingEventWorkflowStates.CLOSED:                     "border-dark",
+    {% set _state_border_color = {
+        MarkingEventWorkflowStates.WAITING:                    "var(--bs-secondary)",
+        MarkingEventWorkflowStates.OPEN:                       "var(--bs-primary)",
+        MarkingEventWorkflowStates.READY_TO_CONFLATE:          "var(--bs-success)",
+        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK: "var(--bs-warning)",
+        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:     "var(--bs-warning)",
+        MarkingEventWorkflowStates.CLOSED:                     "var(--bs-dark)",
     } %}
 
     {# Helper: colour class for a percentage value (high % = healthy) #}
@@ -198,8 +198,8 @@
 
                     {# ProjectClass section header — accent colour keyed to pclass.colour #}
                     {% set _pc_colour = pclass_section.pclass.colour %}
-                    <div class="px-4 py-2 border-start border-4 fw-semibold text-body"
-                         style="border-left-color: {{ _pc_colour if _pc_colour else 'var(--bs-secondary-color)' }}; background-color: {{ 'color-mix(in srgb, ' ~ _pc_colour ~ ' 12%, white)' if _pc_colour else 'var(--bs-light)' }}; font-size: 0.95rem;">
+                    <div class="px-4 py-3 fw-semibold text-body mt-3"
+                         style="border-left: 4px solid {{ _pc_colour if _pc_colour else 'var(--bs-secondary)' }}; background-color: {{ 'color-mix(in srgb, ' ~ _pc_colour ~ ' 12%, white)' if _pc_colour else 'var(--bs-secondary-bg-subtle)' }}; font-size: 1.05rem;">
                         {{ pclass_section.pclass.name }}
                     </div>
 
@@ -220,7 +220,8 @@
                         {% set risk = event_data.risk_summary %}
                         {% set now = current_time %}
 
-                        <div class="border-bottom border-start border-4 bg-white px-4 py-3 mb-2 {{ _state_border.get(event.workflow_state, 'border-secondary') }}">
+                        <div class="border-bottom bg-white px-4 py-3 mb-2"
+                             style="border-left: 4px solid {{ _state_border_color.get(event.workflow_state, 'var(--bs-secondary)') }};">
 
                             {# Event header row #}
                             <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">

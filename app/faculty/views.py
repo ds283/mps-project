@@ -1911,7 +1911,7 @@ def dashboard():
                     num_s_records = period.number_supervisor_records(current_user.id)
                     num_mk_records = period.number_marker_records(current_user.id)
                     num_mo_records = period.number_moderator_records(current_user.id)
-                    num_p_records = period.number_presentation_records(current_user.id)
+                    num_p_records = period.number_presentation_assessor_records(current_user.id)
 
                     if (
                         (pclass.uses_supervisor and num_s_records > 0)

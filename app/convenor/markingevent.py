@@ -44,17 +44,19 @@ from ..models import (
     SubmittingStudent,
     User,
 )
+from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
 from ..models.markingevent import (
     ConflationReport,
     ConvenorAction,
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
-from ..models.submissions import SubmissionRoleTypesMixin
 from ..models.similarity import SimilarityConcern
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.forms.wtf_validators import (
     make_unique_marking_event_in_period,
     make_unique_marking_scheme_in_pclass,
@@ -62,10 +64,8 @@ from ..shared.forms.wtf_validators import (
     make_unique_marking_workflow_key_in_event,
     make_valid_marking_targets,
 )
-from ..shared.forms.forms import ConfirmActionForm
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
-from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
 from ..shared.workflow_logging import log_db_commit
 from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD
 from ..tasks.thumbnails import dispatch_thumbnail_task
@@ -87,7 +87,6 @@ from .forms import (
     TestMarkingEventFormFactory,
     build_resolve_risk_factors_form,
 )
-
 
 
 @convenor.route("/marking_events_inspector/<int:pclass_id>")
@@ -555,8 +554,9 @@ def _delete_feedback_for_cr(cr: ConflationReport, audit_suffix: str = "") -> Non
     Clears cr.recipe, cr.feedback_celery_id, and cr.feedback_generation_failed.
     Caller is responsible for db.session.commit() / rollback.
     """
-    import app.shared.cloud_object_store.bucket_types as buckets
     from sqlalchemy import delete as sa_delete
+
+    import app.shared.cloud_object_store.bucket_types as buckets
 
     from ..models.associations import submission_record_to_feedback_report
     from ..models.markingevent import conflation_report_to_feedback_report
@@ -3524,6 +3524,9 @@ def clear_marking_grade(report_id):
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify reports in a closed marking event.", "error")
         return redirect(url)
+
+    report.report_submitted = False
+    report.grade = None
 
     report.grade_submitted_by_id = None
     report.grade_submitted_timestamp = None

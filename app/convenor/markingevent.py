@@ -3528,14 +3528,41 @@ def clear_marking_grade(report_id):
     report.grade_submitted_by_id = None
     report.grade_submitted_timestamp = None
 
+    # Clearing the grade invalidates any existing sign-off — the responsible supervisor
+    # approved a grade that is now being revoked, so the report must go through the
+    # sign-off cycle again once the assessor resubmits.
+    report.signed_off_id = None
+    report.signed_off_timestamp = None
+    for role in report.responsible_supervisors.all():
+        report.responsible_supervisors.remove(role)
+
+    # Cancel the existing close_marking_window scheduler entry for this report so that
+    # a fresh 24 h window is created when the assessor resubmits their grade.
+    # schedule_close_marking_window has an idempotency guard that skips creation if an
+    # entry already exists, so we must remove the stale one here.
+    from ..sqlalchemy_scheduler import CrontabSchedule, DatabaseSchedulerEntry
+
+    existing_entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report.id}_%"))
+        .first()
+    )
+    if existing_entry is not None:
+        crontab_id = existing_entry.crontab_id
+        db.session.delete(existing_entry)
+        if crontab_id is not None:
+            crontab = db.session.query(CrontabSchedule).filter_by(id=crontab_id).first()
+            if crontab is not None:
+                db.session.delete(crontab)
+
     try:
         log_db_commit(
-            f"Cleared marking grade submission for report #{report.id} (workflow: {workflow.name})",
+            f"Cleared marking grade and sign-off for report #{report.id} (workflow: {workflow.name})",
             user=current_user,
             project_classes=pclass,
         )
         flash(
-            f"The marking form for {report.user.name} has been re-opened. "
+            f"The marking form for {report.user.name} has been re-opened and any sign-off has been cleared. "
             "The assessor can now resubmit their report.",
             "success",
         )

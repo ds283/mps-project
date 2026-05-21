@@ -113,6 +113,22 @@
     border-bottom: 1px solid var(--db-green-200);
 }
 
+/* Micro-label: decorative section headings, e.g. HEALTH INDICATORS */
+.text-micro {
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+}
+
+/* Secondary annotation: tile footers, count labels */
+.text-caption {
+    font-size: 0.75rem;
+}
+
+/* Tertiary metadata: workflow role/scheme/count lines */
+.text-meta {
+    font-size: 0.80rem;
+}
+
 html {
     padding-bottom: 4rem;
 }

@@ -3646,7 +3646,7 @@ def assign_moderator(submitter_report_id):
     )
     workflow = sr.workflow
     event = workflow.event
-    pclass = workflow.pclass
+    pclass = event.pclass
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -3716,7 +3716,7 @@ def accept_moderator_grade(mod_report_id, workflow_id):
     )
     sr = mod_report.submitter_report
     workflow = sr.workflow
-    pclass = workflow.pclass
+    pclass = workflow.event.pclass
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())

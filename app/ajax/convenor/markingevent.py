@@ -560,19 +560,29 @@ _submitter_report_reports = """
                 {% if mr.grade is not none %}
                     <span class="text-primary fw-semibold fs-4">{{ "%.1f"|format(mr.grade) }}%</span>
                 {% endif %}
-                {% if mr.report_submitted %}
-                    <span class="text-success small"><i
-                            class="fas fa-check-circle"></i> Report submitted</span>
+                {% if not mr.distributed %}
+                    {% if report.workflow_state == READY_TO_DISTRIBUTE %}
+                        <span class="badge bg-warning text-dark small"><i
+                                class="fas fa-paper-plane fa-fw"></i> Ready to distribute</span>
+                    {% else %}
+                        <span class="text-secondary small fst-italic"><i
+                                class="fas fa-hourglass-half"></i> Awaiting distribution</span>
+                    {% endif %}
                 {% else %}
-                    <span class="text-secondary small fst-italic"><i
-                            class="fas fa-hourglass-half"></i> Awaiting report</span>
-                {% endif %}
-                {% if mr.feedback_submitted %}
-                    <span class="text-success small"><i
-                            class="fas fa-comment"></i> Feedback submitted</span>
-                {% else %}
-                    <span class="text-secondary small fst-italic"><i
-                            class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                    {% if mr.report_submitted %}
+                        <span class="text-success small"><i
+                                class="fas fa-check-circle"></i> Report submitted</span>
+                    {% else %}
+                        <span class="text-secondary small fst-italic"><i
+                                class="fas fa-hourglass-half"></i> Awaiting report</span>
+                    {% endif %}
+                    {% if mr.feedback_submitted %}
+                        <span class="text-success small"><i
+                                class="fas fa-comment"></i> Feedback submitted</span>
+                    {% else %}
+                        <span class="text-secondary small fst-italic"><i
+                                class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                    {% endif %}
                 {% endif %}
                 {% if mr.signed_off_by is not none %}
                     <div>
@@ -655,25 +665,42 @@ _marking_report_grade = """
 
 # language=jinja2
 _marking_report_status = """
+{% set event = report.submitter_report.workflow.event %}
 <div class="d-flex flex-column justify-content-start align-items-start gap-1 small">
     {% if report.distributed %}
         <span class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Distributed to marker</span>
+    {% elif report.submitter_report.workflow_state == READY_TO_DISTRIBUTE %}
+        <span class="fw-semibold" style="color: var(--bs-warning-text-emphasis)"><i class="fas fa-paper-plane fa-fw"></i> Ready to distribute</span>
+        {% if event.workflow_state >= OPEN and event.workflow_state != CLOSED %}
+            <form method="POST"
+                  action="{{ url_for('convenor.dispatch_marking_report', report_id=report.id,
+                             url=url_for('convenor.marking_reports_inspector',
+                                         workflow_id=report.submitter_report.workflow_id)) }}"
+                  style="display:contents">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-xs btn-warning mt-1" type="submit">
+                    <i class="fas fa-paper-plane fa-fw"></i> Dispatch now
+                </button>
+            </form>
+        {% endif %}
     {% else %}
-        <span class="text-danger fst-italic"><i class="fas fa-hourglass-half"></i> Awaiting distribution</span>
+        <span class="text-secondary fst-italic"><i class="fas fa-hourglass-half"></i> Awaiting distribution</span>
     {% endif %}
-    {% if report.report_submitted %}
-        <span class="text-success"><i
-                class="fas fa-check-circle"></i> Report submitted</span>
-    {% else %}
-        <span class="text-secondary fst-italic"><i
-                class="fas fa-hourglass-half"></i> Awaiting report</span>
-    {% endif %}
-    {% if report.feedback_submitted %}
-        <span class="text-success"><i
-                class="fas fa-comment"></i> Feedback submitted</span>
-    {% else %}
-        <span class="text-secondary fst-italic"><i
-                class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+    {% if report.distributed %}
+        {% if report.report_submitted %}
+            <span class="text-success"><i
+                    class="fas fa-check-circle"></i> Report submitted</span>
+        {% else %}
+            <span class="text-secondary fst-italic"><i
+                    class="fas fa-hourglass-half"></i> Awaiting report</span>
+        {% endif %}
+        {% if report.feedback_submitted %}
+            <span class="text-success"><i
+                    class="fas fa-comment"></i> Feedback submitted</span>
+        {% else %}
+            <span class="text-secondary fst-italic"><i
+                    class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+        {% endif %}
     {% endif %}
 </div>
 """
@@ -857,6 +884,7 @@ def submitter_report_data(reports):
 
     _roles = set(r.name for r in _cu.roles) if hasattr(_cu, "roles") else set()
     state_ctx = {
+        "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
         "NEEDS_MODERATOR_ASSIGNED": SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
         "AWAITING_MODERATOR_REPORT": SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
         "READY_TO_SIGN_OFF": SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
@@ -912,8 +940,23 @@ def marking_report_data(reports):
         if reports else False
     )
 
+    _status_ctx = {
+        "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+        "csrf_token": generate_csrf,
+        **_EVENT_STATES,
+    }
+
+    def _row_class(report):
+        if (
+            not report.distributed
+            and report.submitter_report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+        ):
+            return "table-warning"
+        return ""
+
     return [
         {
+            "DT_RowClass": _row_class(report),
             "marker": render_template(
                 marker_tmpl,
                 report=report,
@@ -921,7 +964,7 @@ def marking_report_data(reports):
             ),
             "student": render_template(student_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
-            "status": render_template(status_tmpl, report=report),
+            "status": render_template(status_tmpl, report=report, **_status_ctx),
             "signoff": render_template(signoff_tmpl, report=report),
             "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, **_EVENT_STATES),
         }

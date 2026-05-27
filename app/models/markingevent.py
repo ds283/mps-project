@@ -282,12 +282,21 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
         }
-        return sum(
+        count = sum(
             1
             for workflow in self.workflows
             for sr in workflow.submitter_reports
             if sr.workflow_state in urgent_states
         )
+        # Distributable reports (READY_TO_DISTRIBUTE with undistributed MarkingReports) are
+        # time-critical — assessors cannot begin until notification emails are sent.
+        if self.workflow_state >= MarkingEventWorkflowStates.OPEN:
+            for workflow in self.workflows:
+                for sr in workflow.submitter_reports:
+                    if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+                        if any(not mr.distributed for mr in sr.marking_reports):
+                            count += 1
+        return count
 
     def get_convenor_actions(
         self,
@@ -368,7 +377,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             if self.workflow_state >= MarkingEventWorkflowStates.OPEN:
                 actions.append(
                     ConvenorAction(
-                        severity="warning",
+                        severity="danger",
                         title="Reports ready to distribute",
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready to send to assessors.",
@@ -379,7 +388,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             else:
                 actions.append(
                     ConvenorAction(
-                        severity="warning",
+                        severity="danger",
                         title="Ready to open marking event",
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready. Open this event to trigger distribution.",

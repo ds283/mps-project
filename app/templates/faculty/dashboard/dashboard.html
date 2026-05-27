@@ -134,12 +134,12 @@
                 <div class="card mt-3 mb-3 border-danger">
                     <div class="card-header bg-danger text-white">
                         <i class="fas fa-marker fa-fw me-1"></i>
-                        <strong>Marking and feedback tasks requiring attention</strong>
+                        <strong>Marking and feedback tasks</strong>
                     </div>
                     <div class="card-body">
                         <p class="text-primary mt-2 mb-3">
-                            The following marking reports have been distributed to you and are awaiting submission.
-                            Please complete each form before the deadline.
+                            The following marking assignments have been allocated to you.
+                            Distributed reports are awaiting your submission — please complete each form before the deadline.
                         </p>
                         <div class="d-flex flex-column gap-3">
                             {% for report in pending_marking_reports %}
@@ -159,25 +159,32 @@
                                                     {% endif %}
                                                 </div>
                                             </div>
-                                            <a class="btn btn-sm btn-danger"
-                                               href="{{ url_for('faculty.marking_form', report_id=report.id, url=url_for('faculty.dashboard', pane='marking')) }}">
-                                                <i class="fas fa-pen fa-fw"></i> Enter report
-                                            </a>
+                                            {% if report.distributed %}
+                                                <a class="btn btn-sm btn-danger"
+                                                   href="{{ url_for('faculty.marking_form', report_id=report.id, url=url_for('faculty.dashboard', pane='marking')) }}">
+                                                    <i class="fas fa-pen fa-fw"></i> Enter report
+                                                </a>
+                                            {% endif %}
                                         </div>
                                         <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3 mt-2 small">
-                                            {% if report.report_submitted %}
-                                                <span class="text-success"><i
-                                                        class="fas fa-check-circle"></i> Report submitted</span>
-                                            {% else %}
+                                            {% if not report.distributed %}
                                                 <span class="text-secondary fst-italic"><i
-                                                        class="fas fa-hourglass-half"></i> Awaiting report</span>
-                                            {% endif %}
-                                            {% if report.feedback_submitted %}
-                                                <span class="text-success"><i
-                                                        class="fas fa-comment"></i> Feedback submitted</span>
+                                                        class="fas fa-clock fa-fw"></i> Not distributed &mdash; awaiting student report</span>
                                             {% else %}
-                                                <span class="text-secondary fst-italic"><i
-                                                        class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                                                {% if report.report_submitted %}
+                                                    <span class="text-success"><i
+                                                            class="fas fa-check-circle"></i> Report submitted</span>
+                                                {% else %}
+                                                    <span class="text-secondary fst-italic"><i
+                                                            class="fas fa-hourglass-half"></i> Awaiting your report</span>
+                                                {% endif %}
+                                                {% if report.feedback_submitted %}
+                                                    <span class="text-success"><i
+                                                            class="fas fa-comment"></i> Feedback submitted</span>
+                                                {% else %}
+                                                    <span class="text-secondary fst-italic"><i
+                                                            class="fas fa-hourglass-half"></i> Awaiting your feedback</span>
+                                                {% endif %}
                                             {% endif %}
                                         </div>
                                     </div>

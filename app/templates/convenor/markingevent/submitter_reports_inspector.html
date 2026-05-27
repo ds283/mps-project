@@ -114,6 +114,19 @@
         </div>
     {% endif %}
 
+    {# Banner: reports ready to distribute #}
+    {%- set ready_to_distribute = state_counts.get(SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE, 0) -%}
+    {% if ready_to_distribute > 0 and can_edit %}
+        <div class="alert alert-danger d-flex align-items-center gap-3 mt-3 mb-2">
+            <i class="fas fa-paper-plane fa-2x flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>{{ ready_to_distribute }} report{{ '' if ready_to_distribute == 1 else 's' }} ready to distribute</strong> &mdash;
+                distribution email{{ '' if ready_to_distribute == 1 else 's' }} have not been sent yet.
+                Assessors cannot begin marking until notified.
+            </div>
+        </div>
+    {% endif %}
+
     {# Banner: reports requiring immediate convenor action #}
     {%- set needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0) -%}
     {%- set needs_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0) -%}

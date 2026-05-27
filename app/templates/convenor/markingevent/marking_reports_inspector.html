@@ -113,6 +113,18 @@
         </div>
     {% endif %}
 
+    {# Banner: marking reports ready to distribute #}
+    {% if distributable_count > 0 %}
+        <div class="alert alert-danger d-flex align-items-center gap-3 mt-3 mb-2">
+            <i class="fas fa-paper-plane fa-2x flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>{{ distributable_count }} marking report{{ '' if distributable_count == 1 else 's' }} ready to distribute</strong> &mdash;
+                distribution email{{ '' if distributable_count == 1 else 's' }} have not been sent yet.
+                Assessors cannot begin marking until notified.
+            </div>
+        </div>
+    {% endif %}
+
     {% if web_validation_failures %}
         <div class="card border-warning mt-3 mb-3">
             <div class="card-header bg-warning text-dark">

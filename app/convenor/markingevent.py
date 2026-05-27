@@ -1763,6 +1763,18 @@ def marking_reports_inspector(workflow_id):
     )
     feedback_count = workflow.number_marking_reports_with_feedback
 
+    distributable_count = (
+        db.session.query(func.count(MarkingReport.id))
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .filter(
+            SubmitterReport.workflow_id == workflow_id,
+            MarkingReport.distributed.is_(False),
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+        )
+        .scalar()
+        or 0
+    )
+
     # Collect web validation failures from submitted marking reports
     import json as _json
 
@@ -1786,6 +1798,7 @@ def marking_reports_inspector(workflow_id):
         text=text,
         total_reports=total_reports,
         distributed_count=distributed_count,
+        distributable_count=distributable_count,
         submitted_count=submitted_count,
         feedback_count=feedback_count,
         web_validation_failures=web_validation_failures,

@@ -2007,13 +2007,12 @@ def dashboard():
                 if files:
                     moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
 
-    # Find pending marking reports for this user (distributed but not yet closed)
+    # Find pending marking reports for this user (distributed or not, but not yet fully submitted)
     pending_marking_reports = (
         db.session.query(MarkingReport)
         .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
         .filter(
             SubmissionRole.user_id == current_user.id,
-            MarkingReport.distributed.is_(True),
             or_(
                 MarkingReport.report_submitted.isnot(True),
                 MarkingReport.feedback_submitted.isnot(True),
@@ -2021,10 +2020,10 @@ def dashboard():
         )
         .all()
     )
-    # Filter in Python for the time-based window (marking_form_is_open)
-    pending_marking_reports = [
-        r for r in pending_marking_reports if r.marking_form_is_open
-    ]
+    # Actionable subset: distributed reports where the marking form is still open.
+    # Used for auto-navigation — undistributed reports are shown for workload planning
+    # but should not force the marking pane to the foreground.
+    actionable_marking_count = sum(1 for r in pending_marking_reports if r.marking_form_is_open)
 
     pane = request.args.get("pane", None)
     if pane is None and session.get("faculty_dashboard_pane"):
@@ -2037,7 +2036,7 @@ def dashboard():
             pane = "signoff"
         elif pending_moderator_reports:
             pane = "moderation"
-        elif pending_marking_reports:
+        elif actionable_marking_count:
             pane = "marking"
         elif len(enrolments) > 0:
             pane = "enrolments"
@@ -2115,6 +2114,7 @@ def dashboard():
         is_project_approver=current_user.has_role("project_approver"),
         today=date.today(),
         pending_marking_reports=pending_marking_reports,
+        actionable_marking_count=actionable_marking_count,
         pending_sign_off_reports=pending_sign_off_reports,
         pending_moderator_reports=pending_moderator_reports,
         moderator_workflow_attachments=moderator_workflow_attachments,

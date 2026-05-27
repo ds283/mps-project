@@ -3685,7 +3685,25 @@ def moderator_report_form(mod_report_id):
         form.grade.data = mod_report.grade
         form.report.data = mod_report.report
 
+    import json
+
     marking_reports = sr.marking_reports.all()
+    sorted_reports = sorted(marking_reports, key=lambda r: r.id)
+
+    def _parse_report(mr):
+        try:
+            return json.loads(mr.report) if mr.report else {}
+        except (ValueError, TypeError):
+            return {}
+
+    report_data = {mr.id: _parse_report(mr) for mr in sorted_reports}
+
+    _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    marker_labels = {mr.id: f"Marker {_letters[i]}" for i, mr in enumerate(sorted_reports)}
+
+    scheme = workflow.scheme
+    schema = scheme.schema_as_dict if scheme else None
+
     filtered_attachments = [
         pa for pa in workflow.attachments
         if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)
@@ -3699,7 +3717,11 @@ def moderator_report_form(mod_report_id):
         workflow=workflow,
         pclass=pclass,
         record=record,
-        marking_reports=marking_reports,
+        sorted_reports=sorted_reports,
+        report_data=report_data,
+        marker_labels=marker_labels,
+        scheme=scheme,
+        schema=schema,
         filtered_attachments=filtered_attachments,
         is_elevated=is_elevated,
         url=url,

@@ -20,8 +20,8 @@
             </div>
 
             {# Context card #}
-            <div class="card border-secondary mb-3">
-                <div class="card-header bg-secondary text-white">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-body-tertiary">
                     <i class="fas fa-info-circle fa-fw me-1"></i> Submission context
                 </div>
                 <div class="card-body">
@@ -38,8 +38,8 @@
 
             {# Student report download #}
             {% if record.report or record.processed_report %}
-                <div class="card border-primary mb-3">
-                    <div class="card-header bg-primary text-white">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-body-tertiary">
                         <i class="fas fa-file-pdf fa-fw me-1"></i> Student report
                     </div>
                     <div class="card-body">
@@ -76,8 +76,8 @@
 
             {# Workflow attachments — filtered to ROLE_MODERATOR only #}
             {% if filtered_attachments %}
-                <div class="card border-secondary mb-3">
-                    <div class="card-header bg-secondary text-white">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-body-tertiary">
                         <i class="fas fa-paperclip fa-fw me-1"></i> Attachments
                     </div>
                     <div class="card-body">
@@ -108,56 +108,127 @@
                 </div>
             {% endif %}
 
-            {# Existing marking reports (read-only) #}
-            {% if marking_reports %}
-                <div class="card border-dark mb-3">
-                    <div class="card-header bg-dark text-white">
+            {# Existing marking reports (read-only, anonymised) #}
+            {% if sorted_reports %}
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-body-tertiary">
                         <i class="fas fa-marker fa-fw me-1"></i> Marking reports to review
                     </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-bordered mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Marker</th>
-                                    <th>Role</th>
-                                    <th class="text-center">Grade</th>
-                                    <th>Feedback</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for mr in marking_reports %}
-                                    <tr>
-                                        <td>{{ mr.user.name }}</td>
-                                        <td>{{ mr.role.role_as_str }}</td>
-                                        <td class="text-center">
-                                            {% if mr.grade is not none %}
-                                                <strong class="text-danger fs-5">{{ "%.1f"|format(mr.grade) }}%</strong>
-                                            {% else %}
-                                                <span class="text-body-secondary">—</span>
+                    <div class="card-body">
+                        {% for mr in sorted_reports %}
+                            {%- set label = marker_labels[mr.id] -%}
+                            <div class="card border-0 shadow-sm {% if not loop.last %}mb-3{% endif %}">
+                                <div class="card-header bg-body-tertiary d-flex align-items-center gap-2">
+                                    <span class="fw-semibold">{{ label }}</span>
+                                    <span class="small text-body-secondary">&ndash; {{ mr.role.role_as_str }}</span>
+                                    {% if mr.grade is not none %}
+                                        <span class="badge bg-danger ms-auto">{{ "%.1f"|format(mr.grade) }}%</span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    {% if mr.feedback_submitted %}
+
+                                        {# Schema-driven sections #}
+                                        {% if schema %}
+                                            {% for block in schema.get('scheme', []) %}
+                                                {%- set bg_colour = block.background if block.get('background') in ('primary', 'success', 'warning', 'danger', 'info') else none -%}
+                                                <div class="card {% if bg_colour %}border-{{ bg_colour }}-subtle{% else %}border-0 shadow-sm{% endif %} mb-3">
+                                                    <div class="card-header {% if bg_colour %}bg-{{ bg_colour }}-subtle{% else %}bg-body-tertiary{% endif %}">
+                                                        <strong>{{ block.title | safe }}</strong>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        {% if block.description %}
+                                                            <div class="text-body-secondary small mb-3">{{ block.description | safe }}</div>
+                                                        {% endif %}
+                                                        {% for field_spec in block.get('fields', []) %}
+                                                            {%- set key = field_spec.key -%}
+                                                            {%- set ftype = field_spec.field_type.type -%}
+                                                            {%- set value = report_data[mr.id].get(key) -%}
+                                                            <div class="mb-2">
+                                                                <div class="small text-body-secondary mb-1">{{ field_spec.label | safe }}</div>
+                                                                {% if value is none %}
+                                                                    <span class="text-body-secondary fst-italic">—</span>
+                                                                {% elif ftype == 'boolean' %}
+                                                                    {% if value %}
+                                                                        <span class="text-success"><i class="fas fa-check fa-fw"></i> Yes</span>
+                                                                    {% else %}
+                                                                        <span class="text-danger"><i class="fas fa-times fa-fw"></i> No</span>
+                                                                    {% endif %}
+                                                                {% elif ftype == 'percent' %}
+                                                                    {{ value }}%
+                                                                {% elif ftype == 'number' %}
+                                                                    {{ value }}
+                                                                {% elif ftype == 'text' %}
+                                                                    {%- set text_val = value | string -%}
+                                                                    {% if text_val | length > 400 %}
+                                                                        {%- set collapse_id = "text-collapse-" ~ mr.id ~ "-" ~ key -%}
+                                                                        {{ text_val[:400] }}&hellip;
+                                                                        <a class="small ms-1" data-bs-toggle="collapse"
+                                                                           href="#{{ collapse_id }}" role="button"
+                                                                           aria-expanded="false">Show more</a>
+                                                                        <div class="collapse" id="{{ collapse_id }}">
+                                                                            {{ text_val[400:] }}
+                                                                            <a class="small ms-1" data-bs-toggle="collapse"
+                                                                               href="#{{ collapse_id }}" role="button">Show less</a>
+                                                                        </div>
+                                                                    {% else %}
+                                                                        {{ text_val }}
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    {{ value }}
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% endif %}
+
+                                        {# Standard feedback fields #}
+                                        {% if scheme and scheme.uses_standard_feedback %}
+                                            {% if mr.feedback_positive %}
+                                                <div class="mb-2">
+                                                    <div class="small text-body-secondary mb-1">Strengths</div>
+                                                    <div class="text-success">{{ mr.feedback_positive }}</div>
+                                                </div>
                                             {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if mr.feedback_submitted and mr.feedback_positive %}
-                                                <div class="small"><strong class="text-success">Strengths:</strong> {{ mr.feedback_positive|striptags|truncate(200) }}</div>
+                                            {% if mr.feedback_improvement %}
+                                                <div class="mb-2">
+                                                    <div class="small text-body-secondary mb-1">Areas for improvement</div>
+                                                    <div>{{ mr.feedback_improvement }}</div>
+                                                </div>
                                             {% endif %}
-                                            {% if mr.feedback_submitted and mr.feedback_improvement %}
-                                                <div class="small mt-1"><strong class="text-secondary">Improvement:</strong> {{ mr.feedback_improvement|striptags|truncate(200) }}</div>
+                                        {% endif %}
+
+                                        {# Legacy: no scheme — show feedback fields directly #}
+                                        {% if not schema %}
+                                            {% if mr.feedback_positive %}
+                                                <div class="mb-2">
+                                                    <div class="small text-body-secondary mb-1">Strengths</div>
+                                                    <div class="text-success">{{ mr.feedback_positive }}</div>
+                                                </div>
                                             {% endif %}
-                                            {% if not mr.feedback_submitted %}
-                                                <span class="text-body-secondary fst-italic small">Feedback not yet submitted</span>
+                                            {% if mr.feedback_improvement %}
+                                                <div class="mb-2">
+                                                    <div class="small text-body-secondary mb-1">Areas for improvement</div>
+                                                    <div>{{ mr.feedback_improvement }}</div>
+                                                </div>
                                             {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                        {% endif %}
+
+                                    {% else %}
+                                        <p class="text-body-secondary fst-italic mb-0">This marker has not yet submitted their report.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
             {% endif %}
 
             {# Moderator report form #}
-            <div class="card border-primary mb-3">
-                <div class="card-header bg-primary text-white">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-primary-subtle text-primary-emphasis">
                     <i class="fas fa-gavel fa-fw me-1"></i> Your moderator report
                 </div>
                 <div class="card-body">

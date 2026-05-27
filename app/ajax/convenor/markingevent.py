@@ -285,13 +285,7 @@ _submitter_report_actions = """
 
 {# --- Direct action buttons (shown above the dropdown) --- #}
 {% if not event_is_closed %}
-    {% if state == NEEDS_MODERATOR_ASSIGNED %}
-        <a class="btn btn-danger btn-sm full-width-button mb-2"
-           href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
-                    url=inspector_url, text='Submitter reports') }}">
-            <i class="fas fa-user-plus fa-fw"></i> Assign moderator
-        </a>
-    {% elif state == READY_TO_SIGN_OFF %}
+    {% if state == READY_TO_SIGN_OFF %}
         <form method="POST"
               action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
               class="mb-2">
@@ -880,8 +874,14 @@ def submitter_report_data(reports):
         if reports else False
     )
 
+    _urgent_states = {
+        SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+    }
+
     return [
         {
+            "DT_RowClass": "table-danger" if report.workflow_state in _urgent_states else "",
             "student": render_template(student_tmpl, report=report),
             "project": render_template(project_tmpl, report=report),
             "reports": render_template(reports_tmpl, report=report, **state_ctx),
@@ -1053,7 +1053,10 @@ _marking_scheme_menu = """
 
 # language=jinja2
 _period_marking_event_status = """
-{% if event.workflow_state == CLOSED %}
+{% set urgent = event.urgent_action_count %}
+{% if urgent > 0 %}
+    <span class="text-danger fw-semibold"><i class="fas fa-exclamation-circle fa-fw"></i> {{ urgent }} action{{ 's' if urgent != 1 else '' }} needed</span>
+{% elif event.workflow_state == CLOSED %}
     <span class="text-secondary"><i class="fas fa-check-circle"></i> Closed</span>
 {% elif event.workflow_state == READY_TO_PUSH_FEEDBACK %}
     <span class="text-success"><i class="fas fa-paper-plane fa-fw"></i> Ready to push feedback</span>
@@ -1238,6 +1241,7 @@ def period_marking_event_data(url, text, can_delete, events):
 
     return [
         {
+            "DT_RowClass": "table-danger" if event.urgent_action_count > 0 else "",
             "period": render_template(period_tmpl, event=event),
             "name": render_template(name_tmpl, event=event, small_swatch=small_swatch),
             "workflows": render_template(workflows_tmpl, event=event),

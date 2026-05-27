@@ -167,6 +167,12 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         )
     )
 
+    marking_urgent_count = sum(
+        event.urgent_action_count
+        for period in config.submission_periods
+        for event in period.marking_events
+    )
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -189,6 +195,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "custom_declined": declined_custom,
         "marking_events": marking_events_count,
         "missing_canvas_count": missing_canvas_count,
+        "marking_urgent_count": marking_urgent_count,
     }
 
 

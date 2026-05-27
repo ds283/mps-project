@@ -42,8 +42,9 @@
                         {%- set missing_canvas = data['missing_canvas_count'] -%}
                         {%- set stale_confirmations = outstanding_confirms and outstanding_confirms > 0 and age_oldest is not none and age_oldest > 5 -%}
                         {%- set canvas_issue = missing_canvas is not none and missing_canvas > 0 -%}
+                        {%- set n_marking_urgent = data['marking_urgent_count'] -%}
                         {%- set lifecycle_action = lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED or lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE -%}
-                        {%- set has_alert = stale_confirmations -%}
+                        {%- set has_alert = stale_confirmations or (n_marking_urgent > 0) -%}
                         {%- set has_warning = canvas_issue and not has_alert -%}
 
                         <div class="col">
@@ -61,6 +62,11 @@
                                             <i class="fas fa-exclamation-triangle fa-fw"></i>
                                             {{ outstanding_confirms }} outstanding confirmation{{ '' if outstanding_confirms == 1 else 's' }},
                                             oldest {{ age_oldest | int }} day{{ '' if age_oldest | int == 1 else 's' }} ago
+                                        </div>
+                                    {% elif n_marking_urgent %}
+                                        <div class="alert alert-danger py-1 px-2 small mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-exclamation-circle fa-fw"></i>
+                                            {{ n_marking_urgent }} marking report{{ '' if n_marking_urgent == 1 else 's' }} need{{ 's' if n_marking_urgent == 1 else '' }} immediate attention
                                         </div>
                                     {% elif canvas_issue %}
                                         <div class="alert alert-warning py-1 px-2 small mb-2 d-flex align-items-center gap-2">
@@ -110,6 +116,9 @@
                                         {% endif %}
                                         {% if n_todo %}
                                             <span class="text-primary"><i class="fas fa-tasks fa-fw"></i> {{ n_todo }} task{{ '' if n_todo == 1 else 's' }}</span>
+                                        {% endif %}
+                                        {% if n_marking_urgent %}
+                                            <span class="text-danger fw-semibold"><i class="fas fa-exclamation-circle fa-fw"></i> {{ n_marking_urgent }} marking action{{ '' if n_marking_urgent == 1 else 's' }} needed</span>
                                         {% endif %}
                                     </div>
                                 </div>

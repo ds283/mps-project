@@ -114,6 +114,29 @@
         </div>
     {% endif %}
 
+    {# Banner: reports requiring immediate convenor action #}
+    {%- set needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0) -%}
+    {%- set needs_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0) -%}
+    {%- set urgent_total = needs_moderator + needs_intervention -%}
+    {% if urgent_total > 0 and can_edit %}
+        <div class="alert alert-danger d-flex align-items-center gap-3 mt-3 mb-2">
+            <i class="fas fa-exclamation-circle fa-2x flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>Convenor action required</strong> &mdash;
+                {% if needs_moderator > 0 %}
+                    {{ needs_moderator }} report{{ '' if needs_moderator == 1 else 's' }}
+                    need{{ 's' if needs_moderator == 1 else '' }} a moderator assigned
+                    {%- if needs_intervention > 0 %} and {% endif %}
+                {% endif %}
+                {% if needs_intervention > 0 %}
+                    {{ needs_intervention }} report{{ '' if needs_intervention == 1 else 's' }}
+                    require{{ 's' if needs_intervention == 1 else '' }} convenor intervention
+                {% endif %}
+                before marking can proceed.
+            </div>
+        </div>
+    {% endif %}
+
     {# Closed event notice #}
     {% if not can_edit %}
         <div class="alert alert-secondary mt-3 mb-2">

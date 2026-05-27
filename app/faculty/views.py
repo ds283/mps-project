@@ -2007,12 +2007,19 @@ def dashboard():
                 if files:
                     moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
 
-    # Find pending marking reports for this user (distributed or not, but not yet fully submitted)
+    # Find pending marking reports for this user (distributed or not, but not yet fully submitted),
+    # restricted to open MarkingEvents (not CLOSED).
+    from ..models.markingevent import MarkingEventWorkflowStates, SubmitterReport
+
     pending_marking_reports = (
         db.session.query(MarkingReport)
         .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+        .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
         .filter(
             SubmissionRole.user_id == current_user.id,
+            MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
             or_(
                 MarkingReport.report_submitted.isnot(True),
                 MarkingReport.feedback_submitted.isnot(True),

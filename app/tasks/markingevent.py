@@ -322,21 +322,54 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
             return
         sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
     else:
-        # Tolerance check required: mark out-of-tolerance and route to moderation
-        sr.out_of_tolerance = True
-        _emit_moderation_required_emails(sr)
+        # Tolerance check required: compare grade spread against the configured threshold.
+        available_grades = [float(r.grade) for r in reports if r.grade is not None]
+        spread = (max(available_grades) - min(available_grades)) if len(available_grades) >= 2 else 0.0
+        tolerance = float(scheme.marker_tolerance) if scheme.marker_tolerance is not None else 0.0
 
-        # Attempt to assign an existing ROLE_MODERATOR on the SubmissionRecord
-        moderator_roles = [
-            r
-            for r in sr.record.roles.all()
-            if r.role == SubmissionRoleTypesMixin.ROLE_MODERATOR
-        ]
-        if moderator_roles:
-            chosen = random.choice(moderator_roles)
-            _assign_moderator(sr, chosen)
+        if spread <= tolerance:
+            # Within tolerance: compute weighted average and advance to READY_TO_SIGN_OFF.
+            # Clear any stale out_of_tolerance flag (e.g. if tolerance was tightened and
+            # then relaxed, or if the flag was set by a previous bug).
+            sr.out_of_tolerance = False
+            total_weight = sum(float(r.weight) if r.weight is not None else 1.0 for r in reports)
+            if total_weight == 0:
+                total_weight = len(reports)
+            sr.grade = (
+                sum(
+                    float(r.grade) * (float(r.weight) if r.weight is not None else 1.0)
+                    for r in reports
+                    if r.grade is not None
+                )
+                / total_weight
+                if total_weight > 0
+                else None
+            )
+            sr.grade_generated_by_id = None
+            sr.grade_generated_timestamp = datetime.now()
+            if sr.grade is None:
+                current_app.logger.error(
+                    f"_check_tolerance_and_grade: computed grade is None for SubmitterReport "
+                    f"id={sr.id} — not advancing to READY_TO_SIGN_OFF"
+                )
+                return
+            sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
         else:
-            sr.workflow_state = SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
+            # Out of tolerance: mark and route to moderation.
+            sr.out_of_tolerance = True
+            _emit_moderation_required_emails(sr)
+
+            # Attempt to assign an existing ROLE_MODERATOR on the SubmissionRecord.
+            moderator_roles = [
+                r
+                for r in sr.record.roles.all()
+                if r.role == SubmissionRoleTypesMixin.ROLE_MODERATOR
+            ]
+            if moderator_roles:
+                chosen = random.choice(moderator_roles)
+                _assign_moderator(sr, chosen)
+            else:
+                sr.workflow_state = SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
 
 
 def advance_submitter_report(sr: SubmitterReport) -> None:

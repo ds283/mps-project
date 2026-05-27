@@ -41,6 +41,16 @@
                                 <dd class="col-sm-7">{{ workflow.name }}</dd>
                                 <dt class="col-sm-5 text-body-secondary">Role</dt>
                                 <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
+                                <dt class="col-sm-5 text-body-secondary">Distribution</dt>
+                                <dd class="col-sm-7">
+                                    {% if report.distributed %}
+                                        <span class="badge bg-success-subtle text-success-emphasis"><i
+                                                class="fas fa-check fa-fw"></i> Distributed</span>
+                                    {% else %}
+                                        <span class="text-secondary fst-italic"><i
+                                                class="fas fa-clock fa-fw"></i> Not yet distributed</span>
+                                    {% endif %}
+                                </dd>
                                 <dt class="col-sm-5 text-body-secondary">Submitted</dt>
                                 <dd class="col-sm-7">
                                     {% if report.grade_submitted_timestamp %}

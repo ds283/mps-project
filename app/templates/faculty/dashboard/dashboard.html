@@ -168,8 +168,17 @@
                                         </div>
                                         <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3 mt-2 small">
                                             {% if not report.distributed %}
-                                                <span class="text-secondary fst-italic"><i
-                                                        class="fas fa-clock fa-fw"></i> Not distributed &mdash; awaiting student report</span>
+                                                {% set sr_state = report.submitter_report.workflow_state if report.submitter_report else none %}
+                                                {% if sr_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION or sr_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED %}
+                                                    <span class="text-warning-emphasis fst-italic"><i
+                                                            class="fas fa-exclamation-triangle fa-fw"></i> Not distributed &mdash; convenor review required</span>
+                                                {% elif sr_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE %}
+                                                    <span class="text-success fst-italic"><i
+                                                            class="fas fa-check-circle fa-fw"></i> Ready to distribute &mdash; notification pending</span>
+                                                {% else %}
+                                                    <span class="text-secondary fst-italic"><i
+                                                            class="fas fa-clock fa-fw"></i> Not distributed &mdash; awaiting student report</span>
+                                                {% endif %}
                                             {% else %}
                                                 {% if report.report_submitted %}
                                                     <span class="text-success"><i

@@ -2009,7 +2009,7 @@ def dashboard():
 
     # Find pending marking reports for this user (distributed or not, but not yet fully submitted),
     # restricted to open MarkingEvents (not CLOSED).
-    from ..models.markingevent import MarkingEventWorkflowStates, SubmitterReport
+    from ..models.markingevent import MarkingEventWorkflowStates, SubmitterReport, SubmitterReportWorkflowStates
 
     pending_marking_reports = (
         db.session.query(MarkingReport)
@@ -2125,6 +2125,7 @@ def dashboard():
         pending_sign_off_reports=pending_sign_off_reports,
         pending_moderator_reports=pending_moderator_reports,
         moderator_workflow_attachments=moderator_workflow_attachments,
+        SubmitterReportWorkflowStates=SubmitterReportWorkflowStates,
     )
 
 

@@ -422,6 +422,8 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                 )
             )
 
+        _SEVERITY_ORDER = {"danger": 0, "warning": 1, "info": 2, "success": 3}
+        actions.sort(key=lambda a: _SEVERITY_ORDER.get(a.severity, 99))
         return actions
 
     def refresh_completed(self) -> None:

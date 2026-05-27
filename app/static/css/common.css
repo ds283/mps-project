@@ -642,6 +642,19 @@ p.copyright {
 .btn-sel-green:hover { background-color: var(--db-green-800); border-color: var(--db-green-800); color: #fff; }
 .btn-sel-green.disabled, .btn-sel-green:disabled { opacity: 0.55; pointer-events: none; }
 
+/* Ghost button: for use on coloured (bg-primary, bg-secondary, bg-danger, etc.) card headers */
+.btn-ghost-header {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+.btn-ghost-header:hover,
+.btn-ghost-header:focus {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
 /* ===== Student browse-projects table ===== */
 
 /* Project title link */

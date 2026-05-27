@@ -325,7 +325,7 @@
                     <span>Marking workflows</span>
                     {% if can_edit %}
                         <a href="{{ url_for('convenor.add_marking_workflow', event_id=event.id, url=request.url, text='Marking workflows') }}"
-                           class="btn btn-sm" style="background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); color: #fff;">
+                           class="btn btn-sm btn-ghost-header">
                             <i class="fas fa-plus fa-fw"></i> Add workflow&hellip;
                         </a>
                     {% endif %}

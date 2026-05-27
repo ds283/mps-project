@@ -129,6 +129,17 @@
     font-size: 0.80rem;
 }
 
+/* Project-class colour swatch — a small inline colour chip.
+   Set background via inline style="background: <colour>" on the element. */
+.pclass-swatch {
+    display: inline-block;
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: 2px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
 html {
     padding-bottom: 4rem;
 }

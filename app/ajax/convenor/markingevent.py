@@ -1307,6 +1307,19 @@ def period_marking_event_data(url, text, can_delete, events):
     ]
 
 
+_URGENT_WORKFLOW_STATES = {
+    SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+    SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+}
+
+
+def _workflow_row_class(workflow) -> str:
+    for sr in workflow.submitter_reports:
+        if sr.workflow_state in _URGENT_WORKFLOW_STATES:
+            return "table-danger"
+    return ""
+
+
 def event_marking_workflow_data(url, text, can_edit, workflows):
     """Format a MarkingWorkflow row for the per-event CRUD inspector DataTable"""
 
@@ -1323,6 +1336,7 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
 
     return [
         {
+            "DT_RowClass": _workflow_row_class(workflow),
             "name": render_template(name_tmpl, workflow=workflow),
             "scheme": render_template(scheme_tmpl, workflow=workflow),
             "attachments": render_template(attachments_tmpl, workflow=workflow),

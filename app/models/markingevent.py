@@ -474,9 +474,9 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                     severity="danger",
                     title="Convenor intervention required",
                     description=(
-                        f"{intervention_count} report{'s' if intervention_count != 1 else ''} "
-                        f"are blocked and require convenor action "
-                        f"({wf_detail})."
+                        f"{intervention_count} "
+                        f"{'report requires' if intervention_count == 1 else 'reports require'} "
+                        f"convenor action before marking can proceed ({wf_detail})."
                     ),
                     action_url=event_url,
                     action_label="Review reports",

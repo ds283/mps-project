@@ -52,10 +52,16 @@
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
                     <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
                 </a>
-                <h4 class="mb-0">
-                    <i class="fas fa-calendar-check fa-fw me-1"></i>
-                    Marking events for: <strong>{{ period.display_name }}</strong>
-                </h4>
+                <div>
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-check fa-fw me-1"></i>
+                        Marking events for: <strong>{{ period.display_name }}</strong>
+                    </h4>
+                    <div class="d-flex align-items-center gap-1 small text-body-secondary mt-1">
+                        <span class="pclass-swatch" style="background: {{ period.config.project_class.colour }};"></span>
+                        {{ period.config.project_class.name }}
+                    </div>
+                </div>
             </div>
 
             <div class="alert alert-secondary mt-1 mb-2">

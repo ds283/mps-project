@@ -134,10 +134,16 @@
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
                     <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
                 </a>
-                <h4 class="mb-0">
-                    <i class="fas fa-clipboard-check fa-fw me-1"></i>
-                    Marking workflows for: <strong>{{ event.name }}</strong>
-                </h4>
+                <div>
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard-check fa-fw me-1"></i>
+                        Marking workflows for: <strong>{{ event.name }}</strong>
+                    </h4>
+                    <div class="d-flex align-items-center gap-1 small text-body-secondary mt-1">
+                        <span class="pclass-swatch" style="background: {{ event.pclass.colour }};"></span>
+                        {{ event.pclass.name }} &mdash; {{ event.period.display_name }}
+                    </div>
+                </div>
             </div>
 
             {# Event summary card #}

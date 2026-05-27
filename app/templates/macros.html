@@ -436,7 +436,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro render_convenor_actions(actions) %}
+{% macro render_convenor_actions(actions, form=none) %}
     {% from "icon_block.html" import icon_block %}
     {% for action in actions %}
         <div class="alert alert-{{ action.severity }} d-flex justify-content-between align-items-center mb-2">
@@ -447,7 +447,14 @@
                 {% endcall %}
             </div>
             {% if action.action_url %}
-                <a href="{{ action.action_url }}" class="btn btn-sm btn-{{ action.severity }} ms-3 flex-shrink-0">{{ action.action_label }}</a>
+                {% if action.action_method == "POST" %}
+                    <form method="POST" action="{{ action.action_url }}" class="ms-3 flex-shrink-0">
+                        {% if form %}{{ form.hidden_tag() }}{% endif %}
+                        <button type="submit" class="btn btn-sm btn-{{ action.severity }}">{{ action.action_label }}</button>
+                    </form>
+                {% else %}
+                    <a href="{{ action.action_url }}" class="btn btn-sm btn-{{ action.severity }} ms-3 flex-shrink-0">{{ action.action_label }}</a>
+                {% endif %}
             {% endif %}
         </div>
     {% endfor %}

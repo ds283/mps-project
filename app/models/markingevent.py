@@ -33,6 +33,7 @@ class ConvenorAction:
     description: str
     action_url: Optional[str] = None
     action_label: Optional[str] = None
+    action_method: str = "GET"  # "GET" or "POST"
 
 
 class MarkingSchemeMixin:
@@ -306,6 +307,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         open_event_url: Optional[str] = None,
         conflation_url: Optional[str] = None,
         generate_feedback_url: Optional[str] = None,
+        send_emails_url: Optional[str] = None,
     ) -> list:
         """
         Return a list of ConvenorAction items representing outstanding actions for this event.
@@ -383,8 +385,9 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                         title="Reports ready to distribute",
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready to send to assessors.",
-                        action_url=event_url,
+                        action_url=send_emails_url,
                         action_label="Send notifications",
+                        action_method="POST",
                     )
                 )
             else:

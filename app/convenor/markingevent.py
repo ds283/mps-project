@@ -2440,7 +2440,8 @@ def event_marking_workflows_inspector(event_id):
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
 
-    event_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
+    event_url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+    send_emails_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
     open_event_url = (
         url_for("convenor.open_marking_event", event_id=event_id)
         if event.workflow_state == MarkingEventWorkflowStates.WAITING
@@ -2465,6 +2466,7 @@ def event_marking_workflows_inspector(event_id):
         open_event_url=open_event_url,
         conflation_url=conflation_url,
         generate_feedback_url=generate_feedback_url,
+        send_emails_url=send_emails_url,
     )
 
     # Add per-workflow CTAs.  Computed here (not in the model) so that url_for() can be called
@@ -2612,6 +2614,7 @@ def event_marking_workflows_inspector(event_id):
         .all()
     )
 
+    form = ConfirmActionForm()
     return render_template_context(
         "convenor/markingevent/event_marking_workflows_inspector.html",
         event=event,
@@ -2621,6 +2624,7 @@ def event_marking_workflows_inspector(event_id):
         can_edit=can_edit,
         actions=actions,
         feedback_jobs=feedback_jobs,
+        form=form,
     )
 
 

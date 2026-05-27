@@ -94,9 +94,9 @@
                 </p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
-                <a href="{{ url_for('dashboards.similarity_dashboard') }}"
+                <a href="{{ back_url }}"
                    class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Back to dashboard
+                    <i class="fas fa-arrow-left me-1"></i>{{ back_text }}
                 </a>
             </div>
         </div>
@@ -685,7 +685,7 @@
             </div>
             <div class="card-body">
                 <form method="POST"
-                      action="{{ url_for('dashboards.resolve_similarity_concern', concern_id=concern.id) }}">
+                      action="{{ url_for('dashboards.resolve_similarity_concern', concern_id=concern.id, url=back_url, text=back_text) }}">
                     {{ form.hidden_tag() }}
 
                     <div class="mb-3">

@@ -1523,6 +1523,9 @@ def resolve_risk_factors(record_id):
         advance_wf.apply_async(args=[record_id])
 
         flash("Risk factor resolutions recorded successfully.", "success")
+        remaining = record.risk_factor_display_items()
+        if any(not item["resolved"] for item in remaining):
+            return redirect(url_for("convenor.resolve_risk_factors", record_id=record_id, url=url, text=text))
         return redirect(url)
 
     # Prepare display items (all logic in Python, template is purely presentational)

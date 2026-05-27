@@ -140,7 +140,8 @@
                             </span>
                         </td>
                         <td class="text-end">
-                            <a href="{{ url_for('dashboards.similarity_concern_detail', concern_id=concern.id) }}#review"
+                            {% set _rrfurl = url_for('convenor.resolve_risk_factors', record_id=record.id, url=url, text=text) %}
+                            <a href="{{ url_for('dashboards.similarity_concern_detail', concern_id=concern.id, url=_rrfurl, text='Resolve risk factors') }}#review"
                                class="btn btn-xs btn-db-orange">
                                 Review <i class="fas fa-arrow-right ms-1"></i>
                             </a>

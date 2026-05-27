@@ -3079,6 +3079,9 @@ def similarity_concern_detail(concern_id: int):
     def _conflation_reports(record):
         return record.conflation_reports.all()
 
+    back_url = request.args.get("url", url_for("dashboards.similarity_dashboard"))
+    back_text = request.args.get("text", "Back to dashboard")
+
     form = ResolveSimilarityConcernForm()
 
     return render_template_context(
@@ -3091,6 +3094,8 @@ def similarity_concern_detail(concern_id: int):
         submitter_reports_b=_submitter_reports(record_b),
         conflation_reports_a=_conflation_reports(record_a),
         conflation_reports_b=_conflation_reports(record_b),
+        back_url=back_url,
+        back_text=back_text,
     )
 
 
@@ -3102,6 +3107,9 @@ def resolve_similarity_concern(concern_id: int):
         flash("You do not have permission to access the Similarity Dashboard.", "error")
         return redirect(url_for("home.homepage"))
 
+    back_url = request.args.get("url", url_for("dashboards.similarity_dashboard"))
+    back_text = request.args.get("text", "Back to dashboard")
+
     # data_dashboard_similarity role is read-only
     if current_user.has_role("data_dashboard_similarity") and not (
         current_user.has_role("root")
@@ -3109,7 +3117,7 @@ def resolve_similarity_concern(concern_id: int):
         or current_user.has_role("faculty")
     ):
         flash("Your role has read-only access and cannot resolve concerns.", "error")
-        return redirect(url_for("dashboards.similarity_dashboard"))
+        return redirect(back_url)
 
     concern = (
         _base_concern_query(status_filter="all")
@@ -3120,7 +3128,9 @@ def resolve_similarity_concern(concern_id: int):
     form = ResolveSimilarityConcernForm()
     if not form.validate_on_submit():
         flash("Invalid submission. Please select a resolution.", "error")
-        return redirect(url_for("dashboards.similarity_concern_detail", concern_id=concern_id))
+        return redirect(
+            url_for("dashboards.similarity_concern_detail", concern_id=concern_id, url=back_url, text=back_text)
+        )
 
     concern.reviewed = True
     concern.reviewed_by_id = current_user.id
@@ -3139,10 +3149,12 @@ def resolve_similarity_concern(concern_id: int):
         db.session.rollback()
         current_app.logger.exception("resolve_similarity_concern: SQLAlchemyError", exc_info=exc)
         flash("Could not save the resolution — please try again.", "error")
-        return redirect(url_for("dashboards.similarity_concern_detail", concern_id=concern_id))
+        return redirect(
+            url_for("dashboards.similarity_concern_detail", concern_id=concern_id, url=back_url, text=back_text)
+        )
 
     flash("Concern resolved successfully.", "success")
-    return redirect(url_for("dashboards.similarity_dashboard"))
+    return redirect(back_url)
 
 
 # ---------------------------------------------------------------------------

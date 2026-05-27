@@ -348,6 +348,9 @@ def clear_language_analysis(sid):
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
 
+    # Load the relationship before mutating the record to prevent autoflush during lazy-load.
+    existing_report = record.processed_report
+
     record.language_analysis = None
     record.language_analysis_started = False
     record.language_analysis_complete = False
@@ -359,8 +362,8 @@ def clear_language_analysis(sid):
 
     # Clear the processed report since it embeds LLM outputs; it will be regenerated
     # automatically after analysis completes.
-    if record.processed_report is not None:
-        old_asset = record.processed_report
+    if existing_report is not None:
+        old_asset = existing_report
         record.processed_report_id = None
         record.celery_finished = False
         record.celery_failed = False

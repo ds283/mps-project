@@ -1505,9 +1505,6 @@ def AssignModeratorFormFactory(pclass_id):
             query_factory=get_eligible_users,
             get_label=lambda u: f"{u.name} ({u.email})",
             allow_blank=False,
-            render_kw={
-                "data-theme": "bootstrap-5",
-            },
         )
         submit = SubmitField("Assign moderator")
 

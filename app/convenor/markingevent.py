@@ -3654,7 +3654,7 @@ def marking_report_properties(report_id):
 @roles_accepted("faculty", "admin", "root")
 def assign_moderator(submitter_report_id):
     from ..models.submissions import SubmissionRoleTypesMixin
-    from ..tasks.markingevent import _assign_moderator, advance_submitter_report
+    from ..tasks.markingevent import _assign_moderator
 
     sr = (
         db.session.query(SubmitterReport)
@@ -3691,7 +3691,6 @@ def assign_moderator(submitter_report_id):
         db.session.flush()
 
         _assign_moderator(sr, new_role)
-        advance_submitter_report(sr)
 
         try:
             log_db_commit(

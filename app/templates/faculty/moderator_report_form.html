@@ -97,7 +97,7 @@
                                             {{ asset.target_name or asset.filename or "Attachment" }}
                                         </div>
                                         <a class="btn btn-xs btn-outline-secondary"
-                                           href="{{ url_for('documents.download_submitted_attachment', asset_id=asset.id) }}">
+                                           href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
                                             <i class="fas fa-download fa-fw"></i> Download
                                         </a>
                                     </div>

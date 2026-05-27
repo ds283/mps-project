@@ -2125,7 +2125,6 @@ def dashboard():
         pending_sign_off_reports=pending_sign_off_reports,
         pending_moderator_reports=pending_moderator_reports,
         moderator_workflow_attachments=moderator_workflow_attachments,
-        SubmitterReportWorkflowStates=SubmitterReportWorkflowStates,
     )
 
 

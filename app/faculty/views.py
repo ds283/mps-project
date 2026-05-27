@@ -3699,6 +3699,9 @@ def moderator_report_form(mod_report_id):
 
     report_data = {mr.id: _parse_report(mr) for mr in sorted_reports}
 
+    submitted_grades = [float(mr.grade) for mr in sorted_reports if mr.grade is not None and mr.feedback_submitted]
+    grade_spread = (max(submitted_grades) - min(submitted_grades) if len(submitted_grades) >= 2 else None)
+
     _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     marker_labels = {mr.id: f"Marker {_letters[i]}" for i, mr in enumerate(sorted_reports)}
 
@@ -3725,6 +3728,7 @@ def moderator_report_form(mod_report_id):
         schema=schema,
         filtered_attachments=filtered_attachments,
         is_elevated=is_elevated,
+        grade_spread=grade_spread,
         url=url,
     )
 

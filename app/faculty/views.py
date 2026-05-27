@@ -3329,7 +3329,7 @@ def marking_form(report_id):
 
                 try:
                     log_db_commit(
-                        f"Submitted marking report for {record.student_identifier['label']} "
+                        f"Submitted marking report for {report.student_identifier['label']} "
                         f"(workflow: {workflow.name})",
                         user=current_user,
                         project_classes=pclass,
@@ -3775,7 +3775,7 @@ def edit_marking_feedback(report_id):
 
         try:
             log_db_commit(
-                f"Updated marking feedback for {record.student_identifier['label']} "
+                f"Updated marking feedback for {report.student_identifier['label']} "
                 f"(workflow: {workflow.name})",
                 user=current_user,
                 project_classes=pclass,

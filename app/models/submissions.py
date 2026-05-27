@@ -274,6 +274,24 @@ class SubmissionRole(
         return self._role_id.get(self.role, "unknown")
 
     @property
+    def student_identifier(self):
+        """
+        Role-based student identifier. No current_user dependency — the answer is
+        fully determined by this role's type. Anonymising roles return the exam number;
+        supervisory roles return the student's real name.
+        """
+        anonymised_roles = [
+            SubmissionRole.ROLE_MARKER,
+            SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+            SubmissionRole.ROLE_MODERATOR,
+            SubmissionRole.ROLE_EXAM_BOARD,
+            SubmissionRole.ROLE_EXTERNAL_EXAMINER,
+        ]
+        if self.role in anonymised_roles:
+            return self.submission.owner.student.exam_number_label
+        return {"label": self.submission.owner.student.user.name}
+
+    @property
     def uses_supervisor_feedback(self):
         return self.submission.period.uses_supervisor_feedback
 
@@ -1163,35 +1181,20 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def student_identifier(self):
         """
-        Return a suitable student identifier. Markers should only see the candidate number,
-        whereas admin users can see student names
-        :return:
+        Return a suitable student identifier. Roles associated with this submission always
+        trump admin rights, even for 'root' and 'admin' users. When a user holds multiple
+        roles, the most restrictive wins: any anonymising role forces the exam number.
         """
-        current_role = None
-        for role in self.roles:
-            if role.user_id == current_user.id:
-                current_role = role
-                break
+        user_roles = [r for r in self.roles if r.user_id == current_user.id]
 
-        # roles associated with this submission always trump admin rights, even for 'root' and 'admin' users
-        if current_role is not None:
-            # marker roles, moderator roles, exam board and external examiners can only see exam number
-            if current_role.role in [
-                SubmissionRole.ROLE_MARKER,
-                SubmissionRole.ROLE_MODERATOR,
-                SubmissionRole.ROLE_EXAM_BOARD,
-                SubmissionRole.ROLE_EXTERNAL_EXAMINER,
-            ]:
-                return self.owner.student.exam_number_label
+        if user_roles:
+            name_label = {"label": self.owner.student.user.name}
+            # If every role would show the name, show the name; otherwise show exam number.
+            if all(r.student_identifier == name_label for r in user_roles):
+                return name_label
+            return self.owner.student.exam_number_label
 
-            # supervision team  can see student name
-            if current_role.role in [
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-            ]:
-                return {"label": self.owner.student.user.name}
-
-        # root, admin, and office roles can always see student name; so can project convenor or co-convenors
+        # No submission role for this user: admin/office/convenor check, then exam number.
         if (
             current_user.has_role("root")
             or current_user.has_role("admin")
@@ -1200,7 +1203,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         ):
             return {"label": self.owner.student.user.name}
 
-        # by default, other users see only the exam number
         return self.owner.student.exam_number_label
 
     def get_roles(self, role: str) -> List[SubmissionRole]:

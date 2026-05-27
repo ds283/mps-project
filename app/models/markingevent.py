@@ -12,13 +12,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+from flask_security import current_user
+
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
 from .live_projects import SubmittingStudent
 from .model_mixins import EditingMetadataMixin, _get_current_year
 from .project_class import ProjectClass, ProjectClassConfig
 from .students import StudentData
-from .submissions import SubmissionRoleTypesMixin
+from .submissions import SubmissionRoleTypesMixin, SubmissionRole
 from .users import User
 
 
@@ -1179,6 +1181,17 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     def user(self) -> User:
         return self.role.user
 
+    @property
+    def student_identifier(self):
+        """
+        When the viewer is the report's role owner, use the role's own unambiguous identifier
+        (bypasses multi-role ambiguity on the parent SubmissionRecord). For elevated viewers
+        (responsible supervisors, convenors, admins) fall back to the record-level logic.
+        """
+        if self.role.user_id == current_user.id:
+            return self.role.student_identifier
+        return self.submitter_report.record.student_identifier
+
     # ROLE_RESPONSIBLE_SUPERVISOR instances pending sign-off for this (supervisor) report.
     # Populated by close_marking_window when the 24-hour editing window closes.
     # Entries are removed as each responsible supervisor approves the report.
@@ -1247,6 +1260,16 @@ class ModeratorReport(db.Model, EditingMetadataMixin):
     def user(self) -> User:
         """Convenience accessor to the moderator's User record."""
         return self.role.user
+
+    @property
+    def student_identifier(self):
+        """
+        When the viewer is the moderator (the role owner), use the role's own unambiguous
+        identifier. For elevated viewers fall back to the record-level logic.
+        """
+        if self.role.user_id == current_user.id:
+            return self.role.student_identifier
+        return self.submitter_report.record.student_identifier
 
 
 class ConflationReport(db.Model, EditingMetadataMixin):

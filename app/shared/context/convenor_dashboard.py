@@ -169,7 +169,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
 
     marking_urgent_count = sum(
         event.urgent_action_count
-        for period in config.submission_periods
+        for period in config.periods
         for event in period.marking_events
     )
 

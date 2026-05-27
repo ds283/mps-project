@@ -117,40 +117,7 @@
                     {% endif %}
                 {% endif %}
 
-                {# show supervisor assignments #}
-                {% if config.uses_supervisor %}
-                    <span class="dashboard-subtitle">Supervising</span>
-                    {{ supervisor_assignments(period, current_user, supv_sabbatical, supv_exempt, record.supervisor_reenroll) }}
-                {% endif %}
-
-                {# show marker assignments — override display_marker gate if any marking form is open #}
-                {%- set marker_roles = period.get_marker_records(current_user.faculty_data.id) -%}
-                {%- set has_open_marking_form = namespace(value=false) -%}
-                {%- for mrole in marker_roles -%}
-                    {%- for mr in mrole.marking_reports if mr.distributed -%}
-                        {%- if mr.marking_form_is_open -%}
-                            {%- set has_open_marking_form.value = true -%}
-                        {%- endif -%}
-                    {%- endfor -%}
-                {%- endfor -%}
-                {% if config.uses_marker and (config.display_marker or has_open_marking_form.value) %}
-                    <span class="dashboard-subtitle">Marking</span>
-                    {% if has_open_marking_form.value and not config.display_marker %}
-                        <div class="alert alert-warning mb-2 py-2">
-                            <i class="fas fa-exclamation-circle fa-fw"></i>
-                            <strong>Marking tasks are available.</strong>
-                            Please complete the marking forms below.
-                        </div>
-                    {% endif %}
-                    {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
-                {% endif %}
-
-                {# show assigned presentation assessments #}
-                {% if config.uses_presentations and config.display_presentations %}
-                    {{ presentation_assignments(period, current_user.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
-                {% endif %}
-
-{# Moderation assignments for this period #}
+                {# Moderation assignments — time-critical, shown first #}
                 {%- set user_mod_reports = [] -%}
                 {%- for rec in period.submissions.all() -%}
                     {%- for sr in rec.submitter_reports.all() -%}
@@ -182,12 +149,12 @@
                                 </td>
                                 <td>
                                     {% if mod_report.report_submitted %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> Submitted</span>
+                                        <div class="text-success"><i class="fas fa-check-circle"></i> Submitted</div>
                                         {% if mod_report.grade is not none %}
                                             <div class="small text-primary mt-1">Grade: {{ "%.1f"|format(mod_report.grade) }}%</div>
                                         {% endif %}
                                     {% else %}
-                                        <span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> Pending</span>
+                                        <span class="text-secondary fst-italic"><i class="fas fa-hourglass-half"></i> Pending</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
@@ -207,6 +174,39 @@
                         {% endfor %}
                         </tbody>
                     </table>
+                {% endif %}
+
+                {# show supervisor assignments #}
+                {% if config.uses_supervisor %}
+                    <span class="dashboard-subtitle">Supervising</span>
+                    {{ supervisor_assignments(period, current_user, supv_sabbatical, supv_exempt, record.supervisor_reenroll) }}
+                {% endif %}
+
+                {# show marker assignments — override display_marker gate if any marking form is open #}
+                {%- set marker_roles = period.get_marker_records(current_user.faculty_data.id) -%}
+                {%- set has_open_marking_form = namespace(value=false) -%}
+                {%- for mrole in marker_roles -%}
+                    {%- for mr in mrole.marking_reports if mr.distributed -%}
+                        {%- if mr.marking_form_is_open -%}
+                            {%- set has_open_marking_form.value = true -%}
+                        {%- endif -%}
+                    {%- endfor -%}
+                {%- endfor -%}
+                {% if config.uses_marker and (config.display_marker or has_open_marking_form.value) %}
+                    <span class="dashboard-subtitle">Marking</span>
+                    {% if has_open_marking_form.value and not config.display_marker %}
+                        <div class="alert alert-warning mb-2 py-2">
+                            <i class="fas fa-exclamation-circle fa-fw"></i>
+                            <strong>Marking tasks are available.</strong>
+                            Please complete the marking forms below.
+                        </div>
+                    {% endif %}
+                    {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
+                {% endif %}
+
+                {# show assigned presentation assessments #}
+                {% if config.uses_presentations and config.display_presentations %}
+                    {{ presentation_assignments(period, current_user.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
 
             </div>

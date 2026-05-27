@@ -17,7 +17,7 @@
         </h4>
     </div>
 
-    {% if display_items %}
+    {% if display_items or (sim_factor and sim_factor.get('present', False)) or (chunking_factor and chunking_factor.get('present', False)) %}
         {% if is_retired %}
             <div class="alert alert-secondary mb-3">
                 {% call icon_block("lock") %}

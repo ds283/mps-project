@@ -16,7 +16,7 @@ from celery import chain as celery_chain
 from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_login import current_user
 from flask_security import roles_accepted
-from sqlalchemy import and_, func
+from sqlalchemy import and_, distinct, func
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
@@ -1365,6 +1365,22 @@ def submitter_reports_inspector(workflow_id):
     )
     any_completed = can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
 
+    # Count SRs that are genuinely ready to distribute: READY_TO_DISTRIBUTE state with at
+    # least one MarkingReport not yet distributed. This excludes SRs that are stuck in
+    # READY_TO_DISTRIBUTE because link_distribution_email failed to advance them after
+    # all their emails were sent.
+    distributable_sr_count = (
+        db.session.query(func.count(distinct(SubmitterReport.id)))
+        .join(MarkingReport, MarkingReport.submitter_report_id == SubmitterReport.id)
+        .filter(
+            SubmitterReport.workflow_id == workflow_id,
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+            MarkingReport.distributed.is_(False),
+        )
+        .scalar()
+        or 0
+    )
+
     # Compute warning counts for CTA blocks
     _supervisor_role_types = frozenset(
         {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
@@ -1403,6 +1419,7 @@ def submitter_reports_inspector(workflow_id):
         return_all_form=ActionForm(),
         multi_mr_count=multi_mr_count,
         wrong_weight_count=wrong_weight_count,
+        distributable_sr_count=distributable_sr_count,
     )
 
 

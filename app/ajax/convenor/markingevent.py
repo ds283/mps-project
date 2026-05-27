@@ -9,9 +9,9 @@
 #
 
 from flask import current_app, get_template_attribute, render_template
-from flask_wtf.csrf import generate_csrf
 from markupsafe import escape
 
+from ...convenor.forms import ActionForm
 from ...models.markingevent import (
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
@@ -196,7 +196,7 @@ _marking_workflow_distribution = """
                 <form method="POST"
                       action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
                       style="display:contents">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
                     <button class="btn btn-xs btn-outline-secondary" type="submit">
                         <i class="fas fa-envelope fa-fw"></i> Send notifications
                     </button>
@@ -289,7 +289,7 @@ _submitter_report_actions = """
         <form method="POST"
               action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
               class="mb-2">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
             <button class="btn btn-success btn-sm full-width-button" type="submit">
                 <i class="fas fa-check-double fa-fw"></i> Complete
             </button>
@@ -322,7 +322,7 @@ _submitter_report_actions = """
             <form method="POST"
                   action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
                   style="display:contents">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
                 <button class="dropdown-item d-flex gap-2" type="submit">
                     <i class="fas fa-check-double fa-fw"></i> Complete&hellip;
                 </button>
@@ -335,7 +335,7 @@ _submitter_report_actions = """
             <form method="POST"
                   action="{{ url_for('convenor.return_submitter_report_to_convenor', sr_id=report.id) }}"
                   style="display:contents">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
                 <button class="dropdown-item d-flex gap-2 text-danger" type="submit">
                     <i class="fas fa-undo fa-fw"></i> Return to convenor&hellip;
                 </button>
@@ -614,7 +614,7 @@ _submitter_report_reports = """
                         <form method="POST"
                               action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
                               class="d-inline ms-1">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {{ form.hidden_tag() }}
                             <button class="btn btn-xs btn-outline-success" type="submit">
                                 <i class="fas fa-check fa-fw"></i> Accept
                             </button>
@@ -677,7 +677,7 @@ _marking_report_status = """
                              url=url_for('convenor.marking_reports_inspector',
                                          workflow_id=report.submitter_report.workflow_id)) }}"
                   style="display:contents">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
                 <button class="btn btn-xs btn-warning mt-1" type="submit">
                     <i class="fas fa-paper-plane fa-fw"></i> Dispatch now
                 </button>
@@ -883,6 +883,8 @@ def submitter_report_data(reports):
     from flask_security import current_user as _scu
 
     _roles = set(r.name for r in _cu.roles) if hasattr(_cu, "roles") else set()
+    form = ActionForm()
+
     state_ctx = {
         "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
         "NEEDS_MODERATOR_ASSIGNED": SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
@@ -891,7 +893,7 @@ def submitter_report_data(reports):
         "COMPLETED": SubmitterReportWorkflowStates.COMPLETED,
         "is_root": "root" in _roles,
         "is_admin": "admin" in _roles,
-        "csrf_token": generate_csrf,
+        "form": form,
         "ROLE_SUPERVISOR": SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
         "ROLE_RESPONSIBLE_SUPERVISOR": SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
         "ROLE_MARKER": SubmissionRoleTypesMixin.ROLE_MARKER,
@@ -940,9 +942,11 @@ def marking_report_data(reports):
         if reports else False
     )
 
+    form = ActionForm()
+
     _status_ctx = {
         "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
-        "csrf_token": generate_csrf,
+        "form": form,
         **_EVENT_STATES,
     }
 
@@ -1315,13 +1319,15 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
     distribution_tmpl = env.from_string(_marking_workflow_distribution)
     menu_tmpl = env.from_string(_event_marking_workflow_menu)
 
+    form = ActionForm()
+
     return [
         {
             "name": render_template(name_tmpl, workflow=workflow),
             "scheme": render_template(scheme_tmpl, workflow=workflow),
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow, csrf_token=generate_csrf, **_EVENT_STATES),
+            "distribution": render_template(distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES),
             "menu": render_template(
                 menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit
             ),
@@ -1483,7 +1489,7 @@ _conflation_report_menu = """
             <form method="POST"
                   action="{{ url_for('convenor.reconflate_conflation_report', cr_id=cr.id, url=url, text=text) }}"
                   style="display:contents">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
                 <button class="dropdown-item d-flex gap-2" type="submit">
                     <i class="fas fa-calculator fa-fw"></i> Reconflate&hellip;
                 </button>
@@ -1500,7 +1506,7 @@ _conflation_report_menu = """
                   action="{{ url_for('convenor.delete_conflation_report_feedback', cr_id=cr.id, url=url, text=text) }}"
                   style="display:contents"
                   onsubmit="return confirm('Delete the generated feedback for this student? This cannot be undone.')">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ form.hidden_tag() }}
                 <button class="dropdown-item d-flex gap-2 text-danger" type="submit">
                     <i class="fas fa-trash fa-fw"></i> Delete feedback&hellip;
                 </button>
@@ -1535,6 +1541,8 @@ def conflation_report_data(event_id, crs):
     inspector_url = _url_for("convenor.marking_event_conflation_reports", event_id=event_id)
     inspector_text = "Conflation reports"
 
+    form = ActionForm()
+
     return [
         {
             "student": render_template(student_tmpl, cr=cr),
@@ -1546,7 +1554,7 @@ def conflation_report_data(event_id, crs):
                 cr=cr,
                 url=inspector_url,
                 text=inspector_text,
-                csrf_token=generate_csrf,
+                form=form,
             ),
         }
         for cr in crs

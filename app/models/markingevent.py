@@ -303,7 +303,6 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
 
     def get_convenor_actions(
         self,
-        event_url: Optional[str] = None,
         open_event_url: Optional[str] = None,
         conflation_url: Optional[str] = None,
         generate_feedback_url: Optional[str] = None,
@@ -420,66 +419,6 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                     f"could not have their report processed. Please restart processing.",
                     action_url=None,
                     action_label=None,
-                )
-            )
-
-        # Check for SubmitterReports in NEEDS_MODERATOR_ASSIGNED state
-        needs_mod_count = 0
-        needs_mod_by_workflow: dict[str, int] = {}
-        for workflow in self.workflows:
-            wf_count = sum(
-                1 for sr in workflow.submitter_reports
-                if sr.workflow_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
-            )
-            if wf_count > 0:
-                needs_mod_by_workflow[workflow.name] = wf_count
-                needs_mod_count += wf_count
-
-        if needs_mod_count > 0:
-            wf_detail = "; ".join(
-                f"{name}: {n}" for name, n in needs_mod_by_workflow.items()
-            )
-            actions.append(
-                ConvenorAction(
-                    severity="danger",
-                    title=f"Moderator{'s' if needs_mod_count != 1 else ''} need assigning",
-                    description=(
-                        f"{needs_mod_count} report{'s' if needs_mod_count != 1 else ''} "
-                        f"cannot proceed until a moderator is assigned "
-                        f"({wf_detail})."
-                    ),
-                    action_url=event_url,
-                    action_label="Review reports",
-                )
-            )
-
-        # Check for SubmitterReports in REQUIRES_CONVENOR_INTERVENTION state
-        intervention_count = 0
-        intervention_by_workflow: dict[str, int] = {}
-        for workflow in self.workflows:
-            wf_count = sum(
-                1 for sr in workflow.submitter_reports
-                if sr.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
-            )
-            if wf_count > 0:
-                intervention_by_workflow[workflow.name] = wf_count
-                intervention_count += wf_count
-
-        if intervention_count > 0:
-            wf_detail = "; ".join(
-                f"{name}: {n}" for name, n in intervention_by_workflow.items()
-            )
-            actions.append(
-                ConvenorAction(
-                    severity="danger",
-                    title="Convenor intervention required",
-                    description=(
-                        f"{intervention_count} "
-                        f"{'report requires' if intervention_count == 1 else 'reports require'} "
-                        f"convenor action before marking can proceed ({wf_detail})."
-                    ),
-                    action_url=event_url,
-                    action_label="Review reports",
                 )
             )
 

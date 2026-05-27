@@ -2440,7 +2440,6 @@ def event_marking_workflows_inspector(event_id):
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
 
-    event_url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
     send_emails_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
     open_event_url = (
         url_for("convenor.open_marking_event", event_id=event_id)
@@ -2462,7 +2461,6 @@ def event_marking_workflows_inspector(event_id):
         else None
     )
     actions = event.get_convenor_actions(
-        event_url=event_url,
         open_event_url=open_event_url,
         conflation_url=conflation_url,
         generate_feedback_url=generate_feedback_url,
@@ -2510,6 +2508,27 @@ def event_marking_workflows_inspector(event_id):
                         ),
                         action_url=workflow_url,
                         action_label="Review risk factors",
+                    )
+                )
+
+            # CTA for reports awaiting moderator assignment
+            needs_mod = sum(
+                1
+                for sr in workflow.submitter_reports
+                if sr.workflow_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
+            )
+            if needs_mod > 0:
+                n = needs_mod
+                actions.append(
+                    ConvenorAction(
+                        severity="danger",
+                        title=f"Moderator{'s' if n != 1 else ''} need assigning: {workflow.name}",
+                        description=(
+                            f"{n} report{'s' if n != 1 else ''} in this workflow "
+                            f"cannot proceed until a moderator is assigned."
+                        ),
+                        action_url=workflow_url,
+                        action_label="Review reports",
                     )
                 )
 

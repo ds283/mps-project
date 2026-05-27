@@ -167,11 +167,11 @@
         </div>
 
         {# ---- role colour mapping ---- #}
-        {% set role_color = {
-            'supervisor': 'warning',
-            'responsible_supervisor': 'warning',
-            'marker': 'info',
-            'moderator': 'secondary'
+        {% set _role_badge_class = {
+            'supervisor': 'role-badge-supervisor',
+            'responsible_supervisor': 'role-badge-supervisor',
+            'marker': 'role-badge-marker',
+            'moderator': 'role-badge-moderator'
         } %}
         {% set _included_roles = [0, 1, 3, 6] %}
         {% set _ai_keys = ['ai_use', 'ai_compliance'] %}
@@ -243,14 +243,13 @@
                 <div>
                     {% for role in record_a.roles %}
                         {% if role.role in _included_roles %}
-                            {% set color = role_color.get(role.roleid_as_str, 'secondary') %}
                             <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
                                  style="background:var(--bs-body-bg); font-size:0.82em;">
                                 <div class="staff-avatar {{ _avatar_class.get(role.role, 'staff-avatar-moderator') }}">
                                     {{ role.user.initials }}
                                 </div>
                                 <span style="flex:1;">{{ role.user.name }}</span>
-                                <span class="badge bg-{{ color }}-subtle text-{{ color }}-emphasis"
+                                <span class="badge {{ _role_badge_class.get(role.roleid_as_str, 'role-badge-moderator') }}"
                                       style="font-size:0.7em;">{{ role.role_as_str }}</span>
                                 {% if is_faculty or is_admin or is_root %}
                                     {% for mr in role.marking_reports %}
@@ -475,14 +474,13 @@
                 <div>
                     {% for role in record_b.roles %}
                         {% if role.role in _included_roles %}
-                            {% set color = role_color.get(role.roleid_as_str, 'secondary') %}
                             <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
                                  style="background:var(--bs-body-bg); font-size:0.82em;">
                                 <div class="staff-avatar {{ _avatar_class.get(role.role, 'staff-avatar-moderator') }}">
                                     {{ role.user.initials }}
                                 </div>
                                 <span style="flex:1;">{{ role.user.name }}</span>
-                                <span class="badge bg-{{ color }}-subtle text-{{ color }}-emphasis"
+                                <span class="badge {{ _role_badge_class.get(role.roleid_as_str, 'role-badge-moderator') }}"
                                       style="font-size:0.7em;">{{ role.role_as_str }}</span>
                                 {% if is_faculty or is_admin or is_root %}
                                     {% for mr in role.marking_reports %}

@@ -29,8 +29,8 @@
                         <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
                         <strong>Grade discrepancy detected.</strong>
                         The submitted grades differ by
-                        <strong>{{ "%.1f"|format(grade_spread) }}pp</strong>,
-                        which exceeds the {{ workflow.scheme.marker_tolerance }}pp tolerance.
+                        <strong>{{ grade_spread | round | int }}%</strong>,
+                        which exceeds the {{ workflow.scheme.marker_tolerance | round | int }}% tolerance.
                         Your moderation report is required.
                     </div>
                 {% endif %}
@@ -209,7 +209,18 @@
                                          role="tabpanel"
                                          aria-labelledby="tab-{{ mr.id }}">
 
-                                        <div class="small text-body-secondary mb-1">{{ mr.role.role_as_str }}</div>
+                                        {%- set _role_badge = {0: 'role-badge-supervisor', 1: 'role-badge-marker',
+                                                               3: 'role-badge-moderator', 6: 'role-badge-supervisor'} -%}
+                                        <div class="d-flex align-items-center gap-2 mb-3">
+                                            <span class="badge {{ _role_badge.get(mr.role.role, 'role-badge-moderator') }}">
+                                                {{ mr.role.role_as_str }}
+                                            </span>
+                                            <a class="btn btn-xs btn-outline-secondary ms-auto"
+                                               href="{{ url_for('faculty.view_marking_report', report_id=mr.id) }}"
+                                               target="_blank" rel="noopener">
+                                                <i class="fas fa-external-link-alt fa-fw"></i> View report
+                                            </a>
+                                        </div>
 
                                         {% if mr.grade is not none %}
                                             <div class="d-flex align-items-baseline gap-2 mb-3 pb-2 border-bottom">

@@ -248,7 +248,7 @@
                                                                 {%- set ftype = field_spec.field_type.type -%}
                                                                 {%- set value = report_data[mr.id].get(key) -%}
                                                                 <div class="mb-2">
-                                                                    <div class="small text-body-secondary mb-1">{{ field_spec.label | safe }}</div>
+                                                                    <div class="small text-body-secondary mb-1">{{ field_spec.text | safe }}</div>
                                                                     {% if value is none %}
                                                                         <span class="text-body-secondary fst-italic">—</span>
                                                                     {% elif ftype == 'boolean' %}

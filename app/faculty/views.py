@@ -3692,7 +3692,8 @@ def moderator_report_form(mod_report_id):
 
     def _parse_report(mr):
         try:
-            return json.loads(mr.report) if mr.report else {}
+            blob = json.loads(mr.report) if mr.report else {}
+            return blob.get("fields", {})
         except (ValueError, TypeError):
             return {}
 

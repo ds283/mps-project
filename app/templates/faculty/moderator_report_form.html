@@ -121,11 +121,14 @@
                                 <div class="card-header bg-body-tertiary d-flex align-items-center gap-2">
                                     <span class="fw-semibold">{{ label }}</span>
                                     <span class="small text-body-secondary">&ndash; {{ mr.role.role_as_str }}</span>
-                                    {% if mr.grade is not none %}
-                                        <span class="badge bg-danger ms-auto">{{ "%.1f"|format(mr.grade) }}%</span>
-                                    {% endif %}
                                 </div>
                                 <div class="card-body">
+                                    {% if mr.grade is not none %}
+                                        <div class="d-flex align-items-baseline gap-2 mb-3 pb-2 border-bottom">
+                                            <span class="small text-body-secondary">Grade:</span>
+                                            <span class="fs-3 fw-bold text-danger lh-1">{{ "%.1f"|format(mr.grade) }}%</span>
+                                        </div>
+                                    {% endif %}
                                     {% if mr.feedback_submitted %}
 
                                         {# Schema-driven sections #}

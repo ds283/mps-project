@@ -387,6 +387,15 @@ def advance_submitter_report(sr: SubmitterReport) -> None:
         sr.convenor_intervention = True
         return
 
+    # Recovery for SRs stuck in READY_TO_DISTRIBUTE because link_distribution_email failed.
+    # dispatch_single_email sets mr.distributed=True synchronously, so this check is reliable
+    # even when the async email-linking callback never ran.
+    if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+        _recs = sr.marking_reports.all()
+        if _recs and all(r.distributed for r in _recs):
+            sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS
+        return
+
     reports = sr.marking_reports.all()
 
     if not reports:

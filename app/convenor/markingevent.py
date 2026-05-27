@@ -2633,6 +2633,9 @@ def event_marking_workflows_inspector(event_id):
         .all()
     )
 
+    _SEVERITY_ORDER = {"danger": 0, "warning": 1, "info": 2, "success": 3, "secondary": 4}
+    actions.sort(key=lambda a: _SEVERITY_ORDER.get(a.severity, 99))
+
     form = ConfirmActionForm()
     return render_template_context(
         "convenor/markingevent/event_marking_workflows_inspector.html",

@@ -186,9 +186,14 @@ def register_marking_tasks(celery):
             deadline = workflow.effective_deadline.isoformat()
 
         # Find SubmitterReports that are READY_TO_DISTRIBUTE (or later) with undistributed MarkingReports
+        _blocking = {
+            SubmitterReportWorkflowStates.NOT_READY,
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+        }
         eligible_ids = []
         for sr in workflow.submitter_reports:
-            if sr.workflow_state < SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+            if sr.workflow_state in _blocking:
                 continue
             if any(not mr.distributed for mr in sr.marking_reports):
                 eligible_ids.append(sr.id)
@@ -266,6 +271,11 @@ def register_marking_tasks(celery):
                 pass
 
         eligible_triples = []  # (sr_id, deadline_str, email_workflow_id)
+        _blocking = {
+            SubmitterReportWorkflowStates.NOT_READY,
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+        }
         for workflow in event.workflows:
             pclass: ProjectClass = workflow.event.pclass
             resolved_template = _resolve_workflow_template(workflow, pclass)
@@ -278,10 +288,7 @@ def register_marking_tasks(celery):
             )
             workflow_sr_ids = []
             for sr in workflow.submitter_reports:
-                if (
-                    sr.workflow_state
-                    < SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-                ):
+                if sr.workflow_state in _blocking:
                     continue
                 if any(not mr.distributed for mr in sr.marking_reports):
                     workflow_sr_ids.append(sr.id)

@@ -405,12 +405,20 @@ def download_generated_asset(asset_id):
         audit_data=f"download_generated_asset (asset id #{asset_id})",
     )
     return_data = BytesIO()
-    with storage.download_to_scratch() as scratch_path:
-        file_path = scratch_path.path
+    try:
+        with storage.download_to_scratch() as scratch_path:
+            file_path = scratch_path.path
 
-        with open(file_path, "rb") as f:
-            return_data.write(f.read())
-        return_data.seek(0)
+            with open(file_path, "rb") as f:
+                return_data.write(f.read())
+            return_data.seek(0)
+    except Exception as e:
+        current_app.logger.exception("Storage error downloading generated asset #%s", asset_id, exc_info=e)
+        flash(
+            "The file could not be downloaded because the storage service is currently unavailable. Please try again later.",
+            "error",
+        )
+        return redirect(redirect_url())
 
     return send_file(
         return_data,
@@ -492,12 +500,20 @@ def download_submitted_asset(asset_id):
         audit_data=f"download_submitted_asset (asset id #{asset_id})",
     )
     return_data = BytesIO()
-    with storage.download_to_scratch() as scratch_path:
-        file_path = scratch_path.path
+    try:
+        with storage.download_to_scratch() as scratch_path:
+            file_path = scratch_path.path
 
-        with open(file_path, "rb") as f:
-            return_data.write(f.read())
-        return_data.seek(0)
+            with open(file_path, "rb") as f:
+                return_data.write(f.read())
+            return_data.seek(0)
+    except Exception as e:
+        current_app.logger.exception("Storage error downloading submitted asset #%s", asset_id, exc_info=e)
+        flash(
+            "The file could not be downloaded because the storage service is currently unavailable. Please try again later.",
+            "error",
+        )
+        return redirect(redirect_url())
 
     return send_file(
         return_data,

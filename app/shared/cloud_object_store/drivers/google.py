@@ -57,7 +57,7 @@ class GoogleCloudStorageDriver:
     def get(self, key: Path) -> bytes:
         try:
             blob: Blob = self._bucket.get_blob(str(key))
-            return blob.download_as_bytes()
+            return blob.download_as_bytes(timeout=(3.05, 60))
         except NotFound as e:
             raise FileNotFoundError(str(e))
 
@@ -65,7 +65,7 @@ class GoogleCloudStorageDriver:
         try:
             blob: Blob = self._bucket.get_blob(str(key))
             # start is first byte returned, end is last byte returned (so need the -1)
-            return blob.download_as_bytes(start=start, end=start + length - 1)
+            return blob.download_as_bytes(start=start, end=start + length - 1, timeout=(3.05, 60))
         except NotFound as e:
             raise FileNotFoundError(str(e))
 

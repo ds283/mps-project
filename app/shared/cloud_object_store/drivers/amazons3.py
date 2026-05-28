@@ -15,6 +15,7 @@ from urllib.parse import SplitResult
 
 import boto3
 from botocore.client import BaseClient
+from botocore.config import Config as BotocoreConfig
 from botocore.exceptions import ClientError, UnknownKeyError
 
 from ..meta import ObjectMeta
@@ -44,6 +45,7 @@ class AmazonS3CloudStorageDriver:
             "s3",
             endpoint_url=data.get("endpoint_url", None),
             region_name=data.get("region", None),
+            config=BotocoreConfig(connect_timeout=3.05, read_timeout=60),
         )
 
         if "endpoint_url" in data:

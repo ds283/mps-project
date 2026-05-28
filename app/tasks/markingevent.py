@@ -355,7 +355,17 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
                 return
             sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
         else:
-            # Out of tolerance: mark and route to moderation.
+            # Out of tolerance: check if moderation is already in progress or complete.
+            # This guard prevents duplicate ModeratorReport creation when advance_submitter_report
+            # is called while an existing report (submitted or pending) already exists for this SR.
+            existing_mod_reports = sr.moderator_reports.all()
+            if existing_mod_reports:
+                any_submitted = any(r.report_submitted for r in existing_mod_reports)
+                if not any_submitted:
+                    sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT
+                return
+
+            # No existing moderator reports — first-time moderation assignment.
             sr.out_of_tolerance = True
             _emit_moderation_required_emails(sr)
 

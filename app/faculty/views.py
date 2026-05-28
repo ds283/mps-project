@@ -3611,7 +3611,6 @@ def moderator_report_form(mod_report_id):
     from wtforms.validators import InputRequired, NumberRange, Optional as WTFOptional
 
     from ..models.markingevent import SubmitterReportWorkflowStates
-    from ..tasks.markingevent import advance_submitter_report
 
     mod_report: ModeratorReport = ModeratorReport.query.get_or_404(mod_report_id)
     sr = mod_report.submitter_report
@@ -3662,8 +3661,6 @@ def moderator_report_form(mod_report_id):
         else:
             sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
             sr.convenor_intervention = True
-
-        advance_submitter_report(sr)
 
         try:
             log_db_commit(

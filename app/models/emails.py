@@ -102,6 +102,8 @@ class EmailTemplateTypesMixin:
     MARKING_NEEDS_SIGN_OFF = 61
     MARKING_OUT_OF_TOLERANCE = 62
     MARKING_MODERATOR = 63
+    MARKING_MARKER_REMINDER = 64
+    MARKING_SUPERVISOR_REMINDER = 65
 
     # notifications
     NOTIFICATIONS_REQUEST_MEETING = 18
@@ -164,6 +166,8 @@ _TYPE_NAMES = {
     EmailTemplateTypesMixin.MARKING_MARKER: "Marking: Marker",
     EmailTemplateTypesMixin.MARKING_SUPERVISOR: "Marking: Supervisor",
     EmailTemplateTypesMixin.MARKING_MODERATOR: "Marking: Moderator",
+    EmailTemplateTypesMixin.MARKING_MARKER_REMINDER: "Marking: Marker reminder",
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR_REMINDER: "Marking: Supervisor reminder",
     EmailTemplateTypesMixin.MARKING_VALIDATION_FAILURE: "Marking: Validation failure",
     EmailTemplateTypesMixin.MARKING_NEEDS_SIGN_OFF: "Marking: Responsible supervisor sign-off",
     EmailTemplateTypesMixin.MARKING_OUT_OF_TOLERANCE: "Marking: Marking reports out of tolerance",
@@ -210,6 +214,8 @@ TENANT_SPECIALIZABLE_TEMPLATES = [
     EmailTemplateTypesMixin.GO_LIVE_SELECTOR,
     EmailTemplateTypesMixin.MARKING_MARKER,
     EmailTemplateTypesMixin.MARKING_SUPERVISOR,
+    EmailTemplateTypesMixin.MARKING_MARKER_REMINDER,
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR_REMINDER,
     EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING,
     EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP,
     EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE,
@@ -250,6 +256,8 @@ PCLASS_SPECIALIZABLE_TEMPLATES = [
     EmailTemplateTypesMixin.GO_LIVE_SELECTOR,
     EmailTemplateTypesMixin.MARKING_MARKER,
     EmailTemplateTypesMixin.MARKING_SUPERVISOR,
+    EmailTemplateTypesMixin.MARKING_MARKER_REMINDER,
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR_REMINDER,
     EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING,
     EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP,
     EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE,

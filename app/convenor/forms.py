@@ -300,6 +300,58 @@ def TestMarkingEventFormFactory(pclass):
     return TestMarkingEventForm
 
 
+def TestMarkingReminderFormFactory(pclass):
+    """
+    Build the test-reminders form for a MarkingWorkflow, scoped to the same set of eligible
+    recipients as TestMarkingEventFormFactory: convenors/co-convenors, admins, and root users.
+    """
+    _convenor_ids = set()
+    if pclass.convenor is not None:
+        _convenor_ids.add(pclass.convenor.id)
+    for fd in pclass.coconvenors.all():
+        _convenor_ids.add(fd.id)
+
+    def get_test_targets():
+        users = (
+            db.session.query(User)
+            .join(User.roles)
+            .filter(
+                User.active.is_(True),
+                User.tenants.any(id=pclass.tenant_id),
+                Role.name.in_(["faculty", "admin", "root"]),
+            )
+            .distinct()
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
+        filtered = []
+        for u in users:
+            roles = {r.name for r in u.roles}
+            if u.id in _convenor_ids:
+                filtered.append(u)
+            elif "admin" in roles or "root" in roles:
+                filtered.append(u)
+        return filtered
+
+    class TestMarkingReminderForm(Form):
+        test_target = QuerySelectField(
+            "Send test to",
+            query_factory=get_test_targets,
+            get_label=lambda u: f"{u.name} <{u.email}>",
+            allow_blank=False,
+            validators=[
+                DataRequired(
+                    message="Please select a recipient for the test reminder."
+                )
+            ],
+            description="Select a recipient for the test reminder emails.",
+        )
+
+        submit_button = SubmitField("Send test reminders")
+
+    return TestMarkingReminderForm
+
+
 class CustomCATSLimitForm(Form, SaveChangesMixin):
     # custom CATS limit for supervision
     CATS_supervision = IntegerField(

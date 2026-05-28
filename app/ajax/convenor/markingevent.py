@@ -1268,6 +1268,13 @@ _event_marking_workflow_menu = """
                 <i class="fas fa-trash fa-fw"></i> Delete&hellip;
             </a>
         {% endif %}
+        {% if has_reminders %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.send_reminder_for_workflow', workflow_id=workflow.id, url=url, text=text) }}">
+                <i class="fas fa-bell fa-fw"></i> Send reminder&hellip;
+            </a>
+        {% endif %}
     </div>
 </div>
 """
@@ -1343,7 +1350,12 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "reports": render_template(reports_tmpl, workflow=workflow),
             "distribution": render_template(distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES),
             "menu": render_template(
-                menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit
+                menu_tmpl,
+                workflow=workflow,
+                url=url,
+                text=text,
+                can_edit=can_edit,
+                has_reminders=workflow.has_reminder_eligible_reports,
             ),
         }
         for workflow in workflows

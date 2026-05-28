@@ -85,6 +85,7 @@ from .forms import (
     PushFeedbackForm,
     ResolveTurnitinForm,
     TestMarkingEventFormFactory,
+    TestMarkingReminderFormFactory,
     build_resolve_risk_factors_form,
 )
 
@@ -3558,6 +3559,197 @@ def test_marking_event(event_id):
         url=url,
         title=f'Test notifications for "{event.name}"',
         formtitle=f"Send test notifications for marking event <strong>{event.name}</strong>",
+    )
+
+
+@convenor.route("/send_reminder_for_workflow/<int:workflow_id>")
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def send_reminder_for_workflow(workflow_id):
+    """Show a confirmation page before dispatching marking reminder emails for a workflow."""
+    workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot send reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    text = request.args.get("text", "Marking workflows")
+
+    # Count eligible reminder targets (same logic as has_reminder_eligible_reports,
+    # but counting individual targets including per-responsible-supervisor items)
+    _blocking = {
+        SubmitterReportWorkflowStates.NOT_READY,
+        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+        SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+    }
+    _supervisor_roles = {
+        SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+        SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+    }
+    eligible_count = 0
+    for sr in workflow.submitter_reports:
+        if sr.workflow_state in _blocking:
+            continue
+        for mr in sr.marking_reports:
+            if not mr.distributed:
+                continue
+            if not mr.report_submitted:
+                eligible_count += 1
+            elif mr.role.role in _supervisor_roles and (
+                sr.workflow_state
+                == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
+            ):
+                eligible_count += mr.responsible_supervisors.count()
+
+    test_url = url_for(
+        "convenor.test_send_reminder_for_workflow", workflow_id=workflow_id, url=url, text=text
+    )
+    action_url = url_for(
+        "convenor.do_send_reminder_for_workflow", workflow_id=workflow_id, url=url
+    )
+
+    title = f'Send reminders for workflow "{workflow.name}"'
+    panel_title = f"Send marking reminders for workflow <strong>{workflow.name}</strong>"
+    message = (
+        f"<p>Are you sure you wish to send reminder emails for the workflow "
+        f"<strong>{workflow.name}</strong>?</p>"
+        f"<p>{eligible_count} reminder email{'s' if eligible_count != 1 else ''} will be dispatched "
+        f"to assessors who have not yet submitted their marking report, or to responsible supervisors "
+        f"who have not yet signed off a submitted report.</p>"
+        f"<p>To send a test reminder first, "
+        f'<a href="{test_url}">click here to run a test</a>.</p>'
+    )
+    submit_label = "Send reminders"
+
+    form = ConfirmActionForm()
+    return render_template_context(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
+        form=form,
+    )
+
+
+@convenor.route("/do_send_reminder_for_workflow/<int:workflow_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def do_send_reminder_for_workflow(workflow_id):
+    """Dispatch marking reminder emails for all eligible MarkingReports in a workflow."""
+    workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot send reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.send_marking_reminders"]
+        task.apply_async(
+            kwargs={
+                "workflow_id": workflow_id,
+                "cc_convenor": True,
+                "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
+                "test_user_id": None,
+                "convenor_id": current_user.id,
+            }
+        )
+        flash(
+            f'Marking reminders for workflow "{workflow.name}" have been queued.',
+            "success",
+        )
+    except Exception as e:
+        current_app.logger.exception(
+            "Error dispatching send_marking_reminders", exc_info=e
+        )
+        flash(
+            "Could not dispatch marking reminders. Please contact a system administrator.",
+            "error",
+        )
+
+    return redirect(url)
+
+
+@convenor.route("/test_send_reminder_for_workflow/<int:workflow_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def test_send_reminder_for_workflow(workflow_id):
+    """Show a form to select a test recipient, then dispatch a test reminder for a workflow."""
+    workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot send test reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    text = request.args.get("text", "Marking workflows")
+
+    TestMarkingReminderForm = TestMarkingReminderFormFactory(pclass)
+    form = TestMarkingReminderForm(request.form)
+
+    if form.validate_on_submit():
+        test_user_id = form.test_target.data.id
+        try:
+            celery = current_app.extensions["celery"]
+            task = celery.tasks["app.tasks.marking.send_marking_reminders"]
+            task.apply_async(
+                kwargs={
+                    "workflow_id": workflow_id,
+                    "cc_convenor": True,
+                    "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
+                    "test_user_id": test_user_id,
+                    "convenor_id": current_user.id,
+                }
+            )
+            flash(
+                f'Test reminders for workflow "{workflow.name}" have been queued '
+                f"to {form.test_target.data.name}.",
+                "success",
+            )
+        except Exception as e:
+            current_app.logger.exception(
+                "Error dispatching test send_marking_reminders", exc_info=e
+            )
+            flash(
+                "Could not dispatch test reminders. Please contact a system administrator.",
+                "error",
+            )
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/test_send_reminder_for_workflow.html",
+        workflow=workflow,
+        event=event,
+        form=form,
+        url=url,
+        title=f'Test reminders for "{workflow.name}"',
+        formtitle=f"Send test reminders for workflow <strong>{workflow.name}</strong>",
     )
 
 

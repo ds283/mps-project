@@ -133,6 +133,20 @@ def _resolve_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass):
         return None
 
 
+def _resolve_workflow_reminder_template(workflow: MarkingWorkflow, pclass: ProjectClass):
+    """Return the best-matching active reminder EmailTemplate for this workflow+pclass, or None."""
+    if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
+        template_type = EmailTemplate.MARKING_MARKER_REMINDER
+    elif workflow.role in _SUPERVISOR_ROLES:
+        template_type = EmailTemplate.MARKING_SUPERVISOR_REMINDER
+    else:
+        return None
+    try:
+        return EmailTemplate.find_template_(template_type, pclass=pclass)
+    except RuntimeError:
+        return None
+
+
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
@@ -757,6 +771,271 @@ def register_marking_tasks(celery):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def link_reminder_email(self, email_log_id: int, marking_report_id: int):
+        """
+        Callback invoked after a reminder email is successfully sent.
+        Appends the EmailLog to MarkingReport.distribution_emails for audit purposes.
+        Does NOT modify distributed, report_submitted, or any signed_off_* field.
+        The email_log_id is prepended to args automatically by the EmailWorkflowItem callback mechanism.
+        """
+        try:
+            mr: MarkingReport = (
+                db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+            )
+            email_log: EmailLog = (
+                db.session.query(EmailLog).filter_by(id=email_log_id).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if mr is None:
+            msg = f"link_reminder_email: could not find MarkingReport #{marking_report_id}"
+            current_app.logger.error(msg)
+            return
+
+        if email_log is None:
+            msg = f"link_reminder_email: could not find EmailLog #{email_log_id}"
+            current_app.logger.error(msg)
+            return
+
+        mr.distribution_emails.append(email_log)
+
+        try:
+            log_db_commit(
+                f"Linked reminder email #{email_log_id} to MarkingReport #{marking_report_id}",
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_marking_reminders(
+        self,
+        workflow_id: int,
+        cc_convenor: bool,
+        max_attachment: int,
+        test_user_id: Optional[int],
+        convenor_id: Optional[int],
+        deadline: Optional[str] = None,
+    ):
+        """
+        Dispatch reminder emails for a single MarkingWorkflow, targeting:
+        - MarkingReport instances that have been distributed but not yet submitted, and
+        - MarkingReport instances (SUPERVISOR role) whose parent SubmitterReport is in
+          AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF — emailing each pending responsible supervisor.
+
+        A single EmailWorkflow wraps all generated EmailWorkflowItems. A callback on each item
+        links the sent EmailLog to MarkingReport.distribution_emails for audit purposes, without
+        modifying any workflow-state flags.
+        """
+        try:
+            workflow: MarkingWorkflow = (
+                db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if workflow is None:
+            msg = f"send_marking_reminders: could not load MarkingWorkflow id={workflow_id}"
+            current_app.logger.error(msg)
+            raise Exception(msg)
+
+        pclass: ProjectClass = workflow.event.pclass
+        resolved_template = _resolve_workflow_reminder_template(workflow, pclass)
+        if resolved_template is None:
+            current_app.logger.warning(
+                f"send_marking_reminders: no active reminder template for workflow id={workflow_id}; skipping"
+            )
+            return
+
+        # Resolve test email address
+        test_email: Optional[str] = None
+        if test_user_id is not None:
+            try:
+                test_user: User = (
+                    db.session.query(User).filter_by(id=test_user_id).first()
+                )
+                if test_user is not None:
+                    test_email = test_user.email
+            except SQLAlchemyError:
+                pass
+
+        # Resolve deadline
+        if deadline is None and workflow.effective_deadline is not None:
+            deadline = workflow.effective_deadline.isoformat()
+
+        _blocking = {
+            SubmitterReportWorkflowStates.NOT_READY,
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+        }
+
+        # Collect eligible (sr, mr, target_role, is_responsible_supervisor) tuples
+        eligible = []
+        for sr in workflow.submitter_reports:
+            if sr.workflow_state in _blocking:
+                continue
+            for mr in sr.marking_reports:
+                if not mr.distributed:
+                    continue
+                if not mr.report_submitted:
+                    eligible.append((sr, mr, mr.role, False))
+                elif mr.role.role in _SUPERVISOR_ROLES and (
+                    sr.workflow_state
+                    == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
+                ):
+                    for resp_role in mr.responsible_supervisors:
+                        eligible.append((sr, mr, resp_role, True))
+
+        convenor: Optional[User] = None
+        if convenor_id is not None:
+            try:
+                convenor = db.session.query(User).filter_by(id=convenor_id).first()
+            except SQLAlchemyError:
+                pass
+
+        if not eligible:
+            report_info(
+                f'No reminder-eligible reports found for workflow "{workflow.name}"',
+                "send_marking_reminders",
+                convenor,
+            )
+            return
+
+        print(
+            f"-- send_marking_reminders: workflow={workflow.name!r}, "
+            f"{len(eligible)} reminder(s) to dispatch"
+        )
+        if test_email is not None:
+            print(f"-- working in test mode: emails being sent to sink={test_email}")
+
+        email_wf = EmailWorkflow.build_(
+            name=f"Marking reminder: {workflow.name}",
+            template=resolved_template,
+            defer=timedelta(minutes=15),
+            pclasses=[pclass],
+            max_attachment_size=max_attachment,
+        )
+        db.session.add(email_wf)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        sent = 0
+        for sr, mr, target_role, is_responsible_supervisor in eligible:
+            record: SubmissionRecord = sr.record
+            period: SubmissionPeriodRecord = record.period
+            config: ProjectClassConfig = period.config
+            submitter: SubmittingStudent = record.owner
+            student: StudentData = submitter.student
+
+            deadline_date: date
+            if deadline is not None:
+                deadline_date = parser.parse(deadline).date()
+            elif workflow.effective_deadline is not None:
+                deadline_date = workflow.effective_deadline.date()
+            else:
+                deadline_date = date.today()
+
+            supervisors: List[SubmissionRole] = record.supervisor_roles
+            markers: List[SubmissionRole] = record.marker_roles
+
+            recipient = test_email if test_email is not None else target_role.user.email
+            recipient_list = [recipient]
+            if test_email is None and cc_convenor:
+                recipient_list.append(config.convenor_email)
+
+            # Responsible supervisors sign off rather than fill in a marking form
+            if is_responsible_supervisor:
+                marking_form_url = None
+            else:
+                marking_form_url = url_for(
+                    "faculty.marking_form", report_id=mr.id, _external=True
+                )
+
+            callbacks = None
+            if test_email is None:
+                callbacks = [
+                    {
+                        "task": "app.tasks.marking.link_reminder_email",
+                        "args": [mr.id],
+                        "kwargs": {},
+                    }
+                ]
+
+            is_supervisor_role = target_role.role in _SUPERVISOR_ROLES
+            if is_supervisor_role:
+                subject_payload = encode_email_payload(
+                    {
+                        "abbv": pclass.abbreviation,
+                        "stu": student.user.name,
+                        "deadline": deadline_date.strftime("%a %d %b"),
+                    }
+                )
+            else:
+                subject_payload = encode_email_payload(
+                    {
+                        "abbv": pclass.abbreviation,
+                        "number": student.exam_number,
+                        "deadline": deadline_date.strftime("%a %d %b"),
+                    }
+                )
+
+            body_payload = encode_email_payload(
+                {
+                    "role": target_role,
+                    "config": config,
+                    "pclass": pclass,
+                    "period": period,
+                    "markers": markers,
+                    "supervisors": supervisors,
+                    "submitter": submitter,
+                    "project": record.project,
+                    "student": student,
+                    "record": record,
+                    "deadline": deadline_date,
+                    "marking_form_url": marking_form_url,
+                }
+            )
+
+            item = EmailWorkflowItem.build_(
+                subject_payload=subject_payload,
+                body_payload=body_payload,
+                recipient_list=recipient_list,
+                reply_to=[pclass.convenor_email],
+                callbacks=callbacks,
+            )
+            item.workflow = email_wf
+            db.session.add(item)
+            sent += 1
+
+        try:
+            log_db_commit(
+                f"Dispatched {sent} marking reminder(s) for workflow {workflow.name!r} "
+                f"({pclass.name})",
+                project_classes=pclass,
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        plural = "s" if sent != 1 else ""
+        report_info(
+            f'Dispatched {sent} marking reminder{plural} for workflow "{workflow.name}"',
+            "send_marking_reminders",
+            convenor,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_single_email(

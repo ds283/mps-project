@@ -637,6 +637,23 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         ).count()
 
     @property
+    def has_reminder_eligible_reports(self) -> bool:
+        """
+        Returns True if at least one MarkingReport in this workflow is eligible for a reminder:
+        either distributed-but-unsubmitted, or the parent SubmitterReport is awaiting
+        responsible-supervisor sign-off on an already-submitted report.
+        """
+        for sr in self.submitter_reports:
+            for mr in sr.marking_reports:
+                if not mr.distributed:
+                    continue
+                if not mr.report_submitted:
+                    return True
+                if sr.workflow_state == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF:
+                    return True
+        return False
+
+    @property
     def number_processing_failures(self) -> int:
         """Count of SubmitterReports whose SubmissionRecord has report_processing_failed == True."""
         if not self.requires_report:

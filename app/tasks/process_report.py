@@ -93,8 +93,10 @@ def transform_date(date_str):
     http://www.verypdf.com/pdfinfoeditor/pdf-date-format.htm
     (D:YYYYMMDDHHmmSSOHH'mm')
     :param date_str: pdf date string
-    :return: datetime object
+    :return: datetime object, or None if date_str is absent or unparseable
     """
+    if not date_str:
+        return None
     global pdf_date_pattern
     match = re.match(pdf_date_pattern, date_str)
     if match:
@@ -124,6 +126,7 @@ def transform_date(date_str):
             del date_info[k]
 
         return datetime(**date_info)
+    return None
 
 
 def _process_report(source: Path, dest: Path, record: SubmissionRecord) -> int:
@@ -222,7 +225,9 @@ def _coverpage_metadata(
     p6 = fitz.Point(x0, y0)
     rc = page.insert_text(
         p6,
-        "Created at {date}".format(date=creation_date.strftime("%a %d %b %Y %H:%M:%S")),
+        "Created at {date}".format(
+            date=creation_date.strftime("%a %d %b %Y %H:%M:%S") if creation_date else "unknown"
+        ),
         color=_black,
         fontname="Helvetica",
         fontsize=_text_label_size,
@@ -233,7 +238,7 @@ def _coverpage_metadata(
     rc = page.insert_text(
         p7,
         "Last modified: {date}".format(
-            date=modified_date.strftime("%a %d %b %Y %H:%M:%S")
+            date=modified_date.strftime("%a %d %b %Y %H:%M:%S") if modified_date else "unknown"
         ),
         color=_black,
         fontname="Helvetica",

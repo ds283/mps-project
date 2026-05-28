@@ -1803,6 +1803,15 @@ _THUMBNAIL_ASSET_TYPES = {
     "SubmittedAsset": SubmittedAsset,
 }
 
+# Served when the object store is unreachable, to avoid blocking Waitress threads
+_THUMBNAIL_UNAVAILABLE_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80">'
+    '<rect width="100%" height="100%" fill="#e9ecef"/>'
+    '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" '
+    'font-family="sans-serif" font-size="11" fill="#6c757d">Unavailable</text>'
+    "</svg>"
+)
+
 
 @documents.route("/thumbnail/<string:asset_type>/<int:asset_id>/<string:size>")
 @login_required
@@ -1838,7 +1847,14 @@ def serve_thumbnail(asset_type, asset_id, size):
         audit_data=f"documents.serve_thumbnail ({asset_type} #{asset_id}, {size})",
     )
 
-    r = http_requests.get(url, stream=True)
+    try:
+        r = http_requests.get(url, stream=True, timeout=(3.05, 10))
+    except http_requests.exceptions.RequestException:
+        return Response(
+            _THUMBNAIL_UNAVAILABLE_SVG,
+            status=503,
+            mimetype="image/svg+xml",
+        )
     if not r.ok:
         abort(r.status_code)
 

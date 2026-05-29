@@ -82,7 +82,7 @@ class PatchedMailUtil(MailUtil):
         workflow = EmailWorkflow.build_(
             name=f"Security email: {subject}",
             template=email_template,
-            defer=timedelta(minutes=1),
+            defer=timedelta(),
         )
         db.session.add(workflow)
         db.session.flush()
@@ -101,6 +101,12 @@ class PatchedMailUtil(MailUtil):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            return
+
+        try:
+            current_app.extensions["celery"].send_task("app.tasks.email_workflow.poll_email_workflows")
+        except Exception as e:
+            current_app.logger.warning(f"PatchedMailUtil: could not dispatch immediate poll: {e}")
 
 
 def read_configuration(app: Flask, config_name: str):

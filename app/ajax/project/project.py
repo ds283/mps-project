@@ -105,23 +105,24 @@ _name = """
 
 # language=jinja2
 _owner = """
+{% set info = project.expected_supervisor_info %}
+{% if info.email %}
+    <a class="text-decoration-none" href="mailto:{{ info.email }}">{{ info.name }}</a>
+{% elif info.name %}
+    <div class="fw-semibold text-secondary">{{ info.name }}</div>
+{% else %}
+    <span class="badge bg-danger">Missing</span>
+{% endif %}
 {% if project.use_supervisor_pool %}
-    <div class="fw-semibold text-secondary">Uses supervisor pool</div>
     {% set num = project.number_supervisors() %}
     <div class="mt-1 d-flex flex-row gap-2 justify-content-start align-items-center">
         {% if num > 0 %}
             <div class="mt-1 small text-muted">Pool size = {{ num }}</div>
         {% else %}
-                <div class="mt-1 small text-danger">Pool size = 0</div>
+            <div class="mt-1 small text-danger">Pool size = 0</div>
         {% endif %}
         <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.edit_project_supervisors', proj_id=project.id, url=url) }}">Edit</a>
     </div>
-{% else %}
-    {% if project.owner is not none %}
-        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
-    {% else %}
-        <span class="badge bg-danger">Missing</span>
-    {% endif %}
 {% endif %}
 """
 

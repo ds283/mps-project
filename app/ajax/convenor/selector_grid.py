@@ -47,10 +47,11 @@ _selections = """
             {% endif %}
             <span class="small">
                 {{ render_formatted_project(item) }}
-                {% if not project.use_supervisor_pool and project.owner is not none %}
-                    <span class="text-muted">&ndash; {{ project.owner.user.name }}</span>
-                {% else %}
-                    <span class="fw-semibold text-secondary">Uses supervisor pool</span>
+                {% set info = project.expected_supervisor_info %}
+                {% if info.email %}
+                    <span class="text-muted">&ndash; {{ info.name }}</span>
+                {% elif info.name %}
+                    <span class="fw-semibold text-secondary">{{ info.name }}</span>
                 {% endif %}
                 {% if item.converted_from_bookmark %}
                     <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> From bookmark</span>

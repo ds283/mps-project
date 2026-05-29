@@ -53,19 +53,16 @@
                         {{ format_availability(project, sel, now) }}
                     </div>
                     <div class="col-4">
-                        {% if project.use_supervisor_pool %}
-                            <div class="text-primary">Uses supervisor pool</div>
+                        {% set info = project.expected_supervisor_info %}
+                        {% if info.email %}
+                            <div><a class="text-decoration-none link-primary"
+                                    href="mailto:{{ info.email }}">{{ info.name }}</a></div>
+                        {% elif info.name %}
+                            <div class="text-primary">{{ info.name }}</div>
                         {% else %}
-                            {% if project.owner is not none %}
-                                <div><a class="text-decoration-none link-primary"
-                                        href="mailto:{{ project.owner.user.email }}">
-                                    {{ project.owner.user.name }}
-                                </a></div>
-                            {% else %}
-                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
-                                    owner missing
-                                </div>
-                            {% endif %}
+                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                owner missing
+                            </div>
                         {% endif %}
                         {% set ns = namespace(affiliation=false) %}
                         {% if config.advertise_research_group and project.group %}
@@ -275,19 +272,16 @@
                         {% endif %}
                     </div>
                     <div class="col-4">
-                        {% if project.use_supervisor_pool %}
-                            <div class="text-primary">Uses supervisor pool</div>
+                        {% set info = project.expected_supervisor_info %}
+                        {% if info.email %}
+                            <div><a class="text-decoration-none link-primary"
+                                    href="mailto:{{ info.email }}">{{ info.name }}</a></div>
+                        {% elif info.name %}
+                            <div class="text-primary">{{ info.name }}</div>
                         {% else %}
-                            {% if project.owner is not none %}
-                                <div><a class="text-decoration-none link-primary"
-                                        href="mailto:{{ project.owner.user.email }}">
-                                    {{ project.owner.user.name }}
-                                </a></div>
-                            {% else %}
-                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
-                                    owner missing
-                                </div>
-                            {% endif %}
+                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                owner missing
+                            </div>
                         {% endif %}
                         {% set ns = namespace(affiliation=false) %}
                         {% if config.advertise_research_group and project.group %}

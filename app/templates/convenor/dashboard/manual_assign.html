@@ -154,11 +154,12 @@
                                                     {{ item.project.name }}
                                                 </a>
                                             </div>
-                                            {% if item.project.use_supervisor_pool %}
-                                                <span class="small text-secondary">Uses supervisor pool</span>
-                                            {% elif item.project.owner is not none %}
+                                            {% set info = item.project.expected_supervisor_info %}
+                                            {% if info.email %}
                                                 <span class="text-body-secondary small">(Project owner <a
-                                                        href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>)</span>
+                                                        href="mailto:{{ info.email }}">{{ info.name }}</a>)</span>
+                                            {% elif info.name %}
+                                                <span class="small text-secondary">{{ info.name }}</span>
                                             {% endif %}
                                             {% if allow_reassign_project %}
                                                 <a class="text-decoration-none text-danger"

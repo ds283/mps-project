@@ -10,6 +10,7 @@
 
 from collections.abc import Iterable
 from datetime import datetime
+from typing import NamedTuple, Optional
 
 import humanize
 from flask import current_app
@@ -25,6 +26,20 @@ from ..database import db
 from ..shared.colours import get_text_colour
 from ..shared.sqlalchemy import get_count
 from .defaults import DEFAULT_STRING_LENGTH
+
+
+class SupervisorInfo(NamedTuple):
+    """
+    Carries the display name and email for an expected supervisor.
+
+    Semantics:
+      - name and email both non-None  → single known supervisor; render a mailto link
+      - name non-None, email None     → multi-member pool; render the label as plain text
+      - both None                     → owner missing; render an error state
+    """
+
+    name: Optional[str]
+    email: Optional[str]
 
 
 class EditingMetadataMixin:
@@ -606,6 +621,18 @@ def ProjectConfigurationMixinFactory(
                 lazy="dynamic",
                 backref=db.backref(supervisor_backref_label, lazy="dynamic"),
             )
+
+        @property
+        def expected_supervisor_info(self) -> SupervisorInfo:
+            if self.use_supervisor_pool:
+                if self.supervisors.count() == 1:
+                    u = self.supervisors.first().user
+                    return SupervisorInfo(name=u.name, email=u.email)
+                return SupervisorInfo(name="Uses supervisor pool", email=None)
+            if self.owner is not None:
+                u = self.owner.user
+                return SupervisorInfo(name=u.name, email=u.email)
+            return SupervisorInfo(name=None, email=None)
 
         if allow_edit_supervisors:
 

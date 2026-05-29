@@ -36,19 +36,16 @@
                         {% endif %}
                     </div>
                     <div class="col-3">
-                        {% if project.use_supervisor_pool %}
-                            <div class="text-primary">Uses supervisor pool</div>
+                        {% set info = project.expected_supervisor_info %}
+                        {% if info.email %}
+                            <div><a class="text-decoration-none link-primary"
+                                    href="mailto:{{ info.email }}">{{ info.name }}</a></div>
+                        {% elif info.name %}
+                            <div class="text-primary">{{ info.name }}</div>
                         {% else %}
-                            {% if project.owner is not none %}
-                                <div><a class="text-decoration-none link-primary"
-                                        href="mailto:{{ project.owner.user.email }}">
-                                    {{ project.owner.user.name }}
-                                </a></div>
-                            {% else %}
-                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
-                                    owner missing
-                                </div>
-                            {% endif %}
+                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                owner missing
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -78,9 +75,12 @@
         {% endif %}
                 </div>
                 {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
-                    <a class="text-decoration-none" href="mailto:{{ offer.liveproject.owner.user.email }}">
-                        {{ offer.liveproject.owner.user.name }}
-                    </a>
+                    {% set info = offer.liveproject.expected_supervisor_info %}
+                    {% if info.email %}
+                        <a class="text-decoration-none" href="mailto:{{ info.email }}">{{ info.name }}</a>
+                    {% elif info.name %}
+                        <span class="text-primary">{{ info.name }}</span>
+                    {% endif %}
                 </div>
                 {% if show_actions %}<div class="col-1">{% else %}<div class="col-2">{% endif %}
                     {% set status = offer.status %}

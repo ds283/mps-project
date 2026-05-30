@@ -190,7 +190,7 @@ _name = """
                 <i class="fas fa-exclamation-circle"></i> Request confirmation
             </a>
         {% endif %}
-        {% if sel.is_project_bookmarked(project) %}
+    {% if sel.is_project_bookmarked(project) %}
             <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-bookmarked">
                 <i class="fas fa-bookmark"></i> Bookmarked
             </a>
@@ -245,7 +245,7 @@ def _build_selector_menu_templ() -> Template:
 
 
 def selector_liveprojects_data(
-        sel: SelectingStudent, is_live: bool, projects: List[LiveProject]
+    sel: SelectingStudent, is_live: bool, projects: List[LiveProject]
 ):
     if hasattr(projects, "len") and len(projects) == 0:
         return []

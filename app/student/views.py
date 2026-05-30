@@ -15,7 +15,9 @@ from typing import Optional
 
 from flask import current_app, flash, jsonify, redirect, request, session, url_for
 from flask_security import current_user, roles_accepted, roles_required
+from sqlalchemy import case
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import and_, func, or_
 
@@ -52,6 +54,7 @@ from ..models import (
     TransferableSkill,
     User,
     add_notification,
+    project_supervisors,
 )
 from ..models.emails import encode_email_payload
 from ..models.markingevent import ConflationReport, MarkingEventWorkflowStates
@@ -385,10 +388,26 @@ def _project_list_endpoint(
     if sd is None:
         return jsonify({})
 
+    # For projects that use a supervisor pool, we want to search/sort by the single pool member
+    # when the pool has exactly one entry (matching the display logic in expected_supervisor_info).
+    # Build a subquery that returns project_id → user_id only for single-member pools.
+    pool_single_sq = (
+        db.session.query(
+            project_supervisors.c.project_id.label("project_id"),
+            project_supervisors.c.faculty_id.label("user_id"),
+        )
+        .group_by(project_supervisors.c.project_id)
+        .having(func.count() == 1)
+        .subquery()
+    )
+    pool_user = aliased(User)
+
     base_query = (
         config.live_projects.join(Project, Project.id == LiveProject.parent_id)
         .join(User, User.id == Project.owner_id, isouter=True)
         .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id, isouter=True)
+        .join(pool_single_sq, pool_single_sq.c.project_id == Project.id, isouter=True)
+        .join(pool_user, pool_user.id == pool_single_sq.c.user_id, isouter=True)
         .filter(LiveProject.hidden.is_(False))
     )
 
@@ -427,8 +446,14 @@ def _project_list_endpoint(
         "search_collation": "utf8_general_ci",
     }
     supervisor = {
-        "search": func.concat(User.first_name, " ", User.last_name),
-        "order": [User.last_name, User.first_name],
+        "search": case(
+            (Project.use_supervisor_pool.is_(True), func.concat(pool_user.first_name, " ", pool_user.last_name)),
+            else_=func.concat(User.first_name, " ", User.last_name),
+        ),
+        "order": [
+            case((Project.use_supervisor_pool.is_(True), pool_user.last_name), else_=User.last_name),
+            case((Project.use_supervisor_pool.is_(True), pool_user.first_name), else_=User.first_name),
+        ],
         "search_collation": "utf8_general_ci",
     }
     group = {

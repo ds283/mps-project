@@ -1,21 +1,4 @@
-# Template conventions
-
-## Colour policy
-
-All colours in templates and component `<style>` blocks must use either Bootstrap 5.3 CSS custom
-property tokens (e.g. `var(--bs-primary)`, `var(--bs-danger-bg-subtle)`) or the app-level
-semantic tokens defined in `app/static/css/common.css`. No other hardcoded hex values are
-permitted except:
-
-- `color: #fff` — white text on a solid `var(--bs-primary)` background
-- `background: rgba(255,255,255,.18)` and `border: 1px solid rgba(255,255,255,.4)` — ghost
-  button on a primary-coloured header bar
-
-The `--db-orange-*` ramp (`--db-orange-50`, `100`, `200`, `400`, `600`, `800`) is reserved for
-similarity concern UI elements (concern strips, score chips, review buttons) to maintain visual
-continuity with the similarity concern dashboard. The `--db-blue-*`, `--db-green-*`, and
-`--db-purple-*` ramps are available for other dashboard-themed components. Do not use `--db-*`
-tokens for general-purpose UI — Bootstrap semantic tokens remain the default.
+# Template UI patterns
 
 ## Filter button pattern
 

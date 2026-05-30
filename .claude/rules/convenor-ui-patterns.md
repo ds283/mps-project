@@ -1,4 +1,4 @@
-# Convenor template conventions
+# Convenor UI patterns
 
 ## Student card structure
 

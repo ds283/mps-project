@@ -903,13 +903,6 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # grade generated timestamp
     grade_generated_timestamp = db.Column(db.DateTime(), nullable=True)
 
-    # signed off by
-    signed_off_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    signed_off_by = db.relationship("User", foreign_keys=[signed_off_id], uselist=False)
-
-    # signed off timestamp
-    signed_off_timestamp = db.Column(db.DateTime(), nullable=True)
-
     # flag set when the MarkingReport grades are out of tolerance and moderation is required.
     # Set by _check_tolerance_and_grade(); cleared if a convenor resets the workflow state.
     out_of_tolerance = db.Column(db.Boolean(), default=False, nullable=False)
@@ -947,17 +940,28 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # timestamp when the acceptance was recorded
     moderator_accepted_timestamp = db.Column(db.DateTime(), nullable=True)
 
-    # COMPLETION
-    # Set when the SubmitterReport moves into the COMPLETED state.  Overwritten if the SR is
-    # returned to the convenor and subsequently completed again.
+    # SIGN-OFF / COMPLETION
+    # Both pairs of fields are written simultaneously when the convenor signs off this report
+    # (transitions to COMPLETED).  They differ only in their clearing behaviour on return:
+    #
+    #   signed_off_*   — never cleared; persists across return-to-convenor cycles.
+    #                    Records the most recent sign-off even while the report is back in
+    #                    READY_TO_SIGN_OFF.  NULL means the report has never been signed off.
+    #
+    #   completed_*    — cleared to NULL when the report is returned to the convenor.
+    #                    Non-NULL iff the report is currently in the COMPLETED state.
+    #                    Overwritten on each subsequent sign-off.
+    #
+    # Invariant: whenever completed_by is non-NULL, signed_off_by == completed_by.
 
-    # who completed this SubmitterReport?
+    signed_off_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    signed_off_by = db.relationship("User", foreign_keys=[signed_off_id], uselist=False)
+    signed_off_timestamp = db.Column(db.DateTime(), nullable=True)
+
     completed_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
     completed_by = db.relationship(
         "User", foreign_keys=[completed_by_id], uselist=False
     )
-
-    # timestamp when the completion was recorded
     completed_timestamp = db.Column(db.DateTime(), nullable=True)
 
     # convenience accessors

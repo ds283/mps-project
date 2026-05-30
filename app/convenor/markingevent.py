@@ -13,7 +13,7 @@ from datetime import datetime
 from functools import partial
 
 from celery import chain as celery_chain
-from flask import current_app, flash, jsonify, redirect, request, url_for
+from flask import current_app, flash, jsonify, redirect, request, session, url_for
 from flask_login import current_user
 from flask_security import roles_accepted
 from sqlalchemy import and_, distinct, func
@@ -31,8 +31,8 @@ from ..models import (
     MarkingEvent,
     MarkingReport,
     MarkingScheme,
-    ModeratorReport,
     MarkingWorkflow,
+    ModeratorReport,
     PeriodAttachment,
     ProjectClass,
     ProjectClassConfig,

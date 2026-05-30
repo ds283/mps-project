@@ -190,7 +190,7 @@ _name = """
                 <i class="fas fa-exclamation-circle"></i> Request confirmation
             </a>
         {% endif %}
-    {% if sel.is_project_bookmarked(project) %}
+        {% if sel.is_project_bookmarked(project) %}
             <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-bookmarked">
                 <i class="fas fa-bookmark"></i> Bookmarked
             </a>

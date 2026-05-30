@@ -54,7 +54,7 @@ _selector_menu = """
             <i class="fas fa-eye fa-fw"></i> View project...
         </a>
         {% if is_live and sel %}
-            {% if sel.is_project_bookmarked(project) %}
+            {% if sel.is_project_bookmarked(project).get('bookmarked') %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
                     <i class="fas fa-fw fa-trash"></i> Remove bookmark
                 </a>
@@ -190,7 +190,7 @@ _name = """
                 <i class="fas fa-exclamation-circle"></i> Request confirmation
             </a>
         {% endif %}
-        {% if sel.is_project_bookmarked(project) %}
+        {% if sel.is_project_bookmarked(project).get('bookmarked') %}
             <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="lp-chip lp-chip-bookmarked">
                 <i class="fas fa-bookmark"></i> Bookmarked
             </a>

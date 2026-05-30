@@ -31,6 +31,7 @@ from ..models import (
     MarkingEvent,
     MarkingReport,
     MarkingScheme,
+    ModeratorReport,
     MarkingWorkflow,
     PeriodAttachment,
     ProjectClass,
@@ -1458,8 +1459,25 @@ def submitter_reports_ajax(workflow_id):
         "order": [User.last_name, User.first_name],
     }
 
+    faculty_name_col = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "search_collation": "utf8_general_ci",
+    }
+
+    def _marker_name_collection(search_expr):
+        return SubmitterReport.marking_reports.any(
+            MarkingReport.role.has(SubmissionRole.user.has(search_expr))
+        )
+
+    def _moderator_name_collection(search_expr):
+        return SubmitterReport.moderator_reports.any(
+            ModeratorReport.role.has(SubmissionRole.user.has(search_expr))
+        )
+
     columns = {
         "student": student_col,
+        "_marker_names": {**faculty_name_col, "search_collection": _marker_name_collection},
+        "_moderator_names": {**faculty_name_col, "search_collection": _moderator_name_collection},
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:

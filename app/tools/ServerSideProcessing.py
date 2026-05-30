@@ -125,7 +125,10 @@ class ServerSideSQLHandler(ServerSideBase):
                     # build filtering expression; check whether we need to search inside a collection
                     if "search_collection" in item_data:
                         collection = item_data["search_collection"]
-                        filter_expr = collection.any(search_expr)
+                        if callable(collection):
+                            filter_expr = collection(search_expr)
+                        else:
+                            filter_expr = collection.any(search_expr)
                     else:
                         filter_expr = search_expr
 

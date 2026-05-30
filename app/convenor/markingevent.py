@@ -1788,6 +1788,41 @@ def marking_reports_inspector(workflow_id):
     )
     text = request.args.get("text", "Marking workflows")
 
+    filter_dist = request.args.get("filter_dist")
+    if filter_dist is None and session.get("convenor_marking_reports_inspector_filter_dist"):
+        filter_dist = session["convenor_marking_reports_inspector_filter_dist"]
+    if filter_dist not in ("all", "distributable", "distributed", "not_distributed"):
+        filter_dist = "all"
+    session["convenor_marking_reports_inspector_filter_dist"] = filter_dist
+
+    filter_sub = request.args.get("filter_sub")
+    if filter_sub is None and session.get("convenor_marking_reports_inspector_filter_sub"):
+        filter_sub = session["convenor_marking_reports_inspector_filter_sub"]
+    if filter_sub not in ("all", "submitted", "awaiting", "not_submitted"):
+        filter_sub = "all"
+    session["convenor_marking_reports_inspector_filter_sub"] = filter_sub
+
+    filter_fb = request.args.get("filter_fb")
+    if filter_fb is None and session.get("convenor_marking_reports_inspector_filter_fb"):
+        filter_fb = session["convenor_marking_reports_inspector_filter_fb"]
+    if filter_fb not in ("all", "submitted", "pending", "not_submitted"):
+        filter_fb = "all"
+    session["convenor_marking_reports_inspector_filter_fb"] = filter_fb
+
+    filter_ready = request.args.get("filter_ready")
+    if filter_ready is None and session.get("convenor_marking_reports_inspector_filter_ready"):
+        filter_ready = session["convenor_marking_reports_inspector_filter_ready"]
+    if filter_ready not in ("all", "ready", "not_ready"):
+        filter_ready = "all"
+    session["convenor_marking_reports_inspector_filter_ready"] = filter_ready
+
+    filter_signoff = request.args.get("filter_signoff")
+    if filter_signoff is None and session.get("convenor_marking_reports_inspector_filter_signoff"):
+        filter_signoff = session["convenor_marking_reports_inspector_filter_signoff"]
+    if filter_signoff not in ("all", "signed_off", "awaiting_signoff"):
+        filter_signoff = "all"
+    session["convenor_marking_reports_inspector_filter_signoff"] = filter_signoff
+
     # Compute aggregate statistics for the summary row
     total_reports = workflow.number_marking_reports
     distributed_count = workflow.number_marking_reports_distributed
@@ -1810,6 +1845,17 @@ def marking_reports_inspector(workflow_id):
             SubmitterReport.workflow_id == workflow_id,
             MarkingReport.distributed.is_(False),
             SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+        )
+        .scalar()
+        or 0
+    )
+
+    signed_off_count = (
+        db.session.query(func.count(MarkingReport.id))
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .filter(
+            SubmitterReport.workflow_id == workflow_id,
+            MarkingReport.signed_off_id.isnot(None),
         )
         .scalar()
         or 0
@@ -1841,7 +1887,13 @@ def marking_reports_inspector(workflow_id):
         distributable_count=distributable_count,
         submitted_count=submitted_count,
         feedback_count=feedback_count,
+        signed_off_count=signed_off_count,
         web_validation_failures=web_validation_failures,
+        filter_dist=filter_dist,
+        filter_sub=filter_sub,
+        filter_fb=filter_fb,
+        filter_ready=filter_ready,
+        filter_signoff=filter_signoff,
     )
 
 
@@ -1863,6 +1915,12 @@ def marking_reports_ajax(workflow_id):
     ):
         return jsonify({"error": "Access denied"}), 403
 
+    filter_dist = request.args.get("filter_dist", "all")
+    filter_sub = request.args.get("filter_sub", "all")
+    filter_fb = request.args.get("filter_fb", "all")
+    filter_ready = request.args.get("filter_ready", "all")
+    filter_signoff = request.args.get("filter_signoff", "all")
+
     StudentUser = aliased(User)
 
     base_query = (
@@ -1876,6 +1934,50 @@ def marking_reports_ajax(workflow_id):
         .join(User, User.id == SubmissionRole.user_id)
         .filter(SubmitterReport.workflow_id == workflow_id)
     )
+
+    if filter_dist == "distributable":
+        base_query = base_query.filter(
+            and_(
+                MarkingReport.distributed.is_(False),
+                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+            )
+        )
+    elif filter_dist == "distributed":
+        base_query = base_query.filter(MarkingReport.distributed.is_(True))
+    elif filter_dist == "not_distributed":
+        base_query = base_query.filter(MarkingReport.distributed.is_(False))
+
+    if filter_sub == "submitted":
+        base_query = base_query.filter(MarkingReport.report_submitted.is_(True))
+    elif filter_sub == "awaiting":
+        base_query = base_query.filter(
+            and_(MarkingReport.distributed.is_(True), MarkingReport.report_submitted.is_(False))
+        )
+    elif filter_sub == "not_submitted":
+        base_query = base_query.filter(MarkingReport.report_submitted.is_(False))
+
+    if filter_fb == "submitted":
+        base_query = base_query.filter(MarkingReport.feedback_submitted.is_(True))
+    elif filter_fb == "pending":
+        base_query = base_query.filter(
+            and_(MarkingReport.report_submitted.is_(True), MarkingReport.feedback_submitted.is_(False))
+        )
+    elif filter_fb == "not_submitted":
+        base_query = base_query.filter(MarkingReport.feedback_submitted.is_(False))
+
+    if filter_ready == "ready":
+        base_query = base_query.filter(
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.NOT_READY
+        )
+    elif filter_ready == "not_ready":
+        base_query = base_query.filter(
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.NOT_READY
+        )
+
+    if filter_signoff == "signed_off":
+        base_query = base_query.filter(MarkingReport.signed_off_id.isnot(None))
+    elif filter_signoff == "awaiting_signoff":
+        base_query = base_query.filter(MarkingReport.signed_off_id.is_(None))
 
     marker_col = {
         "search": func.concat(User.first_name, " ", User.last_name),

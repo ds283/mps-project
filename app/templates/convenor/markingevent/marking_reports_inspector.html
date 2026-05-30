@@ -6,8 +6,39 @@
     {{ super() }}
     {{ import_datatables() }}
 
+    <style>
+        .filter-pill {
+            border-radius: 20px;
+            font-size: 12px;
+            padding: 3px 11px;
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            color: var(--bs-body-color);
+            text-decoration: none;
+            display: inline-block;
+        }
+        .filter-pill:hover {
+            border-color: var(--bs-secondary-color);
+            color: var(--bs-body-color);
+        }
+        .filter-pill.active {
+            background: var(--bs-primary);
+            color: var(--bs-white);
+            border-color: var(--bs-primary);
+        }
+    </style>
+
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        function toggleFilterPanel() {
+            const body = document.getElementById('filter-body');
+            const btn = document.getElementById('filter-toggle-btn');
+            const hidden = body.style.display === 'none';
+            body.style.display = hidden ? '' : 'none';
+            btn.innerHTML = (hidden ? 'Hide filters ' : 'Show filters ')
+                + '<i class="fas fa-chevron-' + (hidden ? 'up' : 'down') + ' fa-fw"></i>';
+        }
 
         $(document).ready(function () {
             $('#marking-reports-table').DataTable({
@@ -16,7 +47,7 @@
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/convenor/marking_reports_ajax/{{ workflow.id }}',
+                    url: $SCRIPT_ROOT + '/convenor/marking_reports_ajax/{{ workflow.id }}?filter_dist={{ filter_dist }}&filter_sub={{ filter_sub }}&filter_fb={{ filter_fb }}&filter_ready={{ filter_ready }}&filter_signoff={{ filter_signoff }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -108,10 +139,87 @@
                     <span class="badge {% if feedback_count == total_reports %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
                         Feedback submitted: {{ feedback_count }}
                     </span>
+                    <span class="badge {% if signed_off_count == total_reports %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
+                        Signed off: {{ signed_off_count }}
+                    </span>
                 </div>
             </div>
         </div>
     {% endif %}
+
+    {# Filter panel #}
+    <div class="card border-secondary mb-3" id="filter-panel">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-2 small">
+            <span><i class="fas fa-filter fa-fw me-1"></i> Filters</span>
+            <button type="button" class="btn btn-sm btn-ghost-header" id="filter-toggle-btn"
+                    onclick="toggleFilterPanel()">
+                Hide filters <i class="fas fa-chevron-up fa-fw"></i>
+            </button>
+        </div>
+        <div class="card-body py-2" id="filter-body">
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">DISTRIBUTION</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_dist == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist='all', filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">All</a>
+                    <a class="filter-pill{% if filter_dist == 'distributable' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist='distributable', filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Distributable</a>
+                    <a class="filter-pill{% if filter_dist == 'distributed' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist='distributed', filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Distributed</a>
+                    <a class="filter-pill{% if filter_dist == 'not_distributed' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist='not_distributed', filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Not distributed</a>
+                </div>
+            </div>
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">SUBMISSION</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_sub == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub='all', filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">All</a>
+                    <a class="filter-pill{% if filter_sub == 'submitted' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub='submitted', filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Submitted</a>
+                    <a class="filter-pill{% if filter_sub == 'awaiting' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub='awaiting', filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Awaiting</a>
+                    <a class="filter-pill{% if filter_sub == 'not_submitted' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub='not_submitted', filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Not submitted</a>
+                </div>
+            </div>
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">FEEDBACK</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_fb == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb='all', filter_ready=filter_ready, filter_signoff=filter_signoff) }}">All</a>
+                    <a class="filter-pill{% if filter_fb == 'submitted' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb='submitted', filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Submitted</a>
+                    <a class="filter-pill{% if filter_fb == 'pending' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb='pending', filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Pending</a>
+                    <a class="filter-pill{% if filter_fb == 'not_submitted' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb='not_submitted', filter_ready=filter_ready, filter_signoff=filter_signoff) }}">Not submitted</a>
+                </div>
+            </div>
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">STUDENT READY</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_ready == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb=filter_fb, filter_ready='all', filter_signoff=filter_signoff) }}">All</a>
+                    <a class="filter-pill{% if filter_ready == 'ready' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb=filter_fb, filter_ready='ready', filter_signoff=filter_signoff) }}">Ready</a>
+                    <a class="filter-pill{% if filter_ready == 'not_ready' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb=filter_fb, filter_ready='not_ready', filter_signoff=filter_signoff) }}">Not ready</a>
+                </div>
+            </div>
+            <div class="row align-items-center small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">SIGN-OFF</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_signoff == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff='all') }}">All</a>
+                    <a class="filter-pill{% if filter_signoff == 'signed_off' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff='signed_off') }}">Signed off</a>
+                    <a class="filter-pill{% if filter_signoff == 'awaiting_signoff' %} active{% endif %}"
+                       href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff='awaiting_signoff') }}">Awaiting sign-off</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {# Banner: marking reports ready to distribute #}
     {% if distributable_count > 0 %}

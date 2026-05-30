@@ -1356,7 +1356,7 @@ def submitter_reports_inspector(workflow_id):
             "Requires convenor intervention",
         ),
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
-        (SubmitterReportWorkflowStates.COMPLETED, "Completed"),
+        (SubmitterReportWorkflowStates.COMPLETED, "Signed off"),
         (SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE, "Feedback available"),
     ]
 
@@ -4052,7 +4052,7 @@ def complete_submitter_report(sr_id):
         return redirect(url)
 
     if sr.grade is None:
-        flash("Cannot complete a report that does not have a grade assigned.", "error")
+        flash("Cannot sign off a report that does not have a grade assigned.", "error")
         return redirect(url)
 
     now = datetime.now()
@@ -4072,11 +4072,11 @@ def complete_submitter_report(sr_id):
             user=current_user,
             project_classes=pclass,
         )
-        flash("Report marked as completed.", "success")
+        flash("Report signed off.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not complete report due to a database error.", "error")
+        flash("Could not sign off report due to a database error.", "error")
 
     return redirect(url)
 
@@ -4167,7 +4167,7 @@ def complete_all_submitter_reports(workflow_id):
                 msg += f"; skipped {skipped_count} without a grade"
             log_db_commit(msg, user=current_user, project_classes=pclass)
             flash(
-                f"{completed_count} report(s) marked as completed."
+                f"{completed_count} report(s) signed off."
                 + (f" {skipped_count} skipped (no grade)." if skipped_count else ""),
                 "success",
             )
@@ -4177,7 +4177,7 @@ def complete_all_submitter_reports(workflow_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not complete reports due to a database error.", "error")
+        flash("Could not sign off reports due to a database error.", "error")
 
     return redirect(url)
 
@@ -4315,7 +4315,7 @@ def return_all_submitter_reports(workflow_id):
             )
         else:
             db.session.commit()
-            flash("No completed reports found in this workflow.", "info")
+            flash("No signed-off reports found in this workflow.", "info")
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

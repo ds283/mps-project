@@ -24,7 +24,7 @@
                 <div class="card-body">
                     <p>
                         This will return <strong>{{ completed_reports|length }}</strong>
-                        completed report{{ 's' if completed_reports|length != 1 else '' }} in workflow
+                        signed-off report{{ 's' if completed_reports|length != 1 else '' }} in workflow
                         <strong>{{ workflow.name }}</strong> (event: <strong>{{ event.name }}</strong>)
                         to the <span class="badge bg-secondary">Ready to sign off</span> state.
                     </p>
@@ -48,7 +48,7 @@
                         </ul>
                     {% else %}
                         <p class="text-body-secondary fst-italic mb-3">
-                            No completed reports found in this workflow. Nothing will be changed.
+                            No signed-off reports found in this workflow. Nothing will be changed.
                         </p>
                     {% endif %}
 

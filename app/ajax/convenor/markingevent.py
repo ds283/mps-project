@@ -291,7 +291,7 @@ _submitter_report_actions = """
               class="mb-2">
                     {{ form.hidden_tag() }}
             <button class="btn btn-success btn-sm full-width-button" type="submit">
-                <i class="fas fa-check-double fa-fw"></i> Complete
+                <i class="fas fa-check-double fa-fw"></i> Sign off
             </button>
         </form>
     {% endif %}
@@ -299,7 +299,7 @@ _submitter_report_actions = """
 {% if is_completed %}
     <div class="mb-2">
         <span class="badge bg-success py-2 px-3">
-            <i class="fas fa-check-circle fa-fw"></i> Completed
+            <i class="fas fa-check-circle fa-fw"></i> Signed off
         </span>
         {% if report.completed_by is not none %}
             <div class="small text-muted mt-1">by {{ report.completed_by.name }}</div>
@@ -324,7 +324,7 @@ _submitter_report_actions = """
                   style="display:contents">
                     {{ form.hidden_tag() }}
                 <button class="dropdown-item d-flex gap-2" type="submit">
-                    <i class="fas fa-check-double fa-fw"></i> Complete&hellip;
+                    <i class="fas fa-check-double fa-fw"></i> Sign off&hellip;
                 </button>
             </form>
             <div class="dropdown-divider"></div>

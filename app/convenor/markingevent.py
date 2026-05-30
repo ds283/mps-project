@@ -18,6 +18,7 @@ from flask_login import current_user
 from flask_security import roles_accepted
 from sqlalchemy import and_, distinct, func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
 
 import app.ajax as ajax
 
@@ -1844,9 +1845,15 @@ def marking_reports_ajax(workflow_id):
     ):
         return jsonify({"error": "Access denied"}), 403
 
+    StudentUser = aliased(User)
+
     base_query = (
         db.session.query(MarkingReport)
         .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+        .join(StudentUser, StudentUser.id == StudentData.id)
         .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
         .join(User, User.id == SubmissionRole.user_id)
         .filter(SubmitterReport.workflow_id == workflow_id)
@@ -1858,8 +1865,15 @@ def marking_reports_ajax(workflow_id):
         "order": [User.last_name, User.first_name],
     }
 
+    student_col = {
+        "search": func.concat(StudentUser.first_name, " ", StudentUser.last_name),
+        "search_collation": "utf8_general_ci",
+        "order": [StudentUser.last_name, StudentUser.first_name],
+    }
+
     columns = {
         "marker": marker_col,
+        "student": student_col,
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:

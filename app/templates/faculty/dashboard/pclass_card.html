@@ -1,5 +1,5 @@
 {% from "faculty/dashboard/selector_card.html" import selector_card %}
-{% from "faculty/dashboard/submitter_card.html" import submitter_card %}
+{% from "faculty/dashboard/submitter_card.html" import submitter_card with context %}
 
 {% macro pclass_card(data, today, home_dashboard_url) %}
     {% set config = data['config'] %}

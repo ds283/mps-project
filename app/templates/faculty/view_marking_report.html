@@ -19,6 +19,17 @@
                 </h4>
             </div>
 
+            {# Withdrawal notice #}
+            {% if report.submitter_report.workflow_state == SubmitterReportWorkflowStates.DROPPED %}
+                <div class="alert alert-secondary mt-3 mb-2">
+                    {% call icon_block("ban") %}
+                        <div><strong>A marking report is not required for this student.</strong></div>
+                        <div class="mt-1">This student has been withdrawn from the current marking
+                            event. Contact the project convenor if you have queries.</div>
+                    {% endcall %}
+                </div>
+            {% endif %}
+
             {# Submission status #}
             <div class="card border-{% if report.grade is not none %}success{% else %}secondary{% endif %} mb-3">
                 <div class="card-header bg-{% if report.grade is not none %}success-subtle{% else %}secondary{% endif %} {% if report.grade is not none %}text-success-emphasis{% else %}text-white{% endif %}">
@@ -177,23 +188,25 @@
                 </div>
             {% endif %}
 
-            <div class="d-flex gap-2 mb-4">
-                {% if report.marking_form_is_open or is_elevated %}
-                    <a class="btn btn-sm btn-outline-primary"
-                       href="{{ url_for('faculty.marking_form', report_id=report.id, url=url) }}">
-                        <i class="fas fa-pen fa-fw"></i> Edit report
-                    </a>
-                {% endif %}
-                {% if is_responsible_supervisor is defined and is_responsible_supervisor and report.signed_off_id is none %}
-                    <form method="POST" action="{{ url_for('faculty.approve_marking_report', report_id=report.id) }}"
-                          class="d-inline">
-                        {{ approve_form.hidden_tag() }}
-                        <button type="submit" class="btn btn-sm btn-warning text-dark">
-                            <i class="fas fa-signature fa-fw"></i> Approve report
-                        </button>
-                    </form>
-                {% endif %}
-            </div>
+            {% if report.submitter_report.workflow_state != SubmitterReportWorkflowStates.DROPPED %}
+                <div class="d-flex gap-2 mb-4">
+                    {% if report.marking_form_is_open or is_elevated %}
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="{{ url_for('faculty.marking_form', report_id=report.id, url=url) }}">
+                            <i class="fas fa-pen fa-fw"></i> Edit report
+                        </a>
+                    {% endif %}
+                    {% if is_responsible_supervisor is defined and is_responsible_supervisor and report.signed_off_id is none %}
+                        <form method="POST" action="{{ url_for('faculty.approve_marking_report', report_id=report.id) }}"
+                              class="d-inline">
+                            {{ approve_form.hidden_tag() }}
+                            <button type="submit" class="btn btn-sm btn-warning text-dark">
+                                <i class="fas fa-signature fa-fw"></i> Approve report
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
 
         </div>
         <div class="col-1"></div>

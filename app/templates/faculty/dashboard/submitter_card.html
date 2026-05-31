@@ -141,6 +141,7 @@
                         {% for mod_report in user_mod_reports %}
                             {%- set sr = mod_report.submitter_report -%}
                             {%- set rec = sr.record -%}
+                            {%- set is_withdrawn = sr.workflow_state == SubmitterReportWorkflowStates.DROPPED -%}
                             <tr>
                                 <td>{{ rec.student_identifier['label'] }}</td>
                                 <td>
@@ -148,7 +149,11 @@
                                     <div class="small text-body-secondary">{{ sr.workflow.event.name }}</div>
                                 </td>
                                 <td>
-                                    {% if mod_report.report_submitted %}
+                                    {% if is_withdrawn %}
+                                        <span class="text-body-secondary fst-italic small">
+                                            <i class="fas fa-ban fa-fw"></i> Withdrawn
+                                        </span>
+                                    {% elif mod_report.report_submitted %}
                                         <div class="text-success"><i class="fas fa-check-circle"></i> Submitted</div>
                                         {% if mod_report.grade is not none %}
                                             <div class="small text-primary mt-1">Grade: {{ "%.1f"|format(mod_report.grade) }}%</div>
@@ -158,7 +163,11 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-                                    {% if not mod_report.report_submitted %}
+                                    {% if is_withdrawn %}
+                                        <span class="text-body-secondary fst-italic small">
+                                            <i class="fas fa-ban fa-fw"></i> No report required
+                                        </span>
+                                    {% elif not mod_report.report_submitted %}
                                         <a class="btn btn-sm btn-secondary"
                                            href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                             <i class="fas fa-gavel fa-fw"></i> Submit report

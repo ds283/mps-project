@@ -1966,7 +1966,12 @@ def dashboard():
             messages.append(message)
 
     # Find MarkingReports requiring sign-off by this user (ROLE_RESPONSIBLE_SUPERVISOR)
-    from ..models.markingevent import marking_report_to_responsible_supervisors
+    from ..models.markingevent import (
+        MarkingEventWorkflowStates,
+        SubmitterReport,
+        SubmitterReportWorkflowStates,
+        marking_report_to_responsible_supervisors,
+    )
 
     pending_sign_off_reports = (
         db.session.query(MarkingReport)
@@ -1974,11 +1979,13 @@ def dashboard():
             marking_report_to_responsible_supervisors,
             marking_report_to_responsible_supervisors.c.marking_report_id == MarkingReport.id,
         )
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
         .filter(
             marking_report_to_responsible_supervisors.c.submission_role_id.in_(
                 db.session.query(SubmissionRole.id).filter(SubmissionRole.user_id == current_user.id)
             ),
             MarkingReport.signed_off_id.is_(None),
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
         )
         .all()
     )
@@ -1987,9 +1994,11 @@ def dashboard():
     pending_moderator_reports = (
         db.session.query(ModeratorReport)
         .join(SubmissionRole, SubmissionRole.id == ModeratorReport.role_id)
+        .join(SubmitterReport, SubmitterReport.id == ModeratorReport.submitter_report_id)
         .filter(
             SubmissionRole.user_id == current_user.id,
             ModeratorReport.report_submitted.is_(False),
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
         )
         .all()
     )
@@ -2009,8 +2018,6 @@ def dashboard():
 
     # Find pending marking reports for this user (distributed or not, but not yet fully submitted),
     # restricted to open MarkingEvents (not CLOSED).
-    from ..models.markingevent import MarkingEventWorkflowStates, SubmitterReport, SubmitterReportWorkflowStates
-
     pending_marking_reports = (
         db.session.query(MarkingReport)
         .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
@@ -2020,6 +2027,7 @@ def dashboard():
         .filter(
             SubmissionRole.user_id == current_user.id,
             MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
             or_(
                 MarkingReport.report_submitted.isnot(True),
                 MarkingReport.feedback_submitted.isnot(True),
@@ -3113,7 +3121,11 @@ def _can_access_marking_form(report: MarkingReport) -> tuple:
     Returns (is_allowed, is_elevated) where is_elevated means the user is a convenor/admin/root
     who can access the form even when the normal access window has closed.
     """
+    from ..models.markingevent import SubmitterReportWorkflowStates
     from ..shared.validators import validate_is_convenor
+
+    if report.submitter_report.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+        return False, False
 
     pclass = report.workflow.event.pclass
     is_elevated = validate_is_convenor(pclass, message=False)
@@ -3136,6 +3148,8 @@ def marking_form(report_id):
     """
     import json as _json
 
+    from ..models.markingevent import SubmitterReportWorkflowStates
+
     report: MarkingReport = MarkingReport.query.get_or_404(report_id)
     workflow: MarkingWorkflow = report.workflow
     event: MarkingEvent = workflow.event
@@ -3153,10 +3167,17 @@ def marking_form(report_id):
 
     is_allowed, is_elevated = _can_access_marking_form(report)
     if not is_allowed:
-        flash(
-            "You do not have access to this marking form, or the form is no longer accepting submissions.",
-            "error",
-        )
+        if submitter_report.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+            flash(
+                "A marking report is not required for this student — they have been withdrawn "
+                "from the current marking event. Contact the project convenor if you have queries.",
+                "info",
+            )
+        else:
+            flash(
+                "You do not have access to this marking form, or the form is no longer accepting submissions.",
+                "error",
+            )
         return redirect(redirect_url())
 
     if scheme is None:

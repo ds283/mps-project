@@ -699,10 +699,9 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         call self.event.refresh_completed() — after any change to a SubmitterReport's
         workflow_state within this workflow.
         """
+        _terminal = {SubmitterReportWorkflowStates.COMPLETED, SubmitterReportWorkflowStates.DROPPED}
         srs = self.submitter_reports.all()
-        self.completed = bool(srs) and all(
-            sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED for sr in srs
-        )
+        self.completed = bool(srs) and all(sr.workflow_state in _terminal for sr in srs)
 
 
 # link FeedbackReports to ConflationReports (one feedback PDF per student per MarkingEvent)
@@ -829,15 +828,52 @@ class SubmitterReportWorkflowStates:
         instances for the parent MarkingEvent to become stale; they are flagged with
         `ConflationReport.is_stale = True` rather than discarded.
 
-        When all SubmitterReports in a MarkingWorkflow are COMPLETED, the workflow's `completed`
-        flag is set True.  When all MarkingWorkflows in a MarkingEvent are completed, the event's
-        `completed` flag is set True.  These flags enable efficient querying and surface the
-        conflation call-to-action in the UI.
+        When all SubmitterReports in a MarkingWorkflow are COMPLETED or DROPPED (see below),
+        the workflow's `completed` flag is set True.  When all MarkingWorkflows in a MarkingEvent
+        are completed, the event's `completed` flag is set True.  These flags enable efficient
+        querying and surface the conflation call-to-action in the UI.
+
+        Return path: the same "Return to convenor…" inspector action handles both COMPLETED and
+        DROPPED states; see DROPPED below.
 
     FEEDBACK_AVAILABLE (13)
         Feedback has been pushed to the student by MarkingEvent. The student can now see
         the grade and feedback documents on their dashboard. This state is set by
         MarkingEvent when feedback is released; no transition logic exists yet.
+
+    DROPPED (14)
+        A convenor has withdrawn this submitter from the current marking event — for example,
+        because the student has been granted a deferral to the resit cycle.
+
+        This is a terminal state with the following properties:
+          - No distribution or reminder emails are sent (DROPPED is in the _blocking set for
+            all email dispatch tasks in app/tasks/marking.py).
+          - No moderation emails are sent (advance_submitter_report() returns early for DROPPED).
+          - Marking forms are inaccessible to assessors; the form view redirects with an
+            explanatory notice.
+          - The record is excluded from feedback conflation and generation: calculate_conflation()
+            skips DROPPED records and no ConflationReport is generated.
+          - The assignment does not appear in faculty "Marking & feedback" or "Moderation"
+            dashboard tabs; it is suppressed in the pending_marking_reports,
+            pending_sign_off_reports, and pending_moderator_reports queries.
+          - The assignment DOES remain visible in the faculty submitter_card (supervisor view),
+            where it is shown with a withdrawal notice and no action buttons.
+
+        Like COMPLETED, DROPPED counts as "done" for MarkingWorkflow.refresh_completed() and
+        MarkingEvent.refresh_completed().  A workflow advances to completed when every
+        SubmitterReport is in COMPLETED or DROPPED.  This allows conflation to proceed even
+        when some students have been withdrawn.
+
+        No `completed_by_id` / `signed_off_id` fields are written when entering DROPPED.
+
+        Reversion: an admin or root user can return a DROPPED SubmitterReport to convenor
+        control via the "Return to convenor…" action in the submitter_reports_inspector (the
+        same action that handles COMPLETED returns).  The report is restored to
+        READY_TO_DISTRIBUTE.  No ConflationReport instances need to be marked stale on return
+        because none were generated for DROPPED records.
+
+        Faculty-facing copy must NOT use the word "dropped" — use "withdrawn from the marking
+        event" to avoid misinterpretation.
 
     RISK FACTOR OVERRIDE
     ====================
@@ -848,6 +884,9 @@ class SubmitterReportWorkflowStates:
     This invariant is enforced in both advance_submitter_report() and _check_tolerance_and_grade()
     in app/tasks/markingevent.py: both functions check has_unresolved_risk_factors as their first
     action and redirect to REQUIRES_CONVENOR_INTERVENTION if needed.
+
+    DROPPED reports are exempt from the risk factor override: advance_submitter_report() returns
+    early for DROPPED without checking risk factors.
     """
 
     NOT_READY = 999
@@ -878,6 +917,7 @@ class SubmitterReportWorkflowStates:
     READY_TO_SIGN_OFF = 9
     COMPLETED = 12
     FEEDBACK_AVAILABLE = 13
+    DROPPED = 14
 
 
 class SubmitterReport(db.Model, EditingMetadataMixin):

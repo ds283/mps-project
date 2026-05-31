@@ -155,6 +155,7 @@ _SR_STATE_PCT: Dict[int, int] = {
     SubmitterReportWorkflowStates.READY_TO_SIGN_OFF: 85,
     SubmitterReportWorkflowStates.COMPLETED: 100,
     SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE: 100,
+    SubmitterReportWorkflowStates.DROPPED: 0,
 }
 
 # State-machine progress percentages for MarkingReport

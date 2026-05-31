@@ -204,6 +204,7 @@ def register_marking_tasks(celery):
             SubmitterReportWorkflowStates.NOT_READY,
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            SubmitterReportWorkflowStates.DROPPED,
         }
         eligible_ids = []
         for sr in workflow.submitter_reports:
@@ -289,6 +290,7 @@ def register_marking_tasks(celery):
             SubmitterReportWorkflowStates.NOT_READY,
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            SubmitterReportWorkflowStates.DROPPED,
         }
         for workflow in event.workflows:
             pclass: ProjectClass = workflow.event.pclass
@@ -878,6 +880,7 @@ def register_marking_tasks(celery):
             SubmitterReportWorkflowStates.NOT_READY,
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            SubmitterReportWorkflowStates.DROPPED,
         }
 
         # Collect eligible (sr, mr, target_role, is_responsible_supervisor) tuples

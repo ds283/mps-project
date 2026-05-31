@@ -138,7 +138,8 @@
             7:   'intervention',
             9:   'ready_signoff',
             12:  'completed',
-            13:  'completed'
+            13:  'completed',
+            14:  'dropped'
         } %}
         <div class="card border-secondary mb-3">
             <div class="card-header bg-secondary text-white small">
@@ -203,6 +204,8 @@
                        href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='ready_signoff', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Ready to sign off</a>
                     <a class="filter-pill{% if filter_state == 'completed' %} active{% endif %}"
                        href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='completed', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Completed</a>
+                    <a class="filter-pill{% if filter_state == 'dropped' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='dropped', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Withdrawn</a>
                 </div>
             </div>
             <div class="row align-items-center mb-1 small">

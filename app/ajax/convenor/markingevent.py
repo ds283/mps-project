@@ -281,6 +281,7 @@ _submitter_report_actions = """
 {% set rec = report.record %}
 {% set state = report.workflow_state %}
 {% set is_completed = (state == COMPLETED) %}
+{% set is_dropped = (state == DROPPED) %}
 {% set inspector_url = url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id) %}
 
 {# --- Direct action buttons (shown above the dropdown) --- #}
@@ -309,6 +310,13 @@ _submitter_report_actions = """
         {% endif %}
     </div>
 {% endif %}
+{% if is_dropped %}
+    <div class="mb-2">
+        <span class="badge bg-secondary py-2 px-3">
+            <i class="fas fa-ban fa-fw"></i> Withdrawn
+        </span>
+    </div>
+{% endif %}
 
 {# --- Actions dropdown --- #}
 <div class="dropdown">
@@ -332,8 +340,8 @@ _submitter_report_actions = """
             {% set ns.shown = true %}
         {% endif %}
 
-        {# Return to convenor: admin/root only, shown when COMPLETED and event is not closed #}
-        {% if is_completed and (is_root or is_admin) and not event_is_closed %}
+        {# Return to convenor: admin/root only, shown when COMPLETED or DROPPED and event is not closed #}
+        {% if (is_completed or is_dropped) and (is_root or is_admin) and not event_is_closed %}
             {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <form method="POST"
                   action="{{ url_for('convenor.return_submitter_report_to_convenor', sr_id=report.id) }}"
@@ -417,6 +425,16 @@ _submitter_report_actions = """
                                 record_id=rec.id,
                                 url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-keyboard fa-fw"></i> Enter Turnitin score&hellip;
+            </a>
+        {% endif %}
+
+        {# Withdraw: shown for non-terminal states when event is not closed #}
+        {% set _not_terminal = state not in (COMPLETED, DROPPED, FEEDBACK_AVAILABLE) %}
+        {% if _not_terminal and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
+            <a class="dropdown-item d-flex gap-2 text-warning"
+               href="{{ url_for('convenor.drop_submitter_report', sr_id=report.id) }}">
+                <i class="fas fa-ban fa-fw"></i> Withdraw&hellip;
             </a>
         {% endif %}
     </div>
@@ -702,6 +720,12 @@ _marking_report_grade = """
 # language=jinja2
 _marking_report_status = """
 {% set event = report.submitter_report.workflow.event %}
+{% if report.submitter_report.workflow_state == DROPPED %}
+<div class="d-flex flex-column justify-content-start align-items-start gap-1 small">
+    <span class="badge bg-secondary">Withdrawn</span>
+    <span class="text-body-secondary fst-italic">Student withdrawn from marking event</span>
+</div>
+{% else %}
 <div class="d-flex flex-column justify-content-start align-items-start gap-1 small">
     {% if report.distributed %}
         <span class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Distributed to marker</span>
@@ -739,6 +763,7 @@ _marking_report_status = """
         {% endif %}
     {% endif %}
 </div>
+{% endif %}
 """
 
 # language=jinja2
@@ -815,11 +840,13 @@ _mr_emails_offcanvas = """
 _marking_report_actions = """
 {% set event = report.submitter_report.workflow.event %}
 {% set workflow = report.submitter_report.workflow %}
+{% set sr_is_dropped = report.submitter_report.workflow_state == DROPPED %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {% if not sr_is_dropped %}
         <a class="dropdown-item d-flex gap-2"
            href="{{ url_for('faculty.marking_form', report_id=report.id,
                      url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
@@ -889,6 +916,7 @@ _marking_report_actions = """
                 </form>
             {% endif %}
         {% endif %}
+        {% endif %}{# end if not sr_is_dropped #}
     </div>
 </div>
 """
@@ -942,6 +970,8 @@ def submitter_report_data(reports):
         "AWAITING_MODERATOR_REPORT": SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
         "READY_TO_SIGN_OFF": SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
         "COMPLETED": SubmitterReportWorkflowStates.COMPLETED,
+        "FEEDBACK_AVAILABLE": SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+        "DROPPED": SubmitterReportWorkflowStates.DROPPED,
         "is_root": "root" in _roles,
         "is_admin": "admin" in _roles,
         "form": form,
@@ -964,6 +994,7 @@ def submitter_report_data(reports):
         SubmitterReportWorkflowStates.NOT_READY,
         SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
         SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+        SubmitterReportWorkflowStates.DROPPED,
     }
 
     rows = []
@@ -984,7 +1015,11 @@ def submitter_report_data(reports):
         )
         rows.append(
             {
-                "DT_RowClass": "table-danger" if report.workflow_state in _urgent_states else "",
+                "DT_RowClass": (
+                    "table-danger" if report.workflow_state in _urgent_states
+                    else "table-secondary" if report.workflow_state == SubmitterReportWorkflowStates.DROPPED
+                    else ""
+                ),
                 "student": render_template(student_tmpl, report=report),
                 "project": render_template(project_tmpl, report=report),
                 "reports": render_template(reports_tmpl, report=report, **state_ctx),
@@ -1030,11 +1065,14 @@ def marking_report_data(reports):
     _status_ctx = {
         "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
         "AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF": SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
+        "DROPPED": SubmitterReportWorkflowStates.DROPPED,
         "form": form,
         **_EVENT_STATES,
     }
 
     def _row_class(report):
+        if report.submitter_report.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+            return "table-secondary"
         if (
             not report.distributed
             and report.submitter_report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE

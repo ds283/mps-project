@@ -1336,7 +1336,7 @@ def submitter_reports_inspector(workflow_id):
         filter_state = session["convenor_submitter_reports_inspector_filter_state"]
     if filter_state not in (
         "all", "not_ready", "distributable", "grading", "signoff_pending",
-        "feedback_pending", "moderation", "intervention", "ready_signoff", "completed",
+        "feedback_pending", "moderation", "intervention", "ready_signoff", "completed", "dropped",
     ):
         filter_state = "all"
     session["convenor_submitter_reports_inspector_filter_state"] = filter_state
@@ -1406,6 +1406,7 @@ def submitter_reports_inspector(workflow_id):
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
         (SubmitterReportWorkflowStates.COMPLETED, "Signed off"),
         (SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE, "Feedback available"),
+        (SubmitterReportWorkflowStates.DROPPED, "Withdrawn"),
     ]
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
@@ -1736,6 +1737,7 @@ def submitter_reports_ajax(workflow_id):
             "intervention":    [S.REQUIRES_CONVENOR_INTERVENTION, S.NEEDS_MODERATOR_ASSIGNED],
             "ready_signoff":   [S.READY_TO_SIGN_OFF],
             "completed":       [S.COMPLETED, S.FEEDBACK_AVAILABLE],
+            "dropped":         [S.DROPPED],
         }
         if filter_state != "all" and filter_state in _state_map:
             states = _state_map[filter_state]
@@ -2277,6 +2279,17 @@ def marking_reports_inspector(workflow_id):
             )
         )
 
+    dropped_count = (
+        db.session.query(func.count(MarkingReport.id))
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .filter(
+            SubmitterReport.workflow_id == workflow_id,
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.DROPPED,
+        )
+        .scalar()
+        or 0
+    )
+
     return render_template_context(
         "convenor/markingevent/marking_reports_inspector.html",
         workflow=workflow,
@@ -2290,6 +2303,7 @@ def marking_reports_inspector(workflow_id):
         submitted_count=submitted_count,
         feedback_count=feedback_count,
         signed_off_count=signed_off_count,
+        dropped_count=dropped_count,
         banners=banners,
         form=ActionForm(),
         web_validation_failures=web_validation_failures,
@@ -4827,12 +4841,92 @@ def complete_all_submitter_reports(workflow_id):
     return redirect(url)
 
 
+@convenor.route("/drop-submitter-report/<int:sr_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def drop_submitter_report(sr_id):
+    """
+    GET: Confirmation page before withdrawing a SubmitterReport from the marking event.
+    POST: Perform the withdrawal, setting workflow_state to DROPPED.
+    """
+    sr: SubmitterReport = SubmitterReport.query.get_or_404(sr_id)
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
+
+    _terminal = {
+        SubmitterReportWorkflowStates.DROPPED,
+        SubmitterReportWorkflowStates.COMPLETED,
+        SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+    }
+
+    if request.method == "GET":
+        student_name = sr.student.user.name if sr.student else f"SubmitterReport #{sr_id}"
+        form = ActionForm()
+        return render_template_context(
+            "admin/danger_confirm.html",
+            title="Withdraw student from marking event",
+            panel_title="Withdraw student from marking event",
+            message=(
+                f"<p>You are about to withdraw <strong>{student_name}</strong> from the "
+                f"marking workflow <strong>{workflow.name}</strong>.</p>"
+                f"<p>Once withdrawn, this student will be excluded from all marking "
+                f"activity: no emails will be sent to their assigned assessors, the "
+                f"marking forms will be inaccessible, and no feedback will be generated "
+                f"for this student.</p>"
+                f"<p><strong>This action can only be reversed by an administrator.</strong> "
+                f"The student's role assignments will remain visible to their assigned "
+                f"staff with a notice that no marking report is required.</p>"
+            ),
+            action_url=url_for("convenor.drop_submitter_report", sr_id=sr_id),
+            submit_label="Withdraw student",
+            form=form,
+            url=url,
+            text="Submitter reports",
+        )
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot modify reports in a closed marking event.", "error")
+        return redirect(url)
+
+    if sr.workflow_state in _terminal:
+        flash("This report is already in a terminal state and cannot be withdrawn.", "error")
+        return redirect(url)
+
+    sr.workflow_state = SubmitterReportWorkflowStates.DROPPED
+    workflow.refresh_completed()
+    event.refresh_completed()
+
+    try:
+        student_name = sr.student.user.name if sr.student else f"#{sr_id}"
+        log_db_commit(
+            f"Withdrew SubmitterReport #{sr.id} for student {student_name} from "
+            f"workflow '{workflow.name}' (event: {event.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Student withdrawn from marking workflow '{workflow.name}'.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not withdraw student due to a database error.", "error")
+
+    return redirect(url)
+
+
 @convenor.route("/return-submitter-report/<int:sr_id>", methods=["POST"])
 @roles_accepted("admin", "root")
 def return_submitter_report_to_convenor(sr_id):
-    """Return a single COMPLETED SubmitterReport to READY_TO_SIGN_OFF (admin/root only)."""
-    from flask_security import current_user as _cu
-
+    """Return a single COMPLETED or DROPPED SubmitterReport to convenor control (admin/root only)."""
     sr: SubmitterReport = SubmitterReport.query.get_or_404(sr_id)
     workflow: MarkingWorkflow = sr.workflow
     event: MarkingEvent = workflow.event
@@ -4844,27 +4938,34 @@ def return_submitter_report_to_convenor(sr_id):
         flash("Cannot modify reports in a closed marking event.", "error")
         return redirect(url)
 
-    if sr.workflow_state != SubmitterReportWorkflowStates.COMPLETED:
-        flash("This report is not in the Completed state.", "error")
+    _returnable = {SubmitterReportWorkflowStates.COMPLETED, SubmitterReportWorkflowStates.DROPPED}
+    if sr.workflow_state not in _returnable:
+        flash("This report cannot be returned — it is not in the Completed or Withdrawn state.", "error")
         return redirect(url)
 
-    sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
-    sr.completed_by_id = None
-    sr.completed_timestamp = None
+    from_dropped = sr.workflow_state == SubmitterReportWorkflowStates.DROPPED
+
+    if from_dropped:
+        sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+    else:
+        sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+        sr.completed_by_id = None
+        sr.completed_timestamp = None
 
     workflow.refresh_completed()
     event.refresh_completed()
 
-    # Mark any existing ConflationReports for this event as stale
-    from ..models.markingevent import ConflationReport
-
-    for cr in event.conflation_reports.all():
-        cr.is_stale = True
+    if not from_dropped:
+        # Mark any existing ConflationReports for this event as stale.
+        # No ConflationReports exist for DROPPED records, so this is only needed for COMPLETED.
+        for cr in event.conflation_reports.all():
+            cr.is_stale = True
 
     try:
+        from_label = "Withdrawn" if from_dropped else "Completed"
         log_db_commit(
             f"Returned SubmitterReport #{sr.id} for student {sr.student.user.name} "
-            f"to convenor from COMPLETED state in workflow '{workflow.name}' (event: {event.name})",
+            f"to convenor from {from_label} state in workflow '{workflow.name}' (event: {event.name})",
             user=current_user,
             project_classes=pclass,
         )
@@ -4884,7 +4985,7 @@ def return_submitter_report_to_convenor(sr_id):
 def return_all_submitter_reports(workflow_id):
     """
     GET: Show a confirmation page listing the reports that will be returned.
-    POST: Return all COMPLETED SubmitterReports in a workflow to READY_TO_SIGN_OFF (admin/root only).
+    POST: Return all COMPLETED or DROPPED SubmitterReports in a workflow to convenor control (admin/root only).
     """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
@@ -4902,10 +5003,11 @@ def return_all_submitter_reports(workflow_id):
         flash("Cannot modify reports in a closed marking event.", "error")
         return redirect(url)
 
-    completed_reports = [
+    _returnable = {SubmitterReportWorkflowStates.COMPLETED, SubmitterReportWorkflowStates.DROPPED}
+    returnable_reports = [
         sr
         for sr in workflow.submitter_reports.all()
-        if sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED
+        if sr.workflow_state in _returnable
     ]
 
     form = ActionForm(request.form)
@@ -4918,7 +5020,7 @@ def return_all_submitter_reports(workflow_id):
             pclass=pclass,
             url=url,
             text=text,
-            completed_reports=completed_reports,
+            completed_reports=returnable_reports,
             form=form,
         )
 
@@ -4928,29 +5030,33 @@ def return_all_submitter_reports(workflow_id):
         return redirect(url)
 
     returned_count = 0
+    any_completed = False
 
     try:
         for sr in workflow.submitter_reports.all():
-            if sr.workflow_state != SubmitterReportWorkflowStates.COMPLETED:
-                continue
-            sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
-            sr.completed_by_id = None
-            sr.completed_timestamp = None
-            returned_count += 1
+            if sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED:
+                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+                sr.completed_by_id = None
+                sr.completed_timestamp = None
+                returned_count += 1
+                any_completed = True
+            elif sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                returned_count += 1
 
         workflow.refresh_completed()
         event.refresh_completed()
 
-        # Mark any existing ConflationReports for this event as stale
-        from ..models.markingevent import ConflationReport
-
-        for cr in event.conflation_reports.all():
-            cr.is_stale = True
+        if any_completed:
+            # Mark any existing ConflationReports for this event as stale.
+            # Not needed for DROPPED returns since no ConflationReport exists for those records.
+            for cr in event.conflation_reports.all():
+                cr.is_stale = True
 
         if returned_count > 0:
             log_db_commit(
                 f"Returned {returned_count} SubmitterReport(s) in workflow '{workflow.name}' "
-                f"to convenor from COMPLETED state (event: {event.name})",
+                f"to convenor from Completed/Withdrawn state (event: {event.name})",
                 user=current_user,
                 project_classes=pclass,
             )
@@ -4960,7 +5066,7 @@ def return_all_submitter_reports(workflow_id):
             )
         else:
             db.session.commit()
-            flash("No signed-off reports found in this workflow.", "info")
+            flash("No signed-off or withdrawn reports found in this workflow.", "info")
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -5040,11 +5146,13 @@ def calculate_conflation(event_id):
         submissions = event.period.submissions.all()
         now = datetime.now()
         generated_count = 0
+        dropped_count = 0
 
         for record in submissions:
             # Build grades dict: {workflow.key: float(sr.grade)}
+            # Skip records where any workflow has a DROPPED SubmitterReport.
             grades = {}
-            failed = False
+            skip_record = False
             for wf in workflows:
                 sr = (
                     db.session.query(SubmitterReport)
@@ -5060,6 +5168,9 @@ def calculate_conflation(event_id):
                     )
                     db.session.rollback()
                     return redirect(url)
+                if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+                    skip_record = True
+                    break
                 if sr.grade is None:
                     flash(
                         f"Conflation failed: SubmitterReport for student "
@@ -5070,6 +5181,10 @@ def calculate_conflation(event_id):
                     db.session.rollback()
                     return redirect(url)
                 grades[wf.key] = float(sr.grade)
+
+            if skip_record:
+                dropped_count += 1
+                continue
 
             # Evaluate each target expression in the restricted namespace, then apply
             # the institutional rounding policy to produce whole-number module marks.
@@ -5113,6 +5228,11 @@ def calculate_conflation(event_id):
             project_classes=pclass,
         )
         flash(f"Conflation complete: {generated_count} record(s) processed.", "success")
+        if dropped_count > 0:
+            flash(
+                f"{dropped_count} withdrawn student(s) were excluded from conflation.",
+                "info",
+            )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception(

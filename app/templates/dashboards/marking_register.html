@@ -234,6 +234,8 @@
                                                 <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">Awaiting sign-off</span>
                                             {% elif sr_state == SubmitterReportWorkflowStates.COMPLETED or sr_state == SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE %}
                                                 <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">Complete</span>
+                                            {% elif sr_state == SubmitterReportWorkflowStates.DROPPED %}
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">Withdrawn</span>
                                             {% endif %}
                                         </div>
                                     {% else %}

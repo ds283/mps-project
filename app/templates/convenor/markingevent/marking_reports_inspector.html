@@ -143,6 +143,9 @@
                     <span class="badge {% if signed_off_count == total_reports %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
                         Signed off: {{ signed_off_count }}
                     </span>
+                    {% if dropped_count > 0 %}
+                        <span class="badge bg-secondary py-2 px-3">Withdrawn: {{ dropped_count }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -390,6 +390,10 @@ def advance_submitter_report(sr: SubmitterReport) -> None:
 
     Does NOT commit the session — callers are responsible for committing.
     """
+    # DROPPED is a terminal state — do not advance.
+    if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+        return
+
     # Risk factor override: any unresolved risk factor blocks all forward progress.
     # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until all are resolved.
     if sr.record.has_unresolved_risk_factors:

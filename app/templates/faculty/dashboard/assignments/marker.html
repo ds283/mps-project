@@ -18,6 +18,9 @@
             {% for my_role in roles %}
                 {# role is a SubmissionRole #}
                 {% set rec = my_role.submission %}
+                {%- set _mr0 = my_role.marking_reports.first() -%}
+                {%- set _sr = _mr0.submitter_report if _mr0 else none -%}
+                {%- set is_withdrawn = _sr is not none and _sr.workflow_state == SubmitterReportWorkflowStates.DROPPED -%}
                 {# rec is a SubmissionRecord #}
                 <tr>
                     <td>
@@ -50,57 +53,71 @@
                             </div>
                         {% endif %}
                         <div class="d-flex flex-column justify-content-start align-items-start gap-1 mt-1">
-                            {% if rec.report %}
-                                <div class="text-success"><i class="fas fa-check-circle"></i> Student report available
+                            {% if is_withdrawn %}
+                                <div class="text-body-secondary fst-italic small mt-1">
+                                    <i class="fas fa-ban fa-fw"></i>
+                                    This student has been withdrawn from the marking event.
+                                    A marking report is not required.
                                 </div>
-                            {% endif %}
-                            {# MarkingReport status for any distributed reports on this role #}
-                            {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
-                            {% if distributed_reports %}
-                                {% for mr in distributed_reports %}
-                                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2">
-                                        {% if mr.report_submitted %}
-                                            {% if mr.grade is not none %}
-                                                <span class="text-primary fw-semibold">Grade: {{ "%.1f"|format(mr.grade) }}%</span>
-                                            {% endif %}
-                                            <span class="text-success"><i
-                                                    class="fas fa-check-circle"></i> Report</span>
-                                        {% else %}
-                                            <span class="text-secondary fst-italic"><i
-                                                    class="fas fa-hourglass-half"></i> Awaiting your report</span>
-                                        {% endif %}
-                                        {% if mr.feedback_submitted %}
-                                            <span class="text-success"><i
-                                                    class="fas fa-comment"></i> Feedback</span>
-                                        {% else %}
-                                            <span class="text-secondary fst-italic"><i
-                                                    class="fas fa-hourglass-half"></i> Awaiting your feedback</span>
-                                        {% endif %}
-                                        {% if mr.signed_off_id %}
-                                            <span class="text-secondary small"><i class="fas fa-check-double"></i> Signed off</span>
-                                        {% endif %}
+                            {% else %}
+                                {% if rec.report %}
+                                    <div class="text-success"><i class="fas fa-check-circle"></i> Student report available
                                     </div>
-                                {% endfor %}
+                                {% endif %}
+                                {# MarkingReport status for any distributed reports on this role #}
+                                {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
+                                {% if distributed_reports %}
+                                    {% for mr in distributed_reports %}
+                                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2">
+                                            {% if mr.report_submitted %}
+                                                {% if mr.grade is not none %}
+                                                    <span class="text-primary fw-semibold">Grade: {{ "%.1f"|format(mr.grade) }}%</span>
+                                                {% endif %}
+                                                <span class="text-success"><i
+                                                        class="fas fa-check-circle"></i> Report</span>
+                                            {% else %}
+                                                <span class="text-secondary fst-italic"><i
+                                                        class="fas fa-hourglass-half"></i> Awaiting your report</span>
+                                            {% endif %}
+                                            {% if mr.feedback_submitted %}
+                                                <span class="text-success"><i
+                                                        class="fas fa-comment"></i> Feedback</span>
+                                            {% else %}
+                                                <span class="text-secondary fst-italic"><i
+                                                        class="fas fa-hourglass-half"></i> Awaiting your feedback</span>
+                                            {% endif %}
+                                            {% if mr.signed_off_id %}
+                                                <span class="text-secondary small"><i class="fas fa-check-double"></i> Signed off</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
                             {% endif %}
                         </div>
                     </td>
                     <td>
                         <div class="d-flex flex-column align-items-end gap-2 w-100">
-                            {# Marking form CTAs #}
-                            {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
-                            {% for mr in distributed_reports %}
-                                {% if mr.marking_form_is_open %}
-                                    <a class="btn btn-warning btn-sm full-width-button"
-                                       href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                        <i class="fas fa-pen fa-fw"></i> Complete marking form
-                                    </a>
-                                {% elif mr.report_submitted %}
-                                    <a class="btn btn-outline-secondary btn-sm full-width-button"
-                                       href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                        <i class="fas fa-search fa-fw"></i> View report
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
+                            {% if is_withdrawn %}
+                                <span class="text-body-secondary fst-italic small">
+                                    <i class="fas fa-ban fa-fw"></i> No report required
+                                </span>
+                            {% else %}
+                                {# Marking form CTAs #}
+                                {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
+                                {% for mr in distributed_reports %}
+                                    {% if mr.marking_form_is_open %}
+                                        <a class="btn btn-warning btn-sm full-width-button"
+                                           href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                            <i class="fas fa-pen fa-fw"></i> Complete marking form
+                                        </a>
+                                    {% elif mr.report_submitted %}
+                                        <a class="btn btn-outline-secondary btn-sm full-width-button"
+                                           href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                            <i class="fas fa-search fa-fw"></i> View report
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle"
                                         type="button" data-bs-toggle="dropdown">

@@ -173,6 +173,45 @@
             font-size: 0.85rem;
             color: var(--db-blue-600);
         }
+
+        /* Refined chip style for all key-facts badges */
+        .sp-facts-table .project-label.badge {
+            border-radius: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            padding: 0.22rem 0.6rem;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+        }
+        .sp-facts-table .project-label.bg-primary {
+            background: var(--bs-primary-bg-subtle) !important;
+            color: var(--bs-primary-text-emphasis) !important;
+            border-color: var(--bs-primary-border-subtle);
+        }
+        .sp-facts-table .project-label.bg-success {
+            background: var(--bs-success-bg-subtle) !important;
+            color: var(--bs-success-text-emphasis) !important;
+            border-color: var(--bs-success-border-subtle);
+        }
+        .sp-facts-table .project-label.bg-danger {
+            background: var(--bs-danger-bg-subtle) !important;
+            color: var(--bs-danger-text-emphasis) !important;
+            border-color: var(--bs-danger-border-subtle);
+        }
+        .sp-facts-table .project-label.bg-warning {
+            background: var(--bs-warning-bg-subtle) !important;
+            color: var(--bs-warning-text-emphasis) !important;
+            border-color: var(--bs-warning-border-subtle);
+        }
+        .sp-facts-table .project-label.bg-info {
+            background: var(--bs-info-bg-subtle) !important;
+            color: var(--bs-info-text-emphasis) !important;
+            border-color: var(--bs-info-border-subtle);
+        }
+        .sp-facts-table .project-label.bg-secondary {
+            background: var(--bs-secondary-bg-subtle) !important;
+            color: var(--bs-secondary-text-emphasis) !important;
+            border-color: var(--bs-secondary-border-subtle);
+        }
     </style>
     {% set is_approver = current_user.has_role('project_approver') %}
     {% set lifecycle = sel.config.selector_lifecycle if sel is defined and sel is not none else none %}
@@ -372,7 +411,7 @@
                                                                 class="fas fa-times"></i> Meeting required</span>
                                                     {% endif %}
                                                 {% elif project.owner.sign_off_students and project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                                    <span class="badge bg-warning text-dark project-label">Meeting optional</span>
+                                                    <span class="badge bg-warning project-label">Meeting optional</span>
                                                 {% else %}
                                                     <span class="badge bg-secondary project-label"><i
                                                             class="fas fa-check"></i> Meeting not required</span>

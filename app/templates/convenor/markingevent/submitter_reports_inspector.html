@@ -263,6 +263,10 @@
                 distribution email{{ '' if ready_to_distribute == 1 else 's' }} have not been sent yet.
                 Assessors cannot begin marking until notified.
             </div>
+            <a class="btn btn-outline-danger btn-sm flex-shrink-0"
+               href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='distributable', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">
+                <i class="fas fa-search fa-fw"></i> View reports
+            </a>
             <form method="POST"
                   action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
                   class="flex-shrink-0">
@@ -300,13 +304,13 @@
             <div class="flex-grow-1">
                 <strong>Convenor action required</strong> &mdash;
                 {% if needs_moderator > 0 %}
-                    {{ needs_moderator }} report{{ '' if needs_moderator == 1 else 's' }}
-                    need{{ 's' if needs_moderator == 1 else '' }} a moderator assigned
+                    <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='moderation', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}" class="alert-link">{{ needs_moderator }} report{{ '' if needs_moderator == 1 else 's' }}
+                    need{{ 's' if needs_moderator == 1 else '' }} a moderator assigned</a>
                     {%- if needs_intervention > 0 %} and {% endif %}
                 {% endif %}
                 {% if needs_intervention > 0 %}
-                    {{ needs_intervention }} report{{ '' if needs_intervention == 1 else 's' }}
-                    require{{ 's' if needs_intervention == 1 else '' }} convenor intervention
+                    <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='intervention', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}" class="alert-link">{{ needs_intervention }} report{{ '' if needs_intervention == 1 else 's' }}
+                    require{{ 's' if needs_intervention == 1 else '' }} convenor intervention</a>
                 {% endif %}
                 before marking can proceed.
             </div>
@@ -330,6 +334,10 @@
                 <strong>All reports are ready to be signed off.</strong>
                 Click to sign off all reports.
             </div>
+            <a class="btn btn-outline-success btn-sm flex-shrink-0"
+               href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='ready_signoff', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">
+                <i class="fas fa-search fa-fw"></i> Review
+            </a>
             <form method="POST"
                   action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=workflow.id) }}"
                   class="flex-shrink-0">

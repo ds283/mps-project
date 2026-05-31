@@ -231,6 +231,10 @@
                 distribution email{{ '' if distributable_count == 1 else 's' }} have not been sent yet.
                 Assessors cannot begin marking until notified.
             </div>
+            <a class="btn btn-outline-danger btn-sm flex-shrink-0"
+               href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist='distributable', filter_sub=filter_sub, filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">
+                <i class="fas fa-search fa-fw"></i> View reports
+            </a>
             <form method="POST"
                   action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
                   class="flex-shrink-0">
@@ -250,6 +254,10 @@
                 <strong>Reminder emails can be sent</strong> &mdash;
                 one or more marking reports are distributed but not yet submitted.
             </div>
+            <a class="btn btn-outline-warning btn-sm flex-shrink-0"
+               href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, filter_dist=filter_dist, filter_sub='awaiting', filter_fb=filter_fb, filter_ready=filter_ready, filter_signoff=filter_signoff) }}">
+                <i class="fas fa-search fa-fw"></i> View reports
+            </a>
             <a class="btn btn-warning btn-sm flex-shrink-0"
                href="{{ url_for('convenor.send_reminder_for_workflow', workflow_id=workflow.id,
                                 url=request.url, text='Marking reports') }}">

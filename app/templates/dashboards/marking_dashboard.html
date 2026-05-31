@@ -423,6 +423,9 @@
                                             {% endcall %}
                                         </div>
 
+                                        {# Moderation tiles — only shown when the scheme uses tolerance-based moderation #}
+                                        {% if wf.scheme and wf.scheme.uses_tolerance %}
+
                                         {# Moderation count #}
                                         <div class="col">
                                             {% call(blk) dashboard_tile("Moderation", title_icon="balance-scale",
@@ -471,6 +474,8 @@
                                                 {% endif %}
                                             {% endcall %}
                                         </div>
+
+                                        {% endif %}{# wf.scheme.uses_tolerance #}
 
                                         {# NOT_READY #}
                                         <div class="col">

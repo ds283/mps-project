@@ -107,6 +107,7 @@
 
 {% block scripts %}
     {{ super() }}
+    {{ import_select2() }}
     <script>
         $(document).ready(function () {
             $('select.select2').select2({

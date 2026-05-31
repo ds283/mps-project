@@ -822,12 +822,16 @@ def register_marking_tasks(celery):
         test_user_id: Optional[int],
         convenor_id: Optional[int],
         deadline: Optional[str] = None,
+        sr_id: Optional[int] = None,
+        mr_id: Optional[int] = None,
     ):
         """
         Dispatch reminder emails for a single MarkingWorkflow, targeting:
         - MarkingReport instances that have been distributed but not yet submitted, and
         - MarkingReport instances (SUPERVISOR role) whose parent SubmitterReport is in
           AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF — emailing each pending responsible supervisor.
+
+        Optional sr_id/mr_id narrow the scope to a single SubmitterReport or MarkingReport.
 
         A single EmailWorkflow wraps all generated EmailWorkflowItems. A callback on each item
         links the sent EmailLog to MarkingReport.distribution_emails for audit purposes, without
@@ -879,9 +883,13 @@ def register_marking_tasks(celery):
         # Collect eligible (sr, mr, target_role, is_responsible_supervisor) tuples
         eligible = []
         for sr in workflow.submitter_reports:
+            if sr_id is not None and sr.id != sr_id:
+                continue
             if sr.workflow_state in _blocking:
                 continue
             for mr in sr.marking_reports:
+                if mr_id is not None and mr.id != mr_id:
+                    continue
                 if not mr.distributed:
                     continue
                 if not mr.report_submitted:

@@ -353,6 +353,33 @@ _submitter_report_actions = """
             <div class="dropdown-divider"></div>
         {% endif %}
 
+        {# Distribute MarkingReports: shown when SR has distributable MRs and event is open #}
+        {% set event = report.workflow.event %}
+        {% if has_distributable_mrs and not event_is_closed and event.workflow_state >= OPEN %}
+            <form method="POST"
+                  action="{{ url_for('convenor.distribute_for_submitter_report', sr_id=report.id) }}"
+                  style="display:contents">
+                {{ form.hidden_tag() }}
+                <button class="dropdown-item d-flex gap-2" type="submit">
+                    <i class="fas fa-envelope fa-fw"></i> Distribute marking reports&hellip;
+                </button>
+            </form>
+            <div class="dropdown-divider"></div>
+        {% endif %}
+
+        {# Send reminders: shown when SR has reminder-eligible MRs and event is not closed #}
+        {% if has_reminder_eligible_mrs and not event_is_closed %}
+            <form method="POST"
+                  action="{{ url_for('convenor.send_reminders_for_submitter_report', sr_id=report.id) }}"
+                  style="display:contents">
+                {{ form.hidden_tag() }}
+                <button class="dropdown-item d-flex gap-2" type="submit">
+                    <i class="fas fa-bell fa-fw"></i> Send reminders&hellip;
+                </button>
+            </form>
+            <div class="dropdown-divider"></div>
+        {% endif %}
+
         {# Risk factors: resolve (only shown when unresolved factors are present and event is not closed) #}
         {% if rec is not none and rec.has_unresolved_risk_factors and not event_is_closed %}
             <a class="dropdown-item d-flex gap-2"
@@ -838,6 +865,21 @@ _marking_report_actions = """
                 <i class="fas fa-envelope-open fa-fw"></i> View emails ({{ report.distribution_emails.count() }})
             </button>
         {% endif %}
+        {# Send reminder: shown when MR is distributed but not submitted (or signoff pending) #}
+        {% if event.workflow_state >= OPEN and event.workflow_state != CLOSED %}
+            {% set sr = report.submitter_report %}
+            {% if report.distributed and (not report.report_submitted
+                  or sr.workflow_state == AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF) %}
+                <form method="POST"
+                      action="{{ url_for('convenor.send_reminder_for_marking_report', report_id=report.id) }}"
+                      style="display:contents">
+                    {{ form.hidden_tag() }}
+                    <button class="dropdown-item d-flex gap-2" type="submit">
+                        <i class="fas fa-bell fa-fw"></i> Send reminder&hellip;
+                    </button>
+                </form>
+            {% endif %}
+        {% endif %}
     </div>
 </div>
 """
@@ -909,19 +951,51 @@ def submitter_report_data(reports):
         SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
     }
 
-    return [
-        {
-            "DT_RowClass": "table-danger" if report.workflow_state in _urgent_states else "",
-            "student": render_template(student_tmpl, report=report),
-            "project": render_template(project_tmpl, report=report),
-            "reports": render_template(reports_tmpl, report=report, **state_ctx),
-            "grade": render_template(grade_tmpl, report=report),
-            "signoff": render_template(signoff_tmpl, report=report),
-            "risk_factors": render_template(risk_factors_tmpl, report=report, event_is_closed=event_is_closed),
-            "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, **state_ctx),
-        }
-        for report in reports
-    ]
+    _blocking = {
+        SubmitterReportWorkflowStates.NOT_READY,
+        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+        SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+    }
+
+    rows = []
+    for report in reports:
+        mrs = list(report.marking_reports)
+        has_distributable_mrs = (
+            report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+            and any(not mr.distributed for mr in mrs)
+        )
+        has_reminder_eligible_mrs = report.workflow_state not in _blocking and any(
+            mr.distributed
+            and (
+                not mr.report_submitted
+                or report.workflow_state
+                == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
+            )
+            for mr in mrs
+        )
+        rows.append(
+            {
+                "DT_RowClass": "table-danger" if report.workflow_state in _urgent_states else "",
+                "student": render_template(student_tmpl, report=report),
+                "project": render_template(project_tmpl, report=report),
+                "reports": render_template(reports_tmpl, report=report, **state_ctx),
+                "grade": render_template(grade_tmpl, report=report),
+                "signoff": render_template(signoff_tmpl, report=report),
+                "risk_factors": render_template(
+                    risk_factors_tmpl, report=report, event_is_closed=event_is_closed
+                ),
+                "actions": render_template(
+                    actions_tmpl,
+                    report=report,
+                    event_is_closed=event_is_closed,
+                    has_distributable_mrs=has_distributable_mrs,
+                    has_reminder_eligible_mrs=has_reminder_eligible_mrs,
+                    **state_ctx,
+                    **_EVENT_STATES,
+                ),
+            }
+        )
+    return rows
 
 
 def marking_report_data(reports):
@@ -946,6 +1020,7 @@ def marking_report_data(reports):
 
     _status_ctx = {
         "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+        "AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF": SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
         "form": form,
         **_EVENT_STATES,
     }

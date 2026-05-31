@@ -1460,6 +1460,8 @@ def submitter_reports_inspector(workflow_id):
         any_completed=any_completed,
         complete_all_form=ActionForm(),
         return_all_form=ActionForm(),
+        distribute_all_form=ActionForm(),
+        has_reminder_eligible=workflow.has_reminder_eligible_reports,
         multi_mr_count=multi_mr_count,
         wrong_weight_count=wrong_weight_count,
         distributable_sr_count=distributable_sr_count,
@@ -2012,6 +2014,8 @@ def marking_reports_inspector(workflow_id):
         submitted_count=submitted_count,
         feedback_count=feedback_count,
         signed_off_count=signed_off_count,
+        distribute_all_form=ActionForm(),
+        has_reminder_eligible=workflow.has_reminder_eligible_reports,
         web_validation_failures=web_validation_failures,
         filter_dist=filter_dist,
         filter_sub=filter_sub,
@@ -3593,6 +3597,130 @@ def send_marking_emails_for_workflow(workflow_id):
             "Could not dispatch marking notifications. Please contact a system administrator.",
             "error",
         )
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/distribute_for_submitter_report/<int:sr_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def distribute_for_submitter_report(sr_id):
+    """Dispatch distribution emails for all distributable MarkingReports of a SubmitterReport."""
+    sr: SubmitterReport = SubmitterReport.query.get_or_404(sr_id)
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state not in (
+        MarkingEventWorkflowStates.OPEN,
+        MarkingEventWorkflowStates.READY_TO_CONFLATE,
+        MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+        MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
+    ):
+        flash("Marking notifications can only be dispatched while the event is open.", "error")
+        return redirect(redirect_url())
+
+    deadline_str = None
+    if workflow.effective_deadline is not None:
+        deadline_str = workflow.effective_deadline.isoformat()
+
+    queued = 0
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.dispatch_single_email"]
+        for mr in sr.marking_reports:
+            if not mr.distributed:
+                task.apply_async(args=[mr.id, True, 10, None, deadline_str, False])
+                queued += 1
+    except Exception as e:
+        current_app.logger.exception("Error dispatching distribute_for_submitter_report", exc_info=e)
+        flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
+        return redirect(redirect_url())
+
+    if queued > 0:
+        flash(
+            f"{queued} marking notification{'s' if queued != 1 else ''} for this submitter report {'have' if queued != 1 else 'has'} been queued.",
+            "success",
+        )
+    else:
+        flash("No distributable marking reports found for this submitter report.", "info")
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/send_reminders_for_submitter_report/<int:sr_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def send_reminders_for_submitter_report(sr_id):
+    """Dispatch reminder emails for all eligible MarkingReports of a SubmitterReport."""
+    sr: SubmitterReport = SubmitterReport.query.get_or_404(sr_id)
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot send reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.send_marking_reminders"]
+        task.apply_async(
+            kwargs={
+                "workflow_id": workflow.id,
+                "cc_convenor": True,
+                "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
+                "test_user_id": None,
+                "convenor_id": current_user.id,
+                "sr_id": sr.id,
+            }
+        )
+        flash("Reminder emails for this submitter report have been queued.", "success")
+    except Exception as e:
+        current_app.logger.exception("Error dispatching send_reminders_for_submitter_report", exc_info=e)
+        flash("Could not dispatch reminder emails. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/send_reminder_for_marking_report/<int:report_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def send_reminder_for_marking_report(report_id):
+    """Dispatch a reminder email for a single MarkingReport."""
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    sr: SubmitterReport = report.submitter_report
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot send reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.send_marking_reminders"]
+        task.apply_async(
+            kwargs={
+                "workflow_id": workflow.id,
+                "cc_convenor": True,
+                "max_attachment": DEFAULT_MAX_ATTACHMENT_SIZE,
+                "test_user_id": None,
+                "convenor_id": current_user.id,
+                "mr_id": report.id,
+            }
+        )
+        flash(f"Reminder email for {report.user.name} has been queued.", "success")
+    except Exception as e:
+        current_app.logger.exception("Error dispatching send_reminder_for_marking_report", exc_info=e)
+        flash("Could not dispatch reminder email. Please contact a system administrator.", "error")
 
     return redirect(redirect_url())
 

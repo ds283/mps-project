@@ -263,6 +263,30 @@
                 distribution email{{ '' if ready_to_distribute == 1 else 's' }} have not been sent yet.
                 Assessors cannot begin marking until notified.
             </div>
+            <form method="POST"
+                  action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
+                  class="flex-shrink-0">
+                {{ distribute_all_form.hidden_tag() }}
+                <button class="btn btn-danger btn-sm" type="submit">
+                    <i class="fas fa-paper-plane fa-fw"></i> Distribute all
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    {# Banner: reminder emails available #}
+    {% if has_reminder_eligible and can_edit %}
+        <div class="alert alert-warning d-flex align-items-center gap-3 mt-3 mb-2">
+            <i class="fas fa-bell fa-2x flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>Reminder emails can be sent</strong> &mdash;
+                one or more marking reports are distributed but not yet submitted.
+            </div>
+            <a class="btn btn-warning btn-sm flex-shrink-0"
+               href="{{ url_for('convenor.send_reminder_for_workflow', workflow_id=workflow.id,
+                                url=request.url, text='Submitter reports') }}">
+                <i class="fas fa-bell fa-fw"></i> Send reminders&hellip;
+            </a>
         </div>
     {% endif %}
 

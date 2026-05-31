@@ -1506,23 +1506,36 @@ def submitter_reports_ajax(workflow_id):
     )
 
     S = SubmitterReportWorkflowStates
-    _state_map = {
-        "not_ready":        [S.NOT_READY],
-        "distributable":    [S.READY_TO_DISTRIBUTE],
-        "grading":          [S.AWAITING_GRADING_REPORTS],
-        "signoff_pending":  [S.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF],
-        "feedback_pending": [S.AWAITING_FEEDBACK],
-        "moderation":       [S.NEEDS_MODERATOR_ASSIGNED, S.AWAITING_MODERATOR_REPORT],
-        "intervention":     [S.REQUIRES_CONVENOR_INTERVENTION],
-        "ready_signoff":    [S.READY_TO_SIGN_OFF],
-        "completed":        [S.COMPLETED, S.FEEDBACK_AVAILABLE],
-    }
-    if filter_state != "all" and filter_state in _state_map:
-        states = _state_map[filter_state]
-        if len(states) == 1:
-            base_query = base_query.filter(SubmitterReport.workflow_state == states[0])
-        else:
-            base_query = base_query.filter(SubmitterReport.workflow_state.in_(states))
+
+    # feedback_pending is cross-state: any SR with an incomplete MarkingReport
+    if filter_state == "feedback_pending":
+        base_query = base_query.filter(
+            SubmitterReport.marking_reports.any(
+                or_(
+                    MarkingReport.report_submitted.is_(False),
+                    MarkingReport.feedback_submitted.is_(False),
+                )
+            )
+        )
+    else:
+        # "intervention" covers both REQUIRES_CONVENOR_INTERVENTION and NEEDS_MODERATOR_ASSIGNED
+        # because both block workflow progress and require immediate convenor action.
+        _state_map = {
+            "not_ready":       [S.NOT_READY],
+            "distributable":   [S.READY_TO_DISTRIBUTE],
+            "grading":         [S.AWAITING_GRADING_REPORTS],
+            "signoff_pending": [S.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF],
+            "moderation":      [S.NEEDS_MODERATOR_ASSIGNED, S.AWAITING_MODERATOR_REPORT],
+            "intervention":    [S.REQUIRES_CONVENOR_INTERVENTION, S.NEEDS_MODERATOR_ASSIGNED],
+            "ready_signoff":   [S.READY_TO_SIGN_OFF],
+            "completed":       [S.COMPLETED, S.FEEDBACK_AVAILABLE],
+        }
+        if filter_state != "all" and filter_state in _state_map:
+            states = _state_map[filter_state]
+            if len(states) == 1:
+                base_query = base_query.filter(SubmitterReport.workflow_state == states[0])
+            else:
+                base_query = base_query.filter(SubmitterReport.workflow_state.in_(states))
 
     if filter_tolerance == "out_of_tolerance":
         base_query = base_query.filter(SubmitterReport.out_of_tolerance.is_(True))

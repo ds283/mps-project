@@ -323,7 +323,7 @@
                                         {% if wf.scheme %}
                                             <span><i class="fas fa-ruler me-1"></i>Scheme: {{ wf.scheme.name }}</span>
                                         {% endif %}
-                                        <span><i class="fas fa-file-alt me-1"></i>{{ wh.n_submitter_reports }} submitter report{{ 's' if wh.n_submitter_reports != 1 else '' }}</span>
+                                        <span><i class="fas fa-file-alt me-1"></i>{{ wh.n_submitter_reports }} submitter report{{ 's' if wh.n_submitter_reports != 1 else '' }}{% if wh.n_dropped > 0 %}&nbsp;<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ wh.n_dropped }} withdrawn</span>{% endif %}</span>
                                         <span><i
                                                 class="fas fa-pen me-1"></i>{{ wh.n_marking_reports }} marking report{{ 's' if wh.n_marking_reports != 1 else '' }}</span>
                                     </div>

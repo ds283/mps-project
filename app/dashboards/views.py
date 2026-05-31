@@ -499,10 +499,14 @@ def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
     round trips and returns a dict safe to pass directly to the template.
     """
     srs = workflow.submitter_reports.all()
-    n_sr = len(srs)
-    sr_ids = [sr.id for sr in srs]
+    # Exclude DROPPED records from all health metrics: they are terminal and require no
+    # action, so they must not inflate denominators or suppress percentages below 100%.
+    active_srs = [sr for sr in srs if sr.workflow_state != SubmitterReportWorkflowStates.DROPPED]
+    n_dropped = len(srs) - len(active_srs)
+    n_sr = len(active_srs)
+    sr_ids = [sr.id for sr in active_srs]
 
-    # Single query for all MarkingReports in this workflow
+    # Single query for all MarkingReports in this workflow (DROPPED SRs excluded)
     mrs = (
         db.session.query(MarkingReport)
         .filter(MarkingReport.submitter_report_id.in_(sr_ids))
@@ -519,7 +523,7 @@ def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
     n_out_of_tolerance = 0
     grades: List[float] = []
 
-    for sr in srs:
+    for sr in active_srs:
         state_counts[sr.workflow_state] = state_counts.get(sr.workflow_state, 0) + 1
         if sr.out_of_tolerance:
             n_out_of_tolerance += 1
@@ -554,6 +558,7 @@ def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
         "workflow": workflow,
         "n_submitter_reports": n_sr,
         "n_marking_reports": n_mr,
+        "n_dropped": n_dropped,
         "distribution_pct": pct(n_mr_dist, n_mr),
         "submitted_pct": pct(n_mr_submitted, n_mr),
         "feedback_pct": pct(n_mr_feedback, n_mr),

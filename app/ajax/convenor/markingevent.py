@@ -316,9 +316,11 @@ _submitter_report_actions = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {% set ns = namespace(shown=false) %}
 
         {# Complete: shown in dropdown for READY_TO_SIGN_OFF (in addition to direct button) #}
         {% if state == READY_TO_SIGN_OFF and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <form method="POST"
                   action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
                   style="display:contents">
@@ -327,11 +329,12 @@ _submitter_report_actions = """
                     <i class="fas fa-check-double fa-fw"></i> Sign off&hellip;
                 </button>
             </form>
-            <div class="dropdown-divider"></div>
+            {% set ns.shown = true %}
         {% endif %}
 
         {# Return to convenor: admin/root only, shown when COMPLETED and event is not closed #}
         {% if is_completed and (is_root or is_admin) and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <form method="POST"
                   action="{{ url_for('convenor.return_submitter_report_to_convenor', sr_id=report.id) }}"
                   style="display:contents">
@@ -340,22 +343,24 @@ _submitter_report_actions = """
                     <i class="fas fa-undo fa-fw"></i> Return to convenor&hellip;
                 </button>
             </form>
-            <div class="dropdown-divider"></div>
+            {% set ns.shown = true %}
         {% endif %}
 
         {# Moderator assignment: shown for NEEDS_MODERATOR_ASSIGNED and AWAITING_MODERATOR_REPORT, suppressed when event is closed #}
         {% if state in (NEEDS_MODERATOR_ASSIGNED, AWAITING_MODERATOR_REPORT) and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
                         url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-user-plus fa-fw"></i> Assign moderator&hellip;
             </a>
-            <div class="dropdown-divider"></div>
+            {% set ns.shown = true %}
         {% endif %}
 
         {# Distribute MarkingReports: shown when SR has distributable MRs and event is open #}
         {% set event = report.workflow.event %}
         {% if has_distributable_mrs and not event_is_closed and event.workflow_state >= OPEN %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <form method="POST"
                   action="{{ url_for('convenor.distribute_for_submitter_report', sr_id=report.id) }}"
                   style="display:contents">
@@ -364,11 +369,12 @@ _submitter_report_actions = """
                     <i class="fas fa-envelope fa-fw"></i> Distribute marking reports&hellip;
                 </button>
             </form>
-            <div class="dropdown-divider"></div>
+            {% set ns.shown = true %}
         {% endif %}
 
         {# Send reminders: shown when SR has reminder-eligible MRs and event is not closed #}
         {% if has_reminder_eligible_mrs and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <form method="POST"
                   action="{{ url_for('convenor.send_reminders_for_submitter_report', sr_id=report.id) }}"
                   style="display:contents">
@@ -377,21 +383,24 @@ _submitter_report_actions = """
                     <i class="fas fa-bell fa-fw"></i> Send reminders&hellip;
                 </button>
             </form>
-            <div class="dropdown-divider"></div>
+            {% set ns.shown = true %}
         {% endif %}
 
         {# Risk factors: resolve (only shown when unresolved factors are present and event is not closed) #}
         {% if rec is not none and rec.has_unresolved_risk_factors and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.resolve_risk_factors',
                                 record_id=rec.id,
                                 url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-gavel fa-fw"></i> Resolve risk factors&hellip;
             </a>
+            {% set ns.shown = true %}
         {% endif %}
 
         {# Turnitin: re-fetch from Canvas or enter manually (only when score is missing and event is not closed) #}
         {% if rec is not none and rec.turnitin_score is none and not event_is_closed %}
+            {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
             {% if rec.canvas_turnitin_refetchable %}
                 <form method="POST"
                       action="{{ url_for('convenor.refetch_turnitin_from_canvas',

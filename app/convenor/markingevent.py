@@ -1544,9 +1544,9 @@ def submitter_reports_inspector(workflow_id):
                             url=url_for(
                                 "convenor.submitter_reports_inspector",
                                 workflow_id=workflow_id,
-                                filter_state="moderation",
+                                filter_state="intervention",
                                 filter_risk=filter_risk,
-                                filter_tolerance=filter_tolerance,
+                                filter_tolerance="out_of_tolerance",
                                 filter_grade=filter_grade,
                                 filter_completion=filter_completion,
                             ),
@@ -1724,14 +1724,15 @@ def submitter_reports_ajax(workflow_id):
             )
         )
     else:
-        # "intervention" covers both REQUIRES_CONVENOR_INTERVENTION and NEEDS_MODERATOR_ASSIGNED
-        # because both block workflow progress and require immediate convenor action.
+        # "moderation" = moderator already assigned and working (AWAITING_MODERATOR_REPORT only).
+        # "intervention" = convenor must act immediately: covers both REQUIRES_CONVENOR_INTERVENTION
+        # and NEEDS_MODERATOR_ASSIGNED (moderator not yet assigned; blocks workflow progress).
         _state_map = {
             "not_ready":       [S.NOT_READY],
             "distributable":   [S.READY_TO_DISTRIBUTE],
             "grading":         [S.AWAITING_GRADING_REPORTS],
             "signoff_pending": [S.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF],
-            "moderation":      [S.NEEDS_MODERATOR_ASSIGNED, S.AWAITING_MODERATOR_REPORT],
+            "moderation":      [S.AWAITING_MODERATOR_REPORT],
             "intervention":    [S.REQUIRES_CONVENOR_INTERVENTION, S.NEEDS_MODERATOR_ASSIGNED],
             "ready_signoff":   [S.READY_TO_SIGN_OFF],
             "completed":       [S.COMPLETED, S.FEEDBACK_AVAILABLE],

@@ -3092,6 +3092,14 @@ def event_marking_workflows_inspector(event_id):
             )
             if needs_mod > 0:
                 n = needs_mod
+                mod_url = url_for(
+                    "convenor.submitter_reports_inspector",
+                    workflow_id=workflow.id,
+                    filter_state="intervention",
+                    filter_tolerance="out_of_tolerance",
+                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                    text="Marking workflows",
+                )
                 actions.append(
                     ConvenorAction(
                         severity="danger",
@@ -3101,7 +3109,7 @@ def event_marking_workflows_inspector(event_id):
                             f"{n} report{'s' if n != 1 else ''} in this workflow "
                             f"cannot proceed until a moderator is assigned."
                         ),
-                        buttons=[ConvenorActionButton(label="Review reports", url=workflow_url, outline=True, icon="search")],
+                        buttons=[ConvenorActionButton(label="Review reports", url=mod_url, outline=True, icon="search")],
                     )
                 )
 

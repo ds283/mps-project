@@ -16,7 +16,7 @@ from celery import chain as celery_chain
 from flask import current_app, flash, jsonify, redirect, request, session, url_for
 from flask_login import current_user
 from flask_security import roles_accepted
-from sqlalchemy import and_, distinct, func
+from sqlalchemy import and_, distinct, func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import aliased
 
@@ -1323,6 +1323,46 @@ def submitter_reports_inspector(workflow_id):
     )
     text = request.args.get("text", "Marking workflows")
 
+    filter_state = request.args.get("filter_state")
+    if filter_state is None and session.get("convenor_submitter_reports_inspector_filter_state"):
+        filter_state = session["convenor_submitter_reports_inspector_filter_state"]
+    if filter_state not in (
+        "all", "not_ready", "distributable", "grading", "signoff_pending",
+        "feedback_pending", "moderation", "intervention", "ready_signoff", "completed",
+    ):
+        filter_state = "all"
+    session["convenor_submitter_reports_inspector_filter_state"] = filter_state
+
+    filter_risk = request.args.get("filter_risk")
+    if filter_risk is None and session.get("convenor_submitter_reports_inspector_filter_risk"):
+        filter_risk = session["convenor_submitter_reports_inspector_filter_risk"]
+    if filter_risk not in ("all", "any_risk", "no_risk"):
+        filter_risk = "all"
+    session["convenor_submitter_reports_inspector_filter_risk"] = filter_risk
+
+    filter_tolerance = request.args.get("filter_tolerance")
+    if filter_tolerance is None and session.get("convenor_submitter_reports_inspector_filter_tolerance"):
+        filter_tolerance = session["convenor_submitter_reports_inspector_filter_tolerance"]
+    if filter_tolerance not in ("all", "out_of_tolerance", "in_tolerance"):
+        filter_tolerance = "all"
+    session["convenor_submitter_reports_inspector_filter_tolerance"] = filter_tolerance
+
+    filter_grade = request.args.get("filter_grade")
+    if filter_grade is None and session.get("convenor_submitter_reports_inspector_filter_grade"):
+        filter_grade = session["convenor_submitter_reports_inspector_filter_grade"]
+    if filter_grade not in ("all", "graded", "not_graded"):
+        filter_grade = "all"
+    session["convenor_submitter_reports_inspector_filter_grade"] = filter_grade
+
+    filter_completion = request.args.get("filter_completion")
+    if filter_completion is None and session.get("convenor_submitter_reports_inspector_filter_completion"):
+        filter_completion = session["convenor_submitter_reports_inspector_filter_completion"]
+    if filter_completion not in ("all", "completed", "not_completed"):
+        filter_completion = "all"
+    session["convenor_submitter_reports_inspector_filter_completion"] = filter_completion
+
+    workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
+
     # Compute per-state counts for the state timeline summary
     state_counts = dict(
         db.session.query(SubmitterReport.workflow_state, func.count())
@@ -1423,6 +1463,12 @@ def submitter_reports_inspector(workflow_id):
         multi_mr_count=multi_mr_count,
         wrong_weight_count=wrong_weight_count,
         distributable_sr_count=distributable_sr_count,
+        filter_state=filter_state,
+        filter_risk=filter_risk,
+        filter_tolerance=filter_tolerance,
+        filter_grade=filter_grade,
+        filter_completion=filter_completion,
+        workflow_uses_tolerance=workflow_uses_tolerance,
     )
 
 
@@ -1444,6 +1490,12 @@ def submitter_reports_ajax(workflow_id):
     ):
         return jsonify({"error": "Access denied"}), 403
 
+    filter_state = request.args.get("filter_state", "all")
+    filter_risk = request.args.get("filter_risk", "all")
+    filter_tolerance = request.args.get("filter_tolerance", "all")
+    filter_grade = request.args.get("filter_grade", "all")
+    filter_completion = request.args.get("filter_completion", "all")
+
     base_query = (
         db.session.query(SubmitterReport)
         .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
@@ -1452,6 +1504,65 @@ def submitter_reports_ajax(workflow_id):
         .join(User, User.id == StudentData.id)
         .filter(SubmitterReport.workflow_id == workflow_id)
     )
+
+    S = SubmitterReportWorkflowStates
+    _state_map = {
+        "not_ready":        [S.NOT_READY],
+        "distributable":    [S.READY_TO_DISTRIBUTE],
+        "grading":          [S.AWAITING_GRADING_REPORTS],
+        "signoff_pending":  [S.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF],
+        "feedback_pending": [S.AWAITING_FEEDBACK],
+        "moderation":       [S.NEEDS_MODERATOR_ASSIGNED, S.AWAITING_MODERATOR_REPORT],
+        "intervention":     [S.REQUIRES_CONVENOR_INTERVENTION],
+        "ready_signoff":    [S.READY_TO_SIGN_OFF],
+        "completed":        [S.COMPLETED, S.FEEDBACK_AVAILABLE],
+    }
+    if filter_state != "all" and filter_state in _state_map:
+        states = _state_map[filter_state]
+        if len(states) == 1:
+            base_query = base_query.filter(SubmitterReport.workflow_state == states[0])
+        else:
+            base_query = base_query.filter(SubmitterReport.workflow_state.in_(states))
+
+    if filter_tolerance == "out_of_tolerance":
+        base_query = base_query.filter(SubmitterReport.out_of_tolerance.is_(True))
+    elif filter_tolerance == "in_tolerance":
+        base_query = base_query.filter(SubmitterReport.out_of_tolerance.is_(False))
+
+    if filter_grade == "graded":
+        base_query = base_query.filter(SubmitterReport.grade.isnot(None))
+    elif filter_grade == "not_graded":
+        base_query = base_query.filter(SubmitterReport.grade.is_(None))
+
+    if filter_completion == "completed":
+        base_query = base_query.filter(SubmitterReport.completed_by_id.isnot(None))
+    elif filter_completion == "not_completed":
+        base_query = base_query.filter(SubmitterReport.completed_by_id.is_(None))
+
+    if filter_risk in ("any_risk", "no_risk"):
+        _risk_types = [
+            "turnitin", "ai_compliance", "ai_use", "document_length",
+            "word_count_discrepancy", "similarity_flagged", "similarity_chunking_failed",
+        ]
+
+        def _risk_unresolved_clause(risk_type):
+            # COALESCE turns NULL (path absent or risk_factors IS NULL) into 0,
+            # ensuring ~or_(...) correctly includes null-risk-factor rows in "no_risk".
+            present = func.coalesce(
+                func.json_contains(SubmissionRecord.risk_factors, '{"present": true}', f"$.{risk_type}"),
+                0,
+            )
+            resolved_true = func.coalesce(
+                func.json_contains(SubmissionRecord.risk_factors, '{"resolved": true}', f"$.{risk_type}"),
+                0,
+            )
+            return and_(present == 1, resolved_true == 0)
+
+        risk_condition = or_(*[_risk_unresolved_clause(rt) for rt in _risk_types])
+        if filter_risk == "any_risk":
+            base_query = base_query.filter(risk_condition)
+        else:
+            base_query = base_query.filter(~risk_condition)
 
     student_col = {
         "search": func.concat(User.first_name, " ", User.last_name),

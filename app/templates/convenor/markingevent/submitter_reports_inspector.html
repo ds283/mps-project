@@ -7,8 +7,39 @@
     {{ super() }}
     {{ import_datatables() }}
 
+    <style>
+        .filter-pill {
+            border-radius: 20px;
+            font-size: 12px;
+            padding: 3px 11px;
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            color: var(--bs-body-color);
+            text-decoration: none;
+            display: inline-block;
+        }
+        .filter-pill:hover {
+            border-color: var(--bs-secondary-color);
+            color: var(--bs-body-color);
+        }
+        .filter-pill.active {
+            background: var(--bs-primary);
+            color: var(--bs-white);
+            border-color: var(--bs-primary);
+        }
+    </style>
+
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        function toggleFilterPanel() {
+            const body = document.getElementById('filter-body');
+            const btn = document.getElementById('filter-toggle-btn');
+            const hidden = body.style.display === 'none';
+            body.style.display = hidden ? '' : 'none';
+            btn.innerHTML = (hidden ? 'Hide filters ' : 'Show filters ')
+                + '<i class="fas fa-chevron-' + (hidden ? 'up' : 'down') + ' fa-fw"></i>';
+        }
 
         $(document).ready(function () {
             $('#submitter-reports-table').DataTable({
@@ -17,7 +48,7 @@
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/convenor/submitter_reports_ajax/{{ workflow.id }}',
+                    url: $SCRIPT_ROOT + '/convenor/submitter_reports_ajax/{{ workflow.id }}?filter_state={{ filter_state }}&filter_risk={{ filter_risk }}&filter_tolerance={{ filter_tolerance }}&filter_grade={{ filter_grade }}&filter_completion={{ filter_completion }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -92,27 +123,135 @@
         </div>
     </div>
 
-    {# Workflow state summary #}
+    {# Workflow state summary — badges converted to clickable filter shortcuts #}
     {% set total = workflow.submitter_reports.count() %}
     {% if total > 0 %}
+        {% set state_to_filter = {
+            999: 'not_ready',
+            0:   'distributable',
+            1:   'grading',
+            2:   'signoff_pending',
+            3:   'feedback_pending',
+            5:   'moderation',
+            6:   'moderation',
+            7:   'intervention',
+            9:   'ready_signoff',
+            12:  'completed',
+            13:  'completed'
+        } %}
         <div class="card border-secondary mb-3">
             <div class="card-header bg-secondary text-white small">
                 <i class="fas fa-chart-bar fa-fw me-1"></i> State summary
             </div>
             <div class="card-body py-2">
-                <div class="d-flex flex-row flex-wrap gap-2">
+                <div class="d-flex flex-row flex-wrap gap-2 align-items-center">
+                    <a class="filter-pill{% if filter_state == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id,
+                                        filter_state='all', filter_risk=filter_risk,
+                                        filter_tolerance=filter_tolerance, filter_grade=filter_grade,
+                                        filter_completion=filter_completion) }}">All states</a>
                     {% for state_val, state_label in state_labels %}
                         {% set count = state_counts.get(state_val, 0) %}
                         {% if count > 0 %}
-                            <span class="badge {% if state_val == 999 %}bg-secondary{% elif state_val == 12 %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
+                            {% set f_val = state_to_filter[state_val] %}
+                            <a class="filter-pill{% if filter_state == f_val %} active{% endif %}"
+                               href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id,
+                                                filter_state=f_val, filter_risk=filter_risk,
+                                                filter_tolerance=filter_tolerance, filter_grade=filter_grade,
+                                                filter_completion=filter_completion) }}"
+                               data-bs-toggle="tooltip" title="Filter to this state">
                                 {{ state_label }}: {{ count }}
-                            </span>
+                            </a>
                         {% endif %}
                     {% endfor %}
                 </div>
             </div>
         </div>
     {% endif %}
+
+    {# Filter panel #}
+    <div class="card border-secondary mb-3" id="filter-panel">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-2 small">
+            <span><i class="fas fa-filter fa-fw me-1"></i> Filters</span>
+            <button type="button" class="btn btn-sm btn-ghost-header" id="filter-toggle-btn"
+                    onclick="toggleFilterPanel()">
+                Hide filters <i class="fas fa-chevron-up fa-fw"></i>
+            </button>
+        </div>
+        <div class="card-body py-2" id="filter-body">
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">STATE</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_state == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='all', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">All</a>
+                    <a class="filter-pill{% if filter_state == 'not_ready' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='not_ready', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Not ready</a>
+                    <a class="filter-pill{% if filter_state == 'distributable' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='distributable', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Distributable</a>
+                    <a class="filter-pill{% if filter_state == 'grading' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='grading', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Awaiting grades</a>
+                    <a class="filter-pill{% if filter_state == 'signoff_pending' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='signoff_pending', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Awaiting resp. sign-off</a>
+                    <a class="filter-pill{% if filter_state == 'feedback_pending' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='feedback_pending', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Awaiting feedback</a>
+                    <a class="filter-pill{% if filter_state == 'moderation' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='moderation', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Moderation</a>
+                    <a class="filter-pill{% if filter_state == 'intervention' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='intervention', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Needs intervention</a>
+                    <a class="filter-pill{% if filter_state == 'ready_signoff' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='ready_signoff', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Ready to sign off</a>
+                    <a class="filter-pill{% if filter_state == 'completed' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='completed', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Completed</a>
+                </div>
+            </div>
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">RISK FACTORS</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_risk == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk='all', filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">All</a>
+                    <a class="filter-pill{% if filter_risk == 'any_risk' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk='any_risk', filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">Any risk factor</a>
+                    <a class="filter-pill{% if filter_risk == 'no_risk' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk='no_risk', filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">No risk factors</a>
+                </div>
+            </div>
+            {% if workflow_uses_tolerance %}
+                <div class="row align-items-center mb-1 small">
+                    <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">TOLERANCE</div>
+                    <div class="col d-flex flex-wrap gap-1">
+                        <a class="filter-pill{% if filter_tolerance == 'all' %} active{% endif %}"
+                           href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance='all', filter_grade=filter_grade, filter_completion=filter_completion) }}">All</a>
+                        <a class="filter-pill{% if filter_tolerance == 'out_of_tolerance' %} active{% endif %}"
+                           href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance='out_of_tolerance', filter_grade=filter_grade, filter_completion=filter_completion) }}">Out of tolerance</a>
+                        <a class="filter-pill{% if filter_tolerance == 'in_tolerance' %} active{% endif %}"
+                           href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance='in_tolerance', filter_grade=filter_grade, filter_completion=filter_completion) }}">In tolerance</a>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="row align-items-center mb-1 small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">GRADE</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_grade == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade='all', filter_completion=filter_completion) }}">All</a>
+                    <a class="filter-pill{% if filter_grade == 'graded' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade='graded', filter_completion=filter_completion) }}">Graded</a>
+                    <a class="filter-pill{% if filter_grade == 'not_graded' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade='not_graded', filter_completion=filter_completion) }}">Not graded</a>
+                </div>
+            </div>
+            <div class="row align-items-center small">
+                <div class="col-auto text-body-secondary fw-semibold" style="min-width: 9rem;">COMPLETION</div>
+                <div class="col d-flex flex-wrap gap-1">
+                    <a class="filter-pill{% if filter_completion == 'all' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion='all') }}">All</a>
+                    <a class="filter-pill{% if filter_completion == 'completed' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion='completed') }}">Completed</a>
+                    <a class="filter-pill{% if filter_completion == 'not_completed' %} active{% endif %}"
+                       href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state=filter_state, filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion='not_completed') }}">Not completed</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {# Banner: reports ready to distribute #}
     {%- set ready_to_distribute = distributable_sr_count -%}

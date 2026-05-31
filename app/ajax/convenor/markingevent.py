@@ -1054,7 +1054,7 @@ def marking_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report, **_status_ctx),
             "signoff": render_template(signoff_tmpl, report=report),
-            "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, **_EVENT_STATES),
+            "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, form=form, **_EVENT_STATES),
         }
         for report in reports
     ]

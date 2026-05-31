@@ -437,25 +437,29 @@
 {% endmacro %}
 
 {% macro render_convenor_actions(actions, form=none) %}
-    {% from "icon_block.html" import icon_block %}
     {% for action in actions %}
-        <div class="alert alert-{{ action.severity }} d-flex justify-content-between align-items-center mb-2">
-            <div>
-                {% call icon_block("exclamation-circle") %}
-                    <strong>{{ action.title }}</strong>
-                    <div class="mt-1 small">{{ action.description }}</div>
-                {% endcall %}
+        <div class="alert alert-{{ action.severity }} d-flex align-items-center gap-3 mb-2">
+            <i class="fas fa-{{ action.icon }} fa-lg flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>{{ action.title }}</strong>
+                {%- if action.description %} &mdash; {{ action.description }}{% endif %}
             </div>
-            {% if action.action_url %}
-                {% if action.action_method == "POST" %}
-                    <form method="POST" action="{{ action.action_url }}" class="ms-3 flex-shrink-0">
+            {% for btn in action.buttons %}
+                {% if btn.method == "POST" %}
+                    <form method="POST" action="{{ btn.url }}" class="flex-shrink-0">
                         {% if form %}{{ form.hidden_tag() }}{% endif %}
-                        <button type="submit" class="btn btn-sm btn-{{ action.severity }}">{{ action.action_label }}</button>
+                        <button type="submit"
+                                class="btn btn-sm {% if btn.outline %}btn-outline-{{ action.severity }}{% else %}btn-{{ action.severity }}{% endif %}">
+                            {%- if btn.icon %}<i class="fas fa-{{ btn.icon }} fa-fw"></i> {% endif %}{{ btn.label }}
+                        </button>
                     </form>
                 {% else %}
-                    <a href="{{ action.action_url }}" class="btn btn-sm btn-{{ action.severity }} ms-3 flex-shrink-0">{{ action.action_label }}</a>
+                    <a href="{{ btn.url }}"
+                       class="btn btn-sm flex-shrink-0 {% if btn.outline %}btn-outline-{{ action.severity }}{% else %}btn-{{ action.severity }}{% endif %}">
+                        {%- if btn.icon %}<i class="fas fa-{{ btn.icon }} fa-fw"></i> {% endif %}{{ btn.label }}
+                    </a>
                 {% endif %}
-            {% endif %}
+            {% endfor %}
         </div>
     {% endfor %}
 {% endmacro %}

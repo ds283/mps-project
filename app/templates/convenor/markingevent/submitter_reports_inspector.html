@@ -2,6 +2,7 @@
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
 {% from "icon_block.html" import icon_block %}
+{% from "macros.html" import render_convenor_actions %}
 
 {% block scripts %}
     {{ super() }}
@@ -253,70 +254,6 @@
         </div>
     </div>
 
-    {# Banner: reports ready to distribute #}
-    {%- set ready_to_distribute = distributable_sr_count -%}
-    {% if ready_to_distribute > 0 and can_edit %}
-        <div class="alert alert-danger d-flex align-items-center gap-3 mt-3 mb-2">
-            <i class="fas fa-paper-plane fa-2x flex-shrink-0"></i>
-            <div class="flex-grow-1">
-                <strong>{{ ready_to_distribute }} report{{ '' if ready_to_distribute == 1 else 's' }} ready to distribute</strong> &mdash;
-                distribution email{{ '' if ready_to_distribute == 1 else 's' }} have not been sent yet.
-                Assessors cannot begin marking until notified.
-            </div>
-            <a class="btn btn-outline-danger btn-sm flex-shrink-0"
-               href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='distributable', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">
-                <i class="fas fa-search fa-fw"></i> View reports
-            </a>
-            <form method="POST"
-                  action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
-                  class="flex-shrink-0">
-                {{ distribute_all_form.hidden_tag() }}
-                <button class="btn btn-danger btn-sm" type="submit">
-                    <i class="fas fa-paper-plane fa-fw"></i> Distribute all
-                </button>
-            </form>
-        </div>
-    {% endif %}
-
-    {# Banner: reminder emails available #}
-    {% if has_reminder_eligible and can_edit %}
-        <div class="alert alert-warning d-flex align-items-center gap-3 mt-3 mb-2">
-            <i class="fas fa-bell fa-2x flex-shrink-0"></i>
-            <div class="flex-grow-1">
-                <strong>Reminder emails can be sent</strong> &mdash;
-                one or more marking reports are distributed but not yet submitted.
-            </div>
-            <a class="btn btn-warning btn-sm flex-shrink-0"
-               href="{{ url_for('convenor.send_reminder_for_workflow', workflow_id=workflow.id,
-                                url=request.url, text='Submitter reports') }}">
-                <i class="fas fa-bell fa-fw"></i> Send reminders&hellip;
-            </a>
-        </div>
-    {% endif %}
-
-    {# Banner: reports requiring immediate convenor action #}
-    {%- set needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0) -%}
-    {%- set needs_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0) -%}
-    {%- set urgent_total = needs_moderator + needs_intervention -%}
-    {% if urgent_total > 0 and can_edit %}
-        <div class="alert alert-danger d-flex align-items-center gap-3 mt-3 mb-2">
-            <i class="fas fa-exclamation-circle fa-2x flex-shrink-0"></i>
-            <div class="flex-grow-1">
-                <strong>Convenor action required</strong> &mdash;
-                {% if needs_moderator > 0 %}
-                    <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='moderation', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}" class="alert-link">{{ needs_moderator }} report{{ '' if needs_moderator == 1 else 's' }}
-                    need{{ 's' if needs_moderator == 1 else '' }} a moderator assigned</a>
-                    {%- if needs_intervention > 0 %} and {% endif %}
-                {% endif %}
-                {% if needs_intervention > 0 %}
-                    <a href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='intervention', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}" class="alert-link">{{ needs_intervention }} report{{ '' if needs_intervention == 1 else 's' }}
-                    require{{ 's' if needs_intervention == 1 else '' }} convenor intervention</a>
-                {% endif %}
-                before marking can proceed.
-            </div>
-        </div>
-    {% endif %}
-
     {# Closed event notice #}
     {% if not can_edit %}
         <div class="alert alert-secondary mt-3 mb-2">
@@ -326,65 +263,10 @@
         </div>
     {% endif %}
 
-    {# Call-to-action: all reports ready to complete #}
-    {% if all_ready_to_sign_off %}
-        <div class="alert alert-success d-flex flex-row align-items-center gap-3 mt-3 mb-2">
-            <div class="flex-grow-1">
-                <i class="fas fa-check-circle fa-fw me-1"></i>
-                <strong>All reports are ready to be signed off.</strong>
-                Click to sign off all reports.
-            </div>
-            <a class="btn btn-outline-success btn-sm flex-shrink-0"
-               href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, filter_state='ready_signoff', filter_risk=filter_risk, filter_tolerance=filter_tolerance, filter_grade=filter_grade, filter_completion=filter_completion) }}">
-                <i class="fas fa-search fa-fw"></i> Review
-            </a>
-            <form method="POST"
-                  action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=workflow.id) }}"
-                  class="flex-shrink-0">
-                {{ complete_all_form.hidden_tag() }}
-                <button class="btn btn-success btn-sm" type="submit">
-                    <i class="fas fa-check-double fa-fw"></i> Sign off all
-                </button>
-            </form>
-        </div>
-    {% endif %}
-
-    {# Danger: multiple supervisor MarkingReports on a single SubmitterReport #}
-    {% if multi_mr_count > 0 %}
-        <div class="alert alert-danger d-flex flex-row align-items-center gap-3 mt-3 mb-2">
-            <div class="flex-grow-1">
-                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
-                <strong>{{ multi_mr_count }} record{% if multi_mr_count != 1 %}s{% endif %}</strong>
-                have more than one supervisor marking report assigned.
-                Each supervisor workflow record should have exactly one marking report.
-                Please review the highlighted rows and remove duplicate assignments.
-            </div>
-        </div>
-    {% endif %}
-
-    {# Danger: marker weight sum does not equal number_markers #}
-    {% if wrong_weight_count > 0 %}
-        <div class="alert alert-danger d-flex flex-row align-items-center gap-3 mt-3 mb-2">
-            <div class="flex-grow-1">
-                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
-                <strong>{{ wrong_weight_count }} record{% if wrong_weight_count != 1 %}s{% endif %}</strong>
-                have marker weights that do not sum to the expected value
-                ({{ workflow.event.period.number_markers }}).
-                Please review the highlighted rows and correct the marker assignments.
-            </div>
-        </div>
-    {% endif %}
-
-    {# Admin/root: return all completed reports to convenor #}
-    {% if any_completed and (is_root or is_admin) %}
-        <div class="d-flex flex-row justify-content-end mt-2 mb-2">
-            <form method="POST"
-                  action="{{ url_for('convenor.return_all_submitter_reports', workflow_id=workflow.id) }}">
-                {{ return_all_form.hidden_tag() }}
-                <button class="btn btn-outline-danger btn-sm" type="submit">
-                    <i class="fas fa-undo fa-fw"></i> Return all to convenor
-                </button>
-            </form>
+    {# CTA banners #}
+    {% if banners %}
+        <div class="mt-3 mb-2">
+            {{ render_convenor_actions(banners, form=form) }}
         </div>
     {% endif %}
 

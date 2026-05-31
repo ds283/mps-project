@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -25,15 +25,25 @@ from .users import User
 
 
 @dataclass
+class ConvenorActionButton:
+    """A single button or link rendered inside a ConvenorAction banner."""
+
+    label: str
+    url: str
+    method: str = "GET"    # "GET" or "POST"
+    outline: bool = False   # True → btn-outline-<severity>; False → btn-<severity>
+    icon: str = ""          # FA icon name without the "fa-" prefix, e.g. "search"
+
+
+@dataclass
 class ConvenorAction:
     """A single call-to-action item surfaced to the convenor on a MarkingEvent inspector."""
 
-    severity: str  # "warning", "danger", "info", "success"
+    severity: str  # "warning", "danger", "info", "success", "secondary"
     title: str
-    description: str
-    action_url: Optional[str] = None
-    action_label: Optional[str] = None
-    action_method: str = "GET"  # "GET" or "POST"
+    description: str = ""
+    icon: str = "exclamation-circle"  # FA icon name without the "fa-" prefix
+    buttons: list = field(default_factory=list)  # list[ConvenorActionButton]
 
 
 class MarkingSchemeMixin:
@@ -325,10 +335,14 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             actions.append(
                 ConvenorAction(
                     severity="success",
+                    icon="check-circle",
                     title="Ready to conflate",
                     description="All marking workflows are complete. Calculate conflated grades to advance to the next stage.",
-                    action_url=conflation_url,
-                    action_label="Conflate…" if conflation_url else None,
+                    buttons=(
+                        [ConvenorActionButton(label="Conflate…", url=conflation_url, icon="calculator")]
+                        if conflation_url
+                        else []
+                    ),
                 )
             )
 
@@ -337,10 +351,14 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             actions.append(
                 ConvenorAction(
                     severity="success",
+                    icon="check-circle",
                     title="Ready to generate feedback",
                     description="Conflation is complete. Generate feedback PDFs for all students.",
-                    action_url=generate_feedback_url,
-                    action_label="Generate feedback…",
+                    buttons=(
+                        [ConvenorActionButton(label="Generate feedback…", url=generate_feedback_url, icon="file-pdf")]
+                        if generate_feedback_url
+                        else []
+                    ),
                 )
             )
 
@@ -352,13 +370,17 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                 actions.append(
                     ConvenorAction(
                         severity="success",
+                        icon="check-circle",
                         title="Ready to fill missing feedback",
                         description=(
                             f"{missing_count} of {total_crs} record(s) are missing feedback PDFs. "
                             "Generate the missing feedback before pushing to students."
                         ),
-                        action_url=generate_feedback_url,
-                        action_label="Fill missing feedback…",
+                        buttons=(
+                            [ConvenorActionButton(label="Fill missing feedback…", url=generate_feedback_url, icon="file-pdf")]
+                            if generate_feedback_url
+                            else []
+                        ),
                     )
                 )
 
@@ -381,23 +403,30 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                 actions.append(
                     ConvenorAction(
                         severity="danger",
+                        icon="paper-plane",
                         title="Reports ready to distribute",
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready to send to assessors.",
-                        action_url=send_emails_url,
-                        action_label="Send notifications",
-                        action_method="POST",
+                        buttons=(
+                            [ConvenorActionButton(label="Send notifications", url=send_emails_url, method="POST", icon="paper-plane")]
+                            if send_emails_url
+                            else []
+                        ),
                     )
                 )
             else:
                 actions.append(
                     ConvenorAction(
                         severity="danger",
+                        icon="paper-plane",
                         title="Ready to open marking event",
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready. Open this event to trigger distribution.",
-                        action_url=open_event_url,
-                        action_label="Open event",
+                        buttons=(
+                            [ConvenorActionButton(label="Open event", url=open_event_url, icon="play")]
+                            if open_event_url
+                            else []
+                        ),
                     )
                 )
 
@@ -414,11 +443,10 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             actions.append(
                 ConvenorAction(
                     severity="danger",
+                    icon="exclamation-triangle",
                     title="Report processing failures",
                     description=f"{failed_count} submission{'s' if failed_count != 1 else ''} "
                     f"could not have their report processed. Please restart processing.",
-                    action_url=None,
-                    action_label=None,
                 )
             )
 

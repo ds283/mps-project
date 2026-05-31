@@ -50,6 +50,7 @@ from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
 from ..models.markingevent import (
     ConflationReport,
     ConvenorAction,
+    ConvenorActionButton,
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
@@ -1453,6 +1454,209 @@ def submitter_reports_inspector(workflow_id):
             ) > 0.001
         )
 
+    is_privileged = current_user.has_role("root") or current_user.has_role("admin")
+    banners = []
+
+    if can_edit:
+        if distributable_sr_count > 0:
+            n = distributable_sr_count
+            banners.append(
+                ConvenorAction(
+                    severity="danger",
+                    icon="paper-plane",
+                    title=f"{n} report{'s' if n != 1 else ''} ready to distribute",
+                    description="Distribution emails have not been sent yet. Assessors cannot begin marking until notified.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="View reports",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="distributable",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        ),
+                        ConvenorActionButton(
+                            label="Distribute all",
+                            icon="paper-plane",
+                            method="POST",
+                            url=url_for("convenor.send_marking_emails_for_workflow", workflow_id=workflow_id),
+                        ),
+                    ],
+                )
+            )
+
+        if workflow.has_reminder_eligible_reports:
+            banners.append(
+                ConvenorAction(
+                    severity="warning",
+                    icon="bell",
+                    title="Reminder emails can be sent",
+                    description="One or more marking reports are distributed but not yet submitted.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="View reports",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="grading",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        ),
+                        ConvenorActionButton(
+                            label="Send reminders…",
+                            icon="bell",
+                            url=url_for(
+                                "convenor.send_reminder_for_workflow",
+                                workflow_id=workflow_id,
+                                url=request.url,
+                                text="Submitter reports",
+                            ),
+                        ),
+                    ],
+                )
+            )
+
+        needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0)
+        if needs_moderator > 0:
+            n = needs_moderator
+            banners.append(
+                ConvenorAction(
+                    severity="danger",
+                    icon="exclamation-circle",
+                    title=f"{n} report{'s' if n != 1 else ''} need{'s' if n == 1 else ''} a moderator assigned",
+                    description="These reports cannot proceed until a moderator is assigned.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="Review",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="moderation",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        )
+                    ],
+                )
+            )
+
+        needs_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0)
+        if needs_intervention > 0:
+            n = needs_intervention
+            banners.append(
+                ConvenorAction(
+                    severity="danger",
+                    icon="exclamation-circle",
+                    title=f"{n} report{'s' if n != 1 else ''} require{'s' if n == 1 else ''} convenor intervention",
+                    description="Marking cannot proceed until the convenor reviews these reports.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="Review",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="intervention",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        )
+                    ],
+                )
+            )
+
+        if all_ready_to_sign_off:
+            banners.append(
+                ConvenorAction(
+                    severity="success",
+                    icon="check-circle",
+                    title="All reports are ready to be signed off.",
+                    description="Click to sign off all reports.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="Review",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="ready_signoff",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        ),
+                        ConvenorActionButton(
+                            label="Sign off all",
+                            icon="check-double",
+                            method="POST",
+                            url=url_for("convenor.complete_all_submitter_reports", workflow_id=workflow_id),
+                        ),
+                    ],
+                )
+            )
+
+    if multi_mr_count > 0:
+        n = multi_mr_count
+        banners.append(
+            ConvenorAction(
+                severity="danger",
+                icon="exclamation-triangle",
+                title=f"{n} record{'s' if n != 1 else ''} {'have' if n != 1 else 'has'} more than one supervisor marking report assigned.",
+                description="Each supervisor workflow record should have exactly one marking report. Please review the highlighted rows and remove duplicate assignments.",
+            )
+        )
+
+    if wrong_weight_count > 0:
+        n = wrong_weight_count
+        banners.append(
+            ConvenorAction(
+                severity="danger",
+                icon="exclamation-triangle",
+                title=f"{n} record{'s' if n != 1 else ''} {'have' if n != 1 else 'has'} marker weights that do not sum to the expected value ({workflow.event.period.number_markers}).",
+                description="Please review the highlighted rows and correct the marker assignments.",
+            )
+        )
+
+    if is_privileged and any_completed:
+        completed_count = state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0)
+        banners.append(
+            ConvenorAction(
+                severity="danger",
+                icon="undo",
+                title="Return all completed reports to convenor",
+                description=f"{completed_count} completed report{'s' if completed_count != 1 else ''} can be returned for re-editing.",
+                buttons=[
+                    ConvenorActionButton(
+                        label="Return all…",
+                        outline=True,
+                        icon="undo",
+                        method="POST",
+                        url=url_for("convenor.return_all_submitter_reports", workflow_id=workflow_id),
+                    )
+                ],
+            )
+        )
+
     return render_template_context(
         "convenor/markingevent/submitter_reports_inspector.html",
         workflow=workflow,
@@ -1463,15 +1667,8 @@ def submitter_reports_inspector(workflow_id):
         can_edit=can_edit,
         state_counts=state_counts,
         state_labels=state_labels,
-        all_ready_to_sign_off=all_ready_to_sign_off,
-        any_completed=any_completed,
-        complete_all_form=ActionForm(),
-        return_all_form=ActionForm(),
-        distribute_all_form=ActionForm(),
-        has_reminder_eligible=workflow.has_reminder_eligible_reports,
-        multi_mr_count=multi_mr_count,
-        wrong_weight_count=wrong_weight_count,
-        distributable_sr_count=distributable_sr_count,
+        banners=banners,
+        form=ActionForm(),
         filter_state=filter_state,
         filter_risk=filter_risk,
         filter_tolerance=filter_tolerance,
@@ -2008,6 +2205,77 @@ def marking_reports_inspector(workflow_id):
             except Exception:
                 pass
 
+    banners = []
+
+    if distributable_count > 0:
+        n = distributable_count
+        banners.append(
+            ConvenorAction(
+                severity="danger",
+                icon="paper-plane",
+                title=f"{n} marking report{'s' if n != 1 else ''} ready to distribute",
+                description="Distribution emails have not been sent yet. Assessors cannot begin marking until notified.",
+                buttons=[
+                    ConvenorActionButton(
+                        label="View reports",
+                        outline=True,
+                        icon="search",
+                        url=url_for(
+                            "convenor.marking_reports_inspector",
+                            workflow_id=workflow_id,
+                            filter_dist="distributable",
+                            filter_sub=filter_sub,
+                            filter_fb=filter_fb,
+                            filter_ready=filter_ready,
+                            filter_signoff=filter_signoff,
+                        ),
+                    ),
+                    ConvenorActionButton(
+                        label="Distribute all",
+                        icon="paper-plane",
+                        method="POST",
+                        url=url_for("convenor.send_marking_emails_for_workflow", workflow_id=workflow_id),
+                    ),
+                ],
+            )
+        )
+
+    if workflow.has_reminder_eligible_reports:
+        banners.append(
+            ConvenorAction(
+                severity="warning",
+                icon="bell",
+                title="Reminder emails can be sent",
+                description="One or more marking reports are distributed but not yet submitted.",
+                buttons=[
+                    ConvenorActionButton(
+                        label="View reports",
+                        outline=True,
+                        icon="search",
+                        url=url_for(
+                            "convenor.marking_reports_inspector",
+                            workflow_id=workflow_id,
+                            filter_dist=filter_dist,
+                            filter_sub="awaiting",
+                            filter_fb=filter_fb,
+                            filter_ready=filter_ready,
+                            filter_signoff=filter_signoff,
+                        ),
+                    ),
+                    ConvenorActionButton(
+                        label="Send reminders…",
+                        icon="bell",
+                        url=url_for(
+                            "convenor.send_reminder_for_workflow",
+                            workflow_id=workflow_id,
+                            url=request.url,
+                            text="Marking reports",
+                        ),
+                    ),
+                ],
+            )
+        )
+
     return render_template_context(
         "convenor/markingevent/marking_reports_inspector.html",
         workflow=workflow,
@@ -2021,8 +2289,8 @@ def marking_reports_inspector(workflow_id):
         submitted_count=submitted_count,
         feedback_count=feedback_count,
         signed_off_count=signed_off_count,
-        distribute_all_form=ActionForm(),
-        has_reminder_eligible=workflow.has_reminder_eligible_reports,
+        banners=banners,
+        form=ActionForm(),
         web_validation_failures=web_validation_failures,
         filter_dist=filter_dist,
         filter_sub=filter_sub,
@@ -2789,6 +3057,7 @@ def event_marking_workflows_inspector(event_id):
                 actions.append(
                     ConvenorAction(
                         severity="warning",
+                        icon="exclamation-circle",
                         title=f"Risk factors require review: {workflow.name}",
                         description=(
                             f"{n} submitter report{'s' if n != 1 else ''} in this workflow "
@@ -2796,8 +3065,7 @@ def event_marking_workflows_inspector(event_id):
                             f"and require{'s' if n == 1 else ''} convenor review before marking "
                             f"can proceed."
                         ),
-                        action_url=workflow_url,
-                        action_label="Review risk factors",
+                        buttons=[ConvenorActionButton(label="Review risk factors", url=workflow_url, outline=True, icon="search")],
                     )
                 )
 
@@ -2812,13 +3080,13 @@ def event_marking_workflows_inspector(event_id):
                 actions.append(
                     ConvenorAction(
                         severity="danger",
+                        icon="exclamation-circle",
                         title=f"Moderator{'s' if n != 1 else ''} need assigning: {workflow.name}",
                         description=(
                             f"{n} report{'s' if n != 1 else ''} in this workflow "
                             f"cannot proceed until a moderator is assigned."
                         ),
-                        action_url=workflow_url,
-                        action_label="Review reports",
+                        buttons=[ConvenorActionButton(label="Review reports", url=workflow_url, outline=True, icon="search")],
                     )
                 )
 
@@ -2839,14 +3107,14 @@ def event_marking_workflows_inspector(event_id):
                 actions.append(
                     ConvenorAction(
                         severity="secondary",
+                        icon="exclamation-circle",
                         title=f"Missing Turnitin data: {workflow.name}",
                         description=(
                             f"{n} submitter report{'s' if n != 1 else ''} in this workflow "
                             f"{'are' if n != 1 else 'is'} missing Turnitin similarity data. "
                             f"You can re-fetch from Canvas or enter scores manually."
                         ),
-                        action_url=workflow_url,
-                        action_label="Review submitter reports",
+                        buttons=[ConvenorActionButton(label="Review submitter reports", url=workflow_url, outline=True, icon="search")],
                     )
                 )
 
@@ -2865,18 +3133,25 @@ def event_marking_workflows_inspector(event_id):
                 actions.append(
                     ConvenorAction(
                         severity="success",
+                        icon="check-circle",
                         title=f"{workflow.name}: all reports ready to complete",
                         description="All submitter reports are in the Ready to sign off state and have grades.",
-                        action_url=url_for(
-                            "convenor.complete_all_submitter_reports",
-                            workflow_id=workflow.id,
-                            url=url_for(
-                                "convenor.event_marking_workflows_inspector",
-                                event_id=event_id,
-                            ),
-                            text="Marking workflows",
-                        ),
-                        action_label="Complete all…",
+                        buttons=[
+                            ConvenorActionButton(
+                                label="Complete all…",
+                                icon="check-double",
+                                method="POST",
+                                url=url_for(
+                                    "convenor.complete_all_submitter_reports",
+                                    workflow_id=workflow.id,
+                                    url=url_for(
+                                        "convenor.event_marking_workflows_inspector",
+                                        event_id=event_id,
+                                    ),
+                                    text="Marking workflows",
+                                ),
+                            )
+                        ],
                     )
                 )
 
@@ -2895,18 +3170,26 @@ def event_marking_workflows_inspector(event_id):
                     actions.append(
                         ConvenorAction(
                             severity="danger",
+                            icon="undo",
                             title=f"{workflow.name}: return completed reports to convenor",
                             description=f"{wf_completed} completed report{'s' if wf_completed != 1 else ''} can be returned for re-editing.",
-                            action_url=url_for(
-                                "convenor.return_all_submitter_reports",
-                                workflow_id=workflow.id,
-                                url=url_for(
-                                    "convenor.event_marking_workflows_inspector",
-                                    event_id=event_id,
-                                ),
-                                text="Marking workflows",
-                            ),
-                            action_label="Return all…",
+                            buttons=[
+                                ConvenorActionButton(
+                                    label="Return all…",
+                                    icon="undo",
+                                    outline=True,
+                                    method="POST",
+                                    url=url_for(
+                                        "convenor.return_all_submitter_reports",
+                                        workflow_id=workflow.id,
+                                        url=url_for(
+                                            "convenor.event_marking_workflows_inspector",
+                                            event_id=event_id,
+                                        ),
+                                        text="Marking workflows",
+                                    ),
+                                )
+                            ],
                         )
                     )
 

@@ -355,8 +355,8 @@
                                                     <div class="text-caption text-body-secondary">
                                                         {% if wh.distribution_pct is not none and wh.distribution_pct >= 100 %}
                                                             All distributed
-                                                            {% elif wh.distribution_pct is not none %}{{ (100 - wh.distribution_pct) | round(0) | int }}
-                                                            % awaiting
+                                                        {% elif wh.distribution_pct is not none %}
+                                                            {{ wh.n_marking_reports - wh.n_mr_distributed }} outstanding
                                                         {% else %}No data{% endif %}
                                                     </div>
                                                 {% endif %}
@@ -385,8 +385,8 @@
                                                     <div class="text-caption text-body-secondary">
                                                         {% if wh.submitted_pct is not none and wh.submitted_pct >= 100 %}
                                                             All submitted
-                                                            {% elif wh.submitted_pct is not none %}{{ (100 - wh.submitted_pct) | round(0) | int }}
-                                                            % awaiting
+                                                        {% elif wh.submitted_pct is not none %}
+                                                            {{ wh.n_marking_reports - wh.n_mr_submitted }} outstanding
                                                         {% else %}No data{% endif %}
                                                     </div>
                                                 {% endif %}
@@ -415,8 +415,8 @@
                                                     <div class="text-caption text-body-secondary">
                                                         {% if wh.feedback_pct is not none and wh.feedback_pct >= 100 %}
                                                             All present
-                                                            {% elif wh.feedback_pct is not none %}{{ (100 - wh.feedback_pct) | round(0) | int }}
-                                                            % missing
+                                                        {% elif wh.feedback_pct is not none %}
+                                                            {{ wh.n_marking_reports - wh.n_mr_with_feedback }} outstanding
                                                         {% else %}No data{% endif %}
                                                     </div>
                                                 {% endif %}
@@ -466,7 +466,7 @@
                                                 {% if blk == 'footer' %}
                                                     <div class="text-caption text-body-secondary">
                                                         {% if wh.needs_moderator_pct is not none and wh.needs_moderator_pct > 0 %}
-                                                            need moderator
+                                                            {{ wh.n_needs_moderator }} {{ 'needs' if wh.n_needs_moderator == 1 else 'need' }} moderator
                                                         {% else %}
                                                             none
                                                         {% endif %}
@@ -497,7 +497,7 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="text-caption text-body-secondary">
-                                                        stalled
+                                                        {{ wh.n_not_ready }} stalled
                                                     </div>
                                                 {% endif %}
                                             {% endcall %}
@@ -523,7 +523,7 @@
                                                 {% endif %}
                                                 {% if blk == 'footer' %}
                                                     <div class="text-caption text-body-secondary">
-                                                        needs intervention
+                                                        {{ wh.n_intervention }} {{ 'needs' if wh.n_intervention == 1 else 'need' }} intervention
                                                     </div>
                                                 {% endif %}
                                             {% endcall %}

@@ -1299,7 +1299,48 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
             ),
         )
 
-    _event = event  # capture for use in validators
+    _event = event                  # capture for use in validators
+    _scheme_locked = scheme_locked  # capture for use in edit-form validator
+    _config = event.config if event is not None else None  # ProjectClassConfig
+
+    # Roles that require a corresponding feature flag on ProjectClassConfig.
+    # Roles absent from this dict (ROLE_EXAM_BOARD, ROLE_EXTERNAL_EXAMINER,
+    # ROLE_RESPONSIBLE_SUPERVISOR) are unconditionally permitted.
+    _ROLE_CONFIG_FLAGS = {
+        MarkingWorkflow.ROLE_SUPERVISOR:            "uses_supervisor",
+        MarkingWorkflow.ROLE_MARKER:                "uses_marker",
+        MarkingWorkflow.ROLE_PRESENTATION_ASSESSOR: "uses_presentations",
+        MarkingWorkflow.ROLE_MODERATOR:             "uses_moderator",
+    }
+
+    _valid_role_choices = [
+        (role, label)
+        for role, label in WORKFLOW_ROLE_CHOICES
+        if _config is None
+        or role not in _ROLE_CONFIG_FLAGS
+        or getattr(_config, _ROLE_CONFIG_FLAGS[role], True)
+    ]
+
+    def _check_scheme_tolerance(scheme):
+        """Return a user-facing error string if scheme.uses_tolerance violates
+        config/period constraints, else None."""
+        if not scheme.uses_tolerance:
+            return None
+        if _config is not None and not _config.uses_moderator:
+            return (
+                "This scheme uses tolerance-based moderation, but moderator roles are "
+                "not enabled for this project class."
+            )
+        if _event is not None and _event.period is not None:
+            n = _event.period.number_markers
+            if n <= 1:
+                marker_word = "marker" if n == 1 else "markers"
+                return (
+                    f"Tolerance-based moderation requires at least 2 markers per "
+                    f"submission, but this period is configured with "
+                    f"{n} {marker_word}."
+                )
+        return None
 
     class MarkingWorkflowMixin:
         name = StringField(
@@ -1369,7 +1410,7 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
     class AddMarkingWorkflowForm(Form, MarkingWorkflowMixin):
         role = SelectField(
             "Role",
-            choices=WORKFLOW_ROLE_CHOICES,
+            choices=_valid_role_choices,
             coerce=int,
             description="The assessor role this workflow targets.",
         )
@@ -1386,9 +1427,18 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
         def validate_scheme(self, field):
             if field.data is None:
                 raise ValidationError("A marking scheme must be selected.")
+            msg = _check_scheme_tolerance(field.data)
+            if msg:
+                raise ValidationError(msg)
 
     class EditMarkingWorkflowForm(Form, MarkingWorkflowMixin, SaveChangesMixin):
-        pass
+        def validate_scheme(self, field):
+            if _scheme_locked:
+                return  # scheme is read-only; re-validation not needed
+            if field.data is not None:
+                msg = _check_scheme_tolerance(field.data)
+                if msg:
+                    raise ValidationError(msg)
 
     return AddMarkingWorkflowForm, EditMarkingWorkflowForm
 

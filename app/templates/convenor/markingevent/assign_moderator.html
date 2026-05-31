@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% from "select2.html" import import_select2 %}
 
 {% block title %}Assign moderator – {{ sr.student.user.name }}{% endblock %}
 
@@ -40,34 +41,34 @@
             <div class="card-body p-0">
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="table-light">
-                        <tr>
-                            <th>Marker</th>
-                            <th>Role</th>
-                            <th class="text-center">Grade</th>
-                            <th class="text-center">Submitted</th>
-                        </tr>
+                    <tr>
+                        <th>Marker</th>
+                        <th>Role</th>
+                        <th class="text-center">Grade</th>
+                        <th class="text-center">Submitted</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        {% for report in reports %}
-                            <tr>
-                                <td>{{ report.user.name }}</td>
-                                <td>{{ report.role.role_as_str }}</td>
-                                <td class="text-center">
-                                    {% if report.grade is not none %}
-                                        <strong class="text-danger">{{ report.grade }}</strong>
-                                    {% else %}
-                                        <span class="text-body-secondary">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    {% if report.report_submitted %}
-                                        <span class="badge bg-success">Submitted</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Pending</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
+                    {% for report in reports %}
+                        <tr>
+                            <td>{{ report.user.name }}</td>
+                            <td>{{ report.role.role_as_str }}</td>
+                            <td class="text-center">
+                                {% if report.grade is not none %}
+                                    <strong class="text-danger">{{ report.grade }}</strong>
+                                {% else %}
+                                    <span class="text-body-secondary">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if report.report_submitted %}
+                                    <span class="badge bg-success">Submitted</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
                     </tbody>
                 </table>
             </div>

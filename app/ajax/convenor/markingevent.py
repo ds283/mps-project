@@ -1512,6 +1512,13 @@ _conflation_report_grades = """
         {% if cr.is_stale %}
             <div class="mt-1"><span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle fa-fw"></i> Stale</span></div>
         {% endif %}
+        {% set policy = cr.rounding_policy %}
+        {% if policy %}
+            <div class="mt-1 text-body-secondary">
+                <i class="fas fa-balance-scale fa-fw"></i>
+                <span data-bs-toggle="tooltip" title="{{ policy.description }}">{{ policy.label }}</span>
+            </div>
+        {% endif %}
     </div>
 {% else %}
     <span class="badge bg-secondary">No grades</span>

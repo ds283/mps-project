@@ -1334,4 +1334,18 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     def conflation_report_as_dict(self) -> dict:
         if not self.conflation_report:
             return {}
-        return json.loads(self.conflation_report)
+        raw = json.loads(self.conflation_report)
+        # Structured format (new): {"targets": {...}, "metadata": {...}}
+        # Legacy flat format (old records): {"target_name": value, ...}
+        return raw.get("targets", raw)
+
+    @property
+    def rounding_policy(self):
+        """Return the RoundingPolicy used when this report was generated, or None."""
+        from ..shared.grade_rounding import lookup_rounding_policy
+
+        if not self.conflation_report:
+            return None
+        raw = json.loads(self.conflation_report)
+        meta = raw.get("metadata", {})
+        return lookup_rounding_policy(meta.get("rounding_policy"))

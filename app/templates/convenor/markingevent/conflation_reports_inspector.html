@@ -153,6 +153,14 @@
                                 <span class="badge bg-secondary">{{ event.workflow_state }}</span>
                             {% endif %}
                         </dd>
+                        <dt class="col-sm-5 text-body-secondary">Rounding policy</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge bg-secondary"
+                                  data-bs-toggle="tooltip"
+                                  title="{{ rounding_policy.description }}">
+                                {{ rounding_policy.label }}
+                            </span>
+                        </dd>
                     </dl>
                 </div>
                 <div class="col-md-6">

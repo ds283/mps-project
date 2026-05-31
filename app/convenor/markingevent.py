@@ -66,6 +66,7 @@ from ..shared.forms.wtf_validators import (
     make_unique_marking_workflow_key_in_event,
     make_valid_marking_targets,
 )
+from ..shared.grade_rounding import ACTIVE_ROUNDING_POLICY
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
@@ -492,6 +493,7 @@ def marking_event_conflation_reports(event_id):
         stale_count=stale_count,
         propagate_form=ActionForm(),
         delete_all_form=ActionForm(),
+        rounding_policy=ACTIVE_ROUNDING_POLICY,
     )
 
 
@@ -689,7 +691,7 @@ def reconflate_conflation_report(cr_id):
     for target_name, expr in targets.items():
         try:
             value = eval(expr, {"__builtins__": {}}, grades)  # noqa: S307
-            result[target_name] = float(value)
+            result[target_name] = ACTIVE_ROUNDING_POLICY.round(float(value))
         except Exception as exc:
             flash(
                 f"Reconflation failed: error evaluating target '{target_name}' "
@@ -699,7 +701,12 @@ def reconflate_conflation_report(cr_id):
             return redirect(url)
 
     try:
-        cr.conflation_report = json.dumps(result)
+        cr.conflation_report = json.dumps(
+            {
+                "targets": result,
+                "metadata": {"rounding_policy": ACTIVE_ROUNDING_POLICY.identifier},
+            }
+        )
         cr.generated_by_id = current_user.id
         cr.generated_timestamp = datetime.now()
         cr.is_stale = False
@@ -4780,12 +4787,13 @@ def calculate_conflation(event_id):
                     return redirect(url)
                 grades[wf.key] = float(sr.grade)
 
-            # Evaluate each target expression in the restricted namespace
+            # Evaluate each target expression in the restricted namespace, then apply
+            # the institutional rounding policy to produce whole-number module marks.
             result = {}
             for target_name, expr in targets.items():
                 try:
                     value = eval(expr, {"__builtins__": {}}, grades)  # noqa: S307
-                    result[target_name] = float(value)
+                    result[target_name] = ACTIVE_ROUNDING_POLICY.round(float(value))
                 except Exception as exc:
                     flash(
                         f"Conflation failed: error evaluating target '{target_name}' "
@@ -4800,7 +4808,12 @@ def calculate_conflation(event_id):
             cr = ConflationReport(
                 marking_event_id=event.id,
                 submission_record_id=record.id,
-                conflation_report=json.dumps(result),
+                conflation_report=json.dumps(
+                    {
+                        "targets": result,
+                        "metadata": {"rounding_policy": ACTIVE_ROUNDING_POLICY.identifier},
+                    }
+                ),
                 generated_by_id=current_user.id,
                 generated_timestamp=now,
                 is_stale=False,

@@ -34,7 +34,7 @@
             </span>
         {% endif %}
     {% elif label_data is none %}
-        <span class="badge bg-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</span>
+        {# None means "don't show this label" — render nothing #}
     {% else %}
         <span class="badge bg-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</span>
     {% endif %}

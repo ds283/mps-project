@@ -296,6 +296,13 @@ _submitter_report_actions = """
             </button>
         </form>
     {% endif %}
+    {% if state == NEEDS_MODERATOR_ASSIGNED %}
+        <a href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
+                 url=inspector_url, text='Submitter reports') }}"
+           class="btn btn-danger btn-sm full-width-button mb-2">
+            <i class="fas fa-user-plus fa-fw"></i> Assign moderator
+        </a>
+    {% endif %}
 {% endif %}
 {% if is_completed %}
     <div class="mb-2">
@@ -449,7 +456,13 @@ _submitter_report_grade = """
         <div class="small text-muted mt-1">by {{ report.grade_generated_by.name }}</div>
     {% endif %}
 {% else %}
-    <span class="badge bg-secondary">Not graded</span>
+    {% if report.out_of_tolerance %}
+        <span class="badge bg-warning text-dark">
+            <i class="fas fa-balance-scale fa-fw"></i> Out of tolerance
+        </span>
+    {% else %}
+        <span class="badge bg-secondary">Not graded</span>
+    {% endif %}
 {% endif %}
 """
 
@@ -606,6 +619,12 @@ _submitter_report_reports = """
             </div>
         {%- endif -%}
     {%- endif -%}
+    {% if report.out_of_tolerance %}
+        <div class="alert alert-warning p-1 mb-1 small">
+            <i class="fas fa-balance-scale fa-fw me-1"></i>
+            <strong>Out of tolerance</strong> &mdash; marking reports differ by more than the allowed tolerance
+        </div>
+    {% endif %}
     {% for mr in marking_reports %}
         <div class="bg-light p-2 mb-2">
             <div class="d-flex flex-column justify-content-start align-items-start gap-1">

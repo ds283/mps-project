@@ -3069,6 +3069,14 @@ def event_marking_workflows_inspector(event_id):
             )
             if unresolved > 0:
                 n = unresolved
+                risk_url = url_for(
+                    "convenor.submitter_reports_inspector",
+                    workflow_id=workflow.id,
+                    filter_state="intervention",
+                    filter_risk="any_risk",
+                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                    text="Marking workflows",
+                )
                 actions.append(
                     ConvenorAction(
                         severity="warning",
@@ -3080,7 +3088,7 @@ def event_marking_workflows_inspector(event_id):
                             f"and require{'s' if n == 1 else ''} convenor review before marking "
                             f"can proceed."
                         ),
-                        buttons=[ConvenorActionButton(label="Review risk factors", url=workflow_url, outline=True, icon="search")],
+                        buttons=[ConvenorActionButton(label="Review risk factors", url=risk_url, outline=True, icon="search")],
                     )
                 )
 

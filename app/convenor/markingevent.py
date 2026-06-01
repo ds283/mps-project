@@ -14,7 +14,7 @@ from functools import partial
 
 from celery import chain as celery_chain
 from flask import current_app, flash, jsonify, redirect, request, session, url_for
-from flask_login import current_user
+from flask_login import current_user, login_required
 from flask_security import roles_accepted
 from sqlalchemy import and_, distinct, func, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -48,13 +48,12 @@ from ..models import (
 )
 from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
 from ..models.markingevent import (
+    _DISTRIBUTED_STATE_VALUES,
     ConflationReport,
     ConvenorAction,
     ConvenorActionButton,
     MarkingEventWorkflowStates,
-    MarkingReportDistributionStates,
     SubmitterReportWorkflowStates,
-    _DISTRIBUTED_STATE_VALUES,
 )
 from ..models.similarity import SimilarityConcern
 from ..models.submissions import SubmissionRoleTypesMixin
@@ -89,7 +88,6 @@ from .forms import (
     MarkingReportPropertiesForm,
     MarkingWorkflowFormFactory,
     PushFeedbackForm,
-    ResolveTurnitinForm,
     TestMarkingEventFormFactory,
     TestMarkingReminderFormFactory,
     build_resolve_risk_factors_form,
@@ -576,7 +574,9 @@ def _delete_feedback_for_cr(cr: ConflationReport, audit_suffix: str = "") -> Non
     if report_ids:
         db.session.execute(
             sa_delete(conflation_report_to_feedback_report).where(
-                conflation_report_to_feedback_report.c.feedback_report_id.in_(report_ids)
+                conflation_report_to_feedback_report.c.feedback_report_id.in_(
+                    report_ids
+                )
             )
         )
         db.session.execute(
@@ -771,16 +771,15 @@ def delete_conflation_report_feedback(cr_id):
     student_name = cr.submission_record.owner.student.user.name
 
     try:
-        _delete_feedback_for_cr(
-            cr, audit_suffix=f" (cr id #{cr.id})"
-        )
+        _delete_feedback_for_cr(cr, audit_suffix=f" (cr id #{cr.id})")
 
         # If no ConflationReport in this event now has any feedback, regress the event state
         all_crs = event.conflation_reports.all()
         any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
         if (
             not any_with_feedback
-            and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+            and event.workflow_state
+            == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
         ):
             event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
 
@@ -841,7 +840,9 @@ def regenerate_conflation_report_feedback(cr_id):
 
         try:
             if cr.feedback_reports.count() > 0:
-                _delete_feedback_for_cr(cr, audit_suffix=f" (cr id #{cr.id}, regenerate)")
+                _delete_feedback_for_cr(
+                    cr, audit_suffix=f" (cr id #{cr.id}, regenerate)"
+                )
                 db.session.flush()
 
             launch_feedback_job(
@@ -1197,13 +1198,16 @@ def delete_all_conflation_report_feedback(event_id):
 
     try:
         for cr in eligible_crs:
-            _delete_feedback_for_cr(cr, audit_suffix=f" (batch delete, event id #{event_id})")
+            _delete_feedback_for_cr(
+                cr, audit_suffix=f" (batch delete, event id #{event_id})"
+            )
 
         all_crs = event.conflation_reports.all()
         any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
         if (
             not any_with_feedback
-            and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
+            and event.workflow_state
+            == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
         ):
             event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
 
@@ -1334,44 +1338,71 @@ def submitter_reports_inspector(workflow_id):
     text = request.args.get("text", "Marking workflows")
 
     filter_state = request.args.get("filter_state")
-    if filter_state is None and session.get("convenor_submitter_reports_inspector_filter_state"):
+    if filter_state is None and session.get(
+        "convenor_submitter_reports_inspector_filter_state"
+    ):
         filter_state = session["convenor_submitter_reports_inspector_filter_state"]
     if filter_state not in (
-        "all", "not_ready", "distributable", "grading", "signoff_pending",
-        "feedback_pending", "moderation", "intervention", "ready_signoff", "completed", "dropped",
+        "all",
+        "not_ready",
+        "distributable",
+        "grading",
+        "signoff_pending",
+        "feedback_pending",
+        "moderation",
+        "intervention",
+        "ready_signoff",
+        "completed",
+        "dropped",
     ):
         filter_state = "all"
     session["convenor_submitter_reports_inspector_filter_state"] = filter_state
 
     filter_risk = request.args.get("filter_risk")
-    if filter_risk is None and session.get("convenor_submitter_reports_inspector_filter_risk"):
+    if filter_risk is None and session.get(
+        "convenor_submitter_reports_inspector_filter_risk"
+    ):
         filter_risk = session["convenor_submitter_reports_inspector_filter_risk"]
     if filter_risk not in ("all", "any_risk", "no_risk"):
         filter_risk = "all"
     session["convenor_submitter_reports_inspector_filter_risk"] = filter_risk
 
     filter_tolerance = request.args.get("filter_tolerance")
-    if filter_tolerance is None and session.get("convenor_submitter_reports_inspector_filter_tolerance"):
-        filter_tolerance = session["convenor_submitter_reports_inspector_filter_tolerance"]
+    if filter_tolerance is None and session.get(
+        "convenor_submitter_reports_inspector_filter_tolerance"
+    ):
+        filter_tolerance = session[
+            "convenor_submitter_reports_inspector_filter_tolerance"
+        ]
     if filter_tolerance not in ("all", "out_of_tolerance", "in_tolerance"):
         filter_tolerance = "all"
     session["convenor_submitter_reports_inspector_filter_tolerance"] = filter_tolerance
 
     filter_grade = request.args.get("filter_grade")
-    if filter_grade is None and session.get("convenor_submitter_reports_inspector_filter_grade"):
+    if filter_grade is None and session.get(
+        "convenor_submitter_reports_inspector_filter_grade"
+    ):
         filter_grade = session["convenor_submitter_reports_inspector_filter_grade"]
     if filter_grade not in ("all", "graded", "not_graded"):
         filter_grade = "all"
     session["convenor_submitter_reports_inspector_filter_grade"] = filter_grade
 
     filter_completion = request.args.get("filter_completion")
-    if filter_completion is None and session.get("convenor_submitter_reports_inspector_filter_completion"):
-        filter_completion = session["convenor_submitter_reports_inspector_filter_completion"]
+    if filter_completion is None and session.get(
+        "convenor_submitter_reports_inspector_filter_completion"
+    ):
+        filter_completion = session[
+            "convenor_submitter_reports_inspector_filter_completion"
+        ]
     if filter_completion not in ("all", "completed", "not_completed"):
         filter_completion = "all"
-    session["convenor_submitter_reports_inspector_filter_completion"] = filter_completion
+    session["convenor_submitter_reports_inspector_filter_completion"] = (
+        filter_completion
+    )
 
-    workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
+    workflow_uses_tolerance = (
+        workflow.scheme is not None and workflow.scheme.uses_tolerance
+    )
 
     if not workflow_uses_tolerance and filter_tolerance != "all":
         filter_tolerance = "all"
@@ -1419,9 +1450,13 @@ def submitter_reports_inspector(workflow_id):
 
     total = workflow.submitter_reports.count()
     all_ready_to_sign_off = can_edit and (
-        total > 0 and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0) == total
+        total > 0
+        and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0)
+        == total
     )
-    any_completed = can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
+    any_completed = (
+        can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
+    )
 
     # Count SRs that are genuinely ready to distribute: READY_TO_DISTRIBUTE state with at
     # least one MarkingReport not yet distributed. This excludes SRs that are stuck in
@@ -1432,7 +1467,8 @@ def submitter_reports_inspector(workflow_id):
         .join(MarkingReport, MarkingReport.submitter_report_id == SubmitterReport.id)
         .filter(
             SubmitterReport.workflow_id == workflow_id,
-            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+            SubmitterReport.workflow_state
+            == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
             ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
         )
         .scalar()
@@ -1441,7 +1477,10 @@ def submitter_reports_inspector(workflow_id):
 
     # Compute warning counts for CTA blocks
     _supervisor_role_types = frozenset(
-        {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+        {
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        }
     )
     wf_role = workflow.role
 
@@ -1455,10 +1494,17 @@ def submitter_reports_inspector(workflow_id):
     if wf_role == SubmissionRoleTypesMixin.ROLE_MARKER:
         expected = float(workflow.event.period.number_markers)
         wrong_weight_count = sum(
-            1 for sr in workflow.submitter_reports
+            1
+            for sr in workflow.submitter_reports
             if abs(
-                sum(float(mr.weight) for mr in sr.marking_reports if mr.weight is not None) - expected
-            ) > 0.001
+                sum(
+                    float(mr.weight)
+                    for mr in sr.marking_reports
+                    if mr.weight is not None
+                )
+                - expected
+            )
+            > 0.001
         )
 
     is_privileged = current_user.has_role("root") or current_user.has_role("admin")
@@ -1492,7 +1538,10 @@ def submitter_reports_inspector(workflow_id):
                             label="Distribute all",
                             icon="paper-plane",
                             method="POST",
-                            url=url_for("convenor.send_marking_emails_for_workflow", workflow_id=workflow_id),
+                            url=url_for(
+                                "convenor.send_marking_emails_for_workflow",
+                                workflow_id=workflow_id,
+                            ),
                         ),
                     ],
                 )
@@ -1534,7 +1583,9 @@ def submitter_reports_inspector(workflow_id):
                 )
             )
 
-        needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0)
+        needs_moderator = state_counts.get(
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0
+        )
         if needs_moderator > 0:
             n = needs_moderator
             banners.append(
@@ -1562,7 +1613,9 @@ def submitter_reports_inspector(workflow_id):
                 )
             )
 
-        needs_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0)
+        needs_intervention = state_counts.get(
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0
+        )
         if needs_intervention > 0:
             n = needs_intervention
             banners.append(
@@ -1616,7 +1669,10 @@ def submitter_reports_inspector(workflow_id):
                             label="Sign off all",
                             icon="check-double",
                             method="POST",
-                            url=url_for("convenor.complete_all_submitter_reports", workflow_id=workflow_id),
+                            url=url_for(
+                                "convenor.complete_all_submitter_reports",
+                                workflow_id=workflow_id,
+                            ),
                         ),
                     ],
                 )
@@ -1658,7 +1714,10 @@ def submitter_reports_inspector(workflow_id):
                         outline=True,
                         icon="undo",
                         method="POST",
-                        url=url_for("convenor.return_all_submitter_reports", workflow_id=workflow_id),
+                        url=url_for(
+                            "convenor.return_all_submitter_reports",
+                            workflow_id=workflow_id,
+                        ),
                     )
                 ],
             )
@@ -1709,7 +1768,9 @@ def submitter_reports_ajax(workflow_id):
     filter_grade = request.args.get("filter_grade", "all")
     filter_completion = request.args.get("filter_completion", "all")
 
-    workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
+    workflow_uses_tolerance = (
+        workflow.scheme is not None and workflow.scheme.uses_tolerance
+    )
     if not workflow_uses_tolerance:
         filter_tolerance = "all"
 
@@ -1739,22 +1800,29 @@ def submitter_reports_ajax(workflow_id):
         # "intervention" = convenor must act immediately: covers both REQUIRES_CONVENOR_INTERVENTION
         # and NEEDS_MODERATOR_ASSIGNED (moderator not yet assigned; blocks workflow progress).
         _state_map = {
-            "not_ready":       [S.NOT_READY],
-            "distributable":   [S.READY_TO_DISTRIBUTE],
-            "grading":         [S.AWAITING_GRADING_REPORTS],
+            "not_ready": [S.NOT_READY],
+            "distributable": [S.READY_TO_DISTRIBUTE],
+            "grading": [S.AWAITING_GRADING_REPORTS],
             "signoff_pending": [S.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF],
-            "moderation":      [S.AWAITING_MODERATOR_REPORT],
-            "intervention":    [S.REQUIRES_CONVENOR_INTERVENTION, S.NEEDS_MODERATOR_ASSIGNED],
-            "ready_signoff":   [S.READY_TO_SIGN_OFF],
-            "completed":       [S.COMPLETED, S.FEEDBACK_AVAILABLE],
-            "dropped":         [S.DROPPED],
+            "moderation": [S.AWAITING_MODERATOR_REPORT],
+            "intervention": [
+                S.REQUIRES_CONVENOR_INTERVENTION,
+                S.NEEDS_MODERATOR_ASSIGNED,
+            ],
+            "ready_signoff": [S.READY_TO_SIGN_OFF],
+            "completed": [S.COMPLETED, S.FEEDBACK_AVAILABLE],
+            "dropped": [S.DROPPED],
         }
         if filter_state != "all" and filter_state in _state_map:
             states = _state_map[filter_state]
             if len(states) == 1:
-                base_query = base_query.filter(SubmitterReport.workflow_state == states[0])
+                base_query = base_query.filter(
+                    SubmitterReport.workflow_state == states[0]
+                )
             else:
-                base_query = base_query.filter(SubmitterReport.workflow_state.in_(states))
+                base_query = base_query.filter(
+                    SubmitterReport.workflow_state.in_(states)
+                )
 
     if filter_tolerance == "out_of_tolerance":
         base_query = base_query.filter(SubmitterReport.out_of_tolerance.is_(True))
@@ -1773,19 +1841,30 @@ def submitter_reports_ajax(workflow_id):
 
     if filter_risk in ("any_risk", "no_risk"):
         _risk_types = [
-            "turnitin", "ai_compliance", "ai_use", "document_length",
-            "word_count_discrepancy", "similarity_flagged", "similarity_chunking_failed",
+            "turnitin",
+            "ai_compliance",
+            "ai_use",
+            "document_length",
+            "word_count_discrepancy",
+            "similarity_flagged",
+            "similarity_chunking_failed",
         ]
 
         def _risk_unresolved_clause(risk_type):
             # COALESCE turns NULL (path absent or risk_factors IS NULL) into 0,
             # ensuring ~or_(...) correctly includes null-risk-factor rows in "no_risk".
             present = func.coalesce(
-                func.json_contains(SubmissionRecord.risk_factors, '{"present": true}', f"$.{risk_type}"),
+                func.json_contains(
+                    SubmissionRecord.risk_factors, '{"present": true}', f"$.{risk_type}"
+                ),
                 0,
             )
             resolved_true = func.coalesce(
-                func.json_contains(SubmissionRecord.risk_factors, '{"resolved": true}', f"$.{risk_type}"),
+                func.json_contains(
+                    SubmissionRecord.risk_factors,
+                    '{"resolved": true}',
+                    f"$.{risk_type}",
+                ),
                 0,
             )
             return and_(present == 1, resolved_true == 0)
@@ -1819,8 +1898,14 @@ def submitter_reports_ajax(workflow_id):
 
     columns = {
         "student": student_col,
-        "_marker_names": {**faculty_name_col, "search_collection": _marker_name_collection},
-        "_moderator_names": {**faculty_name_col, "search_collection": _moderator_name_collection},
+        "_marker_names": {
+            **faculty_name_col,
+            "search_collection": _marker_name_collection,
+        },
+        "_moderator_names": {
+            **faculty_name_col,
+            "search_collection": _moderator_name_collection,
+        },
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
@@ -1868,7 +1953,10 @@ def resolve_risk_factors(record_id):
     is_retired = record.owner.retired if record.owner is not None else False
 
     if is_retired and request.method == "POST":
-        flash("Risk factors are locked for retired students and cannot be modified.", "warning")
+        flash(
+            "Risk factors are locked for retired students and cannot be modified.",
+            "warning",
+        )
         return redirect(url)
 
     FormClass = build_resolve_risk_factors_form()
@@ -1905,14 +1993,23 @@ def resolve_risk_factors(record_id):
         flash("Risk factor resolutions recorded successfully.", "success")
         remaining = record.risk_factor_display_items()
         if any(not item["resolved"] for item in remaining):
-            return redirect(url_for("convenor.resolve_risk_factors", record_id=record_id, url=url, text=text))
+            return redirect(
+                url_for(
+                    "convenor.resolve_risk_factors",
+                    record_id=record_id,
+                    url=url,
+                    text=text,
+                )
+            )
         return redirect(url)
 
     # Prepare display items (all logic in Python, template is purely presentational)
     display_items = record.risk_factor_display_items()
 
     # Collect open similarity concerns for the similarity_flagged risk factor card
-    sim_factor = (record.risk_factors_data or {}).get(SubmissionRecord.RISK_SIMILARITY_FLAGGED, {})
+    sim_factor = (record.risk_factors_data or {}).get(
+        SubmissionRecord.RISK_SIMILARITY_FLAGGED, {}
+    )
     similarity_open_concerns = []
     if sim_factor.get("present", False):
         similarity_open_concerns = (
@@ -1928,7 +2025,9 @@ def resolve_risk_factors(record_id):
             .all()
         )
 
-    chunking_factor = (record.risk_factors_data or {}).get(SubmissionRecord.RISK_SIMILARITY_CHUNKING_FAILED, {})
+    chunking_factor = (record.risk_factors_data or {}).get(
+        SubmissionRecord.RISK_SIMILARITY_CHUNKING_FAILED, {}
+    )
 
     return render_template_context(
         "convenor/markingevent/resolve_risk_factors.html",
@@ -2132,35 +2231,45 @@ def marking_reports_inspector(workflow_id):
     text = request.args.get("text", "Marking workflows")
 
     filter_dist = request.args.get("filter_dist")
-    if filter_dist is None and session.get("convenor_marking_reports_inspector_filter_dist"):
+    if filter_dist is None and session.get(
+        "convenor_marking_reports_inspector_filter_dist"
+    ):
         filter_dist = session["convenor_marking_reports_inspector_filter_dist"]
     if filter_dist not in ("all", "distributable", "distributed", "not_distributed"):
         filter_dist = "all"
     session["convenor_marking_reports_inspector_filter_dist"] = filter_dist
 
     filter_sub = request.args.get("filter_sub")
-    if filter_sub is None and session.get("convenor_marking_reports_inspector_filter_sub"):
+    if filter_sub is None and session.get(
+        "convenor_marking_reports_inspector_filter_sub"
+    ):
         filter_sub = session["convenor_marking_reports_inspector_filter_sub"]
     if filter_sub not in ("all", "submitted", "awaiting", "not_submitted"):
         filter_sub = "all"
     session["convenor_marking_reports_inspector_filter_sub"] = filter_sub
 
     filter_fb = request.args.get("filter_fb")
-    if filter_fb is None and session.get("convenor_marking_reports_inspector_filter_fb"):
+    if filter_fb is None and session.get(
+        "convenor_marking_reports_inspector_filter_fb"
+    ):
         filter_fb = session["convenor_marking_reports_inspector_filter_fb"]
     if filter_fb not in ("all", "submitted", "pending", "not_submitted"):
         filter_fb = "all"
     session["convenor_marking_reports_inspector_filter_fb"] = filter_fb
 
     filter_ready = request.args.get("filter_ready")
-    if filter_ready is None and session.get("convenor_marking_reports_inspector_filter_ready"):
+    if filter_ready is None and session.get(
+        "convenor_marking_reports_inspector_filter_ready"
+    ):
         filter_ready = session["convenor_marking_reports_inspector_filter_ready"]
     if filter_ready not in ("all", "ready", "not_ready"):
         filter_ready = "all"
     session["convenor_marking_reports_inspector_filter_ready"] = filter_ready
 
     filter_signoff = request.args.get("filter_signoff")
-    if filter_signoff is None and session.get("convenor_marking_reports_inspector_filter_signoff"):
+    if filter_signoff is None and session.get(
+        "convenor_marking_reports_inspector_filter_signoff"
+    ):
         filter_signoff = session["convenor_marking_reports_inspector_filter_signoff"]
     if filter_signoff not in ("all", "signed_off", "awaiting_signoff"):
         filter_signoff = "all"
@@ -2187,7 +2296,8 @@ def marking_reports_inspector(workflow_id):
         .filter(
             SubmitterReport.workflow_id == workflow_id,
             ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
-            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+            SubmitterReport.workflow_state
+            == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
         )
         .scalar()
         or 0
@@ -2247,7 +2357,10 @@ def marking_reports_inspector(workflow_id):
                         label="Distribute all",
                         icon="paper-plane",
                         method="POST",
-                        url=url_for("convenor.send_marking_emails_for_workflow", workflow_id=workflow_id),
+                        url=url_for(
+                            "convenor.send_marking_emails_for_workflow",
+                            workflow_id=workflow_id,
+                        ),
                     ),
                 ],
             )
@@ -2367,19 +2480,27 @@ def marking_reports_ajax(workflow_id):
         base_query = base_query.filter(
             and_(
                 ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
-                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+                SubmitterReport.workflow_state
+                == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
             )
         )
     elif filter_dist == "distributed":
-        base_query = base_query.filter(MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)))
+        base_query = base_query.filter(
+            MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
+        )
     elif filter_dist == "not_distributed":
-        base_query = base_query.filter(~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)))
+        base_query = base_query.filter(
+            ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
+        )
 
     if filter_sub == "submitted":
         base_query = base_query.filter(MarkingReport.report_submitted.is_(True))
     elif filter_sub == "awaiting":
         base_query = base_query.filter(
-            and_(MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)), MarkingReport.report_submitted.is_(False))
+            and_(
+                MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
+                MarkingReport.report_submitted.is_(False),
+            )
         )
     elif filter_sub == "not_submitted":
         base_query = base_query.filter(MarkingReport.report_submitted.is_(False))
@@ -2388,7 +2509,10 @@ def marking_reports_ajax(workflow_id):
         base_query = base_query.filter(MarkingReport.feedback_submitted.is_(True))
     elif filter_fb == "pending":
         base_query = base_query.filter(
-            and_(MarkingReport.report_submitted.is_(True), MarkingReport.feedback_submitted.is_(False))
+            and_(
+                MarkingReport.report_submitted.is_(True),
+                MarkingReport.feedback_submitted.is_(False),
+            )
         )
     elif filter_fb == "not_submitted":
         base_query = base_query.filter(MarkingReport.feedback_submitted.is_(False))
@@ -2516,7 +2640,9 @@ def add_marking_scheme(pclass_id):
 
     form = AddMarkingSchemeForm(request.form)
 
-    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass_id)]}):
+    if form.validate_on_submit(
+        extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass_id)]}
+    ):
         scheme = MarkingScheme(
             pclass_id=pclass_id,
             name=form.name.data,
@@ -2581,7 +2707,13 @@ def edit_marking_scheme(scheme_id):
     form = EditMarkingSchemeForm(obj=scheme)
 
     if form.validate_on_submit(
-        extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name, exclude_id=scheme.id)]}
+        extra_validators={
+            "name": [
+                make_unique_marking_scheme_in_pclass(
+                    pclass.id, name=scheme.name, exclude_id=scheme.id
+                )
+            ]
+        }
     ):
         scheme.name = form.name.data
         scheme.title = form.title.data
@@ -2720,7 +2852,9 @@ def add_marking_event(period_id):
 
     form = AddMarkingEventForm(request.form)
 
-    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_event_in_period(period_id)]}):
+    if form.validate_on_submit(
+        extra_validators={"name": [make_unique_marking_event_in_period(period_id)]}
+    ):
         event = MarkingEvent(
             period_id=period_id,
             name=form.name.data,
@@ -2786,7 +2920,11 @@ def edit_marking_event(event_id):
 
     if form.validate_on_submit(
         extra_validators={
-            "name": [make_unique_marking_event_in_period(period.id, name=event.name, exclude_id=event.id)],
+            "name": [
+                make_unique_marking_event_in_period(
+                    period.id, name=event.name, exclude_id=event.id
+                )
+            ],
             "targets": [make_valid_marking_targets(fiducial)],
         }
     ):
@@ -3023,7 +3161,9 @@ def event_marking_workflows_inspector(event_id):
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
 
-    send_emails_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
+    send_emails_url = url_for(
+        "convenor.send_marking_emails_for_event", event_id=event_id
+    )
     open_event_url = (
         url_for("convenor.open_marking_event", event_id=event_id)
         if event.workflow_state == MarkingEventWorkflowStates.WAITING
@@ -3084,7 +3224,9 @@ def event_marking_workflows_inspector(event_id):
                     workflow_id=workflow.id,
                     filter_state="intervention",
                     filter_risk="any_risk",
-                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                    url=url_for(
+                        "convenor.event_marking_workflows_inspector", event_id=event_id
+                    ),
                     text="Marking workflows",
                 )
                 actions.append(
@@ -3098,7 +3240,14 @@ def event_marking_workflows_inspector(event_id):
                             f"and require{'s' if n == 1 else ''} convenor review before marking "
                             f"can proceed."
                         ),
-                        buttons=[ConvenorActionButton(label="Review risk factors", url=risk_url, outline=True, icon="search")],
+                        buttons=[
+                            ConvenorActionButton(
+                                label="Review risk factors",
+                                url=risk_url,
+                                outline=True,
+                                icon="search",
+                            )
+                        ],
                     )
                 )
 
@@ -3106,7 +3255,8 @@ def event_marking_workflows_inspector(event_id):
             needs_mod = sum(
                 1
                 for sr in workflow.submitter_reports
-                if sr.workflow_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
+                if sr.workflow_state
+                == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
             )
             if needs_mod > 0:
                 n = needs_mod
@@ -3115,7 +3265,9 @@ def event_marking_workflows_inspector(event_id):
                     workflow_id=workflow.id,
                     filter_state="intervention",
                     filter_tolerance="out_of_tolerance",
-                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                    url=url_for(
+                        "convenor.event_marking_workflows_inspector", event_id=event_id
+                    ),
                     text="Marking workflows",
                 )
                 actions.append(
@@ -3127,7 +3279,14 @@ def event_marking_workflows_inspector(event_id):
                             f"{n} report{'s' if n != 1 else ''} in this workflow "
                             f"cannot proceed until a moderator is assigned."
                         ),
-                        buttons=[ConvenorActionButton(label="Review reports", url=mod_url, outline=True, icon="search")],
+                        buttons=[
+                            ConvenorActionButton(
+                                label="Review reports",
+                                url=mod_url,
+                                outline=True,
+                                icon="search",
+                            )
+                        ],
                     )
                 )
 
@@ -3155,7 +3314,14 @@ def event_marking_workflows_inspector(event_id):
                             f"{'are' if n != 1 else 'is'} missing Turnitin similarity data. "
                             f"You can re-fetch from Canvas or enter scores manually."
                         ),
-                        buttons=[ConvenorActionButton(label="Review submitter reports", url=workflow_url, outline=True, icon="search")],
+                        buttons=[
+                            ConvenorActionButton(
+                                label="Review submitter reports",
+                                url=workflow_url,
+                                outline=True,
+                                icon="search",
+                            )
+                        ],
                     )
                 )
 
@@ -3247,7 +3413,13 @@ def event_marking_workflows_inspector(event_id):
         .all()
     )
 
-    _SEVERITY_ORDER = {"danger": 0, "warning": 1, "info": 2, "success": 3, "secondary": 4}
+    _SEVERITY_ORDER = {
+        "danger": 0,
+        "warning": 1,
+        "info": 2,
+        "success": 3,
+        "secondary": 4,
+    }
     actions.sort(key=lambda a: _SEVERITY_ORDER.get(a.severity, 99))
 
     form = ConfirmActionForm()
@@ -3457,8 +3629,16 @@ def edit_marking_workflow(workflow_id):
 
     if form.validate_on_submit(
         extra_validators={
-            "name": [make_unique_marking_workflow_in_event(event.id, name=workflow.name, exclude_id=workflow.id)],
-            "key": [make_unique_marking_workflow_key_in_event(event.id, key=workflow.key, exclude_id=workflow.id)],
+            "name": [
+                make_unique_marking_workflow_in_event(
+                    event.id, name=workflow.name, exclude_id=workflow.id
+                )
+            ],
+            "key": [
+                make_unique_marking_workflow_key_in_event(
+                    event.id, key=workflow.key, exclude_id=workflow.id
+                )
+            ],
         }
     ):
         try:
@@ -3950,7 +4130,10 @@ def distribute_for_submitter_report(sr_id):
         MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
         MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
     ):
-        flash("Marking notifications can only be dispatched while the event is open.", "error")
+        flash(
+            "Marking notifications can only be dispatched while the event is open.",
+            "error",
+        )
         return redirect(redirect_url())
 
     deadline_str = None
@@ -3966,8 +4149,13 @@ def distribute_for_submitter_report(sr_id):
                 task.apply_async(args=[mr.id, True, 10, None, deadline_str, False])
                 queued += 1
     except Exception as e:
-        current_app.logger.exception("Error dispatching distribute_for_submitter_report", exc_info=e)
-        flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching distribute_for_submitter_report", exc_info=e
+        )
+        flash(
+            "Could not dispatch marking notifications. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if queued > 0:
@@ -3976,7 +4164,9 @@ def distribute_for_submitter_report(sr_id):
             "success",
         )
     else:
-        flash("No distributable marking reports found for this submitter report.", "info")
+        flash(
+            "No distributable marking reports found for this submitter report.", "info"
+        )
 
     return redirect(redirect_url())
 
@@ -4012,8 +4202,13 @@ def send_reminders_for_submitter_report(sr_id):
         )
         flash("Reminder emails for this submitter report have been queued.", "success")
     except Exception as e:
-        current_app.logger.exception("Error dispatching send_reminders_for_submitter_report", exc_info=e)
-        flash("Could not dispatch reminder emails. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching send_reminders_for_submitter_report", exc_info=e
+        )
+        flash(
+            "Could not dispatch reminder emails. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -4050,8 +4245,13 @@ def send_reminder_for_marking_report(report_id):
         )
         flash(f"Reminder email for {report.user.name} has been queued.", "success")
     except Exception as e:
-        current_app.logger.exception("Error dispatching send_reminder_for_marking_report", exc_info=e)
-        flash("Could not dispatch reminder email. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching send_reminder_for_marking_report", exc_info=e
+        )
+        flash(
+            "Could not dispatch reminder email. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -4129,8 +4329,7 @@ def open_marking_event(event_id):
         f"<p>Are you sure you wish to open the marking event <strong>{event.name}</strong>?</p>"
         f"<p>Marking notification emails will be dispatched for all {workflow_count} "
         f"workflow{'s' if workflow_count != 1 else ''} in this event, where reports are "
-        f"already available. Further notifications can be sent later for reports uploaded "
-        f"after this point.</p>"
+        f"available. Catch-up notifications can be sent later for reports that are subsequently uploaded.</p>"
         f"<p>To send a test distribution first, "
         f'<a href="{test_url}">click here to run a test</a>.</p>'
         f"<p>This action cannot be undone.</p>"
@@ -4327,14 +4526,19 @@ def send_reminder_for_workflow(workflow_id):
                 eligible_count += mr.responsible_supervisors.count()
 
     test_url = url_for(
-        "convenor.test_send_reminder_for_workflow", workflow_id=workflow_id, url=url, text=text
+        "convenor.test_send_reminder_for_workflow",
+        workflow_id=workflow_id,
+        url=url,
+        text=text,
     )
     action_url = url_for(
         "convenor.do_send_reminder_for_workflow", workflow_id=workflow_id, url=url
     )
 
     title = f'Send reminders for workflow "{workflow.name}"'
-    panel_title = f"Send marking reminders for workflow <strong>{workflow.name}</strong>"
+    panel_title = (
+        f"Send marking reminders for workflow <strong>{workflow.name}</strong>"
+    )
     message = (
         f"<p>Are you sure you wish to send reminder emails for the workflow "
         f"<strong>{workflow.name}</strong>?</p>"
@@ -4405,7 +4609,9 @@ def do_send_reminder_for_workflow(workflow_id):
     return redirect(url)
 
 
-@convenor.route("/test_send_reminder_for_workflow/<int:workflow_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/test_send_reminder_for_workflow/<int:workflow_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root")
 def test_send_reminder_for_workflow(workflow_id):
     """Show a form to select a test recipient, then dispatch a test reminder for a workflow."""
@@ -4515,7 +4721,9 @@ def clear_marking_grade(report_id):
 
     existing_entry = (
         db.session.query(DatabaseSchedulerEntry)
-        .filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report.id}_%"))
+        .filter(
+            DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report.id}_%")
+        )
         .first()
     )
     if existing_entry is not None:
@@ -4891,7 +5099,9 @@ def drop_submitter_report(sr_id):
     }
 
     if request.method == "GET":
-        student_name = sr.student.user.name if sr.student else f"SubmitterReport #{sr_id}"
+        student_name = (
+            sr.student.user.name if sr.student else f"SubmitterReport #{sr_id}"
+        )
         form = ActionForm()
         return render_template_context(
             "admin/danger_confirm.html",
@@ -4925,7 +5135,10 @@ def drop_submitter_report(sr_id):
         return redirect(url)
 
     if sr.workflow_state in _terminal:
-        flash("This report is already in a terminal state and cannot be withdrawn.", "error")
+        flash(
+            "This report is already in a terminal state and cannot be withdrawn.",
+            "error",
+        )
         return redirect(url)
 
     sr.workflow_state = SubmitterReportWorkflowStates.DROPPED
@@ -4964,9 +5177,15 @@ def return_submitter_report_to_convenor(sr_id):
         flash("Cannot modify reports in a closed marking event.", "error")
         return redirect(url)
 
-    _returnable = {SubmitterReportWorkflowStates.COMPLETED, SubmitterReportWorkflowStates.DROPPED}
+    _returnable = {
+        SubmitterReportWorkflowStates.COMPLETED,
+        SubmitterReportWorkflowStates.DROPPED,
+    }
     if sr.workflow_state not in _returnable:
-        flash("This report cannot be returned — it is not in the Completed or Withdrawn state.", "error")
+        flash(
+            "This report cannot be returned — it is not in the Completed or Withdrawn state.",
+            "error",
+        )
         return redirect(url)
 
     from_dropped = sr.workflow_state == SubmitterReportWorkflowStates.DROPPED
@@ -5029,7 +5248,10 @@ def return_all_submitter_reports(workflow_id):
         flash("Cannot modify reports in a closed marking event.", "error")
         return redirect(url)
 
-    _returnable = {SubmitterReportWorkflowStates.COMPLETED, SubmitterReportWorkflowStates.DROPPED}
+    _returnable = {
+        SubmitterReportWorkflowStates.COMPLETED,
+        SubmitterReportWorkflowStates.DROPPED,
+    }
     returnable_reports = [
         sr
         for sr in workflow.submitter_reports.all()
@@ -5236,7 +5458,9 @@ def calculate_conflation(event_id):
                 conflation_report=json.dumps(
                     {
                         "targets": result,
-                        "metadata": {"rounding_policy": ACTIVE_ROUNDING_POLICY.identifier},
+                        "metadata": {
+                            "rounding_policy": ACTIVE_ROUNDING_POLICY.identifier
+                        },
                     }
                 ),
                 generated_by_id=current_user.id,
@@ -5452,3 +5676,10 @@ def propagate_presentation_grade(event_id):
         )
 
     return redirect(url)
+
+
+@convenor.route("/marking_report_distribution_status/<int:mr_id>")
+@login_required
+def marking_report_distribution_status(mr_id):
+    mr = db.session.query(MarkingReport).filter_by(id=mr_id).first_or_404()
+    return jsonify({"state": mr.distribution_state})

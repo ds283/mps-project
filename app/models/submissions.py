@@ -278,11 +278,11 @@ class SubmissionRole(
         """
         Role-based student identifier. No current_user dependency — the answer is
         fully determined by this role's type. Anonymising roles return the exam number;
-        supervisory roles return the student's real name.
+        supervisory roles and presentation assessors return the student's real name.
+        Presentations are assessed in person, so the student's name is already known.
         """
         anonymised_roles = [
             SubmissionRole.ROLE_MARKER,
-            SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
             SubmissionRole.ROLE_MODERATOR,
             SubmissionRole.ROLE_EXAM_BOARD,
             SubmissionRole.ROLE_EXTERNAL_EXAMINER,

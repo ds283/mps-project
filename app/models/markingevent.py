@@ -694,6 +694,22 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
             1 for sr in self.submitter_reports if sr.record.report_processing_failed
         )
 
+    def resolve_email_template(self):
+        """Return the active EmailTemplate for this workflow's role, or None if no email is needed."""
+        from .emails import EmailTemplate
+
+        _SUPERVISOR_ROLES = frozenset({self.ROLE_SUPERVISOR, self.ROLE_RESPONSIBLE_SUPERVISOR})
+        if self.role == self.ROLE_MARKER:
+            template_type = EmailTemplate.MARKING_MARKER
+        elif self.role in _SUPERVISOR_ROLES:
+            template_type = EmailTemplate.MARKING_SUPERVISOR
+        else:
+            return None
+        try:
+            return EmailTemplate.find_template_(template_type, pclass=self.event.pclass)
+        except RuntimeError:
+            return None
+
     def refresh_completed(self) -> None:
         """
         Recompute and persist self.completed.

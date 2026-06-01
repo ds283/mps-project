@@ -4324,17 +4324,57 @@ def open_marking_event(event_id):
     panel_title = f"Open marking event <strong>{event.name}</strong>"
     action_url = url_for("convenor.do_open_marking_event", event_id=event_id, url=url)
     test_url = url_for("convenor.test_marking_event", event_id=event_id, url=url)
-    workflow_count = event.workflows.count()
-    message = (
-        f"<p>Are you sure you wish to open the marking event <strong>{event.name}</strong>?</p>"
-        f"<p>Marking notification emails will be dispatched for all {workflow_count} "
-        f"workflow{'s' if workflow_count != 1 else ''} in this event, where reports are "
-        f"available. Catch-up notifications can be sent later for reports that are subsequently uploaded.</p>"
-        f"<p>To send a test distribution first, "
-        f'<a href="{test_url}">click here to run a test</a>.</p>'
-        f"<p>This action cannot be undone.</p>"
-    )
-    submit_label = "Open event and send notifications"
+
+    # Classify each workflow by what will happen when the event is opened.
+    no_email = []    # role has no associated email template; reports marked NOT_REQUIRED automatically
+    immediate = []   # email template exists and requires_report=False; emails dispatched immediately
+    on_upload = []   # email template exists and requires_report=True; emails deferred until report uploaded
+    for wf in event.workflows:
+        if wf.resolve_email_template() is None:
+            no_email.append(wf)
+        elif wf.requires_report:
+            on_upload.append(wf)
+        else:
+            immediate.append(wf)
+
+    message = f"<p>Are you sure you wish to open the marking event <strong>{event.name}</strong>?</p>"
+
+    if not immediate and not on_upload:
+        # All workflows require no email notification
+        message += (
+            "<p>No notification emails will be sent. All marking reports will be marked as "
+            "not requiring distribution automatically when the event is opened.</p>"
+            "<p>This action cannot be undone.</p>"
+        )
+        submit_label = "Open event"
+    else:
+        # At least some workflows will send emails
+        if on_upload:
+            n = len(on_upload)
+            wf_label = f"{n} workflow{'s' if n != 1 else ''}"
+            message += (
+                f"<p>Marking notification emails will be dispatched for {wf_label} once student "
+                f"reports have been uploaded. Catch-up notifications can be sent later for any "
+                f"reports uploaded subsequently.</p>"
+            )
+        if immediate:
+            n = len(immediate)
+            wf_label = f"{n} workflow{'s' if n != 1 else ''}"
+            message += (
+                f"<p>Marking notification emails for {wf_label} will be dispatched immediately, "
+                f"as no submitted report is required before marking can begin.</p>"
+            )
+        if no_email:
+            n = len(no_email)
+            message += (
+                f"<p>{n} workflow{'s' if n != 1 else ''} require no email notification and will "
+                f"be marked as distributed automatically.</p>"
+            )
+        message += (
+            f'<p>To send a test distribution first, <a href="{test_url}">click here to run a test</a>.</p>'
+            f"<p>This action cannot be undone.</p>"
+        )
+        submit_label = "Open event and send notifications"
 
     form = ConfirmActionForm()
     return render_template_context(

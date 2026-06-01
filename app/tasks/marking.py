@@ -125,16 +125,7 @@ _SUPERVISOR_ROLES = frozenset(
 
 def _resolve_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass):
     """Return the best-matching active EmailTemplate for this workflow+pclass, or None."""
-    if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
-        template_type = EmailTemplate.MARKING_MARKER
-    elif workflow.role in _SUPERVISOR_ROLES:
-        template_type = EmailTemplate.MARKING_SUPERVISOR
-    else:
-        return None
-    try:
-        return EmailTemplate.find_template_(template_type, pclass=pclass)
-    except RuntimeError:
-        return None
+    return workflow.resolve_email_template()
 
 
 def _resolve_workflow_reminder_template(workflow: MarkingWorkflow, pclass: ProjectClass):

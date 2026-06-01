@@ -1447,6 +1447,7 @@ def submitter_reports_inspector(workflow_id):
     ]
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
+    event_is_open = event.workflow_state >= MarkingEventWorkflowStates.OPEN
 
     total = workflow.submitter_reports.count()
     all_ready_to_sign_off = can_edit and (
@@ -1513,39 +1514,59 @@ def submitter_reports_inspector(workflow_id):
     if can_edit:
         if distributable_sr_count > 0:
             n = distributable_sr_count
-            banners.append(
-                ConvenorAction(
-                    severity="danger",
-                    icon="paper-plane",
-                    title=f"{n} report{'s' if n != 1 else ''} ready to distribute",
-                    description="Distribution emails have not been sent yet. Assessors cannot begin marking until notified.",
-                    buttons=[
-                        ConvenorActionButton(
-                            label="View reports",
-                            outline=True,
-                            icon="search",
-                            url=url_for(
-                                "convenor.submitter_reports_inspector",
-                                workflow_id=workflow_id,
-                                filter_state="distributable",
-                                filter_risk=filter_risk,
-                                filter_tolerance=filter_tolerance,
-                                filter_grade=filter_grade,
-                                filter_completion=filter_completion,
+            if event_is_open:
+                banners.append(
+                    ConvenorAction(
+                        severity="danger",
+                        icon="paper-plane",
+                        title=f"{n} report{'s' if n != 1 else ''} ready to distribute",
+                        description="Distribution emails have not been sent yet. Assessors cannot begin marking until notified.",
+                        buttons=[
+                            ConvenorActionButton(
+                                label="View reports",
+                                outline=True,
+                                icon="search",
+                                url=url_for(
+                                    "convenor.submitter_reports_inspector",
+                                    workflow_id=workflow_id,
+                                    filter_state="distributable",
+                                    filter_risk=filter_risk,
+                                    filter_tolerance=filter_tolerance,
+                                    filter_grade=filter_grade,
+                                    filter_completion=filter_completion,
+                                ),
                             ),
-                        ),
-                        ConvenorActionButton(
-                            label="Distribute all",
-                            icon="paper-plane",
-                            method="POST",
-                            url=url_for(
-                                "convenor.send_marking_emails_for_workflow",
-                                workflow_id=workflow_id,
+                            ConvenorActionButton(
+                                label="Distribute all",
+                                icon="paper-plane",
+                                method="POST",
+                                url=url_for(
+                                    "convenor.send_marking_emails_for_workflow",
+                                    workflow_id=workflow_id,
+                                ),
                             ),
-                        ),
-                    ],
+                        ],
+                    )
                 )
-            )
+            else:
+                banners.append(
+                    ConvenorAction(
+                        severity="secondary",
+                        icon="lock",
+                        title="Marking event has not been opened",
+                        description=f"{n} submitter report{'s' if n != 1 else ''} {'are' if n != 1 else 'is'} ready to distribute, but distribution is not available until the event is opened.",
+                        buttons=[
+                            ConvenorActionButton(
+                                label="Go to event...",
+                                icon="play",
+                                url=url_for(
+                                    "convenor.event_marking_workflows_inspector",
+                                    event_id=event.id,
+                                ),
+                            ),
+                        ],
+                    )
+                )
 
         if workflow.has_reminder_eligible_reports:
             banners.append(
@@ -2328,43 +2349,64 @@ def marking_reports_inspector(workflow_id):
             except Exception:
                 pass
 
+    event_is_open = event.workflow_state >= MarkingEventWorkflowStates.OPEN
     banners = []
 
     if distributable_count > 0:
         n = distributable_count
-        banners.append(
-            ConvenorAction(
-                severity="danger",
-                icon="paper-plane",
-                title=f"{n} marking report{'s' if n != 1 else ''} ready to distribute",
-                description="Distribution emails have not been sent yet. Assessors cannot begin marking until notified.",
-                buttons=[
-                    ConvenorActionButton(
-                        label="View reports",
-                        outline=True,
-                        icon="search",
-                        url=url_for(
-                            "convenor.marking_reports_inspector",
-                            workflow_id=workflow_id,
-                            filter_dist="distributable",
-                            filter_sub=filter_sub,
-                            filter_fb=filter_fb,
-                            filter_ready=filter_ready,
-                            filter_signoff=filter_signoff,
+        if event_is_open:
+            banners.append(
+                ConvenorAction(
+                    severity="danger",
+                    icon="paper-plane",
+                    title=f"{n} marking report{'s' if n != 1 else ''} ready to distribute",
+                    description="Distribution emails have not been sent yet. Assessors cannot begin marking until notified.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="View reports",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.marking_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_dist="distributable",
+                                filter_sub=filter_sub,
+                                filter_fb=filter_fb,
+                                filter_ready=filter_ready,
+                                filter_signoff=filter_signoff,
+                            ),
                         ),
-                    ),
-                    ConvenorActionButton(
-                        label="Distribute all",
-                        icon="paper-plane",
-                        method="POST",
-                        url=url_for(
-                            "convenor.send_marking_emails_for_workflow",
-                            workflow_id=workflow_id,
+                        ConvenorActionButton(
+                            label="Distribute all",
+                            icon="paper-plane",
+                            method="POST",
+                            url=url_for(
+                                "convenor.send_marking_emails_for_workflow",
+                                workflow_id=workflow_id,
+                            ),
                         ),
-                    ),
-                ],
+                    ],
+                )
             )
-        )
+        else:
+            banners.append(
+                ConvenorAction(
+                    severity="secondary",
+                    icon="lock",
+                    title="Marking event has not been opened",
+                    description=f"{n} marking report{'s' if n != 1 else ''} {'are' if n != 1 else 'is'} ready to distribute, but distribution is not available until the event is opened.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="Go to event...",
+                            icon="play",
+                            url=url_for(
+                                "convenor.event_marking_workflows_inspector",
+                                event_id=event.id,
+                            ),
+                        ),
+                    ],
+                )
+            )
 
     if workflow.has_reminder_eligible_reports:
         banners.append(

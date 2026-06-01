@@ -1127,6 +1127,22 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         )
 
 
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(EmailWorkflowItem, "before_delete")
+def _ewi_before_delete(mapper, connection, target):
+    """When an EmailWorkflowItem is deleted, mark any linked MarkingReport that was
+    still waiting for send confirmation as EMAIL_FAILED."""
+    # Local import to avoid circular dependency (emails ↔ markingevent)
+    from .markingevent import MarkingReportDistributionStates
+
+    for mr in target.marking_reports:
+        if mr.distribution_state == MarkingReportDistributionStates.EMAIL_QUEUED:
+            mr.distribution_state = MarkingReportDistributionStates.EMAIL_FAILED
+            mr.email_workflow_item_id = None
+
+
 # association table for email workflows to project classes
 email_workflow_to_pclasses = db.Table(
     "email_workflow_to_pclasses",

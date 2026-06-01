@@ -652,11 +652,15 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     @property
     def number_marking_reports_distributed(self) -> int:
-        return self.marking_reports.filter(MarkingReport.distributed.is_(True)).count()
+        return self.marking_reports.filter(
+            MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
+        ).count()
 
     @property
     def number_marking_reports_undistributed(self) -> int:
-        return self.marking_reports.filter(MarkingReport.distributed.is_(False)).count()
+        return self.marking_reports.filter(
+            ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
+        ).count()
 
     @property
     def number_marking_reports_with_feedback(self) -> int:
@@ -1092,6 +1096,55 @@ marking_distribution_to_email_log = db.Table(
 )
 
 
+class MarkingReportDistributionStates:
+    """
+    Lifecycle states for MarkingReport distribution.
+
+    UNSENT (0)
+        Default state. dispatch_emails has not yet processed this MarkingReport.
+
+    EMAIL_QUEUED (1)
+        An EmailWorkflowItem has been created and linked; the email has not yet been
+        confirmed as sent. email_workflow_item_id points to the live item.
+
+    EMAIL_CONFIRMED (2)
+        The link_distribution_email callback has run; the email was successfully sent
+        and an EmailLog entry has been linked via distribution_emails.
+
+    NOT_REQUIRED (3)
+        No notification email is needed for this workflow role (e.g. ROLE_PRESENTATION_ASSESSOR).
+        The MarkingReport is considered fully distributed.
+
+    EMAIL_FAILED (4)
+        The EmailWorkflowItem was deleted before the confirmation callback ran.
+        The MarkingReport needs attention (re-dispatch or manual resolution).
+    """
+
+    UNSENT = 0
+    EMAIL_QUEUED = 1
+    EMAIL_CONFIRMED = 2
+    NOT_REQUIRED = 3
+    EMAIL_FAILED = 4
+
+
+# States that count as "distributed" (assessor has been handled)
+_DISTRIBUTED_STATE_VALUES = frozenset(
+    {
+        MarkingReportDistributionStates.EMAIL_QUEUED,
+        MarkingReportDistributionStates.EMAIL_CONFIRMED,
+        MarkingReportDistributionStates.NOT_REQUIRED,
+    }
+)
+
+# States that count as fully terminal (advance SubmitterReport to AWAITING_GRADING_REPORTS)
+_TERMINAL_STATES = frozenset(
+    {
+        MarkingReportDistributionStates.EMAIL_CONFIRMED,
+        MarkingReportDistributionStates.NOT_REQUIRED,
+    }
+)
+
+
 class MarkingReport(db.Model, EditingMetadataMixin):
     """
     Represents the marking report, possibly including feedback, from a single SubmissionRole
@@ -1127,13 +1180,32 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     # JSON-serialized marking report
     report = db.Column(db.Text(), nullable=False)
 
-    # distributed flag: has this assessor been notified of the need to return a report?
-    distributed = db.Column(db.Boolean(), default=False)
+    # distribution state: tracks where this MarkingReport is in the notification lifecycle
+    distribution_state = db.Column(db.Integer(), default=MarkingReportDistributionStates.UNSENT, nullable=False)
+
+    # FK to the EmailWorkflowItem created for this report; nulled automatically (ON DELETE SET NULL)
+    # when the item is deleted, enabling EMAIL_FAILED detection via the before_delete event
+    email_workflow_item_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("email_workflow_items.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    email_workflow_item = db.relationship(
+        "EmailWorkflowItem",
+        foreign_keys=[email_workflow_item_id],
+        uselist=False,
+        backref=db.backref("marking_reports", lazy="dynamic"),
+    )
 
     # distribution emails
     distribution_emails = db.relationship(
         "EmailLog", secondary=marking_distribution_to_email_log, lazy="dynamic"
     )
+
+    @property
+    def distributed(self) -> bool:
+        """True when this MarkingReport has been handled (email sent, confirmed, or not required)."""
+        return self.distribution_state in _DISTRIBUTED_STATE_VALUES
 
     # has this marking report been submitted?
     report_submitted = db.Column(db.Boolean(), default=False, nullable=False)

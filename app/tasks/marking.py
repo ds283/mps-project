@@ -51,7 +51,11 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
-from ..models.markingevent import SubmitterReportWorkflowStates
+from ..models.markingevent import (
+    MarkingReportDistributionStates,
+    SubmitterReportWorkflowStates,
+    _TERMINAL_STATES,
+)
 from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import (
     AssetCloudAdapter,
@@ -147,6 +151,20 @@ def _resolve_workflow_reminder_template(workflow: MarkingWorkflow, pclass: Proje
         return None
 
 
+def _try_advance_to_awaiting_grading(sr: SubmitterReport) -> bool:
+    """Advance sr to AWAITING_GRADING_REPORTS if every MarkingReport is in a terminal
+    distribution state (EMAIL_CONFIRMED or NOT_REQUIRED). Returns True if transitioned."""
+    if sr is None or sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+        return False
+    mrs = list(sr.marking_reports)
+    if not mrs:
+        return False
+    if all(mr.distribution_state in _TERMINAL_STATES for mr in mrs):
+        sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS
+        return True
+    return False
+
+
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
@@ -176,11 +194,37 @@ def register_marking_tasks(celery):
             raise Exception(msg)
 
         pclass: ProjectClass = workflow.event.pclass
+
+        _blocking = {
+            SubmitterReportWorkflowStates.NOT_READY,
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            SubmitterReportWorkflowStates.DROPPED,
+        }
+
         resolved_template = _resolve_workflow_template(workflow, pclass)
         if resolved_template is None:
-            current_app.logger.warning(
-                f"send_marking_emails: no active email template for workflow id={workflow_id}; skipping"
-            )
+            # No email needed for this workflow role (e.g. ROLE_PRESENTATION_ASSESSOR).
+            # Mark all undistributed MRs as NOT_REQUIRED and attempt to advance each SR.
+            advanced = 0
+            for sr in workflow.submitter_reports:
+                if sr.workflow_state in _blocking:
+                    continue
+                for mr in sr.marking_reports:
+                    if not mr.distributed:
+                        mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
+                if _try_advance_to_awaiting_grading(sr):
+                    advanced += 1
+            try:
+                log_db_commit(
+                    f"send_marking_emails: set NOT_REQUIRED for workflow id={workflow_id}; "
+                    f"advanced {advanced} SubmitterReport(s) to AWAITING_GRADING_REPORTS",
+                    endpoint=self.name,
+                )
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
             return
 
         # Resolve test email address from user id
@@ -200,12 +244,6 @@ def register_marking_tasks(celery):
             deadline = workflow.effective_deadline.isoformat()
 
         # Find SubmitterReports that are READY_TO_DISTRIBUTE (or later) with undistributed MarkingReports
-        _blocking = {
-            SubmitterReportWorkflowStates.NOT_READY,
-            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
-            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
-            SubmitterReportWorkflowStates.DROPPED,
-        }
         eligible_ids = []
         for sr in workflow.submitter_reports:
             if sr.workflow_state in _blocking:
@@ -286,6 +324,7 @@ def register_marking_tasks(celery):
                 pass
 
         eligible_triples = []  # (sr_id, deadline_str, email_workflow_id)
+        not_required_changed = False
         _blocking = {
             SubmitterReportWorkflowStates.NOT_READY,
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
@@ -296,6 +335,16 @@ def register_marking_tasks(celery):
             pclass: ProjectClass = workflow.event.pclass
             resolved_template = _resolve_workflow_template(workflow, pclass)
             if resolved_template is None:
+                # No email needed for this workflow role. Mark undistributed MRs as NOT_REQUIRED
+                # and attempt to advance each eligible SubmitterReport.
+                for sr in workflow.submitter_reports:
+                    if sr.workflow_state in _blocking:
+                        continue
+                    for mr in sr.marking_reports:
+                        if not mr.distributed:
+                            mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
+                            not_required_changed = True
+                    _try_advance_to_awaiting_grading(sr)
                 continue
             deadline_str = (
                 workflow.effective_deadline.isoformat()
@@ -324,7 +373,7 @@ def register_marking_tasks(celery):
             for sr_id in workflow_sr_ids:
                 eligible_triples.append((sr_id, deadline_str, email_wf.id))
 
-        if not eligible_triples:
+        if not eligible_triples and not not_required_changed:
             return
 
         try:
@@ -333,6 +382,9 @@ def register_marking_tasks(celery):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
+
+        if not eligible_triples:
+            return
 
         email_group = group(
             dispatch_emails.s(
@@ -691,8 +743,10 @@ def register_marking_tasks(celery):
 
             item.workflow = email_wf
             db.session.add(item)
+            db.session.flush()  # obtain item.id before commit
             if test_email is None:
-                mr.distributed = True
+                mr.distribution_state = MarkingReportDistributionStates.EMAIL_QUEUED
+                mr.email_workflow_item_id = item.id
             sent += 1
 
         try:
@@ -740,26 +794,14 @@ def register_marking_tasks(celery):
             return
 
         mr.distribution_emails.append(email_log)
-        # Flush so the newly added association is visible to subsequent count() queries
-        # within this transaction.
         db.session.flush()
 
-        # Advance SubmitterReport to AWAITING_GRADING_REPORTS once all distributed
-        # MarkingReports have had their notification emails actually sent.
+        # Mark as confirmed and release the in-flight FK
+        mr.distribution_state = MarkingReportDistributionStates.EMAIL_CONFIRMED
+        mr.email_workflow_item_id = None
+
         sr: SubmitterReport = mr.submitter_report
-        transitioned = False
-        if (
-            sr is not None
-            and sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-        ):
-            distributed_mrs = [mr2 for mr2 in sr.marking_reports if mr2.distributed]
-            if distributed_mrs and all(
-                mr2.distribution_emails.count() > 0 for mr2 in distributed_mrs
-            ):
-                sr.workflow_state = (
-                    SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS
-                )
-                transitioned = True
+        transitioned = _try_advance_to_awaiting_grading(sr)
 
         commit_msg = f"Linked distribution email #{email_log_id} to MarkingReport #{marking_report_id}"
         if transitioned:
@@ -1109,9 +1151,19 @@ def register_marking_tasks(celery):
 
         resolved_template = _resolve_workflow_template(workflow, pclass)
         if resolved_template is None:
-            current_app.logger.warning(
-                f"dispatch_emails: no active email template for workflow id={workflow.id}; skipping"
-            )
+            # No email needed for this workflow role. Mark as NOT_REQUIRED and try to advance.
+            if test_email is None:
+                mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
+                _try_advance_to_awaiting_grading(mr.submitter_report)
+                try:
+                    log_db_commit(
+                        f"dispatch_single_email: set NOT_REQUIRED for MarkingReport #{mr.id}",
+                        endpoint=self.name,
+                    )
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
             return {"sent": 0}
 
         email_wf = EmailWorkflow.build_(
@@ -1163,8 +1215,10 @@ def register_marking_tasks(celery):
 
         item.workflow = email_wf
         db.session.add(item)
+        db.session.flush()  # obtain item.id before commit
         if test_email is None:
-            mr.distributed = True
+            mr.distribution_state = MarkingReportDistributionStates.EMAIL_QUEUED
+            mr.email_workflow_item_id = item.id
 
         try:
             log_db_commit(

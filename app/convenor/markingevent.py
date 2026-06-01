@@ -52,7 +52,9 @@ from ..models.markingevent import (
     ConvenorAction,
     ConvenorActionButton,
     MarkingEventWorkflowStates,
+    MarkingReportDistributionStates,
     SubmitterReportWorkflowStates,
+    _DISTRIBUTED_STATE_VALUES,
 )
 from ..models.similarity import SimilarityConcern
 from ..models.submissions import SubmissionRoleTypesMixin
@@ -1427,7 +1429,7 @@ def submitter_reports_inspector(workflow_id):
         .filter(
             SubmitterReport.workflow_id == workflow_id,
             SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
-            MarkingReport.distributed.is_(False),
+            ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
         )
         .scalar()
         or 0
@@ -2176,7 +2178,7 @@ def marking_reports_inspector(workflow_id):
         .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
         .filter(
             SubmitterReport.workflow_id == workflow_id,
-            MarkingReport.distributed.is_(False),
+            ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
             SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
         )
         .scalar()
@@ -2356,20 +2358,20 @@ def marking_reports_ajax(workflow_id):
     if filter_dist == "distributable":
         base_query = base_query.filter(
             and_(
-                MarkingReport.distributed.is_(False),
+                ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
                 SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
             )
         )
     elif filter_dist == "distributed":
-        base_query = base_query.filter(MarkingReport.distributed.is_(True))
+        base_query = base_query.filter(MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)))
     elif filter_dist == "not_distributed":
-        base_query = base_query.filter(MarkingReport.distributed.is_(False))
+        base_query = base_query.filter(~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)))
 
     if filter_sub == "submitted":
         base_query = base_query.filter(MarkingReport.report_submitted.is_(True))
     elif filter_sub == "awaiting":
         base_query = base_query.filter(
-            and_(MarkingReport.distributed.is_(True), MarkingReport.report_submitted.is_(False))
+            and_(MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)), MarkingReport.report_submitted.is_(False))
         )
     elif filter_sub == "not_submitted":
         base_query = base_query.filter(MarkingReport.report_submitted.is_(False))

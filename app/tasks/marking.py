@@ -909,7 +909,20 @@ def register_marking_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        pclass: ProjectClass = workflow.event.pclass
+        event: MarkingEvent = workflow.event
+        pclass: ProjectClass = event.pclass
+
+        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+            convenor: Optional[User] = (
+                db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
+            )
+            report_error(
+                f'Cannot send marking reminders: marking event "{event.name}" has not been opened yet.',
+                "send_marking_reminders",
+                convenor,
+            )
+            return
+
         resolved_template = _resolve_workflow_reminder_template(workflow, pclass)
         if resolved_template is None:
             current_app.logger.warning(

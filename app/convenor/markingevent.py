@@ -4236,6 +4236,10 @@ def send_reminders_for_submitter_report(sr_id):
         flash("Cannot send reminders for a closed marking event.", "error")
         return redirect(redirect_url())
 
+    if event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        flash("Cannot send reminders: the marking event has not yet been opened.", "error")
+        return redirect(redirect_url())
+
     try:
         celery = current_app.extensions["celery"]
         task = celery.tasks["app.tasks.marking.send_marking_reminders"]
@@ -4277,6 +4281,10 @@ def send_reminder_for_marking_report(report_id):
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot send reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        flash("Cannot send reminders: the marking event has not yet been opened.", "error")
         return redirect(redirect_url())
 
     try:
@@ -4668,6 +4676,10 @@ def do_send_reminder_for_workflow(workflow_id):
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot send reminders for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        flash("Cannot send reminders: the marking event has not yet been opened.", "error")
         return redirect(redirect_url())
 
     url = request.args.get("url", None)

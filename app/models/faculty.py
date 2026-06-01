@@ -490,6 +490,13 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return False
 
+    def is_convenor_for(self, pclass) -> bool:
+        if self.convenor_for.filter_by(id=pclass.id).count() > 0:
+            return True
+        if self.coconvenor_for.filter_by(id=pclass.id).count() > 0:
+            return True
+        return False
+
     @property
     def convenor_list(self):
         """

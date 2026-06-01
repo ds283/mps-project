@@ -62,9 +62,7 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
             msg = f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
             current_app.logger.warning(f"compute_rank: {msg}")
             current_app.logger.warning(f"compute_rank: affected query is {query}")
-
-            # raising an exception will cause a retry
-            raise RuntimeError(msg)
+            # proceed with however many records are present rather than retrying
 
         current_rank = 1
         current_record = 1
@@ -94,9 +92,6 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        raise self.retry()
-
-    except RuntimeError:
         raise self.retry()
 
     self.update_state(state=states.SUCCESS)
@@ -218,9 +213,12 @@ def register_popularity_tasks(celery):
         num_records = len(records)
 
         if num_records != num_live:
-            raise RuntimeError(
-                f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
+            current_app.logger.warning(
+                f"store_lowest_popularity_score_rank: record count mismatch: "
+                f"expected {num_live}, found {num_records} | uuid={str(uuid)}, config_id={cid}"
             )
+            self.update_state(state=states.IGNORED, meta={"msg": "Record count mismatch"})
+            raise Ignore()
 
         try:
             for record in records:
@@ -289,15 +287,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_project_popularity_data(self, pid):
-        self.update_state(
-            state=states.STARTED,
-            meta={
-                "msg": "Looking up current project class configuration for id={id}".format(
-                    id=pid
-                )
-            },
-        )
-
         try:
             # get most recent configuration record for this project class
             pcl: ProjectClass = db.session.query(ProjectClass).filter_by(id=pid).first()
@@ -305,15 +294,6 @@ def register_popularity_tasks(celery):
 
         except SQLAlchemyError:
             raise self.retry()
-
-        self.update_state(
-            state=states.STARTED,
-            meta={
-                "msg": 'Update popularity data for project class "{name}"'.format(
-                    name=config.name
-                )
-            },
-        )
 
         # set up group of tasks to update popularity score of each LiveProject on this configuration
         # only need to work with projects that are open for student selections
@@ -331,6 +311,14 @@ def register_popularity_tasks(celery):
             return {
                 "action": "none",
                 "uuid": str(uuid),
+                "project_class": pcl.id,
+                "config": config.id,
+            }
+
+        if num_live == 0:
+            return {
+                "action": "none",
+                "reason": "no live projects",
                 "project_class": pcl.id,
                 "config": config.id,
             }
@@ -354,8 +342,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_popularity_data(self):
-        self.update_state(state=states.STARTED, meta={"msg": "Update popularity data"})
-
         try:
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
 

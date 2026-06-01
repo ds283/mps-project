@@ -18,4 +18,5 @@ CELERY = {
     "task_default_queue": "default",
     "task_routes": {"app.task.ping.ping": {"queue": "priority"}},
     "chord_unlock_max_retries": 100,
+    "result_expires": 86400,
 }

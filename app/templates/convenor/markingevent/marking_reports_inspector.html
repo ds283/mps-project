@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "icon_block.html" import icon_block %}
 {% from "macros.html" import render_convenor_actions %}
 
 {% block scripts %}
@@ -254,6 +255,15 @@
             </div>
         </div>
     </div>
+
+    {# Closed event notice #}
+    {% if not can_edit %}
+        <div class="alert alert-secondary mt-3 mb-2">
+            {% call icon_block("lock") %}
+                <div>This marking event is closed. Reports cannot be moved through workflow states.</div>
+            {% endcall %}
+        </div>
+    {% endif %}
 
     {# CTA banners #}
     {% if banners %}

@@ -1373,6 +1373,10 @@ def submitter_reports_inspector(workflow_id):
 
     workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
 
+    if not workflow_uses_tolerance and filter_tolerance != "all":
+        filter_tolerance = "all"
+        session["convenor_submitter_reports_inspector_filter_tolerance"] = "all"
+
     # Compute per-state counts for the state timeline summary
     state_counts = dict(
         db.session.query(SubmitterReport.workflow_state, func.count())
@@ -1704,6 +1708,10 @@ def submitter_reports_ajax(workflow_id):
     filter_tolerance = request.args.get("filter_tolerance", "all")
     filter_grade = request.args.get("filter_grade", "all")
     filter_completion = request.args.get("filter_completion", "all")
+
+    workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
+    if not workflow_uses_tolerance:
+        filter_tolerance = "all"
 
     base_query = (
         db.session.query(SubmitterReport)

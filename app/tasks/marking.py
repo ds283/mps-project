@@ -52,6 +52,7 @@ from ..models import (
 )
 from ..models.emails import encode_email_payload
 from ..models.markingevent import (
+    MarkingEventWorkflowStates,
     MarkingReportDistributionStates,
     SubmitterReportWorkflowStates,
     _TERMINAL_STATES,
@@ -64,7 +65,7 @@ from ..shared.asset_tools import (
 )
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.workflow_logging import log_db_commit
-from .shared.utils import report_info
+from .shared.utils import report_error, report_info
 from .thumbnails import dispatch_thumbnail_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
@@ -184,7 +185,19 @@ def register_marking_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        pclass: ProjectClass = workflow.event.pclass
+        event: MarkingEvent = workflow.event
+        pclass: ProjectClass = event.pclass
+
+        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+            convenor: Optional[User] = (
+                db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
+            )
+            report_error(
+                f'Cannot send marking emails: marking event "{event.name}" has not been opened yet.',
+                "send_marking_emails",
+                convenor,
+            )
+            return
 
         _blocking = {
             SubmitterReportWorkflowStates.NOT_READY,
@@ -301,6 +314,17 @@ def register_marking_tasks(celery):
             msg = f"Could not load MarkingEvent id={event_id} from database"
             current_app.logger.error(msg)
             raise Exception(msg)
+
+        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+            convenor: Optional[User] = (
+                db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
+            )
+            report_error(
+                f'Cannot send marking emails: marking event "{event.name}" has not been opened yet.',
+                "send_marking_event_emails",
+                convenor,
+            )
+            return
 
         # Resolve test email address from user id
         test_email: Optional[str] = None

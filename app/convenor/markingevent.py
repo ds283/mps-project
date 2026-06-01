@@ -4129,6 +4129,10 @@ def send_marking_emails_for_workflow(workflow_id):
         flash("Cannot send notifications for a closed marking event.", "error")
         return redirect(redirect_url())
 
+    if event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        flash("Cannot send notifications: the marking event has not yet been opened.", "error")
+        return redirect(redirect_url())
+
     try:
         celery = current_app.extensions["celery"]
         task = celery.tasks["app.tasks.marking.send_marking_emails"]
@@ -4313,6 +4317,10 @@ def send_marking_emails_for_event(event_id):
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot send notifications for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    if event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        flash("Cannot send notifications: the marking event has not yet been opened.", "error")
         return redirect(redirect_url())
 
     try:

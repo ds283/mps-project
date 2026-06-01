@@ -36,7 +36,9 @@ from .marking import _collect_marking_attachments
 def _next_9am() -> datetime:
     """Return a datetime for 9am on the day following the current time."""
     now = datetime.now()
-    candidate = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    candidate = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(
+        days=1
+    )
     return candidate
 
 
@@ -142,7 +144,8 @@ def _emit_moderation_required_emails(sr: SubmitterReport) -> None:
 
     except Exception as e:
         current_app.logger.exception(
-            f"Could not generate moderation emails for SubmitterReport #{sr.id}", exc_info=e
+            f"Could not generate moderation emails for SubmitterReport #{sr.id}",
+            exc_info=e,
         )
 
 
@@ -166,16 +169,15 @@ def _emit_moderator_assignment_email(
 
     all_roles = list(record.roles)
     supervisors = [
-        r for r in all_roles
-        if r.role in (
+        r
+        for r in all_roles
+        if r.role
+        in (
             SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
             SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
         )
     ]
-    markers = [
-        r for r in all_roles
-        if r.role == SubmissionRoleTypesMixin.ROLE_MARKER
-    ]
+    markers = [r for r in all_roles if r.role == SubmissionRoleTypesMixin.ROLE_MARKER]
 
     moderator_form_url = url_for(
         "faculty.moderator_report_form",
@@ -214,7 +216,9 @@ def _emit_moderator_assignment_email(
         )
 
         attachments = _collect_marking_attachments(
-            record, workflow, report_name,
+            record,
+            workflow,
+            report_name,
             target_role=SubmissionRoleTypesMixin.ROLE_MODERATOR,
         )
 
@@ -232,7 +236,9 @@ def _emit_moderator_assignment_email(
                 {
                     "abbv": pclass.abbreviation,
                     "number": student.exam_number,
-                    "deadline": deadline.strftime("%a %d %b") if deadline is not None else "",
+                    "deadline": deadline.strftime("%a %d %b")
+                    if deadline is not None
+                    else "",
                 }
             ),
             body_payload=encode_email_payload(
@@ -303,14 +309,21 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
 
     if scheme is None or not scheme.uses_tolerance:
         # No tolerance check: compute weighted average grade and advance to READY_TO_SIGN_OFF
-        total_weight = sum(float(r.weight) if r.weight is not None else 1.0 for r in reports)
+        total_weight = sum(
+            float(r.weight) if r.weight is not None else 1.0 for r in reports
+        )
         if total_weight == 0:
             total_weight = len(reports)
-        sr.grade = sum(
-            float(r.grade) * (float(r.weight) if r.weight is not None else 1.0)
-            for r in reports
-            if r.grade is not None
-        ) / total_weight if total_weight > 0 else None
+        sr.grade = (
+            sum(
+                float(r.grade) * (float(r.weight) if r.weight is not None else 1.0)
+                for r in reports
+                if r.grade is not None
+            )
+            / total_weight
+            if total_weight > 0
+            else None
+        )
         sr.grade_generated_by_id = None  # system-generated
         sr.grade_generated_timestamp = datetime.now()
         # Guard: only advance to READY_TO_SIGN_OFF if a grade was actually computed.
@@ -324,15 +337,25 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
     else:
         # Tolerance check required: compare grade spread against the configured threshold.
         available_grades = [float(r.grade) for r in reports if r.grade is not None]
-        spread = (max(available_grades) - min(available_grades)) if len(available_grades) >= 2 else 0.0
-        tolerance = float(scheme.marker_tolerance) if scheme.marker_tolerance is not None else 0.0
+        spread = (
+            (max(available_grades) - min(available_grades))
+            if len(available_grades) >= 2
+            else 0.0
+        )
+        tolerance = (
+            float(scheme.marker_tolerance)
+            if scheme.marker_tolerance is not None
+            else 0.0
+        )
 
         if spread <= tolerance:
             # Within tolerance: compute weighted average and advance to READY_TO_SIGN_OFF.
             # Clear any stale out_of_tolerance flag (e.g. if tolerance was tightened and
             # then relaxed, or if the flag was set by a previous bug).
             sr.out_of_tolerance = False
-            total_weight = sum(float(r.weight) if r.weight is not None else 1.0 for r in reports)
+            total_weight = sum(
+                float(r.weight) if r.weight is not None else 1.0 for r in reports
+            )
             if total_weight == 0:
                 total_weight = len(reports)
             sr.grade = (
@@ -362,7 +385,9 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
             if existing_mod_reports:
                 any_submitted = any(r.report_submitted for r in existing_mod_reports)
                 if not any_submitted:
-                    sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT
+                    sr.workflow_state = (
+                        SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT
+                    )
                 return
 
             # No existing moderator reports — first-time moderation assignment.
@@ -379,7 +404,9 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
                 chosen = random.choice(moderator_roles)
                 _assign_moderator(sr, chosen)
             else:
-                sr.workflow_state = SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
+                sr.workflow_state = (
+                    SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
+                )
 
 
 def advance_submitter_report(sr: SubmitterReport) -> None:
@@ -427,7 +454,9 @@ def advance_submitter_report(sr: SubmitterReport) -> None:
     elif all_signed_off:
         sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_FEEDBACK
     else:
-        sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
+        sr.workflow_state = (
+            SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
+        )
 
 
 def schedule_close_marking_window(mr: MarkingReport) -> None:
@@ -575,7 +604,8 @@ def register_markingevent_tasks(celery):
                 all_roles = record.roles.all()
                 if wf_role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR:
                     has_supervisor = any(
-                        r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR for r in all_roles
+                        r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR
+                        for r in all_roles
                     )
                     has_responsible = any(
                         r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
@@ -591,7 +621,8 @@ def register_markingevent_tasks(celery):
                         eligible_roles = [
                             r
                             for r in all_roles
-                            if r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
+                            if r.role
+                            == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
                         ]
                     else:
                         eligible_roles = [
@@ -603,7 +634,8 @@ def register_markingevent_tasks(celery):
                     eligible_roles = [
                         r
                         for r in all_roles
-                        if r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
+                        if r.role
+                        == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
                     ]
                 else:
                     eligible_roles = [r for r in all_roles if r.role == wf_role]
@@ -697,7 +729,8 @@ def register_markingevent_tasks(celery):
                     advanced += 1
 
                 elif (
-                    sr.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    sr.workflow_state
+                    == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                     and not record.has_unresolved_risk_factors
                 ):
                     # All risk factors resolved: re-evaluate using the full lifecycle evaluator
@@ -724,14 +757,10 @@ def register_markingevent_tasks(celery):
 
                     advanced += 1
 
-                elif (
-                    record.has_unresolved_risk_factors
-                    and sr.workflow_state
-                    not in (
-                        SubmitterReportWorkflowStates.NOT_READY,
-                        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
-                        SubmitterReportWorkflowStates.COMPLETED,
-                    )
+                elif record.has_unresolved_risk_factors and sr.workflow_state not in (
+                    SubmitterReportWorkflowStates.NOT_READY,
+                    SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                    SubmitterReportWorkflowStates.COMPLETED,
                 ):
                     # Risk factors present but SR has already advanced past NOT_READY.
                     # Enforce the invariant: move back to REQUIRES_CONVENOR_INTERVENTION.
@@ -757,7 +786,11 @@ def register_markingevent_tasks(celery):
             )
             raise self.retry()
 
-    @celery.task(bind=True, default_retry_delay=30, name="app.tasks.markingevent.close_marking_window")
+    @celery.task(
+        bind=True,
+        default_retry_delay=30,
+        name="app.tasks.markingevent.close_marking_window",
+    )
     def close_marking_window(self, marking_report_id, scheduler_entry_id):
         """
         Called 24 hours after a MarkingReport's grade_submitted_timestamp to close the editing
@@ -768,12 +801,20 @@ def register_markingevent_tasks(celery):
         """
         # --- self-cleanup: remove the scheduler entry and its crontab ---
         try:
-            entry = db.session.query(DatabaseSchedulerEntry).filter_by(id=scheduler_entry_id).first()
+            entry = (
+                db.session.query(DatabaseSchedulerEntry)
+                .filter_by(id=scheduler_entry_id)
+                .first()
+            )
             if entry is not None:
                 crontab_id = entry.crontab_id
                 db.session.delete(entry)
                 if crontab_id is not None:
-                    crontab = db.session.query(CrontabSchedule).filter_by(id=crontab_id).first()
+                    crontab = (
+                        db.session.query(CrontabSchedule)
+                        .filter_by(id=crontab_id)
+                        .first()
+                    )
                     if crontab is not None:
                         db.session.delete(crontab)
                 db.session.flush()
@@ -786,7 +827,9 @@ def register_markingevent_tasks(celery):
 
         # --- load the MarkingReport ---
         try:
-            mr: MarkingReport = db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+            mr: MarkingReport = (
+                db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -810,6 +853,7 @@ def register_markingevent_tasks(celery):
             if role.role in (
                 SubmissionRoleTypesMixin.ROLE_MARKER,
                 SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR,
             ):
                 # Self sign-off: marker or responsible supervisor can sign off their own report
                 mr.signed_off_id = role.id

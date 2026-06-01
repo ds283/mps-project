@@ -14,6 +14,7 @@ from markupsafe import escape
 from ...convenor.forms import ActionForm
 from ...models.markingevent import (
     MarkingEventWorkflowStates,
+    MarkingReportDistributionStates,
     SubmitterReportWorkflowStates,
 )
 from ...models.submissions import SubmissionRoleTypesMixin
@@ -746,8 +747,25 @@ _marking_report_status = """
 </div>
 {% else %}
 <div class="d-flex flex-column justify-content-start align-items-start gap-1 small">
-    {% if report.distributed %}
-        <span class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Distributed to marker</span>
+    {% if report.distribution_state == EMAIL_QUEUED %}
+        <span class="badge bg-warning-subtle text-warning-emphasis dist-email-queued"
+              data-mr-id="{{ report.id }}">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"
+                  style="width:.6em;height:.6em;border-width:.1em"></span>
+            Email sending&hellip;
+        </span>
+    {% elif report.distribution_state == EMAIL_CONFIRMED %}
+        <span class="text-success fw-semibold">
+            <i class="fas fa-check-circle"></i> Distributed to marker
+        </span>
+    {% elif report.distribution_state == NOT_REQUIRED %}
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">
+            <i class="fas fa-minus-circle fa-fw"></i> No notification
+        </span>
+    {% elif report.distribution_state == EMAIL_FAILED %}
+        <span class="badge bg-danger-subtle text-danger-emphasis">
+            <i class="fas fa-exclamation-circle fa-fw"></i> Email failed
+        </span>
     {% elif report.submitter_report.workflow_state == READY_TO_DISTRIBUTE %}
         <span class="fw-semibold" style="color: var(--bs-warning-text-emphasis)"><i class="fas fa-paper-plane fa-fw"></i> Ready to distribute</span>
         {% if event.workflow_state >= OPEN and event.workflow_state != CLOSED %}
@@ -1086,6 +1104,10 @@ def marking_report_data(reports):
         "AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF": SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
         "DROPPED": SubmitterReportWorkflowStates.DROPPED,
         "form": form,
+        "EMAIL_QUEUED": MarkingReportDistributionStates.EMAIL_QUEUED,
+        "EMAIL_CONFIRMED": MarkingReportDistributionStates.EMAIL_CONFIRMED,
+        "NOT_REQUIRED": MarkingReportDistributionStates.NOT_REQUIRED,
+        "EMAIL_FAILED": MarkingReportDistributionStates.EMAIL_FAILED,
         **_EVENT_STATES,
     }
 

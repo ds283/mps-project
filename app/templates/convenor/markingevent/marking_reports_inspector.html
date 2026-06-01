@@ -41,8 +41,17 @@
                 + '<i class="fas fa-chevron-' + (hidden ? 'up' : 'down') + ' fa-fw"></i>';
         }
 
+        var _mrPollers = {};
+
+        function _clearMrPollers() {
+            Object.keys(_mrPollers).forEach(function (id) {
+                clearInterval(_mrPollers[id]);
+            });
+            _mrPollers = {};
+        }
+
         $(document).ready(function () {
-            $('#marking-reports-table').DataTable({
+            var table = $('#marking-reports-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
                 stateSave: true,
                 serverSide: true, processing: true,
@@ -67,6 +76,27 @@
                     {data: 'actions', orderable: false, searchable: false}
                 ],
                 order: [[0, 'asc']]
+            });
+
+            table.on('draw', function () {
+                _clearMrPollers();
+                document.querySelectorAll('.dist-email-queued[data-mr-id]').forEach(function (el) {
+                    var mrId = el.dataset.mrId;
+                    if (mrId && !_mrPollers[mrId]) {
+                        _mrPollers[mrId] = setInterval(function () {
+                            fetch($SCRIPT_ROOT + '/convenor/marking_report_distribution_status/' + mrId)
+                                .then(function (r) { return r.json(); })
+                                .then(function (data) {
+                                    if (data.state !== 1) {  // 1 = EMAIL_QUEUED
+                                        clearInterval(_mrPollers[mrId]);
+                                        delete _mrPollers[mrId];
+                                        table.ajax.reload(null, false);
+                                    }
+                                })
+                                .catch(function () { /* ignore transient network errors */ });
+                        }, 10000);
+                    }
+                });
             });
         });
     </script>

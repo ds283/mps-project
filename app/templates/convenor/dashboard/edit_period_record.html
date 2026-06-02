@@ -44,6 +44,7 @@
 
         {{ wtf.render_field(form.name) }}
         {{ wtf.render_field(form.number_markers) }}
+        {{ wtf.render_field(form.uses_supervision_grade) }}
         {{ date_field(form.start_date, 'datetimepicker1') }}
         {{ date_field(form.hand_in_date, 'datetimepicker2') }}
         <hr class="intro-divider">

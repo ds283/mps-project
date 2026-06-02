@@ -1885,6 +1885,37 @@ _conflation_report_menu = """
 </div>
 """
 
+# language=jinja2
+_conflation_report_canvas = """
+{% if not canvas_enabled %}
+    <span class="text-body-secondary small">—</span>
+{% elif not grade_pushed and not feedback_pushed %}
+    <span class="badge bg-light text-secondary border">Not pushed</span>
+{% else %}
+    <div class="d-flex flex-column gap-1">
+        {% if feedback_pushed %}
+            <span class="badge bg-success py-1 px-2"
+                  {% if feedback_ts %}
+                  data-bs-toggle="tooltip"
+                  title="PDF uploaded {{ feedback_ts.strftime('%d %b %Y %H:%M') }}"
+                  {% endif %}>
+                <i class="fas fa-file-pdf fa-fw me-1"></i>PDF on Canvas
+            </span>
+        {% endif %}
+        {% if grade_pushed %}
+            <span class="badge bg-primary py-1 px-2"
+                  {% if grade_ts %}
+                  data-bs-toggle="tooltip"
+                  title="Grade '{{ grade_target }}' pushed {{ grade_ts.strftime('%d %b %Y %H:%M') }}"
+                  {% endif %}>
+                <i class="fas fa-check-circle fa-fw me-1"></i>Grade pushed
+                {% if grade_target %}<span class="fw-normal opacity-75">({{ grade_target }})</span>{% endif %}
+            </span>
+        {% endif %}
+    </div>
+{% endif %}
+"""
+
 
 def conflation_report_data(event_id, crs):
     """Format a ConflationReport row for DataTables"""
@@ -1896,6 +1927,7 @@ def conflation_report_data(event_id, crs):
     grades_tmpl = env.from_string(_conflation_report_grades)
     feedback_tmpl = env.from_string(_conflation_report_feedback)
     menu_tmpl = env.from_string(_conflation_report_menu)
+    canvas_tmpl = env.from_string(_conflation_report_canvas)
 
     from flask import url_for as _url_for
 
@@ -1921,6 +1953,21 @@ def conflation_report_data(event_id, crs):
                 "project": render_template(project_tmpl, cr=cr),
                 "grades": render_template(grades_tmpl, cr=cr),
                 "feedback": render_template(feedback_tmpl, cr=cr),
+                "canvas": render_template(
+                    canvas_tmpl,
+                    canvas_enabled=canvas_enabled,
+                    grade_pushed=cr.canvas_grade_pushed,
+                    feedback_pushed=cr.canvas_feedback_pushed,
+                    grade_target=cr.canvas_grade_target,
+                    grade_ts=cr.canvas_grade_push_timestamp,
+                    feedback_ts=cr.canvas_feedback_push_timestamp,
+                    push_url=_url_for(
+                        "convenor.push_cr_to_canvas",
+                        cr_id=cr.id,
+                        url=inspector_url,
+                        text="Conflation reports",
+                    ),
+                ),
                 "menu": render_template(
                     menu_tmpl,
                     cr=cr,

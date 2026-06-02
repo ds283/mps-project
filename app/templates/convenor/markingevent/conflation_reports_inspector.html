@@ -108,6 +108,9 @@
                     {data: 'project', orderable: false, searchable: false},
                     {data: 'grades', orderable: false, searchable: false},
                     {data: 'feedback', orderable: false, searchable: false},
+                    {% if canvas_enabled %}
+                    {data: 'canvas', orderable: false, searchable: false},
+                    {% endif %}
                     {data: 'menu', orderable: false, searchable: false}
                 ],
                 order: [[0, 'asc']]
@@ -225,7 +228,24 @@
                             <i class="fas fa-paper-plane fa-fw"></i> Sent: {{ sent_count }}
                         </span>
                     {% endif %}
-                    {% if with_feedback_count == 0 and stale_count == 0 and in_progress_count == 0 and failed_count == 0 %}
+                    {% if canvas_enabled %}
+                        {% if canvas_pushed_count > 0 %}
+                            <span class="badge bg-primary py-2 px-3">
+                                <i class="fas fa-cloud-upload-alt fa-fw"></i>
+                                On Canvas: {{ canvas_pushed_count }}
+                            </span>
+                        {% endif %}
+                        {% if canvas_pushable_count > 0 %}
+                            <span class="badge bg-secondary py-2 px-3"
+                                  data-bs-toggle="tooltip"
+                                  title="{{ canvas_pushable_count }} student(s) have grades ready to push to Canvas">
+                                <i class="fas fa-cloud fa-fw"></i>
+                                Pushable: {{ canvas_pushable_count }}
+                            </span>
+                        {% endif %}
+                    {% endif %}
+                    {% if with_feedback_count == 0 and stale_count == 0 and in_progress_count == 0
+                          and failed_count == 0 and canvas_pushed_count == 0 %}
                         <span class="badge bg-secondary py-2 px-3">
                             No feedback generated yet
                         </span>
@@ -492,11 +512,14 @@
             <table id="conflation-reports-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="16%">Student</th>
-                    <th width="18%">Project</th>
-                    <th width="20%">Conflated grades</th>
-                    <th width="30%">Feedback</th>
-                    <th width="16%">Actions</th>
+                    <th width="15%">Student</th>
+                    <th width="17%">Project</th>
+                    <th width="18%">Conflated grades</th>
+                    <th width="25%">Feedback</th>
+                    {% if canvas_enabled %}
+                    <th width="13%">Canvas</th>
+                    {% endif %}
+                    <th width="12%">Actions</th>
                 </tr>
                 </thead>
             </table>

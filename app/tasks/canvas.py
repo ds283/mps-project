@@ -34,39 +34,18 @@ from ..models import (
     User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.canvas_api import (
+    CanvasAPIError,
+    build_api_url,
+    extract_turnitin_data,
+    fetch_submission,
+    get_paginated,
+    make_session,
+)
 from ..shared.scraped_text_store import delete_scraped_text
 from ..shared.utils import get_main_config
 from ..shared.workflow_logging import log_db_commit
 from .thumbnails import dispatch_thumbnail_task
-
-
-def _URL_query(session: requests.Session, URL, **kwargs):
-    print(">> Querying API URL: {url}".format(url=URL))
-
-    response = session.get(URL, **kwargs)
-
-    if not response:
-        print(">> API returned NOT OK response: {msg}".format(msg=response))
-        return None
-
-    response_list = []
-    finished = False
-
-    while not finished:
-        json = response.json()
-        response_list = response_list + json
-
-        links = response.links
-        if "next" in links:
-            next_dict = links["next"]
-            if "url" in next_dict:
-                response = session.get(next_dict["url"])
-            else:
-                finished = True
-        else:
-            finished = True
-
-    return response_list
 
 
 def _finalize_report_attachment(data, rid, user_id, endpoint=None):
@@ -253,22 +232,13 @@ def register_canvas_tasks(celery):
         )
 
         # set up requests session; safe to assume config.canvas_login is not zero
-        session = requests.Session()
-        session.headers.update(
-            {
-                "Authorization": "Bearer {token}".format(
-                    token=config.canvas_login.canvas_API_token
-                )
-            }
-        )
+        session = make_session(config.canvas_login.canvas_API_token)
 
-        API_URL = url_normalize(
-            urljoin(
-                API_root,
-                "courses/{course_id}/users".format(course_id=config.canvas_module_id),
-            )
+        API_URL = build_api_url(
+            API_root,
+            "courses/{course_id}/users".format(course_id=config.canvas_module_id),
         )
-        user_list = _URL_query(session, API_URL, params={"enrollment_type": "student"})
+        user_list = get_paginated(session, API_URL, params={"enrollment_type": "student"})
 
         if user_list is None:
             print(
@@ -595,25 +565,16 @@ def register_canvas_tasks(celery):
             sub.canvas_submission_available = False
 
         # set up requests session; safe to assume config.canvas_login is not zero
-        session = requests.Session()
-        session.headers.update(
-            {
-                "Authorization": "Bearer {token}".format(
-                    token=config.canvas_login.canvas_API_token
-                )
-            }
-        )
+        session = make_session(config.canvas_login.canvas_API_token)
 
-        API_URL = url_normalize(
-            urljoin(
-                API_root,
-                "courses/{course_id}/assignments/{assign_id}/submissions".format(
-                    course_id=period.canvas_module_id,
-                    assign_id=period.canvas_assignment_id,
-                ),
-            )
+        API_URL = build_api_url(
+            API_root,
+            "courses/{course_id}/assignments/{assign_id}/submissions".format(
+                course_id=period.canvas_module_id,
+                assign_id=period.canvas_assignment_id,
+            ),
         )
-        submission_list = _URL_query(session, API_URL)
+        submission_list = get_paginated(session, API_URL)
 
         if submission_list is None:
             print(
@@ -761,25 +722,16 @@ def register_canvas_tasks(celery):
             )
 
         # set up requests session; safe to assume config.canvas_login is not zero
-        session = requests.Session()
-        session.headers.update(
-            {
-                "Authorization": "Bearer {token}".format(
-                    token=config.canvas_login.canvas_API_token
-                )
-            }
-        )
+        session = make_session(config.canvas_login.canvas_API_token)
 
-        API_URL = url_normalize(
-            urljoin(
-                API_root,
-                "courses/{course_id}/assignments/{assign_id}/"
-                "submissions/{user_id}".format(
-                    course_id=period.canvas_module_id,
-                    assign_id=period.canvas_assignment_id,
-                    user_id=submitter.canvas_user_id,
-                ),
-            )
+        API_URL = build_api_url(
+            API_root,
+            "courses/{course_id}/assignments/{assign_id}/"
+            "submissions/{user_id}".format(
+                course_id=period.canvas_module_id,
+                assign_id=period.canvas_assignment_id,
+                user_id=submitter.canvas_user_id,
+            ),
         )
         response = session.get(API_URL)
         data = response.json()
@@ -874,34 +826,12 @@ def register_canvas_tasks(celery):
             audit_data=f"canvas.pull_report (submission record #{rid})",
         )
 
-        similarity_score = None
-        web_overlap = None
-        publication_overlap = None
-        student_overlap = None
-        turnitin_outcome = None
-
-        if "turnitin_data" in data:
-            turnitin_attachments = data["turnitin_data"]
-
-            if len(turnitin_attachments) >= 1:
-                key = next(iter(turnitin_attachments))
-                turnitin_data = turnitin_attachments[key]
-
-                if turnitin_data["status"] == "scored":
-                    if "similarity_score" in turnitin_data:
-                        similarity_score = turnitin_data["similarity_score"]
-
-                    if "web_overlap" in turnitin_data:
-                        web_overlap = turnitin_data["web_overlap"]
-
-                    if "publication_overlap" in turnitin_data:
-                        publication_overlap = turnitin_data["publication_overlap"]
-
-                    if "student_overlap" in turnitin_data:
-                        student_overlap = turnitin_data["student_overlap"]
-
-                    if "state" in turnitin_data:
-                        turnitin_outcome = turnitin_data["state"]
+        turnitin = extract_turnitin_data(data)
+        similarity_score = turnitin["similarity_score"]
+        web_overlap = turnitin["web_overlap"]
+        publication_overlap = turnitin["publication_overlap"]
+        student_overlap = turnitin["student_overlap"]
+        turnitin_outcome = turnitin["turnitin_outcome"]
 
         try:
             db.session.flush()
@@ -1118,24 +1048,15 @@ def register_canvas_tasks(celery):
 
         config: ProjectClassConfig = submitter.config
 
-        session = requests.Session()
-        session.headers.update(
-            {
-                "Authorization": "Bearer {token}".format(
-                    token=config.canvas_login.canvas_API_token
-                )
-            }
-        )
+        session = make_session(config.canvas_login.canvas_API_token)
 
-        API_URL = url_normalize(
-            urljoin(
-                API_root,
-                "courses/{course_id}/assignments/{assign_id}/submissions/{user_id}".format(
-                    course_id=period.canvas_module_id,
-                    assign_id=period.canvas_assignment_id,
-                    user_id=submitter.canvas_user_id,
-                ),
-            )
+        API_URL = build_api_url(
+            API_root,
+            "courses/{course_id}/assignments/{assign_id}/submissions/{user_id}".format(
+                course_id=period.canvas_module_id,
+                assign_id=period.canvas_assignment_id,
+                user_id=submitter.canvas_user_id,
+            ),
         )
         response = session.get(API_URL)
         if not response.ok:
@@ -1146,23 +1067,12 @@ def register_canvas_tasks(celery):
 
         data = response.json()
 
-        similarity_score = None
-        web_overlap = None
-        publication_overlap = None
-        student_overlap = None
-        turnitin_outcome = None
-
-        if "turnitin_data" in data:
-            turnitin_attachments = data["turnitin_data"]
-            if len(turnitin_attachments) >= 1:
-                key = next(iter(turnitin_attachments))
-                turnitin_data = turnitin_attachments[key]
-                if turnitin_data.get("status") == "scored":
-                    similarity_score = turnitin_data.get("similarity_score")
-                    web_overlap = turnitin_data.get("web_overlap")
-                    publication_overlap = turnitin_data.get("publication_overlap")
-                    student_overlap = turnitin_data.get("student_overlap")
-                    turnitin_outcome = turnitin_data.get("state")
+        turnitin = extract_turnitin_data(data)
+        similarity_score = turnitin["similarity_score"]
+        web_overlap = turnitin["web_overlap"]
+        publication_overlap = turnitin["publication_overlap"]
+        student_overlap = turnitin["student_overlap"]
+        turnitin_outcome = turnitin["turnitin_outcome"]
 
         if similarity_score is None:
             current_app.logger.info(

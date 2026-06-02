@@ -130,26 +130,16 @@
             <i class="fas fa-file-contract fa-fw me-1"></i>
             Conflation reports for: <strong>{{ event.name }}</strong>
         </h4>
-        {% if is_faculty or is_admin or is_root %}
-            <a class="btn btn-sm btn-warning text-dark ms-auto"
-               href="{{ url_for('convenor.calculate_conflation', event_id=event.id,
-                                url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
-                                text='Conflation reports') }}"
-               data-bs-toggle="tooltip"
-               title="Discard existing conflation results and re-run with the current target expressions">
-                <i class="fas fa-redo fa-fw"></i> Reconflate
-            </a>
-        {% endif %}
     </div>
 
-    {# Event summary card #}
+    {# Consolidated event summary card #}
     <div class="card border-secondary mb-3">
         <div class="card-header bg-secondary text-white">
             <i class="fas fa-info-circle fa-fw me-1"></i> Event summary
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <dl class="row mb-0 small">
                         <dt class="col-sm-5 text-body-secondary">Period</dt>
                         <dd class="col-sm-7">{{ event.period.display_name }}</dd>
@@ -177,7 +167,7 @@
                         </dd>
                     </dl>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <dl class="row mb-0 small">
                         <dt class="col-sm-5 text-body-secondary">Students</dt>
                         <dd class="col-sm-7">{{ total_count }}</dd>
@@ -191,98 +181,95 @@
                         {% endif %}
                     </dl>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    {# State summary badges #}
-    {% if total_count > 0 %}
-        <div class="card border-secondary mb-3">
-            <div class="card-header bg-secondary text-white small">
-                <i class="fas fa-chart-bar fa-fw me-1"></i> State summary
-            </div>
-            <div class="card-body py-2">
-                <div class="d-flex flex-row flex-wrap gap-2">
-                    {% if stale_count > 0 %}
-                        <span class="badge bg-warning text-dark py-2 px-3">
-                            <i class="fas fa-exclamation-triangle fa-fw"></i> Stale: {{ stale_count }}
-                        </span>
-                    {% endif %}
-                    {% if in_progress_count > 0 %}
-                        <span class="badge bg-primary py-2 px-3">
-                            <i class="fas fa-spinner fa-spin fa-fw"></i> Generating: {{ in_progress_count }}
-                        </span>
-                    {% endif %}
-                    {% if failed_count > 0 %}
-                        <span class="badge bg-danger py-2 px-3">
-                            <i class="fas fa-times-circle fa-fw"></i> Failed: {{ failed_count }}
-                        </span>
-                    {% endif %}
-                    {% if with_feedback_count > 0 %}
-                        <span class="badge bg-success py-2 px-3">
-                            <i class="fas fa-file-pdf fa-fw"></i> With feedback: {{ with_feedback_count }}
-                        </span>
-                    {% endif %}
-                    {% if sent_count > 0 %}
-                        <span class="badge bg-success py-2 px-3">
-                            <i class="fas fa-paper-plane fa-fw"></i> Sent: {{ sent_count }}
-                        </span>
-                    {% endif %}
-                    {% if canvas_enabled %}
-                        {% if canvas_pushed_count > 0 %}
+                <div class="col-md-4">
+                    <p class="text-muted small mb-2">State summary</p>
+                    <div class="d-flex flex-row flex-wrap gap-2">
+                        {% if stale_count > 0 %}
+                            <span class="badge bg-warning text-dark py-2 px-3">
+                                <i class="fas fa-exclamation-triangle fa-fw"></i> Stale: {{ stale_count }}
+                            </span>
+                        {% endif %}
+                        {% if in_progress_count > 0 %}
                             <span class="badge bg-primary py-2 px-3">
-                                <i class="fas fa-cloud-upload-alt fa-fw"></i>
-                                On Canvas: {{ canvas_pushed_count }}
+                                <i class="fas fa-spinner fa-spin fa-fw"></i> Generating: {{ in_progress_count }}
                             </span>
                         {% endif %}
-                        {% if canvas_pushable_count > 0 %}
-                            <span class="badge bg-secondary py-2 px-3"
-                                  data-bs-toggle="tooltip"
-                                  title="{{ canvas_pushable_count }} student(s) have grades ready to push to Canvas">
-                                <i class="fas fa-cloud fa-fw"></i>
-                                Pushable: {{ canvas_pushable_count }}
+                        {% if failed_count > 0 %}
+                            <span class="badge bg-danger py-2 px-3">
+                                <i class="fas fa-times-circle fa-fw"></i> Failed: {{ failed_count }}
                             </span>
                         {% endif %}
-                    {% endif %}
-                    {% if with_feedback_count == 0 and stale_count == 0 and in_progress_count == 0
-                          and failed_count == 0 and canvas_pushed_count == 0 %}
-                        <span class="badge bg-secondary py-2 px-3">
-                            No feedback generated yet
-                        </span>
-                    {% endif %}
+                        {% if with_feedback_count > 0 %}
+                            <span class="badge bg-success py-2 px-3">
+                                <i class="fas fa-file-pdf fa-fw"></i> With feedback: {{ with_feedback_count }}
+                            </span>
+                        {% endif %}
+                        {% if sent_count > 0 %}
+                            <span class="badge bg-success py-2 px-3">
+                                <i class="fas fa-paper-plane fa-fw"></i> Sent: {{ sent_count }}
+                            </span>
+                        {% endif %}
+                        {% if canvas_enabled %}
+                            {% if canvas_pushed_count > 0 %}
+                                <span class="badge bg-primary py-2 px-3">
+                                    <i class="fas fa-cloud-upload-alt fa-fw"></i>
+                                    On Canvas: {{ canvas_pushed_count }}
+                                </span>
+                            {% endif %}
+                            {% if canvas_pushable_count > 0 %}
+                                <span class="badge bg-secondary py-2 px-3"
+                                      data-bs-toggle="tooltip"
+                                      title="{{ canvas_pushable_count }} student(s) have grades ready to push to Canvas">
+                                    <i class="fas fa-cloud fa-fw"></i>
+                                    Pushable: {{ canvas_pushable_count }}
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                        {% if with_feedback_count == 0 and stale_count == 0 and in_progress_count == 0
+                              and failed_count == 0 and canvas_pushed_count == 0 %}
+                            <span class="badge bg-secondary py-2 px-3">No feedback generated yet</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    {% endif %}
-
-    {# Batch feedback actions panel #}
-    {% if with_feedback_count > 0 and (is_root or is_admin or is_convenor) %}
-        <div class="card border-secondary mb-3">
-            <div class="card-header bg-secondary text-white">
-                <i class="fas fa-layer-group fa-fw me-1"></i> Batch feedback actions
-            </div>
-            <div class="card-body d-flex flex-wrap gap-2">
-                {% set unsent_with_feedback = with_feedback_count - sent_count %}
-                <form method="POST"
-                      action="{{ url_for('convenor.delete_all_conflation_report_feedback', event_id=event.id) }}">
-                    {{ delete_all_form.hidden_tag() }}
-                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                            onclick="return confirm('Delete all generated feedback? This cannot be undone.')">
-                        <i class="fas fa-trash fa-fw"></i>
-                        Delete all feedback
-                        {% if unsent_with_feedback > 0 %}
-                            <span class="badge bg-secondary ms-1">{{ unsent_with_feedback }} unsent</span>
-                        {% endif %}
-                    </button>
-                </form>
-                <a href="{{ url_for('convenor.regenerate_all_conflation_report_feedback', event_id=event.id) }}"
-                   class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-sync fa-fw"></i>
-                    Regenerate all feedback
+        {% if is_faculty or is_admin or is_root %}
+        <div class="card-footer bg-light">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="text-muted small me-1">Feedback</span>
+                {% if with_feedback_count > 0 and (is_root or is_admin or is_convenor) %}
+                    {% set unsent_with_feedback = with_feedback_count - sent_count %}
+                    <form method="POST"
+                          action="{{ url_for('convenor.delete_all_conflation_report_feedback', event_id=event.id) }}">
+                        {{ delete_all_form.hidden_tag() }}
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete all generated feedback? This cannot be undone.')">
+                            <i class="fas fa-trash fa-fw"></i>
+                            Delete all feedback
+                            {% if unsent_with_feedback > 0 %}
+                                <span class="badge bg-secondary ms-1">{{ unsent_with_feedback }} unsent</span>
+                            {% endif %}
+                        </button>
+                    </form>
+                    <a href="{{ url_for('convenor.regenerate_all_conflation_report_feedback', event_id=event.id) }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sync fa-fw"></i>
+                        Regenerate all feedback
+                    </a>
+                {% endif %}
+                <span class="ms-auto"></span>
+                <a class="btn btn-sm btn-outline-warning"
+                   href="{{ url_for('convenor.calculate_conflation', event_id=event.id,
+                                    url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
+                                    text='Conflation reports') }}"
+                   data-bs-toggle="tooltip"
+                   title="Discard existing conflation results and re-run with the current target expressions">
+                    <i class="fas fa-redo fa-fw"></i> Reconflate
                 </a>
             </div>
         </div>
-    {% endif %}
+        {% endif %}
+    </div>
 
     {# CTA banners: grade-push actions (needs_push for any CV target) #}
     {% if banners %}
@@ -318,24 +305,27 @@
         {% endfor %}
     {% endif %}
 
-    {# Canvas bulk push card #}
+    {# Canvas CTA panel #}
     {% if canvas_enabled and canvas_pushable_count > 0 %}
-        <div class="card border-secondary mb-3">
-            <div class="card-header bg-secondary text-white">
-                <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Canvas grade push
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-2">
+            <i class="fas fa-cloud-upload-alt fa-fw flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>Push grades to Canvas</strong> &mdash;
+                {{ canvas_pushable_count }}
+                student{{ 's' if canvas_pushable_count != 1 else '' }}
+                {{ 'have' if canvas_pushable_count != 1 else 'has' }} grades ready to push.
+                Canvas has not yet been updated for this event.
             </div>
-            <div class="card-body d-flex flex-wrap gap-2">
-                <form method="POST"
-                      action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
-                    {{ canvas_push_event_form.hidden_tag() }}
-                    <input type="hidden" name="grade_target" value="{{ default_canvas_target }}">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
-                        Push all to Canvas
-                        <span class="badge bg-primary ms-1">{{ canvas_pushable_count }}</span>
-                    </button>
-                </form>
-            </div>
+            <form method="POST"
+                  action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}"
+                  class="flex-shrink-0">
+                {{ canvas_push_event_form.hidden_tag() }}
+                <input type="hidden" name="grade_target" value="{{ default_canvas_target }}">
+                <button type="submit" class="btn btn-sm btn-success">
+                    <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                    Push all to Canvas
+                </button>
+            </form>
         </div>
     {% endif %}
 

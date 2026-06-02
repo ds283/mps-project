@@ -19,6 +19,7 @@ from ...models.markingevent import (
 )
 from ...models.submissions import SubmissionRoleTypesMixin
 from ...shared.forms.wtf_validators import SchemaValidationError, parse_schema
+from ...shared.grade_rounding import ACTIVE_ROUNDING_POLICY
 
 # Convenience dict injected into every render_template call so Jinja2 templates can
 # reference MarkingEventWorkflowStates constants by short name.
@@ -1674,8 +1675,15 @@ _conflation_report_grades = """
 {% if grades %}
     <div class="d-flex flex-column gap-1">
         {% for target_name, value in grades.items() %}
+            {% if value >= 70 %}
+                {% set badge_class = "bg-success" %}
+            {% elif value >= 50 %}
+                {% set badge_class = "bg-warning text-dark" %}
+            {% else %}
+                {% set badge_class = "bg-danger" %}
+            {% endif %}
             <div class="d-flex flex-row align-items-center gap-2">
-                <span class="badge bg-secondary" style="min-width:5rem;">{{ target_name }}</span>
+                <span class="badge {{ badge_class }}" style="min-width:5rem;">{{ target_name }}</span>
                 <span class="fw-semibold text-primary">{{ "%.1f"|format(value) }}%</span>
             </div>
         {% endfor %}
@@ -1691,10 +1699,13 @@ _conflation_report_grades = """
             <div class="mt-1"><span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle fa-fw"></i> Stale</span></div>
         {% endif %}
         {% set policy = cr.rounding_policy %}
-        {% if policy %}
-            <div class="mt-1 text-body-secondary">
-                <i class="fas fa-balance-scale fa-fw"></i>
-                <span data-bs-toggle="tooltip" title="{{ policy.description }}">{{ policy.label }}</span>
+        {% if policy and policy.identifier != event_rounding_policy.identifier %}
+            <div class="mt-1">
+                <span class="badge bg-warning text-dark"
+                      title="Differs from event default">
+                    <i class="fas fa-exclamation-triangle fa-fw"></i>
+                    {{ policy.label }}
+                </span>
             </div>
         {% endif %}
     </div>
@@ -1953,7 +1964,7 @@ def conflation_report_data(event_id, crs):
             {
                 "student": render_template(student_tmpl, cr=cr),
                 "project": render_template(project_tmpl, cr=cr),
-                "grades": render_template(grades_tmpl, cr=cr),
+                "grades": render_template(grades_tmpl, cr=cr, event_rounding_policy=ACTIVE_ROUNDING_POLICY),
                 "feedback": render_template(feedback_tmpl, cr=cr),
                 "canvas": render_template(
                     canvas_tmpl,

@@ -608,7 +608,7 @@ _submitter_report_reports = """
 {%- set marking_reports = report.marking_reports.all() -%}
 {%- set moderator_reports = report.moderator_reports.all() -%}
 {%- set wf_role = report.workflow.role -%}
-<div class="d-flex flex-column gap-2">
+<div class="d-flex flex-column gap-1">
     {%- if wf_role == ROLE_SUPERVISOR or wf_role == ROLE_RESPONSIBLE_SUPERVISOR -%}
         {%- if marking_reports | length > 1 -%}
             <div class="alert alert-danger p-1 mb-1 small">
@@ -629,141 +629,115 @@ _submitter_report_reports = """
             </div>
         {%- endif -%}
     {%- endif -%}
-    {% if report.out_of_tolerance %}
+    {%- if report.out_of_tolerance -%}
         <div class="alert alert-warning p-1 mb-1 small">
             <i class="fas fa-balance-scale fa-fw me-1"></i>
             <strong>Out of tolerance</strong> &mdash; marking reports differ by more than the allowed tolerance
         </div>
-    {% endif %}
+    {%- endif -%}
     {% for mr in marking_reports %}
-        <div class="bg-light p-2 mb-2">
-            <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                <div class="fw-semibold">{{ mr.user.name }}</div>
-                <div class="text-muted small">{{ mr.role.role_as_str }}</div>
+        <div class="border-bottom pb-1 mb-1">
+            <div class="d-flex justify-content-between align-items-baseline gap-1">
+                <a class="fw-semibold small text-decoration-none"
+                   href="{{ url_for('faculty.marking_form', report_id=mr.id,
+                                    url=url_for('convenor.submitter_reports_inspector',
+                                                workflow_id=report.workflow_id)) }}">
+                    {{ mr.user.name }} <i class="fas fa-external-link-alt" style="font-size:0.65rem;"></i>
+                </a>
                 {% if mr.grade is not none %}
-                    <span class="text-primary fw-semibold fs-4">{{ "%.1f"|format(mr.grade) }}%</span>
+                    <span class="small fw-semibold text-primary text-nowrap">{{ "%.1f"|format(mr.grade) }}%</span>
                 {% endif %}
+            </div>
+            <div class="d-flex flex-wrap align-items-start gap-1 mt-1">
+                <span class="text-muted text-nowrap" style="font-size:0.7rem;">{{ mr.role.role_as_str }}</span>
                 {% if not mr.distributed %}
                     {% if report.workflow_state == READY_TO_DISTRIBUTE %}
-                        <span class="badge bg-warning text-dark small"><i
-                                class="fas fa-paper-plane fa-fw"></i> Ready to distribute</span>
+                        <span class="badge bg-warning text-dark" style="font-size:0.65rem;"><i class="fas fa-paper-plane fa-fw"></i> Ready to distribute</span>
                     {% else %}
-                        <span class="text-secondary small fst-italic"><i
-                                class="fas fa-hourglass-half"></i> Awaiting distribution</span>
+                        <span class="badge bg-secondary" style="font-size:0.65rem;"><i class="fas fa-hourglass-half fa-fw"></i> Awaiting distribution</span>
                     {% endif %}
                 {% else %}
                     {% if mr.report_submitted %}
-                        <span class="text-success small"><i
-                                class="fas fa-check-circle"></i> Marker report submitted</span>
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size:0.65rem;"><i class="fas fa-check fa-fw"></i> Report</span>
                         {% if mr.feedback_submitted %}
-                            <span class="text-success small"><i
-                                    class="fas fa-comment"></i> Feedback submitted</span>
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size:0.65rem;"><i class="fas fa-comment fa-fw"></i> Feedback</span>
                         {% else %}
                             {%- set _fb_pos = (mr.feedback_positive or '') | trim -%}
                             {%- set _fb_imp = (mr.feedback_improvement or '') | trim -%}
                             {%- if _fb_pos or _fb_imp %}
-                                <div class="d-flex flex-row align-items-center gap-1 flex-wrap">
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
-                                        <i class="fas fa-comment-slash fa-fw"></i> Feedback incomplete
-                                    </span>
-                                    {% if not event_is_closed %}
-                                        <form method="POST"
-                                              action="{{ url_for('convenor.force_complete_feedback', id=mr.id, url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id)) }}"
-                                              class="d-inline">
-                                            {{ form.hidden_tag() }}
-                                            <button type="submit" class="btn btn-xs btn-outline-warning py-0 px-2"
-                                                    style="font-size:0.75rem;"
-                                                    title="Mark this assessor's feedback as complete">
-                                                <i class="fas fa-check fa-fw"></i> Mark complete
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                </div>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:0.65rem;"><i class="fas fa-comment-slash fa-fw"></i> Feedback incomplete</span>
+                                {% if not event_is_closed %}
+                                    <form method="POST"
+                                          action="{{ url_for('convenor.force_complete_feedback', id=mr.id, url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id)) }}"
+                                          class="d-inline">
+                                        {{ form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-xs btn-outline-warning py-0 px-1" style="font-size:0.65rem;"
+                                                title="Mark this assessor's feedback as complete">
+                                            <i class="fas fa-check fa-fw"></i> Mark complete
+                                        </button>
+                                    </form>
+                                {% endif %}
                             {%- else %}
-                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle small">
-                                    <i class="fas fa-comment-slash fa-fw"></i> Feedback absent
-                                </span>
+                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle" style="font-size:0.65rem;"><i class="fas fa-comment-slash fa-fw"></i> Feedback absent</span>
                             {%- endif %}
                         {% endif %}
                         {% if mr.signed_off_by is not none %}
-                            <div>
-                                <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Signed off</div>
-                                <div class="small text-muted mt-1">by <i class="fas fa-user"></i> {{ mr.signed_off_by.user.name }}</div>
-                                {% if mr.signed_off_timestamp is not none %}
-                                    <div class="small text-muted">{{ mr.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
-                                {% endif %}
-                            </div>
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size:0.65rem;">
+                                <i class="fas fa-check-circle fa-fw"></i> Signed off &mdash; {{ mr.signed_off_by.user.name }}{% if mr.signed_off_timestamp is not none %}, {{ mr.signed_off_timestamp.strftime("%d/%m/%Y") }}{% endif %}
+                            </span>
                         {% elif mr.grade_submitted_timestamp is not none %}
-                            <div class="d-flex flex-column align-items-start gap-1">
-                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
-                                    <i class="fas fa-hourglass-half fa-fw"></i> Submitted &mdash; sign-off pending
-                                </span>
-                                {% if mr.sign_off_scheduled_at is not none %}
-                                    <div class="small text-body-secondary">
-                                        Auto sign-off: {{ mr.sign_off_scheduled_at.strftime("%a %d %b %Y at %H:%M") }}
-                                    </div>
-                                {% endif %}
-                                {% if not event_is_closed %}
-                                    <button type="button" class="btn btn-xs btn-outline-warning mt-1"
-                                            data-signoff-url="{{ url_for('convenor.force_close_marking_window', report_id=mr.id,
-                                                                         url=url_for('convenor.submitter_reports_inspector',
-                                                                                     workflow_id=report.workflow_id)) }}"
-                                            data-marker-name="{{ mr.user.name | e }}"
-                                            onclick="openForceSignOffModal(this.dataset.signoffUrl, this.dataset.markerName)">
-                                        <i class="fas fa-forward fa-fw"></i> Force sign-off
-                                    </button>
-                                {% endif %}
-                            </div>
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size:0.65rem;">
+                                <i class="fas fa-hourglass-half fa-fw"></i> Sign-off pending{% if mr.sign_off_scheduled_at is not none %} &mdash; auto {{ mr.sign_off_scheduled_at.strftime("%d/%m/%Y %H:%M") }}{% endif %}
+                            </span>
+                            {% if not event_is_closed %}
+                                <button type="button" class="btn btn-xs btn-outline-warning py-0 px-1" style="font-size:0.65rem;"
+                                        data-signoff-url="{{ url_for('convenor.force_close_marking_window', report_id=mr.id,
+                                                                     url=url_for('convenor.submitter_reports_inspector',
+                                                                                 workflow_id=report.workflow_id)) }}"
+                                        data-marker-name="{{ mr.user.name | e }}"
+                                        onclick="openForceSignOffModal(this.dataset.signoffUrl, this.dataset.markerName)">
+                                    <i class="fas fa-forward fa-fw"></i> Force sign-off
+                                </button>
+                            {% endif %}
                         {% endif %}
                     {% else %}
-                        <span class="text-secondary small fst-italic"><i
-                                class="fas fa-hourglass-half"></i> Awaiting marker report</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle" style="font-size:0.65rem;"><i class="fas fa-hourglass-half fa-fw"></i> Awaiting report</span>
                     {% endif %}
                 {% endif %}
-                <a class="btn btn-xs btn-outline-secondary mt-1"
-                   href="{{ url_for('faculty.marking_form', report_id=mr.id,
-                                    url=url_for('convenor.submitter_reports_inspector',
-                                                workflow_id=report.workflow_id)) }}">
-                    <i class="fas fa-external-link-alt fa-fw"></i> View report
-                </a>
             </div>
         </div>
     {% endfor %}
     {% if moderator_reports %}
-        <hr class="my-1">
         {% for mod_report in moderator_reports %}
-            <div class="bg-light p-2 mb-2">
-                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                    <div class="text-muted fst-italic">Moderator: {{ mod_report.user.name }}</div>
+            <div class="ps-2" style="border-left: 3px solid var(--bs-warning-border-subtle);">
+                <div class="d-flex justify-content-between align-items-baseline gap-1">
+                    <a class="text-muted fst-italic small text-decoration-none"
+                       href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id,
+                                        url=url_for('convenor.submitter_reports_inspector',
+                                                    workflow_id=report.workflow_id)) }}">
+                        Moderator: {{ mod_report.user.name }} <i class="fas fa-external-link-alt" style="font-size:0.65rem;"></i>
+                    </a>
+                    {% if mod_report.grade is not none %}
+                        <span class="small fw-semibold text-danger text-nowrap">{{ "%.1f"|format(mod_report.grade) }}%</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex flex-wrap align-items-start gap-1 mt-1">
                     {% if mod_report.report_submitted %}
-                        {% if mod_report.grade is not none %}
-                            <span class="text-danger fw-semibold fs-4">{{ "%.1f"|format(mod_report.grade) }}%</span>
-                        {% endif %}
-                        <span class="text-success"><i
-                                class="fas fa-check-circle"></i> Report submitted</span>
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size:0.65rem;"><i class="fas fa-check fa-fw"></i> Submitted</span>
                         {% if report.accepted_moderator_report_id == mod_report.id %}
-                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
-                                <i class="fas fa-check-circle fa-fw"></i> Accepted
-                            </span>
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size:0.65rem;"><i class="fas fa-check-circle fa-fw"></i> Accepted</span>
                         {% else %}
                             <form method="POST"
                                   action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
-                                  class="d-inline ms-1">
+                                  class="d-inline">
                                 {{ form.hidden_tag() }}
-                                <button class="btn btn-xs btn-outline-success" type="submit">
+                                <button class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:0.65rem;" type="submit">
                                     <i class="fas fa-check fa-fw"></i> Accept
                                 </button>
                             </form>
                         {% endif %}
-                        <a class="btn btn-xs btn-outline-secondary mt-1"
-                           href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id,
-                                            url=url_for('convenor.submitter_reports_inspector',
-                                                        workflow_id=report.workflow_id)) }}">
-                            <i class="fas fa-external-link-alt fa-fw"></i> View report
-                        </a>
                     {% else %}
-                        <span class="text-secondary fst-italic"><i
-                                class="fas fa-hourglass-half"></i> Awaiting report</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle" style="font-size:0.65rem;"><i class="fas fa-hourglass-half fa-fw"></i> Awaiting report</span>
                     {% endif %}
                 </div>
             </div>

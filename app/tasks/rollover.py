@@ -111,7 +111,6 @@ def insert_new_pclass_config(self, old_config: ProjectClassConfig, convenor_id: 
                 config_id=new_config.id,
                 name=t.name,
                 number_markers=t.number_markers,
-                number_moderators=t.number_moderators,
                 start_date=t.start_date,
                 has_presentation=t.has_presentation,
                 lecture_capture=t.lecture_capture,

@@ -74,17 +74,6 @@
                                     <strong>Mean workload</strong>: {{ data['marking_workload']|round(precision=0) }} CATS
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-4">
-                                    <strong>Moderation CATS</strong>: {{ data['moderation_CATS'] }}
-                                </div>
-                                <div class="col-4">
-                                    <strong>#Moderators</strong>: {{ data['moderation_faculty'] }}
-                                </div>
-                                <div class="col-4">
-                                    <strong>Mean workload</strong>: {{ data['moderation_workload']|round(precision=0) }} CATS
-                                </div>
-                            </div>
                         </div>
 
                         <div class="card mt-3 mb-3 card-body bg-well {% if form.pclasses_to_include.errors %}has-error{% endif %}">

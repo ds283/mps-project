@@ -2267,7 +2267,6 @@ def add_pclass():
                         config_id=config.id,
                         name=t.name,
                         number_markers=t.number_markers,
-                        number_moderators=t.number_moderators,
                         start_date=t.start_date,
                         has_presentation=t.has_presentation,
                         lecture_capture=t.lecture_capture,
@@ -2661,7 +2660,6 @@ def regenerate_period_records(id):
             config_id=config.id,
             name=t.name,
             number_markers=t.number_markers,
-            number_moderators=t.number_moderators,
             start_date=t.start_date,
             has_presentation=t.has_presentation,
             lecture_capture=t.lecture_capture,
@@ -2764,7 +2762,6 @@ def add_period_definition(id):
                 period=pclass.number_submissions + 1,
                 name=form.name.data,
                 number_markers=form.number_markers.data,
-                number_moderators=form.number_moderators.data,
                 start_date=form.start_date.data,
                 has_presentation=True,
                 lecture_capture=form.lecture_capture.data,
@@ -2783,7 +2780,6 @@ def add_period_definition(id):
                 period=pclass.number_submissions + 1,
                 name=form.name.data,
                 number_markers=form.number_markers.data,
-                number_moderators=form.number_moderators.data,
                 start_date=form.start_date.data,
                 has_presentation=False,
                 lecture_capture=False,
@@ -2836,7 +2832,6 @@ def edit_period_definition(id):
     if form.validate_on_submit():
         pd.name = form.name.data
         pd.number_markers = form.number_markers.data
-        pd.number_moderators = form.number_moderators.data
         pd.start_date = form.start_date.data
         pd.has_presentation = form.has_presentation.data
 

@@ -34,7 +34,6 @@ from .choices import (
 from .content import *
 from .defaults import (
     DEFAULT_ASSIGNED_MARKERS,
-    DEFAULT_ASSIGNED_MODERATORS,
     DEFAULT_STRING_LENGTH,
     IP_LENGTH,
     PASSWORD_HASH_LENGTH,

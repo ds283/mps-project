@@ -1239,7 +1239,6 @@ def do_match_compare(id1, id2):
         "project",
         "supervisor",
         "marker",
-        "moderator",
     ]:
         diff_filter = "all"
 
@@ -1432,9 +1431,6 @@ def _build_match_changes(
         def get_marker_roles(rec: MatchingRecord) -> RoleDictType:
             return get_role_dict(rec, MatchingRole.ROLE_MARKER)
 
-        def get_moderator_roles(rec: MatchingRecord) -> RoleDictType:
-            return get_role_dict(rec, MatchingRole.ROLE_MODERATOR)
-
         def find_record_changes(
             rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str
         ) -> List[str]:
@@ -1460,14 +1456,6 @@ def _build_match_changes(
                 markers_diff = markers1.keys() ^ markers2.keys()
                 if len(markers_diff) > 0:
                     changes.append("marker")
-
-            # check for differing moderator roles
-            if diff_filter == "all" or diff_filter == "moderator":
-                moderators1: RoleDictType = get_moderator_roles(rec1)
-                moderators2: RoleDictType = get_moderator_roles(rec2)
-                moderators_diff = moderators1.keys() ^ moderators2.keys()
-                if len(moderators_diff) > 0:
-                    changes.append("moderator")
 
             return changes
 

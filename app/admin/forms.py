@@ -38,7 +38,6 @@ from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
-    DEFAULT_ASSIGNED_MODERATORS,
     DEFAULT_STRING_LENGTH,
     BackupConfiguration,
     DegreeProgramme,
@@ -956,34 +955,11 @@ class PeriodDefinitionMixin:
         ],
     )
 
-    number_moderators = IntegerField(
-        "Number of moderators to be assigned",
-        default=DEFAULT_ASSIGNED_MODERATORS,
-        description="Number of moderators that should be assigned to each project "
-        "by default. Used during automated matching. Usually this should be "
-        "set to zero. If required, moderators can be added manually during "
-        "the marking workflow.",
-        validators=[
-            InputRequired("Please enter the required number of moderators"),
-            NumberRange(
-                min=0,
-                message="The required number of moderators should not be negative",
-            ),
-        ],
-    )
-
     @staticmethod
     def validate_number_markers(form, field):
         if form._pclass.uses_marker and field.data == 0:
             raise ValidationError(
                 "This project class uses markers. The number of markers should be 1 or greater."
-            )
-
-    @staticmethod
-    def validate_number_moderators(form, field):
-        if form._pclass.uses_moderator and field.data == 0:
-            raise ValidationError(
-                "This project class uses moderators. This number of moderators should be 1 or greater."
             )
 
 

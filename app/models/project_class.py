@@ -558,7 +558,6 @@ class ProjectClass(
                     period=1,
                     name=None,
                     number_markers=1 if self.uses_marker else 0,
-                    number_moderators=1 if self.uses_moderator else 0,
                     start_date=None,
                     has_presentation=self.uses_presentations,
                     creator_id=current_user.id,
@@ -670,9 +669,6 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
     # number of markers to be assigned
     number_markers = db.Column(db.Integer(), default=1)
 
-    # number of moderators to be assigned
-    number_moderators = db.Column(db.Integer(), default=0)
-
     # PERIOD CONFIGURATION
 
     # does this period have a presentation submission?
@@ -783,8 +779,12 @@ class ProjectClassConfig(
     creation_timestamp = db.Column(db.DateTime())
 
     # grading rubric for language analysis pipeline
-    grading_rubric_id = db.Column(db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=True)
-    grading_rubric = db.relationship("GradingRubric", uselist=False, foreign_keys=[grading_rubric_id])
+    grading_rubric_id = db.Column(
+        db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=True
+    )
+    grading_rubric = db.relationship(
+        "GradingRubric", uselist=False, foreign_keys=[grading_rubric_id]
+    )
 
     # LOCAL CONFIGURATION
 
@@ -1561,7 +1561,6 @@ class ProjectClassConfig(
                 config_id=self.id,
                 name=t.name,
                 number_markers=t.number_markers,
-                number_moderators=t.number_moderators,
                 start_date=t.start_date,
                 has_presentation=t.has_presentation,
                 lecture_capture=t.lecture_capture,
@@ -1745,7 +1744,10 @@ class ProjectClassConfig(
                 PopularityRecord.liveproject_id.label("popq_liveproject_id"),
                 func.max(PopularityRecord.datestamp).label("popq_datestamp"),
             )
-            .filter(PopularityRecord.score_rank != None, PopularityRecord.config_id == self.id)
+            .filter(
+                PopularityRecord.score_rank != None,
+                PopularityRecord.config_id == self.id,
+            )
             .group_by(PopularityRecord.liveproject_id)
             .subquery()
         )
@@ -2099,13 +2101,10 @@ class SubmissionPeriodRecord(db.Model):
     # number of markers to be assigned
     number_markers = db.Column(db.Integer(), default=1)
 
-    # number of moderators to be assigned
-    number_moderators = db.Column(db.Integer(), default=0)
-
-    # PRESENTATION DATA, IF USED
-
     # does this submission period have an associated presentation assessment?
     has_presentation = db.Column(db.Boolean())
+
+    # PRESENTATION DATA, IF USED
 
     # if using a presentation, does it require lecture capture?
     lecture_capture = db.Column(db.Boolean())
@@ -2179,7 +2178,6 @@ class SubmissionPeriodRecord(db.Model):
         messages = []
 
         messages.append("Markers={m}".format(m=self.number_markers))
-        messages.append("Moderators={m}".format(m=self.number_moderators))
 
         if self.config.main_config.enable_canvas_sync:
             if self.canvas_enabled:

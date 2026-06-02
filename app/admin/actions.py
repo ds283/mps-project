@@ -39,12 +39,10 @@ def estimate_CATS_load():
 
     supervision_CATS = 0
     marking_CATS = 0
-    moderation_CATS = 0
     presentation_CATS = 0
 
     supervision_faculty = set()
     marking_faculty = set()
-    moderation_faculty = set()
     presentation_faculty = set()
 
     for pclass in pclasses:
@@ -108,31 +106,6 @@ def estimate_CATS_load():
             for item in markers:
                 marking_faculty.add(item.owner_id)
 
-        if pclass.uses_moderator:
-            if pclass.CATS_moderation is not None and pclass.CATS_moderation > 0:
-                for period in pclass.periods:
-                    period: SubmissionPeriodDefinition
-                    moderation_CATS += (
-                        pclass.CATS_moderation
-                        * num_selectors
-                        * period.number_moderators
-                    )
-
-            # find moderating faculty enrolled for this project
-            moderators = (
-                db.session.query(EnrollmentRecord)
-                .filter_by(
-                    pclass_id=pclass.id,
-                    moderator_state=EnrollmentRecord.MODERATOR_ENROLLED,
-                )
-                .join(User, User.id == EnrollmentRecord.owner_id)
-                .filter(User.active)
-                .all()
-            )
-
-            for item in moderators:
-                moderation_faculty.add(item.owner_id)
-
         if pclass.uses_presentations:
             if pclass.CATS_presentation is not None and pclass.CATS_presentation > 0:
                 for period in pclass.periods:
@@ -161,26 +134,20 @@ def estimate_CATS_load():
 
     num_supervision_faculty = len(supervision_faculty)
     num_marking_faculty = len(marking_faculty)
-    num_moderation_faculty = len(moderation_faculty)
     num_presentation_faculty = len(presentation_faculty)
 
     return {
         "supervision_CATS": supervision_CATS,
         "marking_CATS": marking_CATS,
-        "moderation_CATS": moderation_CATS,
         "presentation_CATS": presentation_CATS,
         "supervision_faculty": num_supervision_faculty,
         "marking_faculty": num_marking_faculty,
-        "moderation_faculty": num_moderation_faculty,
         "presentation_faculty": num_presentation_faculty,
         "supervision_workload": supervision_CATS / num_supervision_faculty
         if num_supervision_faculty > 0
         else 0,
         "marking_workload": marking_CATS / num_marking_faculty
         if num_marking_faculty > 0
-        else 0,
-        "moderation_workload": moderation_CATS / num_moderation_faculty
-        if num_moderation_faculty > 0
         else 0,
         "presentation_owrkload": presentation_CATS / num_presentation_faculty
         if num_presentation_faculty > 0

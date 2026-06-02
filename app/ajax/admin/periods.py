@@ -73,7 +73,6 @@ def periods_data(periods: List[SubmissionPeriodDefinition]):
             "number": p.period,
             "name": render_template_string(_name, p=p),
             "markers": p.number_markers,
-            "moderators": p.number_moderators,
             "presentation": render_template_string(_presentation, p=p),
             "menu": render_template_string(_menu, period=p),
         }

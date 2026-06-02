@@ -25,6 +25,3 @@ SERIALIZED_LAYOUT_LENGTH = 2048
 
 # default number of markers to assign
 DEFAULT_ASSIGNED_MARKERS = 2
-
-# default number of moderators to assign
-DEFAULT_ASSIGNED_MODERATORS = 0

@@ -48,14 +48,7 @@
 {#        {{ wtf.form_errors(form) }}#}
 
         {{ wtf.render_field(form.name) }}
-        <div class="row vertical-top">
-            <div class="col-6">
-                {{ wtf.render_field(form.number_markers) }}
-            </div>
-            <div class="col-6">
-                {{ wtf.render_field(form.number_moderators) }}
-            </div>
-        </div>
+        {{ wtf.render_field(form.number_markers) }}
         {{ date_field(form.start_date, 'datepicker1') }}
         <hr class="intro-divider">
 

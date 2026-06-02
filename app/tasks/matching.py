@@ -66,7 +66,6 @@ from .thumbnails import dispatch_thumbnail_task
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
 FALLBACK_DEFAULT_MARKER_CATS = 3
-FALLBACK_DEFAULT_MODERATOR_CATS = 3
 
 # should be a large enough number that capacity for a project is effectively unbounded
 UNBOUNDED_SUPERVISING_CAPACITY = 100

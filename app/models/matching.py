@@ -524,22 +524,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             .order_by(MatchingRecord.submission_period.asc())
         )
 
-    def get_moderator_records(self, fac_id):
-        from .live_projects import LiveProject
-
-        return (
-            self.records.join(LiveProject, LiveProject.id == MatchingRecord.project_id)
-            .filter(
-                MatchingRecord.roles.any(
-                    and_(
-                        MatchingRole.user_id == fac_id,
-                        MatchingRole.role == MatchingRole.ROLE_MODERATOR,
-                    )
-                )
-            )
-            .order_by(MatchingRecord.submission_period.asc())
-        )
-
     def number_project_assignments(self, project):
         return _MatchingAttempt_number_project_assignments(self.id, project.id)
 
@@ -1057,9 +1041,7 @@ def _MatchingRecord_is_valid(id):
 
         uses_supervisor = pclass.uses_supervisor
         uses_marker = pclass.uses_marker
-        uses_moderator = pclass.uses_moderator
         markers_needed = pd.number_markers
-        moderators_needed = pd.number_moderators
 
     else:
         pd: SubmissionPeriodRecord = config.get_period(obj.submission_period)
@@ -1069,38 +1051,24 @@ def _MatchingRecord_is_valid(id):
 
         uses_supervisor = config.uses_supervisor
         uses_marker = config.uses_marker
-        uses_moderator = config.uses_moderator
         markers_needed = pd.number_markers
-        moderators_needed = pd.number_moderators
 
     supervisor_roles: List[User] = obj.supervisor_roles
     marker_roles: List[User] = obj.marker_roles
-    moderator_roles: List[User] = obj.moderator_roles
 
     supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
     marker_ids: Set[int] = set(u.id for u in marker_roles)
-    moderator_ids: Set[int] = set(u.id for u in moderator_roles)
 
-    # 1. SUPERVISOR, MARKER, AND MODERATOR ROLES SHOULD BE DISTINCT
+    # 1. SUPERVISOR AND MARKER ROLES SHOULD BE DISTINCT
     a = supervisor_ids.intersection(marker_ids)
     if len(a) > 0:
         errors[("basic", 0)] = "Some supervisor and marker roles coincide"
 
-    b = supervisor_ids.intersection(moderator_ids)
-    if len(b) > 0:
-        errors[("basic", 1)] = "Some supervisor and moderator roles coincide"
-
-    c = marker_ids.intersection(moderator_ids)
-    if len(c) > 0:
-        errors[("basic", 2)] = "Some marker and moderator roles coincide"
-
     supervisor_counts = {}
     marker_counts = {}
-    moderator_counts = {}
 
     supervisor_dict = {}
     marker_dict = {}
-    moderator_dict = {}
 
     for u in supervisor_roles:
         supervisor_dict[u.id] = u
@@ -1117,14 +1085,6 @@ def _MatchingRecord_is_valid(id):
             marker_counts[u.id] = 1
         else:
             marker_counts[u.id] += 1
-
-    for u in moderator_roles:
-        moderator_dict[u.id] = u
-
-        if u.id not in moderator_counts:
-            moderator_counts[u.id] = 1
-        else:
-            moderator_counts[u.id] += 1
 
     if uses_supervisor:
         # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
@@ -1178,35 +1138,6 @@ def _MatchingRecord_is_valid(id):
 
                 errors[("markers", 1)] = (
                     'Marker "{name}" is assigned {n} times for this selector'.format(
-                        name=user.name, n=count
-                    )
-                )
-
-    if uses_moderator:
-        # 1G. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MODERATORS
-        if len(moderator_ids) < moderators_needed:
-            errors[("moderators", 0)] = (
-                "Fewer moderator roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                    assgn=len(moderator_ids), exp=moderators_needed
-                )
-            )
-
-        # 1H. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
-        if len(moderator_ids) > moderators_needed:
-            warnings[("moderators", 0)] = (
-                "More moderator roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                    assgn=len(moderator_ids), exp=moderators_needed
-                )
-            )
-
-        # 1I. MODERATORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
-        for u_id in moderator_counts:
-            count = moderator_counts[u_id]
-            if count > 1:
-                user: User = moderator_dict[u_id]
-
-                errors[("moderators", 1)] = (
-                    'Moderator "{name}" is assigned {n} times for this selector'.format(
                         name=user.name, n=count
                     )
                 )
@@ -1297,25 +1228,7 @@ def _MatchingRecord_is_valid(id):
                 '"{name}" has been assigned a marking role, but is not a faculty member'
             )
 
-    # 7. STAFF WITH MODERATION ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    for u in moderator_roles:
-        if u.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
-            if (
-                enrolment is None
-                or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED
-            ):
-                errors[("enrolment", 2)] = (
-                    '"{name}" has been assigned a moderation role, but is not currently enrolled for this project class'.format(
-                        name=u.name
-                    )
-                )
-        else:
-            warnings[("enrolment", 3)] = (
-                '"{name}" has been assigned a moderation role, but is not a faculty member'
-            )
-
-    # 8. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
+    # 7. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(
         attempt.records.filter_by(
             selector_id=obj.selector_id, project_id=obj.project_id
@@ -1355,21 +1268,7 @@ def _MatchingRecord_is_valid(id):
                     )
                 )
 
-    # 10. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
-    if uses_moderator:
-        for u in moderator_roles:
-            count = get_count(
-                project.assessor_list_query.filter(FacultyData.id == u.id)
-            )
-
-            if count != 1:
-                errors[("moderators", 2)] = (
-                    'Assigned moderator "{name}" is not in assessor pool for assigned project'.format(
-                        name=u.name
-                    )
-                )
-
-    # 11. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
+    # 10. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if not project.use_supervisor_pool:
         if project.owner is not None and project.owner_id not in supervisor_ids:
             warnings[("supervisors", 2)] = (
@@ -1378,7 +1277,7 @@ def _MatchingRecord_is_valid(id):
                 )
             )
 
-    # 12. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
+    # 11. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
     if project.use_supervisor_pool:
         for u in supervisor_roles:
             if not any(u.id == fd.id for fd in project.supervisors):
@@ -1388,7 +1287,7 @@ def _MatchingRecord_is_valid(id):
                     )
                 )
 
-    # 13. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    # 12. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
         # only refuse to validate if we are the first member of the multiplet
         lo_rec = (
@@ -1404,7 +1303,7 @@ def _MatchingRecord_is_valid(id):
                 )
             )
 
-    # 14. THE PROJECT SHOULD NOT BE OVERASSIGNED
+    # 13. THE PROJECT SHOULD NOT BE OVERASSIGNED
     if project.enforce_capacity and project.capacity is not None:
         supervisor_roles = obj.supervisor_roles
         for supv in supervisor_roles:
@@ -1641,7 +1540,6 @@ class MatchingRecord(db.Model):
                 MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
             ],
             "marker": [MatchingRole.ROLE_MARKER],
-            "moderator": [MatchingRole.ROLE_MODERATOR],
         }
 
         if role not in role_map:
@@ -1688,22 +1586,6 @@ class MatchingRecord(db.Model):
         :return:
         """
         return self.get_role_ids("marker")
-
-    @property
-    def moderator_roles(self) -> List:
-        """
-        Convenience function for get_roles() with role='moderator'
-        :return:
-        """
-        return self.get_roles("moderator")
-
-    @property
-    def moderator_role_ids(self) -> Set[int]:
-        """
-        Convenience function for get_role_ids() with role='moderator'
-        :return:
-        """
-        return self.get_role_ids("moderator")
 
     @property
     def period(self):

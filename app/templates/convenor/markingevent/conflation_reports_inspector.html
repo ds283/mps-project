@@ -131,7 +131,7 @@
             Conflation reports for: <strong>{{ event.name }}</strong>
         </h4>
         {% if is_faculty or is_admin or is_root %}
-            <a class="btn btn-sm btn-outline-warning ms-auto"
+            <a class="btn btn-sm btn-warning text-dark ms-auto"
                href="{{ url_for('convenor.calculate_conflation', event_id=event.id,
                                 url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
                                 text='Conflation reports') }}"
@@ -284,27 +284,6 @@
         </div>
     {% endif %}
 
-    {# Canvas bulk push card #}
-    {% if canvas_enabled and canvas_pushable_count > 0 %}
-        <div class="card border-secondary mb-3">
-            <div class="card-header bg-secondary text-white">
-                <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Canvas grade push
-            </div>
-            <div class="card-body d-flex flex-wrap gap-2">
-                <form method="POST"
-                      action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
-                    {{ canvas_push_event_form.hidden_tag() }}
-                    <input type="hidden" name="grade_target" value="{{ default_canvas_target }}">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
-                        Push all to Canvas
-                        <span class="badge bg-primary ms-1">{{ canvas_pushable_count }}</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    {% endif %}
-
     {# CTA banners: grade-push actions (needs_push for any CV target) #}
     {% if banners %}
         <div class="mt-3 mb-2">
@@ -339,77 +318,25 @@
         {% endfor %}
     {% endif %}
 
-    {# Grade back-propagation panel (shown when conflation results exist) #}
-    {% set conflation_reports = event.conflation_reports.all() %}
-    {% if conflation_reports %}
-        {% set targets = event.targets_as_dict %}
-        {% set any_stale = conflation_reports | selectattr('is_stale') | list | length > 0 %}
-        {% if targets %}
-            {% set sample_dict = conflation_reports[0].conflation_report_as_dict %}
-            {# Only show propagatable targets that the period is configured to accept #}
-            {% set propagatable = (('report' in sample_dict and period.report_grade_available) or
-                                   ('supervisor' in sample_dict and period.supervision_grade_available) or
-                                   ('presentation' in sample_dict and period.presentation_grade_available)) %}
-            {% if propagatable %}
-                <div class="card border-secondary mb-3">
-                    <div class="card-header bg-secondary text-white d-flex align-items-center gap-2">
-                        <i class="fas fa-arrow-right fa-fw"></i>
-                        <strong>Copy grades to submission records</strong>
-                        {% if any_stale %}
-                            <span class="badge bg-warning text-dark ms-auto">
-                                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>Some results stale
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="card-body">
-                        {% if any_stale %}
-                            <div class="alert alert-warning py-2 mb-3">
-                                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
-                                Some conflation results are <strong>stale</strong> because a report was returned
-                                after conflation was last run. Re-run conflation before copying grades.
-                            </div>
-                        {% endif %}
-                        <p class="small text-body-secondary mb-2">
-                            Conflation run for <strong>{{ conflation_reports|length }}</strong> record(s).
-                            Generated {{ conflation_reports[0].generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
-                            {% if conflation_reports[0].generated_by is not none %}
-                                by {{ conflation_reports[0].generated_by.name }}
-                            {% endif %}.
-                        </p>
-                        <div class="d-flex flex-wrap gap-2 align-items-start">
-                            {% for cv_key, grade_avail, push_url in [
-                                ('report',       period.report_grade_available,       url_for('convenor.propagate_report_grade', event_id=event.id)),
-                                ('supervisor',   period.supervision_grade_available,  url_for('convenor.propagate_supervision_grade', event_id=event.id)),
-                                ('presentation', period.presentation_grade_available, url_for('convenor.propagate_presentation_grade', event_id=event.id))
-                            ] %}
-                                {% if cv_key in sample_dict and grade_avail %}
-                                    {% set push_info = cv_push_status.get(cv_key, {}) %}
-                                    {% set is_stale = push_info.get('push_stale', False) %}
-                                    {% set last_push = push_info.get('last_push') %}
-                                    <div>
-                                        <form method="POST" action="{{ push_url }}">
-                                            {{ propagate_form.hidden_tag() }}
-                                            <button class="btn btn-sm {% if is_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
-                                                <i class="fas fa-arrow-right fa-fw"></i>
-                                                Copy &ldquo;{{ cv_key }}&rdquo; grades &rarr; submission records
-                                                {% if is_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
-                                            </button>
-                                        </form>
-                                        {% if last_push %}
-                                            <div class="text-body-secondary mt-1" style="font-size:0.75rem">
-                                                Last pushed {{ last_push.pushed_at[:16]|replace('T', ' ') }}
-                                                by {{ last_push.pushed_by_name }}
-                                                &mdash; {{ last_push.record_count }} record{{ 's' if last_push.record_count != 1 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-        {% endif %}
+    {# Canvas bulk push card #}
+    {% if canvas_enabled and canvas_pushable_count > 0 %}
+        <div class="card border-secondary mb-3">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Canvas grade push
+            </div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <form method="POST"
+                      action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
+                    {{ canvas_push_event_form.hidden_tag() }}
+                    <input type="hidden" name="grade_target" value="{{ default_canvas_target }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                        Push all to Canvas
+                        <span class="badge bg-primary ms-1">{{ canvas_pushable_count }}</span>
+                    </button>
+                </form>
+            </div>
+        </div>
     {% endif %}
 
     {# Active feedback PDF generation jobs panel #}

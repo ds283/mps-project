@@ -1772,16 +1772,18 @@ _conflation_report_menu = """
         {# ── Section 1: Propagate grades ───────────────────────────────────── #}
         <h6 class="dropdown-header">Propagate grades</h6>
         {% for target, value in grade_dict.items() %}
-            <form method="POST"
-                  action="{{ url_for('convenor.propagate_cr_grade', cr_id=cr.id,
-                                     target=target, url=return_url) }}"
-                  style="display:contents">
-                {{ form.hidden_tag() }}
-                <button type="submit" class="dropdown-item d-flex gap-2">
-                    <i class="fas fa-arrow-right fa-fw"></i>
-                    Copy &#8220;{{ target }}&#8221; ({{ "%.1f"|format(value) }}) &rarr; record
-                </button>
-            </form>
+            {% if target in ('report', 'supervisor', 'presentation') %}
+                <form method="POST"
+                      action="{{ url_for('convenor.propagate_cr_grade', cr_id=cr.id,
+                                         target=target, url=return_url) }}"
+                      style="display:contents">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="dropdown-item d-flex gap-2">
+                        <i class="fas fa-arrow-right fa-fw"></i>
+                        Copy &#8220;{{ target }}&#8221; ({{ "%.1f"|format(value) }}) &rarr; record
+                    </button>
+                </form>
+            {% endif %}
         {% else %}
             <span class="dropdown-item text-body-secondary disabled">No grades available</span>
         {% endfor %}

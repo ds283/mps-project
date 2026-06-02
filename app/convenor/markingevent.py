@@ -796,12 +796,6 @@ def reconflate_conflation_report(cr_id):
         )
         return redirect(url)
 
-    if not cr.is_stale:
-        flash(
-            "This conflation report is not stale; reconflation is not needed.", "info"
-        )
-        return redirect(url)
-
     targets = event.targets_as_dict
     if not targets:
         flash("This event has no conflation targets defined.", "error")

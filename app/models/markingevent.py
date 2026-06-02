@@ -9,7 +9,7 @@
 #
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from flask_security import current_user
@@ -1283,6 +1283,13 @@ class MarkingReport(db.Model, EditingMetadataMixin):
             return True
         delta = datetime.now() - self.grade_submitted_timestamp
         return delta.total_seconds() < 86400
+
+    @property
+    def sign_off_scheduled_at(self):
+        """Returns the datetime when the 24-hour auto-sign-off task is scheduled to run."""
+        if self.grade_submitted_timestamp is None:
+            return None
+        return self.grade_submitted_timestamp + timedelta(hours=24)
 
     @property
     def workflow(self):

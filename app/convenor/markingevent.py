@@ -4142,6 +4142,58 @@ def dispatch_marking_report(report_id):
     return redirect(url)
 
 
+@convenor.route("/force_close_marking_window/<int:report_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def force_close_marking_window(report_id):
+    """Force early dispatch of close_marking_window for a MarkingReport."""
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    sr: SubmitterReport = report.submitter_report
+    workflow: MarkingWorkflow = sr.workflow
+    pclass: ProjectClass = workflow.event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if not report.report_submitted:
+        flash("This marking report has not been submitted yet.", "error")
+        return redirect(redirect_url())
+
+    if report.signed_off_id is not None:
+        flash("This marking report has already been signed off.", "info")
+        return redirect(redirect_url())
+
+    from ..sqlalchemy_scheduler import DatabaseSchedulerEntry
+
+    entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report_id}_%"))
+        .first()
+    )
+    scheduler_entry_id = entry.id if entry is not None else None
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.markingevent.close_marking_window"]
+        task.apply_async(args=[report_id, scheduler_entry_id])
+        flash(
+            f"Sign-off for {report.user.name}'s marking report has been dispatched. "
+            "The report will be locked shortly.",
+            "success",
+        )
+    except Exception as e:
+        current_app.logger.exception("Error dispatching close_marking_window", exc_info=e)
+        flash(
+            "Could not dispatch sign-off task. Please contact a system administrator.",
+            "error",
+        )
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_reports_inspector", workflow_id=workflow.id),
+    )
+    return redirect(url)
+
+
 @convenor.route("/send_marking_emails_for_workflow/<int:workflow_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def send_marking_emails_for_workflow(workflow_id):

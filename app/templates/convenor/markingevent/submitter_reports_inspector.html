@@ -42,6 +42,12 @@
                 + '<i class="fas fa-chevron-' + (hidden ? 'up' : 'down') + ' fa-fw"></i>';
         }
 
+        function openForceSignOffModal(url, markerName) {
+            document.getElementById('forceSignOffForm').action = url;
+            document.getElementById('forceSignOffMarkerName').textContent = markerName;
+            new bootstrap.Modal(document.getElementById('forceSignOffModal')).show();
+        }
+
         $(document).ready(function () {
             $('#submitter-reports-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
@@ -289,6 +295,40 @@
                 </tr>
                 </thead>
             </table>
+        </div>
+    </div>
+
+    {# Force sign-off confirmation modal #}
+    <div class="modal fade" id="forceSignOffModal" tabindex="-1"
+         aria-labelledby="forceSignOffModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="forceSignOffModalLabel">
+                        <i class="fas fa-exclamation-triangle fa-fw me-1"></i> Force early sign-off
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>The 24-hour editing window for <strong id="forceSignOffMarkerName"></strong> has not
+                       yet expired.</p>
+                    <p>Forcing sign-off now will <strong>immediately lock</strong> this marking report.
+                       The assessor will no longer be able to make changes.</p>
+                    <p class="mb-0 text-body-secondary small">The sign-off task will be dispatched to the
+                       background queue and will complete within a few seconds.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times fa-fw me-1"></i> Cancel
+                    </button>
+                    <form id="forceSignOffForm" method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-forward fa-fw me-1"></i> Force sign-off now
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}

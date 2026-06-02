@@ -698,9 +698,30 @@ _submitter_report_reports = """
                             <div class="small text-muted">{{ mr.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
                         {% endif %}
                     </div>
+                {% elif mr.report_submitted and mr.grade_submitted_timestamp is not none %}
+                    <div class="d-flex flex-column align-items-start gap-1">
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
+                            <i class="fas fa-hourglass-half fa-fw"></i> Submitted &mdash; sign-off pending
+                        </span>
+                        {% if mr.sign_off_scheduled_at is not none %}
+                            <div class="small text-body-secondary">
+                                Auto sign-off: {{ mr.sign_off_scheduled_at.strftime("%a %d %b %Y at %H:%M") }}
+                            </div>
+                        {% endif %}
+                        {% if not event_is_closed %}
+                            <button type="button" class="btn btn-xs btn-outline-warning mt-1"
+                                    data-signoff-url="{{ url_for('convenor.force_close_marking_window', report_id=mr.id,
+                                                                 url=url_for('convenor.submitter_reports_inspector',
+                                                                             workflow_id=report.workflow_id)) }}"
+                                    data-marker-name="{{ mr.user.name | e }}"
+                                    onclick="openForceSignOffModal(this.dataset.signoffUrl, this.dataset.markerName)">
+                                <i class="fas fa-forward fa-fw"></i> Force sign-off
+                            </button>
+                        {% endif %}
+                    </div>
                 {% else %}
-                        <span class="text-secondary small fst-italic small"><i
-                                class="fas fa-hourglass-half"></i> Awaiting signoff</span>
+                    <span class="text-secondary small fst-italic"><i
+                            class="fas fa-hourglass-half"></i> Awaiting report</span>
                 {% endif %}
             </div>
         </div>
@@ -851,9 +872,29 @@ _marking_report_signoff = """
     {% if report.signed_off_timestamp is not none %}
         <div class="small text-muted">{{ report.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
     {% endif %}
+{% elif report.report_submitted and report.grade_submitted_timestamp is not none %}
+    <div class="d-flex flex-column align-items-start gap-1">
+        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
+            <i class="fas fa-hourglass-half fa-fw"></i> Submitted &mdash; sign-off pending
+        </span>
+        {% if report.sign_off_scheduled_at is not none %}
+            <div class="small text-body-secondary">
+                Auto sign-off: {{ report.sign_off_scheduled_at.strftime("%a %d %b %Y at %H:%M") }}
+            </div>
+        {% endif %}
+        {% if not event_is_closed %}
+            <button type="button" class="btn btn-xs btn-outline-warning mt-1"
+                    data-signoff-url="{{ url_for('convenor.force_close_marking_window', report_id=report.id,
+                                                 url=url_for('convenor.marking_reports_inspector',
+                                                             workflow_id=report.submitter_report.workflow_id)) }}"
+                    data-marker-name="{{ report.user.name | e }}"
+                    onclick="openForceSignOffModal(this.dataset.signoffUrl, this.dataset.markerName)">
+                <i class="fas fa-forward fa-fw"></i> Force sign-off
+            </button>
+        {% endif %}
+    </div>
 {% else %}
-        <span class="text-secondary fst-italic small"><i
-                class="fas fa-hourglass-half"></i> Awaiting signoff</span>
+    <span class="text-secondary fst-italic small"><i class="fas fa-hourglass-half"></i> Awaiting report</span>
 {% endif %}
 """
 
@@ -1173,7 +1214,7 @@ def marking_report_data(reports):
             "student": render_template(student_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report, **_status_ctx),
-            "signoff": render_template(signoff_tmpl, report=report),
+            "signoff": render_template(signoff_tmpl, report=report, event_is_closed=event_is_closed),
             "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, form=form, **_EVENT_STATES),
         }
         for report in reports

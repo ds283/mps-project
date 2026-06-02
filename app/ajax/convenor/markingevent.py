@@ -305,19 +305,6 @@ _submitter_report_actions = """
         </a>
     {% endif %}
 {% endif %}
-{% if is_completed %}
-    <div class="mb-2">
-        <span class="badge bg-success py-2 px-3">
-            <i class="fas fa-check-circle fa-fw"></i> Signed off
-        </span>
-        {% if report.completed_by is not none %}
-            <div class="small text-muted mt-1">by {{ report.completed_by.name }}</div>
-        {% endif %}
-        {% if report.completed_timestamp is not none %}
-            <div class="small text-muted">{{ report.completed_timestamp.strftime("%d/%m/%Y") }}</div>
-        {% endif %}
-    </div>
-{% endif %}
 {% if is_dropped %}
     <div class="mb-2">
         <span class="badge bg-secondary py-2 px-3">
@@ -490,7 +477,9 @@ _submitter_report_grade = """
 # language=jinja2
 _submitter_report_signoff = """
 {% if report.signed_off_by is not none %}
-    <div class="text-success"><i class="fas fa-check-circle"></i> Signed off</div>
+    <span class="badge bg-success py-2 px-3">
+        <i class="fas fa-check-circle fa-fw"></i> Signed off
+    </span>
     <div class="small text-muted mt-1">by {{ report.signed_off_by.name }}</div>
     {% if report.signed_off_timestamp is not none %}
         <div class="small text-muted">{{ report.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
@@ -1718,8 +1707,12 @@ _conflation_report_feedback = """
 _conflation_report_menu = """
 {% set reports = cr.feedback_reports.all() %}
 {% set has_feedback = reports|length > 0 %}
+{% set has_any_action = (cr.is_stale and not cr.feedback_sent) or (has_feedback and not cr.feedback_sent) or (cr.feedback_emails.count() > 0) %}
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button{% if has_any_action %} dropdown-toggle{% endif %}"
+            type="button"
+            {% if has_any_action %}data-bs-toggle="dropdown"{% endif %}
+            {% if not has_any_action %}disabled{% endif %}>
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">

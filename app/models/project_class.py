@@ -2388,18 +2388,6 @@ class SubmissionPeriodRecord(db.Model):
         return get_count(self._unordered_records_query(user, "presentation"))
 
     @property
-    def uses_supervisor_feedback(self):
-        return self.config.uses_supervisor
-
-    @property
-    def uses_marker_feedback(self):
-        return self.config.uses_marker
-
-    @property
-    def uses_presentation_feedback(self):
-        return self.has_presentation
-
-    @property
     def submitter_list(self):
         return self.submissions
 

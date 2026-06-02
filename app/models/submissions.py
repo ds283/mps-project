@@ -292,18 +292,6 @@ class SubmissionRole(
         return {"label": self.submission.owner.student.user.name}
 
     @property
-    def uses_supervisor_feedback(self):
-        return self.submission.period.uses_supervisor_feedback
-
-    @property
-    def uses_marker_feedback(self):
-        return self.submission.period.uses_marker_feedback
-
-    @property
-    def uses_presentation_feedback(self):
-        return self.submission.period.uses_presentation_feedback
-
-    @property
     def has_regular_meeting(self):
         if self.role not in [
             SubmissionRole.ROLE_SUPERVISOR,
@@ -1359,18 +1347,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
         return self.get_role_user("supervisor", user)
-
-    @property
-    def uses_supervisor_feedback(self):
-        return self.period.uses_supervisor_feedback
-
-    @property
-    def uses_marker_feedback(self):
-        return self.period.uses_marker_feedback
-
-    @property
-    def uses_presentation_feedback(self):
-        return self.period.uses_presentation_feedback
 
     @property
     def has_feedback(self):

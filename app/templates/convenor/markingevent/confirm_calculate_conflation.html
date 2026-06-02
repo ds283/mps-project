@@ -45,6 +45,31 @@
                                 <strong>discarded</strong> and replaced with a fresh calculation.
                             {% endif %}
                         </div>
+
+                        {% if sent_count > 0 %}
+                            <div class="alert alert-danger py-2 mb-3">
+                                <i class="fas fa-exclamation-circle fa-fw me-1"></i>
+                                Feedback has already been <strong>sent</strong> to
+                                <strong>{{ sent_count }}</strong> student{{ 's' if sent_count != 1 else '' }}.
+                                Re-calculating will delete those feedback PDFs. Students will need to be
+                                re-notified after a new set is generated.
+                            </div>
+                        {% elif with_feedback_count > 0 %}
+                            <div class="alert alert-warning py-2 mb-3">
+                                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                                <strong>{{ with_feedback_count }}</strong> generated feedback PDF{{ 's' if with_feedback_count != 1 else '' }}
+                                will be <strong>deleted</strong>. You will need to regenerate feedback after
+                                re-conflation.
+                            </div>
+                        {% endif %}
+
+                        {% if in_progress_count > 0 %}
+                            <div class="alert alert-danger py-2 mb-3">
+                                <i class="fas fa-spinner fa-spin fa-fw me-1"></i>
+                                <strong>{{ in_progress_count }}</strong> feedback PDF{{ 's are' if in_progress_count != 1 else ' is' }}
+                                currently being generated. Wait for generation to finish before reconflating.
+                            </div>
+                        {% endif %}
                     {% else %}
                         <p class="text-body-secondary mb-3">
                             Conflation will be calculated for <strong>{{ submission_count }}</strong>
@@ -57,6 +82,8 @@
                         <form method="POST"
                               action="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}">
                             {{ form.hidden_tag() }}
+                            <input type="hidden" name="url" value="{{ url }}">
+                            <input type="hidden" name="text" value="{{ text }}">
                             <button class="btn btn-success" type="submit">
                                 <i class="fas fa-calculator fa-fw"></i>
                                 {% if existing_reports > 0 %}Re-calculate{% else %}Calculate{% endif %} conflation

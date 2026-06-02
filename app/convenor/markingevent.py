@@ -5712,22 +5712,42 @@ def calculate_conflation(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+    fallback_url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
 
     if event.workflow_state < MarkingEventWorkflowStates.READY_TO_CONFLATE:
         flash(
             "Cannot calculate conflation: not all marking workflows are complete.",
             "error",
         )
-        return redirect(url)
+        return redirect(fallback_url)
 
     if request.method == "GET":
-        submission_count = event.period.submissions.count()
-        existing_reports = event.conflation_reports.count()
-        any_stale = (
-            existing_reports > 0
-            and event.conflation_reports.filter_by(is_stale=True).count() > 0
+        url = request.args.get("url", fallback_url)
+        text = request.args.get("text", "Marking workflows")
+
+        active_jobs = (
+            db.session.query(FeedbackOrchestrationJob)
+            .filter(
+                FeedbackOrchestrationJob.event_id == event.id,
+                FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+            )
+            .count()
         )
+        if active_jobs > 0:
+            flash(
+                "Cannot reconflate: a feedback PDF generation job is currently running. "
+                "Wait for it to finish before reconflating.",
+                "error",
+            )
+            return redirect(url)
+
+        submission_count = event.period.submissions.count()
+        all_crs = event.conflation_reports.all()
+        existing_reports = len(all_crs)
+        any_stale = existing_reports > 0 and any(cr.is_stale for cr in all_crs)
+        with_feedback_count = sum(1 for cr in all_crs if cr.feedback_reports.count() > 0)
+        sent_count = sum(1 for cr in all_crs if cr.feedback_sent)
+        in_progress_count = sum(1 for cr in all_crs if cr.feedback_celery_id is not None)
         form = ActionForm()
         return render_template_context(
             "convenor/markingevent/confirm_calculate_conflation.html",
@@ -5736,10 +5756,31 @@ def calculate_conflation(event_id):
             submission_count=submission_count,
             existing_reports=existing_reports,
             any_stale=any_stale,
+            with_feedback_count=with_feedback_count,
+            sent_count=sent_count,
+            in_progress_count=in_progress_count,
             form=form,
             url=url,
-            text="Marking workflows",
+            text=text,
         )
+
+    url = request.form.get("url", fallback_url)
+
+    active_jobs = (
+        db.session.query(FeedbackOrchestrationJob)
+        .filter(
+            FeedbackOrchestrationJob.event_id == event.id,
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
+        )
+        .count()
+    )
+    if active_jobs > 0:
+        flash(
+            "Cannot reconflate: a feedback PDF generation job is currently running. "
+            "Wait for it to finish before reconflating.",
+            "error",
+        )
+        return redirect(url)
 
     form = ActionForm(request.form)
     if not form.validate_on_submit():
@@ -5754,8 +5795,12 @@ def calculate_conflation(event_id):
     workflows = event.workflows.all()
 
     try:
-        # Discard all existing ConflationReports for this event
-        event.conflation_reports.delete()
+        # Discard all existing ConflationReports for this event, including any generated
+        # feedback PDFs and their stored assets, so nothing is left orphaned.
+        for cr in event.conflation_reports.all():
+            _delete_feedback_for_cr(cr)
+            db.session.delete(cr)
+        db.session.flush()
 
         submissions = event.period.submissions.all()
         now = datetime.now()

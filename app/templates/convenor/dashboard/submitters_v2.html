@@ -484,6 +484,12 @@
       {% for sub in submitters %}
         {% set recs = sub.ordered_assignments.all() %}
         {% set sid = sub.id %}
+        {% set active_period = namespace(idx=0) %}
+        {% for r in recs %}
+          {% if r.period.submission_period == config.submission_period %}
+            {% set active_period.idx = loop.index0 %}
+          {% endif %}
+        {% endfor %}
         {% set is_published = sub.published and pclass.publish %}
         {% set sub_errors = sub.errors %}
         {% set sub_warnings = sub.warnings %}
@@ -687,10 +693,10 @@
                     {% endif %}
                   {% endif %}
 
-                  {# "Viewing" indicator — hidden by default on non-first periods, shown by JS on tab switch #}
+                  {# "Viewing" indicator — hidden by default on non-active periods, shown by JS on tab switch #}
                   <span class="sv2-psbar-viewing"
                         id="sv2-psbar-{{ sid }}-viewing-{{ loop.index0 }}"
-                        {% if not loop.first %}style="display:none"{% endif %}>viewing</span>
+                        {% if loop.index0 != active_period.idx %}style="display:none"{% endif %}>viewing</span>
 
                 </div>
               </div>
@@ -703,7 +709,7 @@
               {% for r in recs %}
                 {% set rec_errors = r.errors %}
                 {% set rec_warnings = r.warnings %}
-                <button class="sv2-ptab{% if loop.first %} active{% endif %}"
+                <button class="sv2-ptab{% if loop.index0 == active_period.idx %} active{% endif %}"
                         onclick="switchTab({{ sid }}, {{ loop.index0 }}, this)">
                   {{ r.period.display_name }}
                   {% if rec_errors|length > 0 %}
@@ -721,7 +727,7 @@
           {# ── Period panels ── #}
           {% for r in recs %}
             {% set period = r.period %}
-            <div class="sv2-period-panel{% if loop.first %} active{% endif %}"
+            <div class="sv2-period-panel{% if loop.index0 == active_period.idx %} active{% endif %}"
                  id="sv2-{{ sid }}-panel-{{ loop.index0 }}">
 
               {% if r.project is not none %}

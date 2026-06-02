@@ -735,14 +735,20 @@ _submitter_report_reports = """
                         {% endif %}
                         <span class="text-success"><i
                                 class="fas fa-check-circle"></i> Report submitted</span>
-                        <form method="POST"
-                              action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
-                              class="d-inline ms-1">
-                            {{ form.hidden_tag() }}
-                            <button class="btn btn-xs btn-outline-success" type="submit">
-                                <i class="fas fa-check fa-fw"></i> Accept
-                            </button>
-                        </form>
+                        {% if report.accepted_moderator_report_id == mod_report.id %}
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
+                                <i class="fas fa-check-circle fa-fw"></i> Accepted
+                            </span>
+                        {% else %}
+                            <form method="POST"
+                                  action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
+                                  class="d-inline ms-1">
+                                {{ form.hidden_tag() }}
+                                <button class="btn btn-xs btn-outline-success" type="submit">
+                                    <i class="fas fa-check fa-fw"></i> Accept
+                                </button>
+                            </form>
+                        {% endif %}
                     {% else %}
                         <span class="text-secondary fst-italic"><i
                                 class="fas fa-hourglass-half"></i> Awaiting report</span>

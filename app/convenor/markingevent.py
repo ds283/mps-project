@@ -1563,13 +1563,22 @@ def submitter_reports_inspector(workflow_id):
     event_is_open = event.workflow_state >= MarkingEventWorkflowStates.OPEN
 
     total = workflow.submitter_reports.count()
-    all_ready_to_sign_off = can_edit and (
-        total > 0
-        and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0)
-        == total
-    )
+    ready_to_sign_off_count = state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0)
+    all_ready_to_sign_off = can_edit and (total > 0 and ready_to_sign_off_count == total)
     any_completed = (
         can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
+    )
+
+    awaiting_mod_with_report = (
+        db.session.query(func.count(distinct(SubmitterReport.id)))
+        .filter(
+            SubmitterReport.workflow_id == workflow_id,
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+            SubmitterReport.accepted_moderator_report_id.is_(None),
+            SubmitterReport.moderator_reports.any(ModeratorReport.report_submitted.is_(True)),
+        )
+        .scalar()
+        or 0
     )
 
     # Count SRs that are genuinely ready to distribute: READY_TO_DISTRIBUTE state with at
@@ -1805,6 +1814,33 @@ def submitter_reports_inspector(workflow_id):
                 )
             )
 
+        if awaiting_mod_with_report > 0:
+            n = awaiting_mod_with_report
+            banners.append(
+                ConvenorAction(
+                    severity="warning",
+                    icon="balance-scale",
+                    title=f"{n} report{'s' if n != 1 else ''} {'have' if n != 1 else 'has'} a moderator report awaiting review",
+                    description="A moderator has submitted their report but no grade has been accepted.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="Review",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="moderation",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        )
+                    ],
+                )
+            )
+
         if all_ready_to_sign_off:
             banners.append(
                 ConvenorAction(
@@ -1812,6 +1848,41 @@ def submitter_reports_inspector(workflow_id):
                     icon="check-circle",
                     title="All reports are ready to be signed off.",
                     description="Click to sign off all reports.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="Review",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="ready_signoff",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        ),
+                        ConvenorActionButton(
+                            label="Sign off all",
+                            icon="check-double",
+                            method="POST",
+                            url=url_for(
+                                "convenor.complete_all_submitter_reports",
+                                workflow_id=workflow_id,
+                            ),
+                        ),
+                    ],
+                )
+            )
+        elif ready_to_sign_off_count > 0:
+            n = ready_to_sign_off_count
+            banners.append(
+                ConvenorAction(
+                    severity="info",
+                    icon="check-circle",
+                    title=f"{n} report{'s' if n != 1 else ''} {'are' if n != 1 else 'is'} ready to be signed off",
+                    description="Some reports can be signed off now; others are still in progress.",
                     buttons=[
                         ConvenorActionButton(
                             label="Review",

@@ -3194,7 +3194,12 @@ def marking_form(report_id):
     form = FormClass(request.form)
 
     schema = scheme.schema_as_dict
-    is_editable = is_elevated or report.marking_form_is_open
+    _sr_completed_states = {
+        SubmitterReportWorkflowStates.COMPLETED,
+        SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+    }
+    sr_signed_off = submitter_report.workflow_state in _sr_completed_states
+    is_editable = (is_elevated or report.marking_form_is_open) and not sr_signed_off
     prevent_submit_failures = []
 
     if form.validate_on_submit() and is_editable:
@@ -3464,6 +3469,7 @@ def marking_form(report_id):
         form=form,
         is_editable=is_editable,
         is_elevated=is_elevated,
+        sr_signed_off=sr_signed_off,
         is_supervisor_role=is_supervisor_role,
         journal_entries=journal_entries,
         supervision_events=supervision_events,
@@ -3653,6 +3659,8 @@ def moderator_report_form(mod_report_id):
         flash("You do not have permission to access this moderator report.", "error")
         return redirect(redirect_url())
 
+    is_editable = is_owner  # convenors may view but not submit
+
     url = request.args.get("url", url_for("faculty.dashboard", pane="moderation"))
 
     class ModeratorReportForm(FlaskForm):
@@ -3670,7 +3678,7 @@ def moderator_report_form(mod_report_id):
 
     form = ModeratorReportForm(request.form)
 
-    if form.validate_on_submit():
+    if form.validate_on_submit() and is_editable:
         mod_report.grade = form.grade.data
         mod_report.report = form.report.data
         mod_report.report_submitted = True
@@ -3751,6 +3759,7 @@ def moderator_report_form(mod_report_id):
         schema=schema,
         filtered_attachments=filtered_attachments,
         is_elevated=is_elevated,
+        is_editable=is_editable,
         grade_spread=grade_spread,
         url=url,
     )

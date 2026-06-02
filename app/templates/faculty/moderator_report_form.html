@@ -141,6 +141,7 @@
                         {% endif %}
                         <form method="POST">
                             {{ form.hidden_tag() if form.hidden_tag is defined }}
+                            {% if not is_editable %}<fieldset disabled>{% endif %}
                             <div class="mb-3">
                                 {{ form.grade.label(class="form-label fw-semibold") }}
                                 {{ form.grade(class="form-control" + (" is-invalid" if form.grade.errors else ""), style="max-width: 12rem") }}
@@ -158,9 +159,16 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
+                            {% if not is_editable %}</fieldset>{% endif %}
                             <div class="d-flex gap-2">
-                                {{ form.submit(class="btn btn-primary") }}
-                                <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+                                {% if is_editable %}
+                                    {{ form.submit(class="btn btn-primary") }}
+                                    <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+                                {% else %}
+                                    <a class="btn btn-outline-secondary" href="{{ url }}">
+                                        <i class="fas fa-arrow-left fa-fw me-1"></i> Return
+                                    </a>
+                                {% endif %}
                             </div>
                         </form>
                     </div>

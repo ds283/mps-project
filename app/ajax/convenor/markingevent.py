@@ -720,6 +720,12 @@ _submitter_report_reports = """
                                 class="fas fa-hourglass-half"></i> Awaiting marker report</span>
                     {% endif %}
                 {% endif %}
+                <a class="btn btn-xs btn-outline-secondary mt-1"
+                   href="{{ url_for('faculty.marking_form', report_id=mr.id,
+                                    url=url_for('convenor.submitter_reports_inspector',
+                                                workflow_id=report.workflow_id)) }}">
+                    <i class="fas fa-external-link-alt fa-fw"></i> View report
+                </a>
             </div>
         </div>
     {% endfor %}
@@ -749,6 +755,12 @@ _submitter_report_reports = """
                                 </button>
                             </form>
                         {% endif %}
+                        <a class="btn btn-xs btn-outline-secondary mt-1"
+                           href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id,
+                                            url=url_for('convenor.submitter_reports_inspector',
+                                                        workflow_id=report.workflow_id)) }}">
+                            <i class="fas fa-external-link-alt fa-fw"></i> View report
+                        </a>
                     {% else %}
                         <span class="text-secondary fst-italic"><i
                                 class="fas fa-hourglass-half"></i> Awaiting report</span>

@@ -234,14 +234,24 @@
             </div>
 
             {# Status banner #}
-            {% if not is_editable and not is_elevated %}
-                <div class="alert alert-warning mb-3">
-                    {% call icon_block("lock") %}
-                        <strong>This marking form is now closed.</strong>
-                        The 24 hour submission window has now passed. Please contact the convenor if you need to make
-                        changes.
-                    {% endcall %}
-                </div>
+            {% if not is_editable %}
+                {% if sr_signed_off %}
+                    <div class="alert alert-secondary mb-3">
+                        {% call icon_block("lock") %}
+                            <strong>This marking report is locked.</strong>
+                            The submitter report has been signed off by the convenor. No further changes can be made
+                            until an administrator returns it for revision.
+                        {% endcall %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mb-3">
+                        {% call icon_block("lock") %}
+                            <strong>This marking form is now closed.</strong>
+                            The 24 hour submission window has now passed. Please contact the convenor if you need to make
+                            changes.
+                        {% endcall %}
+                    </div>
+                {% endif %}
             {% elif report.grade_submitted_timestamp is not none %}
                 <div class="alert alert-success mb-3">
                     {% call icon_block("check-circle") %}

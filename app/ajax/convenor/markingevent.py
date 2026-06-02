@@ -1850,17 +1850,35 @@ _conflation_report_menu = """
             </span>
         {% endif %}
 
-        {# ── Section 4: Canvas (stub) ──────────────────────────────────────── #}
+        {# ── Section 4: Canvas ─────────────────────────────────────────────── #}
         {% if canvas_enabled %}
             <div role="separator" class="dropdown-divider"></div>
             <h6 class="dropdown-header">Canvas</h6>
-            <span class="dropdown-item d-flex gap-2 text-body-secondary"
-                  style="opacity:0.6; cursor:not-allowed;"
-                  data-bs-toggle="tooltip"
-                  title="Canvas grade push is not yet implemented">
-                <i class="fas fa-cloud-upload-alt fa-fw"></i>
-                Push grade + feedback to Canvas
-            </span>
+            {% if canvas_push_ready %}
+                {% if not canvas_grade_pushed %}
+                    <a class="dropdown-item d-flex gap-2"
+                       href="{{ url_for('convenor.push_cr_to_canvas', cr_id=cr.id,
+                                        url=return_url, text='Conflation reports') }}">
+                        <i class="fas fa-cloud-upload-alt fa-fw"></i>
+                        Push grade + feedback to Canvas
+                    </a>
+                {% else %}
+                    <a class="dropdown-item d-flex gap-2"
+                       href="{{ url_for('convenor.push_cr_to_canvas', cr_id=cr.id,
+                                        url=return_url, text='Conflation reports') }}">
+                        <i class="fas fa-cloud-upload-alt fa-fw"></i>
+                        Update grade on Canvas
+                        {% if canvas_grade_target %}
+                            <span class="ms-1 text-body-secondary small">({{ canvas_grade_target }})</span>
+                        {% endif %}
+                    </a>
+                {% endif %}
+            {% else %}
+                <span class="dropdown-item text-body-secondary disabled">
+                    <i class="fas fa-cloud-upload-alt fa-fw"></i>
+                    Canvas push unavailable
+                </span>
+            {% endif %}
         {% endif %}
 
     </div>
@@ -1909,6 +1927,11 @@ def conflation_report_data(event_id, crs):
                     grade_dict=grade_dict,
                     feedback_count=feedback_count,
                     canvas_enabled=canvas_enabled,
+                    canvas_push_ready=cr.canvas_push_ready,
+                    canvas_grade_pushed=cr.canvas_grade_pushed,
+                    canvas_feedback_pushed=cr.canvas_feedback_pushed,
+                    canvas_grade_target=cr.canvas_grade_target,
+                    canvas_grade_push_timestamp=cr.canvas_grade_push_timestamp,
                     return_url=inspector_url,
                     form=form,
                 ),

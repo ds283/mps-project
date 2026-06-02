@@ -49,6 +49,7 @@ from ..models import (
 from ..models.emails import DEFAULT_MAX_ATTACHMENT_SIZE
 from ..models.markingevent import (
     _DISTRIBUTED_STATE_VALUES,
+    CanvasPushStatus,
     ConflationReport,
     ConvenorAction,
     ConvenorActionButton,
@@ -81,6 +82,8 @@ from .forms import (
     AddMarkingEventForm,
     AddMarkingSchemeForm,
     AssignModeratorFormFactory,
+    CanvasPushEventForm,
+    CanvasPushForm,
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     EnterTurnitinScoreForm,
@@ -483,6 +486,19 @@ def marking_event_conflation_reports(event_id):
 
     # ── Grade-push CTA and warning logic ──────────────────────────────────────
     period = event.period
+
+    canvas_enabled = period.canvas_enabled
+    canvas_pushable_count = sum(1 for cr in all_crs if cr.canvas_push_ready and not cr.canvas_grade_pushed)
+    canvas_pushed_count = sum(1 for cr in all_crs if cr.canvas_grade_pushed)
+    _all_targets = [k for cr in all_crs for k in cr.conflation_report_as_dict.keys()]
+    from collections import Counter
+
+    default_canvas_target = (
+        "report"
+        if "report" in _all_targets
+        else (Counter(_all_targets).most_common(1)[0][0] if _all_targets else "")
+    )
+    canvas_push_event_form = CanvasPushEventForm()
     targets = event.targets_as_dict or {}
     any_stale = stale_count > 0
 
@@ -610,6 +626,11 @@ def marking_event_conflation_reports(event_id):
         cv_push_status=cv_push_status,
         cv_present_but_unavailable=cv_present_but_unavailable,
         available_but_no_target=available_but_no_target,
+        canvas_enabled=canvas_enabled,
+        canvas_pushable_count=canvas_pushable_count,
+        canvas_pushed_count=canvas_pushed_count,
+        default_canvas_target=default_canvas_target,
+        canvas_push_event_form=canvas_push_event_form,
     )
 
 
@@ -1174,6 +1195,89 @@ def push_single_cr_feedback(cr_id):
         unsent_count=1,
         total_count=1,
         single_student=student_name,
+    )
+
+
+@convenor.route("/push_cr_to_canvas/<int:cr_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def push_cr_to_canvas(cr_id):
+    """
+    Confirmation page and dispatch for pushing a single ConflationReport to Canvas.
+
+    GET: render push_cr_to_canvas.html with CanvasPushForm, pre-selected to "report" if
+         that key is present, otherwise the first key alphabetically.
+    POST: validate form, dispatch push_cr_to_canvas Celery task, redirect.
+    """
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+    text = request.args.get("text", "Conflation reports")
+
+    if not cr.canvas_push_ready:
+        flash(
+            "Canvas push is not available for this student — Canvas may not be enabled "
+            "for this period, or the student may not have a Canvas user ID.",
+            "warning",
+        )
+        return redirect(url)
+
+    grade_dict = cr.conflation_report_as_dict
+    if not grade_dict:
+        flash("No conflated grades are available for this student.", "warning")
+        return redirect(url)
+
+    if cr.canvas_push_status == CanvasPushStatus.FULLY_PUSHED:
+        flash(
+            f"Grades and feedback for this student have already been pushed to Canvas "
+            f"(target: '{cr.canvas_grade_target}', "
+            f"pushed: {cr.canvas_grade_push_timestamp:%Y-%m-%d %H:%M}).",
+            "info",
+        )
+        return redirect(url)
+
+    choices = [(k, f"{k} ({v:.1f})") for k, v in sorted(grade_dict.items())]
+    form = CanvasPushForm(request.form)
+    form.grade_target.choices = choices
+
+    if request.method == "GET":
+        form.grade_target.data = "report" if "report" in grade_dict else choices[0][0]
+
+    if form.validate_on_submit():
+        grade_target = form.grade_target.data
+        celery = current_app.extensions["celery"]
+        task = celery.tasks.get("app.tasks.canvas_push.push_cr_to_canvas")
+        if task is None:
+            flash(
+                "Canvas push task is not registered. Please contact a system administrator.",
+                "error",
+            )
+            return redirect(url)
+        task.apply_async(args=[cr.id, grade_target])
+        student_name = cr.submission_record.owner.student.user.name
+        flash(
+            f"Canvas push queued for {student_name} (target: '{grade_target}').",
+            "success",
+        )
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/push_cr_to_canvas.html",
+        cr=cr,
+        event=event,
+        pclass=pclass,
+        form=form,
+        grade_dict=grade_dict,
+        url=url,
+        text=text,
+        CanvasPushStatus=CanvasPushStatus,
     )
 
 
@@ -6116,6 +6220,45 @@ def propagate_presentation_grade(event_id):
             "Could not propagate presentation grades due to a database error.", "error"
         )
 
+    return redirect(url)
+
+
+@convenor.route("/push_event_to_canvas/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def push_event_to_canvas(event_id):
+    """
+    Bulk dispatch: fan out push_cr_to_canvas for all eligible ConflationReports
+    in a MarkingEvent, using a single grade_target supplied in the POST body.
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
+
+    form = CanvasPushEventForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    grade_target = form.grade_target.data.strip()
+    if not grade_target:
+        flash("No grade target specified.", "error")
+        return redirect(url)
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks.get("app.tasks.canvas_push.push_event_to_canvas")
+    if task is None:
+        flash("Canvas push task is not registered. Please contact a system administrator.", "error")
+        return redirect(url)
+
+    task.apply_async(args=[event_id, grade_target])
+    flash(
+        f"Bulk Canvas push queued for all eligible students (target: '{grade_target}').",
+        "success",
+    )
     return redirect(url)
 
 

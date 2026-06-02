@@ -1193,6 +1193,30 @@ class PushFeedbackForm(Form):
     submit = SubmitField("Send feedback")
 
 
+class CanvasPushForm(Form):
+    """
+    Form for the per-student Canvas grade and feedback push confirmation page.
+    The grade_target SelectField choices are set dynamically by the view from
+    cr.conflation_report_as_dict.keys() before the form is rendered or validated.
+    """
+
+    grade_target = SelectField(
+        "Grade target",
+        description="Select which conflated grade value to post to the Canvas gradebook.",
+        validators=[DataRequired()],
+    )
+
+    submit = SubmitField("Push to Canvas")
+
+
+class CanvasPushEventForm(Form):
+    """Minimal form used by the bulk push_event_to_canvas route."""
+
+    grade_target = StringField("Grade target", validators=[DataRequired()])
+
+    submit = SubmitField("Push all to Canvas")
+
+
 # ---- MarkingWorkflow forms ----
 
 # Role choices for MarkingWorkflow: ROLE_SUPERVISOR covers both supervisor types

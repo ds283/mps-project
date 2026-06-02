@@ -1,0 +1,126 @@
+{% extends "base_app.html" %}
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}Push to Canvas – {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Push to Canvas &mdash; {{ event.name }}
+        </h4>
+    </div>
+
+    {# Event and student summary card #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Summary
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-body-secondary">Event</dt>
+                <dd class="col-sm-9">{{ event.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Period</dt>
+                <dd class="col-sm-9">{{ event.period.display_name }}</dd>
+                {% set student = cr.submission_record.owner.student %}
+                <dt class="col-sm-3 text-body-secondary">Student</dt>
+                <dd class="col-sm-9">
+                    {{ student.user.name }}
+                    {% if student.registration_number %}
+                        <span class="text-body-secondary ms-1">({{ student.registration_number }})</span>
+                    {% endif %}
+                </dd>
+                {% if cr.submission_record.project %}
+                    <dt class="col-sm-3 text-body-secondary">Project</dt>
+                    <dd class="col-sm-9">{{ cr.submission_record.project.name }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {# Current Canvas state card (only if something has already been pushed) #}
+    {% if cr.canvas_push_status != CanvasPushStatus.NOT_PUSHED %}
+        <div class="card border-secondary mb-3">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-history fa-fw me-1"></i> Previous Canvas push
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% if cr.canvas_grade_pushed %}
+                        <span class="badge bg-success py-2 px-3">
+                            <i class="fas fa-check-circle fa-fw me-1"></i>
+                            Grade on Canvas
+                            {% if cr.canvas_grade_target %}
+                                &mdash; target: {{ cr.canvas_grade_target }}
+                            {% endif %}
+                            {% if cr.canvas_grade_push_timestamp %}
+                                &mdash; {{ cr.canvas_grade_push_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                    {% if cr.canvas_feedback_pushed %}
+                        <span class="badge bg-success py-2 px-3">
+                            <i class="fas fa-file-pdf fa-fw me-1"></i>
+                            PDF on Canvas
+                            {% if cr.canvas_feedback_push_timestamp %}
+                                &mdash; {{ cr.canvas_feedback_push_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Info alert if the feedback PDF has already been attached #}
+    {% if cr.canvas_feedback_pushed %}
+        <div class="alert alert-primary d-flex align-items-center gap-2 mb-3">
+            <i class="fas fa-info-circle fa-fw flex-shrink-0"></i>
+            <div>
+                The feedback PDF has already been attached to this student&rsquo;s Canvas submission.
+                This push will <strong>update the grade only</strong>.
+            </div>
+        </div>
+    {% endif %}
+
+    {# Push form card #}
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Push to Canvas
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('convenor.push_cr_to_canvas', cr_id=cr.id,
+                                     url=url, text=text) }}"
+                  method="POST">
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="grade_target">
+                        {{ form.grade_target.label.text }}
+                    </label>
+                    {% if form.grade_target.description %}
+                        <div class="form-text text-body-secondary mb-1">
+                            {{ form.grade_target.description }}
+                        </div>
+                    {% endif %}
+                    {{ form.grade_target(class='form-select', style='max-width:24rem;') }}
+                    {% if form.grade_target.errors %}
+                        {% for error in form.grade_target.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="alert alert-secondary py-2 mb-3 small">
+                    <i class="fas fa-info-circle fa-fw me-1"></i>
+                    The feedback PDF will be attached to the Canvas submission comment on first push only.
+                    Subsequent pushes update the grade without re-uploading the PDF.
+                </div>
+
+                {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+            </form>
+        </div>
+    </div>
+{% endblock %}

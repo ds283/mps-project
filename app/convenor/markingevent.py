@@ -479,6 +479,114 @@ def marking_event_conflation_reports(event_id):
     in_progress_count = sum(1 for cr in all_crs if cr.feedback_celery_id is not None)
     stale_count = sum(1 for cr in all_crs if cr.is_stale)
 
+    # ── Grade-push CTA and warning logic ──────────────────────────────────────
+    period = event.period
+    targets = event.targets_as_dict or {}
+    any_stale = stale_count > 0
+
+    # Determine the latest ConflationReport generation timestamp (detects re-conflation since last push)
+    max_cr_generated = None
+    for cr in all_crs:
+        ts = getattr(cr, "generated_timestamp", None)
+        if ts and (max_cr_generated is None or ts > max_cr_generated):
+            max_cr_generated = ts
+
+    # CV targets present in results but the period doesn't track that grade
+    cv_present_but_unavailable = []
+    if "supervisor" in targets and not period.supervision_grade_available:
+        cv_present_but_unavailable.append(("supervisor", "supervision grade"))
+    if "report" in targets and not period.report_grade_available:
+        cv_present_but_unavailable.append(("report", "report grade"))
+    if "presentation" in targets and not period.presentation_grade_available:
+        cv_present_but_unavailable.append(("presentation", "presentation grade"))
+
+    # Grade available on period but no CV target in this event's conflation targets
+    available_but_no_target = []
+    if period.supervision_grade_available and "supervisor" not in targets:
+        available_but_no_target.append(("supervisor", "supervision grade"))
+    if period.report_grade_available and "report" not in targets:
+        available_but_no_target.append(("report", "report grade"))
+    if period.presentation_grade_available and "presentation" not in targets:
+        available_but_no_target.append(("presentation", "presentation grade"))
+
+    # Per CV target: determine push status for CTA construction
+    sample_dict = all_crs[0].conflation_report_as_dict if all_crs else {}
+    cv_push_status = {}
+    _cv_grade_avail = [
+        ("supervisor", period.supervision_grade_available),
+        ("report", period.report_grade_available),
+        ("presentation", period.presentation_grade_available),
+    ]
+    for cv_key, grade_avail in _cv_grade_avail:
+        if cv_key not in sample_dict or not grade_avail:
+            continue
+        last_push = event.last_grade_push(cv_key)
+        push_stale = False
+        if last_push:
+            pushed_at_str = last_push.get("pushed_at")
+            if pushed_at_str and max_cr_generated:
+                pushed_at = datetime.fromisoformat(pushed_at_str)
+                push_stale = max_cr_generated > pushed_at or any_stale
+            elif any_stale:
+                push_stale = True
+        needs_push = last_push is None or push_stale
+        cv_push_status[cv_key] = {
+            "needs_push": needs_push,
+            "last_push": last_push,
+            "push_stale": push_stale,
+        }
+
+    # Build CTA banners for grades that are ready to push (or need re-pushing)
+    _cv_labels = {
+        "supervisor": ("supervision", url_for("convenor.propagate_supervision_grade", event_id=event.id)),
+        "report": ("report", url_for("convenor.propagate_report_grade", event_id=event.id)),
+        "presentation": ("presentation", url_for("convenor.propagate_presentation_grade", event_id=event.id)),
+    }
+    propagate_form = ActionForm()
+    banners = []
+    for cv_key, status in cv_push_status.items():
+        if not status["needs_push"]:
+            continue
+        label, push_url = _cv_labels[cv_key]
+        last_push = status["last_push"]
+        if last_push:
+            pushed_at_str = last_push.get("pushed_at", "")
+            try:
+                pushed_at_dt = datetime.fromisoformat(pushed_at_str)
+                pushed_str = pushed_at_dt.strftime("%d/%m/%Y %H:%M")
+            except (ValueError, TypeError):
+                pushed_str = pushed_at_str
+            desc = (
+                f"Conflation results have changed since the last push "
+                f"({pushed_str} by {last_push.get('pushed_by_name', 'unknown')}). "
+                f"Re-copy to update submission records."
+            )
+            severity = "warning"
+            icon = "exclamation-triangle"
+        else:
+            n = len(all_crs)
+            desc = f"{n} conflation result{'s' if n != 1 else ''} ready. Grades have not yet been copied to submission records."
+            severity = "info"
+            icon = "arrow-right"
+        banners.append(
+            ConvenorAction(
+                severity=severity,
+                icon=icon,
+                title=f"Copy “{label}” grades to submission records",
+                description=desc,
+                buttons=[
+                    ConvenorActionButton(
+                        label=f"Copy “{cv_key}” grades",
+                        icon="arrow-right",
+                        method="POST",
+                        url=push_url,
+                        outline=status["push_stale"],
+                    )
+                ],
+            )
+        )
+    # ── End grade-push logic ──────────────────────────────────────────────────
+
     return render_template_context(
         "convenor/markingevent/conflation_reports_inspector.html",
         event=event,
@@ -492,9 +600,14 @@ def marking_event_conflation_reports(event_id):
         failed_count=failed_count,
         in_progress_count=in_progress_count,
         stale_count=stale_count,
-        propagate_form=ActionForm(),
+        propagate_form=propagate_form,
         delete_all_form=ActionForm(),
         rounding_policy=ACTIVE_ROUNDING_POLICY,
+        banners=banners,
+        period=period,
+        cv_push_status=cv_push_status,
+        cv_present_but_unavailable=cv_present_but_unavailable,
+        available_but_no_target=available_but_no_target,
     )
 
 
@@ -5691,10 +5804,11 @@ def _propagate_grade_to_records(
     generated_ts_field: str,
     event_id_field: str,
     pclass: ProjectClass,
-) -> tuple[int, str | None]:
+):
     """
     Copy the named target value from each ConflationReport to the given SubmissionRecord field.
-    Also records which MarkingEvent was the source of the grade in event_id_field.
+    Also records which MarkingEvent was the source of the grade in event_id_field, and appends
+    an entry to event.grade_push_log for audit history.
 
     Returns (count_updated, error_message).  error_message is None on success.
     """
@@ -5702,6 +5816,7 @@ def _propagate_grade_to_records(
     if not conflation_reports:
         return 0, "No conflation results exist for this event."
 
+    stale_count = sum(1 for cr in conflation_reports if cr.is_stale)
     now = datetime.now()
     updated = 0
     for cr in conflation_reports:
@@ -5715,6 +5830,7 @@ def _propagate_grade_to_records(
         setattr(record, event_id_field, event.id)
         updated += 1
 
+    event.record_grade_push(target_key, current_user, updated, stale_count)
     return updated, None
 
 
@@ -5723,7 +5839,8 @@ def _propagate_grade_to_records(
 def propagate_report_grade(event_id):
     """Copy the 'report' conflation target to SubmissionRecord.report_grade."""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
-    pclass: ProjectClass = event.period.config.project_class
+    period = event.period
+    pclass: ProjectClass = period.config.project_class
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -5733,6 +5850,14 @@ def propagate_report_grade(event_id):
     form = ActionForm(request.form)
     if not form.validate_on_submit():
         flash("Invalid request.", "error")
+        return redirect(url)
+
+    if not period.report_grade_available:
+        flash(
+            "The report grade is not available for this submission period "
+            "(number of markers is zero).",
+            "warning",
+        )
         return redirect(url)
 
     try:
@@ -5770,7 +5895,8 @@ def propagate_report_grade(event_id):
 def propagate_supervision_grade(event_id):
     """Copy the 'supervisor' conflation target to SubmissionRecord.supervision_grade."""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
-    pclass: ProjectClass = event.period.config.project_class
+    period = event.period
+    pclass: ProjectClass = period.config.project_class
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -5780,6 +5906,14 @@ def propagate_supervision_grade(event_id):
     form = ActionForm(request.form)
     if not form.validate_on_submit():
         flash("Invalid request.", "error")
+        return redirect(url)
+
+    if not period.supervision_grade_available:
+        flash(
+            "The supervision grade is not available for this submission period. "
+            "Enable it in the period configuration before copying grades.",
+            "warning",
+        )
         return redirect(url)
 
     try:
@@ -5819,7 +5953,8 @@ def propagate_supervision_grade(event_id):
 def propagate_presentation_grade(event_id):
     """Copy the 'presentation' conflation target to SubmissionRecord.presentation_grade."""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
-    pclass: ProjectClass = event.period.config.project_class
+    period = event.period
+    pclass: ProjectClass = period.config.project_class
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -5829,6 +5964,14 @@ def propagate_presentation_grade(event_id):
     form = ActionForm(request.form)
     if not form.validate_on_submit():
         flash("Invalid request.", "error")
+        return redirect(url)
+
+    if not period.presentation_grade_available:
+        flash(
+            "The presentation grade is not available for this submission period "
+            "(no presentation assessment is configured).",
+            "warning",
+        )
         return redirect(url)
 
     try:

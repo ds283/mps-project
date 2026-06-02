@@ -694,6 +694,9 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    # whether a supervision mark is tracked for this period
+    uses_supervision_grade = db.Column(db.Boolean(), default=False)
+
     def display_name(self, year):
         if isinstance(year, int):
             pass
@@ -1561,6 +1564,7 @@ class ProjectClassConfig(
                 config_id=self.id,
                 name=t.name,
                 number_markers=t.number_markers,
+                uses_supervision_grade=t.uses_supervision_grade,
                 start_date=t.start_date,
                 has_presentation=t.has_presentation,
                 lecture_capture=t.lecture_capture,
@@ -2126,6 +2130,9 @@ class SubmissionPeriodRecord(db.Model):
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    # whether a supervision mark is tracked for this period
+    uses_supervision_grade = db.Column(db.Boolean(), default=False)
+
     # LIFECYCLE DATA
 
     # retired flag, set by rollover code
@@ -2172,6 +2179,20 @@ class SubmissionPeriodRecord(db.Model):
     @orm.reconstructor
     def _reconstruct(self):
         self._canvas_assignment_URL = None
+
+    # GRADE AVAILABILITY
+
+    @property
+    def supervision_grade_available(self) -> bool:
+        return bool(self.uses_supervision_grade)
+
+    @property
+    def report_grade_available(self) -> bool:
+        return self.number_markers is not None and self.number_markers > 0
+
+    @property
+    def presentation_grade_available(self) -> bool:
+        return bool(self.has_presentation)
 
     @property
     def messages(self):

@@ -359,16 +359,16 @@ def _build_row(record: SubmissionRecord) -> dict:
         "Bonferroni α (medium)": _float(flags.get("bonferroni_alpha_medium")),
         "Bonferroni α (high)": _float(flags.get("bonferroni_alpha_high")),
         "Risk Flags (active)": "; ".join(active_rf) if active_rf else "",
-        "Supervision Grade (%)": _float(record.supervision_grade),
-        "Report Grade (%)": _float(record.report_grade),
-        "Presentation Grade (%)": _float(record.presentation_grade),
+        "Supervision Grade (%)": _float(record.supervision_grade) if (period and period.supervision_grade_available) else None,
+        "Report Grade (%)": _float(record.report_grade) if (period and period.report_grade_available) else None,
+        "Presentation Grade (%)": _float(record.presentation_grade) if (period and period.presentation_grade_available) else None,
         "Stated Word Count": llm_result.get("stated_word_count"),
         "LLM Grade Band": llm_result.get("classification", ""),
         "LLM Model": record.llm_model_name or "",
         "LLM Context Window": record.llm_context_size,
         "LLM Analysis Failed": record.llm_analysis_failed,
         "LLM Feedback Failed": record.llm_feedback_failed,
-        "Report Grade Band": _grade_band(record.report_grade),
+        "Report Grade Band": _grade_band(record.report_grade) if (period and period.report_grade_available) else None,
     }
 
 

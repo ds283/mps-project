@@ -519,6 +519,7 @@ def edit_period_record(pid):
     if edit_form.validate_on_submit():
         record.name = edit_form.name.data
         record.number_markers = edit_form.number_markers.data
+        record.uses_supervision_grade = edit_form.uses_supervision_grade.data
         record.start_date = edit_form.start_date.data
         record.hand_in_date = edit_form.hand_in_date.data
 

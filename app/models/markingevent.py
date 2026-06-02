@@ -268,7 +268,46 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # Form: { "target_name": "conflation_expression", ... }
     targets = db.Column(db.Text(), nullable=True)
 
+    # JSON list recording every push of a controlled-vocabulary grade target to SubmissionRecords.
+    # Stores full history (one entry per push per target), enabling staleness detection across
+    # re-conflation cycles without requiring per-term SQL columns.
+    # Schema per entry:
+    #   { "target": str,          — CV key, e.g. "report", "supervisor", "presentation"
+    #     "pushed_by_id": int,    — User.id at push time
+    #     "pushed_by_name": str,  — User.name captured at push time (denormalised for history)
+    #     "pushed_at": str,       — ISO-format datetime
+    #     "record_count": int,    — number of SubmissionRecords updated
+    #     "stale_count": int }    — number of stale ConflationReports at push time
+    grade_push_log = db.Column(db.Text(collation="utf8_bin"), nullable=True, default=None)
+
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
+
+    @property
+    def grade_push_log_as_list(self) -> list:
+        if not self.grade_push_log:
+            return []
+        try:
+            return json.loads(self.grade_push_log)
+        except (TypeError, ValueError):
+            return []
+
+    def last_grade_push(self, target: str):
+        entries = [e for e in self.grade_push_log_as_list if e.get("target") == target]
+        return entries[-1] if entries else None
+
+    def record_grade_push(self, target: str, user, record_count: int, stale_count: int) -> None:
+        log = self.grade_push_log_as_list
+        log.append(
+            {
+                "target": target,
+                "pushed_by_id": user.id,
+                "pushed_by_name": user.name,
+                "pushed_at": datetime.now().isoformat(),
+                "record_count": record_count,
+                "stale_count": stale_count,
+            }
+        )
+        self.grade_push_log = json.dumps(log)
 
     @property
     def targets_as_dict(self) -> dict:

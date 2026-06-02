@@ -835,9 +835,7 @@
                       {# Filter grade items relevant to this project class #}
                       {% set visible_grades = [] %}
                       {% for g in grade_data %}
-                        {% if g.label != 'Presentation' or pclass.uses_presentations %}
-                          {% if visible_grades.append(g) %}{% endif %}
-                        {% endif %}
+                        {% if visible_grades.append(g) %}{% endif %}
                       {% endfor %}
                       {% if visible_grades|length > 0 %}
                         <div class="sv2-metric-cap grades">

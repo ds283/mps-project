@@ -386,7 +386,8 @@ def PeriodRecordMixinFactory(enable_canvas=True):
         number_markers = IntegerField(
             "Number of markers",
             default=DEFAULT_ASSIGNED_MARKERS,
-            description="Number of markers that should be assigned to each project.",
+            description="Number of markers that should be assigned to each project. "
+                        "If set to zero, no markers are assigned and the report grade will not be tracked.",
             validators=[
                 InputRequired("Please enter the required number of markers"),
                 NumberRange(
@@ -394,6 +395,13 @@ def PeriodRecordMixinFactory(enable_canvas=True):
                     message="The required number of markers should not be negative",
                 ),
             ],
+        )
+
+        uses_supervision_grade = BooleanField(
+            "Track a supervision grade for this period",
+            description="Enable if a separate supervision mark will be recorded for this period "
+                        "and copied into submission records via the marking workflow. If disabled, "
+                        "the supervision grade column is suppressed in the student inspector and exports.",
         )
 
         @staticmethod

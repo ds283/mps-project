@@ -946,13 +946,21 @@ class PeriodDefinitionMixin:
     number_markers = IntegerField(
         "Number of markers to be assigned",
         default=DEFAULT_ASSIGNED_MARKERS,
-        description="Number of markers that should be assigned to each project. Used during automated matching.",
+        description="Number of markers that should be assigned to each project. Used during automated matching. "
+                    "If set to zero, no markers are assigned and the report grade will not be tracked.",
         validators=[
             InputRequired("Please enter the required number of markers"),
             NumberRange(
                 min=0, message="The required number of markers should not be negative"
             ),
         ],
+    )
+
+    uses_supervision_grade = BooleanField(
+        "Track a supervision grade for this period",
+        description="Enable if a separate supervision mark will be recorded for this period "
+                    "and copied into submission records via the marking workflow. If disabled, "
+                    "the supervision grade column is suppressed in the student inspector and exports.",
     )
 
     @staticmethod

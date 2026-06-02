@@ -212,7 +212,8 @@ def OnlineServicesMixinFactory(enable_canvas=False):
 
 class PeriodPresentationsMixin:
     has_presentation = BooleanField(
-        "This submission period includes a presentation assessment"
+        "This submission period includes a presentation assessment",
+        description="Enabling this also makes the presentation grade available in submission records and exports.",
     )
 
     number_assessors = IntegerField(

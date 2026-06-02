@@ -2204,13 +2204,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
           }
         """
         entries = []
-        grade_specs = [
-            ("Supervision", self.supervision_grade, self.supervision_event),
-            ("Report", self.report_grade, self.report_event),
-        ]
-        # Only include presentation if the project class uses presentations; we don't have
-        # direct access to config here so always include it — the template can gate on pclass.
-        grade_specs.append(("Presentation", self.presentation_grade, self.presentation_event))
+        period = self.period
+        grade_specs = []
+        if period is None or period.supervision_grade_available:
+            grade_specs.append(("Supervision", self.supervision_grade, self.supervision_event))
+        if period is None or period.report_grade_available:
+            grade_specs.append(("Report", self.report_grade, self.report_event))
+        if period is None or period.presentation_grade_available:
+            grade_specs.append(("Presentation", self.presentation_grade, self.presentation_event))
         for label, grade, event in grade_specs:
             entries.append({
                 "label": label,

@@ -89,6 +89,21 @@
       .sv2-tab-warn  { width: 7px; height: 7px; border-radius: 50%; background: var(--bs-warning); display: inline-block; }
       .sv2-tab-sim   { width: 7px; height: 7px; border-radius: 50%; background: var(--db-orange-400); display: inline-block; }
 
+      /* ── Period summary bar ── */
+      .sv2-psbar { display: flex; align-items: stretch; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); }
+      .sv2-psbar-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.3125rem 0.9rem; flex: 1; min-width: 0; position: relative; flex-wrap: wrap; }
+      .sv2-psbar-item + .sv2-psbar-item::before { content: ''; position: absolute; left: 0; top: 20%; height: 60%; width: 1px; background: var(--bs-border-color); }
+      .sv2-psbar-name { font-size: 0.75rem; font-weight: 600; color: var(--bs-secondary-color); white-space: nowrap; min-width: 7rem; }
+      .sv2-psbar-chips { display: flex; align-items: center; gap: 0.3125rem; flex-wrap: wrap; }
+      .sv2-psbar-chip { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.7rem; padding: 0.125rem 0.5rem; border-radius: 20px; white-space: nowrap; font-weight: 500; }
+      .sv2-psbar-chip-rep-ok   { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+      .sv2-psbar-chip-rep-no   { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+      .sv2-psbar-chip-grade    { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+      .sv2-psbar-chip-nograde  { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+      .sv2-psbar-chip-att-ok   { background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis); }
+      .sv2-psbar-chip-att-warn { background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+      .sv2-psbar-viewing       { font-size: 0.65rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--bs-primary); }
+
       /* ── Period panel ── */
       .sv2-period-panel { padding: .75rem .9rem; display: none; background: var(--bs-body-bg); }
       .sv2-period-panel.active { display: block; }
@@ -187,6 +202,14 @@
         });
         var target = document.getElementById(prefix + panelIdx);
         if (target) { target.style.display = 'block'; target.classList.add('active'); }
+
+        /* Update summary bar "viewing" indicator */
+        var bar = document.getElementById('sv2-psbar-' + sid);
+        if (bar) {
+          bar.querySelectorAll('.sv2-psbar-viewing').forEach(function(v) { v.style.display = 'none'; });
+          var indicator = document.getElementById('sv2-psbar-' + sid + '-viewing-' + panelIdx);
+          if (indicator) { indicator.style.display = ''; }
+        }
       }
 
       function sv2ToggleSimMore(rid, extraCount, btn) {
@@ -604,6 +627,75 @@
               </div>
             </div>
           </div>{# /card-head #}
+
+          {# ── Period summary bar ── #}
+          <div class="sv2-psbar" id="sv2-psbar-{{ sid }}">
+            {% for r in recs %}
+              {% set period = r.period %}
+              {% set att = r.get_attendance_data() %}
+              {% set gd = r.grade_display_data() %}
+              {% set show_att = att and att['total'] > 0 %}
+              {# Compute best single headline grade: prefer Report, fall back to first available #}
+              {% set headline_grade = namespace(value=none) %}
+              {% for g in gd %}
+                {% if g.label == 'Report' and g.grade is not none %}
+                  {% set headline_grade.value = g.grade %}
+                {% endif %}
+              {% endfor %}
+              {% if headline_grade.value is none %}
+                {% for g in gd %}
+                  {% if g.grade is not none and headline_grade.value is none %}
+                    {% set headline_grade.value = g.grade %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+
+              <div class="sv2-psbar-item">
+                <span class="sv2-psbar-name">{{ period.display_name }}</span>
+                <div class="sv2-psbar-chips">
+
+                  {# Report chip #}
+                  {% if r.report is not none %}
+                    <span class="sv2-psbar-chip sv2-psbar-chip-rep-ok">
+                      <i class="fas fa-check-circle" style="font-size:9px"></i> Report
+                    </span>
+                  {% else %}
+                    <span class="sv2-psbar-chip sv2-psbar-chip-rep-no">
+                      <i class="fas fa-times-circle" style="font-size:9px"></i> No report
+                    </span>
+                  {% endif %}
+
+                  {# Headline grade chip #}
+                  {% if headline_grade.value is not none %}
+                    <span class="sv2-psbar-chip sv2-psbar-chip-grade">{{ "%.1f"|format(headline_grade.value) }}%</span>
+                  {% else %}
+                    <span class="sv2-psbar-chip sv2-psbar-chip-nograde">No grades</span>
+                  {% endif %}
+
+                  {# Attendance chip — only when data exists #}
+                  {% if show_att %}
+                    {% set att_missing = att['missing'] %}
+                    {% set att_recorded = att['recorded'] %}
+                    {% if att_missing == 0 %}
+                      <span class="sv2-psbar-chip sv2-psbar-chip-att-ok">
+                        <i class="fas fa-user-check" style="font-size:9px"></i> {{ att_recorded }} rec
+                      </span>
+                    {% else %}
+                      <span class="sv2-psbar-chip sv2-psbar-chip-att-warn">
+                        <i class="fas fa-user-times" style="font-size:9px"></i> {{ att_recorded }}&thinsp;/&thinsp;{{ att_missing }} miss
+                      </span>
+                    {% endif %}
+                  {% endif %}
+
+                  {# "Viewing" indicator — hidden by default on non-first periods, shown by JS on tab switch #}
+                  <span class="sv2-psbar-viewing"
+                        id="sv2-psbar-{{ sid }}-viewing-{{ loop.index0 }}"
+                        {% if not loop.first %}style="display:none"{% endif %}>viewing</span>
+
+                </div>
+              </div>
+            {% endfor %}
+          </div>{# /sv2-psbar #}
 
           {# ── Period tabs (multi-period only) ── #}
           {% if config.number_submissions > 1 %}

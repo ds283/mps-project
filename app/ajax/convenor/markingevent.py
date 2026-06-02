@@ -1090,7 +1090,8 @@ def submitter_report_data(reports):
 
     event_is_closed = (
         reports[0].workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED
-        if reports else False
+        if reports
+        else False
     )
 
     _urgent_states = {
@@ -1124,8 +1125,10 @@ def submitter_report_data(reports):
         rows.append(
             {
                 "DT_RowClass": (
-                    "table-danger" if report.workflow_state in _urgent_states
-                    else "table-secondary" if report.workflow_state == SubmitterReportWorkflowStates.DROPPED
+                    "table-danger"
+                    if report.workflow_state in _urgent_states
+                    else "table-secondary"
+                    if report.workflow_state == SubmitterReportWorkflowStates.DROPPED
                     else ""
                 ),
                 "student": render_template(student_tmpl, report=report),
@@ -1164,8 +1167,10 @@ def marking_report_data(reports):
     actions_tmpl = env.from_string(_marking_report_actions)
 
     event_is_closed = (
-        reports[0].submitter_report.workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED
-        if reports else False
+        reports[0].submitter_report.workflow.event.workflow_state
+        == MarkingEventWorkflowStates.CLOSED
+        if reports
+        else False
     )
 
     form = ActionForm()
@@ -1183,11 +1188,15 @@ def marking_report_data(reports):
     }
 
     def _row_class(report):
-        if report.submitter_report.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+        if (
+            report.submitter_report.workflow_state
+            == SubmitterReportWorkflowStates.DROPPED
+        ):
             return "table-secondary"
         if (
             not report.distributed
-            and report.submitter_report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+            and report.submitter_report.workflow_state
+            == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
         ):
             return "table-warning"
         return ""
@@ -1203,8 +1212,16 @@ def marking_report_data(reports):
             "student": render_template(student_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report, **_status_ctx),
-            "signoff": render_template(signoff_tmpl, report=report, event_is_closed=event_is_closed),
-            "actions": render_template(actions_tmpl, report=report, event_is_closed=event_is_closed, form=form, **_EVENT_STATES),
+            "signoff": render_template(
+                signoff_tmpl, report=report, event_is_closed=event_is_closed
+            ),
+            "actions": render_template(
+                actions_tmpl,
+                report=report,
+                event_is_closed=event_is_closed,
+                form=form,
+                **_EVENT_STATES,
+            ),
         }
         for report in reports
     ]
@@ -1582,7 +1599,9 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "scheme": render_template(scheme_tmpl, workflow=workflow),
             "attachments": render_template(attachments_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow),
-            "distribution": render_template(distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES),
+            "distribution": render_template(
+                distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES
+            ),
             "menu": render_template(
                 menu_tmpl,
                 workflow=workflow,
@@ -1809,7 +1828,9 @@ def conflation_report_data(event_id, crs):
 
     from flask import url_for as _url_for
 
-    inspector_url = _url_for("convenor.marking_event_conflation_reports", event_id=event_id)
+    inspector_url = _url_for(
+        "convenor.marking_event_conflation_reports", event_id=event_id
+    )
     inspector_text = "Conflation reports"
 
     form = ActionForm()

@@ -3235,10 +3235,15 @@ def marking_form(report_id):
                 report.feedback_positive = form.feedback_positive.data or ""
                 report.feedback_improvement = form.feedback_improvement.data or ""
 
-                if (
-                    len(report.feedback_positive) > 0
-                    and len(report.feedback_improvement) > 0
-                ):
+                _pos = report.feedback_positive.strip()
+                _imp = report.feedback_improvement.strip()
+                _force = request.form.get("force_feedback_submitted") == "1"
+
+                if _pos and _imp:
+                    report.feedback_submitted = True
+                    report.feedback_timestamp = datetime.now()
+                elif _force and (_pos or _imp):
+                    # marker confirmed intentional partial feedback via the modal
                     report.feedback_submitted = True
                     report.feedback_timestamp = datetime.now()
 
@@ -3809,7 +3814,10 @@ def edit_marking_feedback(report_id):
     if form.validate_on_submit():
         report.feedback_positive = form.feedback_positive.data or ""
         report.feedback_improvement = form.feedback_improvement.data or ""
-        if len(report.feedback_positive) > 0 and len(report.feedback_improvement) > 0:
+        _pos = report.feedback_positive.strip()
+        _imp = report.feedback_improvement.strip()
+        _force = request.form.get("force_feedback_submitted") == "1"
+        if (_pos and _imp) or (_force and (_pos or _imp)):
             report.feedback_submitted = True
         report.feedback_timestamp = datetime.now()
 

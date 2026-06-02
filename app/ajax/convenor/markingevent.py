@@ -436,6 +436,26 @@ _submitter_report_actions = """
             </a>
         {% endif %}
 
+        {# Mark feedback complete: shown per-MR when SR is AWAITING_FEEDBACK and a MR has partial feedback #}
+        {% if state == AWAITING_FEEDBACK and not event_is_closed %}
+            {%- for mr in report.marking_reports.all() %}
+                {%- set _mfc_pos = (mr.feedback_positive or '') | trim -%}
+                {%- set _mfc_imp = (mr.feedback_improvement or '') | trim -%}
+                {%- if not mr.feedback_submitted and (_mfc_pos or _mfc_imp) %}
+                    {% if ns.shown %}<div class="dropdown-divider"></div>{% endif %}
+                    <form method="POST"
+                          action="{{ url_for('convenor.force_complete_feedback', id=mr.id, url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id)) }}"
+                          style="display:contents">
+                        {{ form.hidden_tag() }}
+                        <button class="dropdown-item d-flex gap-2 text-warning" type="submit">
+                            <i class="fas fa-comment-dots fa-fw"></i> Mark feedback complete ({{ mr.user.name }})&hellip;
+                        </button>
+                    </form>
+                    {% set ns.shown = true %}
+                {%- endif %}
+            {%- endfor %}
+        {% endif %}
+
         {# Withdraw: shown for non-terminal states when event is not closed #}
         {% set _not_terminal = state not in (COMPLETED, DROPPED, FEEDBACK_AVAILABLE) %}
         {% if _not_terminal and not event_is_closed %}
@@ -654,8 +674,31 @@ _submitter_report_reports = """
                         <span class="text-success small"><i
                                 class="fas fa-comment"></i> Feedback submitted</span>
                     {% else %}
-                        <span class="text-secondary small fst-italic"><i
-                                class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                        {%- set _fb_pos = (mr.feedback_positive or '') | trim -%}
+                        {%- set _fb_imp = (mr.feedback_improvement or '') | trim -%}
+                        {%- if _fb_pos or _fb_imp %}
+                            <div class="d-flex flex-row align-items-center gap-1 flex-wrap">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                                    <i class="fas fa-comment-slash fa-fw"></i> Feedback incomplete
+                                </span>
+                                {% if not event_is_closed %}
+                                    <form method="POST"
+                                          action="{{ url_for('convenor.force_complete_feedback', id=mr.id, url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id)) }}"
+                                          class="d-inline">
+                                        {{ form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-xs btn-outline-warning py-0 px-1"
+                                                style="font-size:0.7rem;"
+                                                title="Mark this assessor's feedback as complete">
+                                            <i class="fas fa-check fa-fw"></i> Mark complete
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {%- else %}
+                            <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle small">
+                                <i class="fas fa-comment-slash fa-fw"></i> Feedback absent
+                            </span>
+                        {%- endif %}
                     {% endif %}
                 {% endif %}
                 {% if mr.signed_off_by is not none %}
@@ -1003,6 +1046,7 @@ def submitter_report_data(reports):
 
     state_ctx = {
         "READY_TO_DISTRIBUTE": SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+        "AWAITING_FEEDBACK": SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
         "NEEDS_MODERATOR_ASSIGNED": SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
         "AWAITING_MODERATOR_REPORT": SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
         "READY_TO_SIGN_OFF": SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,

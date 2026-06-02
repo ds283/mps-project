@@ -85,8 +85,11 @@
                             {% for sr in submitter_reports %}
                                 {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
                                 {% for mr in visible_reports %}
-                                    <div class="card mt-2 mb-2 border-secondary-subtle">
-                                        <div class="card-header bg-light">
+                                    {%- set _vf_pos = (mr.feedback_positive or '') | trim -%}
+                                    {%- set _vf_imp = (mr.feedback_improvement or '') | trim -%}
+                                    {%- set _vf_incomplete = not mr.feedback_submitted and (not _vf_pos or not _vf_imp) -%}
+                                    <div class="card mt-2 mb-2 {% if _vf_incomplete %}border-warning{% else %}border-secondary-subtle{% endif %}">
+                                        <div class="card-header {% if _vf_incomplete %}bg-warning-subtle{% else %}bg-light{% endif %}">
                                             <div class="d-flex flex-row justify-content-between align-items-center w-100">
                                                 <div>
                                                     <i class="fas fa-user-circle me-1"></i>
@@ -100,11 +103,54 @@
                                                     <a href="{{ url_for('convenor.edit_feedback', id=mr.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
                                                        class="btn btn-sm btn-outline-secondary">Edit...</a>
                                                     {% if not mr.feedback_submitted %}
-                                                        <a href="{{ url_for('convenor.submit_feedback', id=mr.id) }}"
-                                                           class="btn btn-sm btn-outline-success">Submit</a>
+                                                        {%- set _pos = (mr.feedback_positive or '') | trim -%}
+                                                        {%- set _imp = (mr.feedback_improvement or '') | trim -%}
+                                                        {%- set _both_absent = not _pos and not _imp -%}
+                                                        {%- set _one_missing = (_pos and not _imp) or (_imp and not _pos) -%}
+                                                        {%- if _both_absent %}
+                                                            <form method="POST"
+                                                                  action="{{ url_for('convenor.submit_feedback', id=mr.id, url=request.url) }}"
+                                                                  class="d-inline">
+                                                                {{ action_form.hidden_tag() }}
+                                                                <button type="submit" class="btn btn-sm btn-warning"
+                                                                        title="Both feedback fields are empty">
+                                                                    Submit (no feedback)
+                                                                </button>
+                                                            </form>
+                                                        {%- elif _one_missing %}
+                                                            <form method="POST"
+                                                                  action="{{ url_for('convenor.force_complete_feedback', id=mr.id, url=request.url) }}"
+                                                                  class="d-inline">
+                                                                {{ action_form.hidden_tag() }}
+                                                                <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                                        title="One feedback field is empty — click to mark as complete anyway">
+                                                                    Confirm complete
+                                                                </button>
+                                                            </form>
+                                                            <form method="POST"
+                                                                  action="{{ url_for('convenor.submit_feedback', id=mr.id, url=request.url) }}"
+                                                                  class="d-inline">
+                                                                {{ action_form.hidden_tag() }}
+                                                                <button type="submit" class="btn btn-sm btn-outline-success"
+                                                                        disabled title="Complete both feedback fields first">
+                                                                    Submit
+                                                                </button>
+                                                            </form>
+                                                        {%- else %}
+                                                            <form method="POST"
+                                                                  action="{{ url_for('convenor.submit_feedback', id=mr.id, url=request.url) }}"
+                                                                  class="d-inline">
+                                                                {{ action_form.hidden_tag() }}
+                                                                <button type="submit" class="btn btn-sm btn-outline-success">Submit</button>
+                                                            </form>
+                                                        {%- endif %}
                                                     {% elif event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
-                                                        <a href="{{ url_for('convenor.unsubmit_feedback', id=mr.id) }}"
-                                                           class="btn btn-sm btn-outline-secondary">Unsubmit</a>
+                                                        <form method="POST"
+                                                              action="{{ url_for('convenor.unsubmit_feedback', id=mr.id, url=request.url) }}"
+                                                              class="d-inline">
+                                                            {{ action_form.hidden_tag() }}
+                                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Unsubmit</button>
+                                                        </form>
                                                     {% endif %}
                                                 </div>
                                             </div>

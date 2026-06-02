@@ -139,6 +139,79 @@
                 document.querySelectorAll('.ev-popover.show').forEach(p => p.classList.remove('show'));
             }
         });
+
+        {% if scheme.uses_standard_feedback %}
+        (function () {
+            var _modalShown = false;
+
+            function getFeedbackState() {
+                var pos = (document.getElementById('feedback_positive') || {value: ''}).value.trim();
+                var imp = (document.getElementById('feedback_improvement') || {value: ''}).value.trim();
+                if (!pos && !imp) return 'both_absent';
+                if (!pos || !imp) return 'one_missing';
+                return 'complete';
+            }
+
+            function submitWithForce(form) {
+                var hidden = document.getElementById('force_feedback_submitted_input');
+                if (!hidden) {
+                    hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'force_feedback_submitted';
+                    hidden.id = 'force_feedback_submitted_input';
+                    form.appendChild(hidden);
+                }
+                hidden.value = '1';
+                _modalShown = true;
+                form.submit();
+            }
+
+            function submitWithoutForce(form) {
+                _modalShown = true;
+                form.submit();
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                var markingForm = document.querySelector('form[method="POST"]');
+                if (!markingForm) return;
+
+                markingForm.addEventListener('submit', function (e) {
+                    if (_modalShown) return;
+                    var state = getFeedbackState();
+                    if (state === 'complete') return;
+
+                    e.preventDefault();
+
+                    var modal = document.getElementById('feedbackWarningModal');
+                    var bodyBothAbsent = document.getElementById('fwm-body-both-absent');
+                    var bodyOneMissing = document.getElementById('fwm-body-one-missing');
+                    var btnConfirmComplete = document.getElementById('fwm-btn-confirm-complete');
+                    var btnSaveOnly = document.getElementById('fwm-btn-save-only');
+
+                    if (state === 'both_absent') {
+                        bodyBothAbsent.classList.remove('d-none');
+                        bodyOneMissing.classList.add('d-none');
+                        btnConfirmComplete.classList.add('d-none');
+                    } else {
+                        bodyBothAbsent.classList.add('d-none');
+                        bodyOneMissing.classList.remove('d-none');
+                        btnConfirmComplete.classList.remove('d-none');
+                    }
+
+                    btnConfirmComplete.onclick = function () {
+                        bootstrap.Modal.getInstance(modal).hide();
+                        submitWithForce(markingForm);
+                    };
+                    btnSaveOnly.onclick = function () {
+                        bootstrap.Modal.getInstance(modal).hide();
+                        submitWithoutForce(markingForm);
+                    };
+
+                    new bootstrap.Modal(modal).show();
+                });
+            });
+        })();
+        {% endif %}
     </script>
 {% endblock %}
 
@@ -706,6 +779,44 @@
         </div>
         <div class="col-1"></div>
     </div>
+
+    {# Feedback warning modal — shown client-side when feedback fields are absent or incomplete #}
+    {% if scheme.uses_standard_feedback %}
+    <div class="modal fade" id="feedbackWarningModal" tabindex="-1"
+         aria-labelledby="feedbackWarningModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="feedbackWarningModalLabel">
+                        <i class="fas fa-exclamation-triangle fa-fw me-1"></i> Feedback incomplete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="fwm-body-both-absent">
+                        <p>You haven't entered any feedback for the student. Submitting without feedback means the student will not receive any written comments.</p>
+                        <p class="mb-0 text-body-secondary small">If you save now the marking report will be saved, but the feedback will not be marked as submitted. You can return later to add feedback.</p>
+                    </div>
+                    <div id="fwm-body-one-missing" class="d-none">
+                        <p>One of the feedback fields is empty. You can save the marking report without submitting the feedback, or confirm that the feedback is complete as entered.</p>
+                        <p class="mb-0 text-body-secondary small">Choosing <strong>Confirm complete</strong> will mark the feedback as submitted even though one field is empty.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-edit fa-fw me-1"></i> Return to form
+                    </button>
+                    <button type="button" class="btn btn-outline-primary d-none" id="fwm-btn-confirm-complete">
+                        <i class="fas fa-check fa-fw me-1"></i> Confirm complete
+                    </button>
+                    <button type="button" class="btn btn-primary" id="fwm-btn-save-only">
+                        <i class="fas fa-save fa-fw me-1"></i> Save marking report only
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     {# Validation failure modal — auto-shown on page load when the server blocks submission #}
     {% if prevent_submit_failures %}

@@ -1085,6 +1085,7 @@ def view_feedback():
         submitter=submitter,
         record=rec,
         form=form,
+        action_form=ConfirmActionForm(),
         event_data=event_data,
         ROLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
         ROLE_RESPONSIBLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
@@ -1877,10 +1878,14 @@ def edit_feedback(id):
     return redirect(url_for("faculty.edit_marking_feedback", **kwargs))
 
 
-@convenor.route("/submit_feedback/<int:id>")
+@convenor.route("/submit_feedback/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def submit_feedback(id):
     # id is a MarkingReport instance
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return redirect(redirect_url())
+
     report: MarkingReport = MarkingReport.query.get_or_404(id)
     sr: SubmitterReport = report.submitter_report
     record: SubmissionRecord = sr.record
@@ -1899,9 +1904,11 @@ def submit_feedback(id):
     if report.feedback_submitted:
         return redirect(redirect_url())
 
-    if not report.feedback_positive and not report.feedback_improvement:
+    positive = (report.feedback_positive or "").strip()
+    improvement = (report.feedback_improvement or "").strip()
+    if not positive or not improvement:
         flash(
-            "Feedback is empty: please enter feedback before submitting.",
+            "Both feedback fields must be completed before submitting. Use 'Mark feedback complete' to force submission with partial feedback.",
             "warning",
         )
         return redirect(redirect_url())
@@ -1909,8 +1916,12 @@ def submit_feedback(id):
     period: SubmissionPeriodRecord = record.period
 
     try:
+        from ..tasks.markingevent import advance_submitter_report
+
         report.feedback_submitted = True
         report.feedback_timestamp = datetime.now()
+        db.session.flush()
+        advance_submitter_report(sr)
 
         log_db_commit(
             f'Submitted feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
@@ -1928,10 +1939,14 @@ def submit_feedback(id):
     return redirect(redirect_url())
 
 
-@convenor.route("/unsubmit_feedback/<int:id>")
+@convenor.route("/unsubmit_feedback/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def unsubmit_feedback(id):
     # id is a MarkingReport instance
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return redirect(redirect_url())
+
     report: MarkingReport = MarkingReport.query.get_or_404(id)
     sr: SubmitterReport = report.submitter_report
     record: SubmissionRecord = sr.record
@@ -1958,8 +1973,12 @@ def unsubmit_feedback(id):
     period: SubmissionPeriodRecord = record.period
 
     try:
+        from ..tasks.markingevent import advance_submitter_report
+
         report.feedback_submitted = False
         report.feedback_timestamp = None
+        db.session.flush()
+        advance_submitter_report(sr)
 
         log_db_commit(
             f'Unsubmitted feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
@@ -1971,6 +1990,68 @@ def unsubmit_feedback(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             "Could not unsubmit feedback due to a database error. Please contact a system administrator.",
+            "error",
+        )
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/force_complete_feedback/<int:id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def force_complete_feedback(id):
+    # id is a MarkingReport instance; marks feedback as submitted even if one field is absent
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return redirect(redirect_url())
+
+    report: MarkingReport = MarkingReport.query.get_or_404(id)
+    sr: SubmitterReport = report.submitter_report
+    record: SubmissionRecord = sr.record
+    pclass = sr.workflow.event.pclass
+
+    if record.retired:
+        flash(
+            "It is not possible to edit feedback for submissions that have been retired.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if report.feedback_submitted:
+        return redirect(redirect_url())
+
+    positive = (report.feedback_positive or "").strip()
+    improvement = (report.feedback_improvement or "").strip()
+    if not positive and not improvement:
+        flash(
+            "Cannot mark feedback as complete: both feedback fields are empty.",
+            "warning",
+        )
+        return redirect(redirect_url())
+
+    period: SubmissionPeriodRecord = record.period
+
+    try:
+        from ..tasks.markingevent import advance_submitter_report
+
+        report.feedback_submitted = True
+        report.feedback_timestamp = datetime.now()
+        db.session.flush()
+        advance_submitter_report(sr)
+
+        log_db_commit(
+            f'Force-completed feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash("Feedback marked as complete.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not mark feedback as complete due to a database error. Please contact a system administrator.",
             "error",
         )
 

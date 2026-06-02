@@ -1604,6 +1604,34 @@ def submitter_reports_inspector(workflow_id):
                 )
             )
 
+        feedback_awaiting = state_counts.get(SubmitterReportWorkflowStates.AWAITING_FEEDBACK, 0)
+        if feedback_awaiting > 0:
+            n = feedback_awaiting
+            banners.append(
+                ConvenorAction(
+                    severity="warning",
+                    icon="comment-slash",
+                    title=f"{n} report{'s' if n != 1 else ''} awaiting assessor feedback",
+                    description="The grade cannot be computed until all assessors submit their feedback.",
+                    buttons=[
+                        ConvenorActionButton(
+                            label="View reports",
+                            outline=True,
+                            icon="search",
+                            url=url_for(
+                                "convenor.submitter_reports_inspector",
+                                workflow_id=workflow_id,
+                                filter_state="feedback_pending",
+                                filter_risk=filter_risk,
+                                filter_tolerance=filter_tolerance,
+                                filter_grade=filter_grade,
+                                filter_completion=filter_completion,
+                            ),
+                        )
+                    ],
+                )
+            )
+
         needs_moderator = state_counts.get(
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0
         )

@@ -1762,54 +1762,107 @@ _conflation_report_feedback = """
 
 # language=jinja2
 _conflation_report_menu = """
-{% set reports = cr.feedback_reports.all() %}
-{% set has_feedback = reports|length > 0 %}
-{% set has_any_action = (cr.is_stale and not cr.feedback_sent) or (has_feedback and not cr.feedback_sent) or (cr.feedback_emails.count() > 0) %}
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm full-width-button{% if has_any_action %} dropdown-toggle{% endif %}"
-            type="button"
-            {% if has_any_action %}data-bs-toggle="dropdown"{% endif %}
-            {% if not has_any_action %}disabled{% endif %}>
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle"
+            type="button" data-bs-toggle="dropdown">
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        {% set needs_divider = false %}
-        {% if cr.is_stale and not cr.feedback_sent %}
-            {% set needs_divider = true %}
+
+        {# ── Section 1: Propagate grades ───────────────────────────────────── #}
+        <h6 class="dropdown-header">Propagate grades</h6>
+        {% for target, value in grade_dict.items() %}
             <form method="POST"
-                  action="{{ url_for('convenor.reconflate_conflation_report', cr_id=cr.id, url=url, text=text) }}"
+                  action="{{ url_for('convenor.propagate_cr_grade', cr_id=cr.id,
+                                     target=target, url=return_url) }}"
                   style="display:contents">
-                    {{ form.hidden_tag() }}
-                <button class="dropdown-item d-flex gap-2" type="submit">
-                    <i class="fas fa-calculator fa-fw"></i> Reconflate&hellip;
+                {{ form.hidden_tag() }}
+                <button type="submit" class="dropdown-item d-flex gap-2">
+                    <i class="fas fa-arrow-right fa-fw"></i>
+                    Copy &#8220;{{ target }}&#8221; ({{ "%.1f"|format(value) }}) &rarr; record
                 </button>
             </form>
-        {% endif %}
-        {% if has_feedback and not cr.feedback_sent %}
-            {% if needs_divider %}<div class="dropdown-divider"></div>{% endif %}
-            {% set needs_divider = true %}
+        {% else %}
+            <span class="dropdown-item text-body-secondary disabled">No grades available</span>
+        {% endfor %}
+
+        {# ── Section 2: Feedback ───────────────────────────────────────────── #}
+        <div role="separator" class="dropdown-divider"></div>
+        <h6 class="dropdown-header">Feedback</h6>
+        {% if not cr.feedback_sent %}
             <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('convenor.regenerate_conflation_report_feedback', cr_id=cr.id, url=url, text=text) }}">
-                <i class="fas fa-redo fa-fw"></i> Regenerate feedback&hellip;
+               href="{{ url_for('convenor.regenerate_conflation_report_feedback',
+                                cr_id=cr.id, url=return_url, text='Conflation reports') }}">
+                <i class="fas fa-file-pdf fa-fw"></i>
+                {% if feedback_count == 0 %}Generate feedback PDF
+                {% else %}Re-generate feedback PDF{% endif %}
             </a>
-            <form method="POST"
-                  action="{{ url_for('convenor.delete_conflation_report_feedback', cr_id=cr.id, url=url, text=text) }}"
-                  style="display:contents"
-                  onsubmit="return confirm('Delete the generated feedback for this student? This cannot be undone.')">
-                    {{ form.hidden_tag() }}
-                <button class="dropdown-item d-flex gap-2 text-danger" type="submit">
-                    <i class="fas fa-trash fa-fw"></i> Delete feedback&hellip;
-                </button>
-            </form>
+        {% endif %}
+        {% if feedback_count > 0 and not cr.feedback_sent %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.push_single_cr_feedback',
+                                cr_id=cr.id, url=return_url, text='Conflation reports') }}">
+                <i class="fas fa-paper-plane fa-fw"></i> Send feedback email
+            </a>
         {% endif %}
         {% if cr.feedback_emails.count() > 0 %}
-            {% if needs_divider %}<div class="dropdown-divider"></div>{% endif %}
-            {% set needs_divider = true %}
             <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('convenor.view_conflation_report_emails', cr_id=cr.id, url=url, text=text) }}">
-                <i class="fas fa-envelope fa-fw"></i> View emails&hellip;
+               href="{{ url_for('convenor.view_conflation_report_emails',
+                                cr_id=cr.id, url=return_url, text='Conflation reports') }}">
+                <i class="fas fa-envelope fa-fw"></i> View feedback emails
             </a>
         {% endif %}
+        {% if feedback_count > 0 and not cr.feedback_sent %}
+            <form method="POST"
+                  action="{{ url_for('convenor.delete_conflation_report_feedback',
+                                     cr_id=cr.id, url=return_url, text='Conflation reports') }}"
+                  style="display:contents"
+                  onsubmit="return confirm('Delete the generated feedback for this student?')">
+                {{ form.hidden_tag() }}
+                <button class="dropdown-item d-flex gap-2 text-danger" type="submit">
+                    <i class="fas fa-trash fa-fw"></i> Delete feedback
+                </button>
+            </form>
+        {% endif %}
+        {% if feedback_count == 0 and cr.feedback_emails.count() == 0 and cr.feedback_sent %}
+            <span class="dropdown-item text-body-secondary disabled">
+                <i class="fas fa-check-circle fa-fw"></i> Feedback sent
+            </span>
+        {% endif %}
+
+        {# ── Section 3: Conflation ─────────────────────────────────────────── #}
+        <div role="separator" class="dropdown-divider"></div>
+        <h6 class="dropdown-header">Conflation</h6>
+        {% if not cr.feedback_sent %}
+            <form method="POST"
+                  action="{{ url_for('convenor.reconflate_conflation_report',
+                                     cr_id=cr.id, url=return_url, text='Conflation reports') }}"
+                  style="display:contents">
+                {{ form.hidden_tag() }}
+                <button class="dropdown-item d-flex gap-2" type="submit">
+                    <i class="fas fa-sync fa-fw"></i>
+                    Reconflate{% if cr.is_stale %}&nbsp;<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                </button>
+            </form>
+        {% else %}
+            <span class="dropdown-item text-body-secondary disabled">
+                <i class="fas fa-lock fa-fw"></i> Feedback sent &mdash; cannot reconflate
+            </span>
+        {% endif %}
+
+        {# ── Section 4: Canvas (stub) ──────────────────────────────────────── #}
+        {% if canvas_enabled %}
+            <div role="separator" class="dropdown-divider"></div>
+            <h6 class="dropdown-header">Canvas</h6>
+            <span class="dropdown-item d-flex gap-2 text-body-secondary"
+                  style="opacity:0.6; cursor:not-allowed;"
+                  data-bs-toggle="tooltip"
+                  title="Canvas grade push is not yet implemented">
+                <i class="fas fa-cloud-upload-alt fa-fw"></i>
+                Push grade + feedback to Canvas
+            </span>
+        {% endif %}
+
     </div>
 </div>
 """
@@ -1831,23 +1884,34 @@ def conflation_report_data(event_id, crs):
     inspector_url = _url_for(
         "convenor.marking_event_conflation_reports", event_id=event_id
     )
-    inspector_text = "Conflation reports"
 
     form = ActionForm()
 
-    return [
-        {
-            "student": render_template(student_tmpl, cr=cr),
-            "project": render_template(project_tmpl, cr=cr),
-            "grades": render_template(grades_tmpl, cr=cr),
-            "feedback": render_template(feedback_tmpl, cr=cr),
-            "menu": render_template(
-                menu_tmpl,
-                cr=cr,
-                url=inspector_url,
-                text=inspector_text,
-                form=form,
-            ),
-        }
-        for cr in crs
-    ]
+    rows = []
+    for cr in crs:
+        grade_dict = cr.conflation_report_as_dict
+        feedback_count = cr.feedback_reports.count()
+        record = cr.submission_record
+        canvas_enabled = (
+            record is not None
+            and record.period.canvas_enabled
+            and record.owner.canvas_user_id is not None
+        )
+        rows.append(
+            {
+                "student": render_template(student_tmpl, cr=cr),
+                "project": render_template(project_tmpl, cr=cr),
+                "grades": render_template(grades_tmpl, cr=cr),
+                "feedback": render_template(feedback_tmpl, cr=cr),
+                "menu": render_template(
+                    menu_tmpl,
+                    cr=cr,
+                    grade_dict=grade_dict,
+                    feedback_count=feedback_count,
+                    canvas_enabled=canvas_enabled,
+                    return_url=inspector_url,
+                    form=form,
+                ),
+            }
+        )
+    return rows

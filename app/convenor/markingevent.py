@@ -6119,6 +6119,75 @@ def propagate_presentation_grade(event_id):
     return redirect(url)
 
 
+@convenor.route("/propagate-cr-grade/<int:cr_id>/<string:target>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def propagate_cr_grade(cr_id, target):
+    """Copy one target from a single ConflationReport into the matching SubmissionRecord field."""
+    cr: ConflationReport = ConflationReport.query.get_or_404(cr_id)
+    event: MarkingEvent = cr.marking_event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.marking_event_conflation_reports", event_id=event.id),
+    )
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    grade_dict = cr.conflation_report_as_dict
+    if target not in grade_dict:
+        flash(f"Grade target '{target}' not found in this conflation report.", "error")
+        return redirect(url)
+
+    grade_value = grade_dict[target]
+    record: SubmissionRecord = cr.submission_record
+    now = datetime.now()
+
+    _CV_FIELDS = {
+        "report": ("report_grade", "report_generated_id", "report_generated_timestamp", "report_event_id"),
+        "supervisor": ("supervision_grade", "supervision_generated_id", "supervision_generated_timestamp", "supervision_event_id"),
+        "presentation": ("presentation_grade", "presentation_generated_id", "presentation_generated_timestamp", "presentation_event_id"),
+    }
+    if target not in _CV_FIELDS:
+        flash(
+            f"Grade target '{target}' is not a controlled-vocabulary target "
+            f"(expected 'report', 'supervisor', or 'presentation').",
+            "warning",
+        )
+        return redirect(url)
+
+    grade_f, gen_id_f, gen_ts_f, ev_id_f = _CV_FIELDS[target]
+    setattr(record, grade_f, grade_value)
+    setattr(record, gen_id_f, current_user.id)
+    setattr(record, gen_ts_f, now)
+    setattr(record, ev_id_f, event.id)
+
+    try:
+        log_db_commit(
+            f"Propagated '{target}' grade ({grade_value}) from ConflationReport "
+            f"for '{record.owner.student.user.name}' in event '{event.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(
+            f"Copied '{target}' grade ({grade_value:.1f}) to submission record "
+            f"for {record.owner.student.user.name}.",
+            "success",
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in propagate_cr_grade", exc_info=e)
+        flash("Could not save grade due to a database error.", "error")
+
+    return redirect(url)
+
+
 @convenor.route("/marking_report_distribution_status/<int:mr_id>")
 @login_required
 def marking_report_distribution_status(mr_id):

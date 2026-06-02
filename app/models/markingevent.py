@@ -1439,6 +1439,35 @@ class ModeratorReport(db.Model, EditingMetadataMixin):
         return self.submitter_report.record.student_identifier
 
 
+class CanvasPushStatus:
+    """
+    Integer constants describing the Canvas push state of a ConflationReport.
+
+    NOT_PUSHED (0)
+        Neither a grade nor a feedback PDF has been sent to Canvas.
+
+    GRADE_ONLY (10)
+        A grade has been posted to the Canvas submission but no feedback PDF
+        has been attached.  This can occur if the Celery task fails after the
+        grade PUT but before the file upload completes, or when the convenor
+        deliberately re-pushes only the grade after the PDF is already on Canvas.
+
+    FEEDBACK_ONLY (20)
+        A feedback PDF has been uploaded and attached to the Canvas submission
+        comment, but no grade has been posted.  This should not occur in normal
+        operation but is representable for diagnostic purposes.
+
+    FULLY_PUSHED (30)
+        Both the grade and at least one feedback PDF have been successfully
+        delivered to Canvas.  This is the normal terminal state.
+    """
+
+    NOT_PUSHED = 0
+    GRADE_ONLY = 10
+    FEEDBACK_ONLY = 20
+    FULLY_PUSHED = 30
+
+
 class ConflationReport(db.Model, EditingMetadataMixin):
     """
     Stores the result of one conflation run for a single SubmissionRecord within a MarkingEvent.
@@ -1532,6 +1561,33 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     # set True when the last PDF generation attempt failed
     feedback_generation_failed = db.Column(db.Boolean(), default=False, nullable=False)
 
+    # CANVAS SYNCHRONISATION
+
+    # Grade target name archived at push time (e.g. "report", "supervisor").
+    # Null until the first successful grade push.
+    canvas_grade_target = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
+
+    # True once a grade has been successfully POSTed to Canvas for this student.
+    canvas_grade_pushed = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # Timestamp of the most recent successful Canvas grade push.
+    canvas_grade_push_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    # True once at least one feedback PDF has been successfully uploaded and
+    # attached to the Canvas submission comment for this student.
+    canvas_feedback_pushed = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # Timestamp of the most recent successful Canvas feedback push.
+    canvas_feedback_push_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    # JSON list of Canvas file IDs attached to the submission comment,
+    # e.g. [12345, 12346].  Null until the first successful feedback push.
+    # Stored as TEXT rather than a relationship because Canvas file IDs are
+    # ephemeral external identifiers, not FK-addressable rows in this database.
+    canvas_file_ids = db.Column(db.Text(collation="utf8_bin"), nullable=True)
+
     @property
     def conflation_report_as_dict(self) -> dict:
         if not self.conflation_report:
@@ -1551,3 +1607,42 @@ class ConflationReport(db.Model, EditingMetadataMixin):
         raw = json.loads(self.conflation_report)
         meta = raw.get("metadata", {})
         return lookup_rounding_policy(meta.get("rounding_policy"))
+
+    @property
+    def canvas_file_ids_as_list(self) -> list:
+        """Return canvas_file_ids as a Python list, or [] if not yet set."""
+        if not self.canvas_file_ids:
+            return []
+        return json.loads(self.canvas_file_ids)
+
+    @property
+    def canvas_push_status(self) -> int:
+        """
+        Return a CanvasPushStatus integer constant representing the current
+        Canvas push state of this ConflationReport.
+        """
+        if self.canvas_grade_pushed and self.canvas_feedback_pushed:
+            return CanvasPushStatus.FULLY_PUSHED
+        if self.canvas_grade_pushed:
+            return CanvasPushStatus.GRADE_ONLY
+        if self.canvas_feedback_pushed:
+            return CanvasPushStatus.FEEDBACK_ONLY
+        return CanvasPushStatus.NOT_PUSHED
+
+    @property
+    def canvas_push_ready(self) -> bool:
+        """
+        True when this ConflationReport has sufficient data to attempt a Canvas push:
+          - the parent SubmissionPeriodRecord has Canvas integration enabled, AND
+          - the owning SubmittingStudent has a canvas_user_id, AND
+          - the conflation_report dict is non-empty.
+        Does NOT check whether a push has already been made.
+        """
+        record = self.submission_record
+        return (
+            record is not None
+            and record.period.canvas_enabled
+            and record.owner is not None
+            and record.owner.canvas_user_id is not None
+            and bool(self.conflation_report_as_dict)
+        )

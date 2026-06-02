@@ -1,0 +1,200 @@
+#
+# Created by David Seery on 02/06/2026.
+# Copyright (c) 2026 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+
+import json
+from datetime import datetime
+
+from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
+
+from ..database import db
+from ..models import ConflationReport, MarkingEvent
+from ..shared.asset_tools import AssetCloudAdapter
+from ..shared.canvas_api import (
+    CanvasAPIError,
+    make_session,
+    push_grade_to_canvas,
+    upload_submission_comment_file,
+)
+from ..shared.workflow_logging import log_db_commit
+
+
+def register_canvas_push_tasks(celery):
+    @celery.task(bind=True, default_retry_delay=30)
+    def push_cr_to_canvas(self, cr_id: int, grade_target: str):
+        """
+        Push a grade and feedback PDF for a single ConflationReport to Canvas.
+
+        Parameters
+        ----------
+        cr_id : int
+            Primary key of the ConflationReport to push.
+        grade_target : str
+            Key in cr.conflation_report_as_dict to use as the grade value,
+            e.g. "report".
+        """
+        # --- pre-flight: load ConflationReport ---
+        try:
+            cr: ConflationReport = db.session.query(ConflationReport).filter_by(id=cr_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if cr is None:
+            current_app.logger.warning(f"push_cr_to_canvas: ConflationReport id={cr_id} not found")
+            return
+
+        if not cr.canvas_push_ready:
+            current_app.logger.warning(
+                f"push_cr_to_canvas: ConflationReport id={cr_id} not ready for Canvas push "
+                f"(canvas not enabled, missing user id, or no grade data)"
+            )
+            return
+
+        if grade_target not in cr.conflation_report_as_dict:
+            current_app.logger.warning(
+                f"push_cr_to_canvas: grade target '{grade_target}' not found in ConflationReport id={cr_id}"
+            )
+            return
+
+        # --- extract credentials from ORM before any API calls ---
+        api_root = cr.submission_record.period.config.main_config.canvas_root_API
+        api_token = cr.submission_record.period.config.canvas_login.canvas_API_token
+        course_id = cr.submission_record.period.canvas_module_id
+        assignment_id = cr.submission_record.period.canvas_assignment_id
+        user_id = cr.submission_record.owner.canvas_user_id
+
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        session = make_session(api_token)
+        grade_value = cr.conflation_report_as_dict[grade_target]
+        pdf_just_uploaded = False
+
+        # --- step 1: upload feedback PDFs (skip if already done) ---
+        if not cr.canvas_feedback_pushed:
+            file_ids = []
+            try:
+                for report in cr.feedback_reports.all():
+                    adapter = AssetCloudAdapter(
+                        report.asset,
+                        object_store,
+                        audit_data=f"push_cr_to_canvas: ConflationReport id={cr_id}",
+                    )
+                    pdf_bytes = adapter.get()
+                    file_id = upload_submission_comment_file(
+                        session,
+                        api_root,
+                        course_id,
+                        assignment_id,
+                        user_id,
+                        filename=report.asset.target_name,
+                        file_bytes=pdf_bytes,
+                    )
+                    file_ids.append(file_id)
+            except CanvasAPIError as e:
+                current_app.logger.error(
+                    f"push_cr_to_canvas: Canvas API error uploading feedback PDF for ConflationReport "
+                    f"id={cr_id}: status={e.status_code}, body={e.response_body}"
+                )
+                raise self.retry(exc=e)
+
+            cr.canvas_file_ids = json.dumps(file_ids)
+            cr.canvas_feedback_pushed = True
+            cr.canvas_feedback_push_timestamp = datetime.now()
+
+            # commit immediately so a subsequent grade-push failure does not re-upload PDFs
+            try:
+                log_db_commit(
+                    f"Canvas push: uploaded feedback PDFs for ConflationReport id={cr_id}",
+                    endpoint=self.name,
+                )
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+            pdf_just_uploaded = True
+
+        # --- step 2: push grade ---
+        # only attach file_ids when the PDFs were uploaded in this execution, to avoid duplicate attachments
+        file_ids_for_grade = cr.canvas_file_ids_as_list if pdf_just_uploaded else None
+        try:
+            push_grade_to_canvas(
+                session,
+                api_root,
+                course_id,
+                assignment_id,
+                user_id,
+                posted_grade=grade_value,
+                file_ids=file_ids_for_grade,
+            )
+        except CanvasAPIError as e:
+            current_app.logger.error(
+                f"push_cr_to_canvas: Canvas API error pushing grade for ConflationReport "
+                f"id={cr_id}: status={e.status_code}, body={e.response_body}"
+            )
+            raise self.retry(exc=e)
+
+        # --- step 3: persist push state ---
+        cr.canvas_grade_pushed = True
+        cr.canvas_grade_push_timestamp = datetime.now()
+        cr.canvas_grade_target = grade_target
+
+        try:
+            log_db_commit(
+                f"Canvas push: grade pushed for ConflationReport id={cr_id} (target={grade_target})",
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def push_event_to_canvas(self, event_id: int, grade_target: str):
+        """
+        Fan out push_cr_to_canvas across all eligible ConflationReports in a MarkingEvent.
+
+        A ConflationReport is eligible if:
+          - cr.canvas_push_ready is True
+          - cr.canvas_grade_pushed is False
+          - grade_target is in cr.conflation_report_as_dict
+
+        Parameters
+        ----------
+        event_id : int
+            Primary key of the MarkingEvent.
+        grade_target : str
+            Grade target name to push for each student.
+        """
+        try:
+            event: MarkingEvent = db.session.query(MarkingEvent).filter_by(id=event_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if event is None:
+            current_app.logger.warning(f"push_event_to_canvas: MarkingEvent id={event_id} not found")
+            return
+
+        all_reports = event.conflation_reports.all()
+        total = len(all_reports)
+        n = 0
+
+        for cr in all_reports:
+            if cr.canvas_push_ready and not cr.canvas_grade_pushed and grade_target in cr.conflation_report_as_dict:
+                push_cr_to_canvas.apply_async(args=[cr.id, grade_target])
+                n += 1
+
+        skipped = total - n
+        current_app.logger.info(
+            f"push_event_to_canvas: dispatched Canvas push for {n} of {total} ConflationReports "
+            f"in MarkingEvent id={event_id} (grade_target='{grade_target}', {skipped} skipped as "
+            f"already pushed or ineligible)"
+        )

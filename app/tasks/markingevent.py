@@ -645,7 +645,6 @@ def register_markingevent_tasks(celery):
                         role_id=role.id,
                         submitter_report_id=sr.id,
                         report="{}",
-                        distributed=False,
                         report_submitted=False,
                         feedback_submitted=False,
                         grade=None,

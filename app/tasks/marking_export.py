@@ -40,6 +40,7 @@ from ..models.markingevent import (
     MarkingReport,
     MarkingWorkflow,
     SubmitterReport,
+    SubmitterReportWorkflowStates,
 )
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
@@ -143,29 +144,39 @@ def register_marking_export_tasks(celery):
             workflows = list(event.workflows.order_by(MarkingWorkflow.name))
 
             # ----------------------------------------------------------------
-            # Collect unique SubmissionRecord IDs for this event
+            # Collect unique SubmissionRecord IDs for this event, excluding
+            # students withdrawn (DROPPED) from any workflow.
             # ----------------------------------------------------------------
-            record_id_set = set()
+            dropped_record_ids = set()
+            all_record_ids = set()
             for wf in workflows:
                 for sr in wf.submitter_reports:
-                    record_id_set.add(sr.record_id)
+                    all_record_ids.add(sr.record_id)
+                    if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+                        dropped_record_ids.add(sr.record_id)
+            record_id_set = all_record_ids - dropped_record_ids
 
-            # Build lookups used for both sheets
+            # Build lookups used for both sheets (withdrawn students excluded)
             sr_lookup = {}  # (wf_id, record_id) -> SubmitterReport
             mr_lookup = {}  # sr_id -> [MarkingReport, ...] sorted by id
 
             for wf in workflows:
                 for sr in wf.submitter_reports:
+                    if sr.record_id in dropped_record_ids:
+                        continue
                     sr_lookup[(wf.id, sr.record_id)] = sr
                     mr_lookup[sr.id] = sorted(
                         sr.marking_reports.all(), key=lambda m: m.id
                     )
 
-            # Max MarkingReports per workflow (for column alignment)
+            # Max MarkingReports per workflow (active students only, for column alignment)
             wf_max_mr = {}
             for wf in workflows:
+                active_sr_ids = [
+                    sr.id for sr in wf.submitter_reports if sr.record_id not in dropped_record_ids
+                ]
                 max_mr = max(
-                    (len(mr_lookup.get(sr.id, [])) for sr in wf.submitter_reports),
+                    (len(mr_lookup.get(sid, [])) for sid in active_sr_ids),
                     default=0,
                 )
                 wf_max_mr[wf.id] = max_mr

@@ -113,6 +113,7 @@ _SUBMISSIONS_COLUMNS = [
     "bonferroni_alpha_medium",
     "bonferroni_alpha_high",
     "has_language_analysis",
+    "page_count",
     "has_turnitin",
 ]
 
@@ -361,6 +362,7 @@ def _build_submission_row(
         "bonferroni_alpha_medium": flags.get("bonferroni_alpha_medium"),
         "bonferroni_alpha_high": flags.get("bonferroni_alpha_high"),
         "has_language_analysis": record.language_analysis_complete,
+        "page_count": la.get("_page_count"),
         "has_turnitin": record.turnitin_score is not None,
     }
 

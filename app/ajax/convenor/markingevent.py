@@ -834,20 +834,22 @@ _marking_report_status = """
             <span class="text-secondary fst-italic"><i
                     class="fas fa-hourglass-half"></i> Awaiting report</span>
         {% endif %}
-        {% if report.feedback_submitted %}
-            <span class="text-success"><i class="fas fa-comment"></i> Feedback submitted</span>
-        {% else %}
-            {%- set _fb_pos = (report.feedback_positive or '') | trim -%}
-            {%- set _fb_imp = (report.feedback_improvement or '') | trim -%}
-            {%- if _fb_pos or _fb_imp %}
-                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
-                    <i class="fas fa-comment-slash fa-fw"></i> Feedback incomplete
-                </span>
-            {%- else %}
-                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle small">
-                    <i class="fas fa-comment-slash fa-fw"></i> Feedback absent
-                </span>
-            {%- endif %}
+        {% if report.report_submitted %}
+            {% if report.feedback_submitted %}
+                <span class="text-success"><i class="fas fa-comment"></i> Feedback submitted</span>
+            {% else %}
+                {%- set _fb_pos = (report.feedback_positive or '') | trim -%}
+                {%- set _fb_imp = (report.feedback_improvement or '') | trim -%}
+                {%- if _fb_pos or _fb_imp %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                        <i class="fas fa-comment-slash fa-fw"></i> Feedback incomplete
+                    </span>
+                {%- else %}
+                    <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle small">
+                        <i class="fas fa-comment-slash fa-fw"></i> Feedback absent
+                    </span>
+                {%- endif %}
+            {% endif %}
         {% endif %}
     {% endif %}
 </div>

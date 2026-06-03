@@ -422,7 +422,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         if self._CATS_list is not None:
             return
 
-        fsum = lambda x: x[0] + x[1] + x[2]
+        fsum = lambda x: x[0] + x[1]
 
         query = self.faculty_list_query()
         self._CATS_list = [fsum(self.get_faculty_CATS(fac.id)) for fac in query.all()]
@@ -544,7 +544,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             pclass = None
 
         # calculate supervision assignment, either summed over all project types, or for one specific project type if specified
-        sup, mark, mod = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
         included_matches = {}
 
@@ -552,7 +552,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         total = sup
         if include_matches:
             for match in self.include_matches:
-                sup, mark, mod = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
                 included_matches[match.id] = sup
 
             if len(included_matches) > 0:
@@ -636,7 +636,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             pclass: Optional[ProjectClass] = None
 
         # calculate marking assignment, either summed over all project types, or for one specific project type if specified
-        sup, mark, mod = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
         included_matches = {}
 
@@ -644,7 +644,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         total = mark
         if include_matches:
             for match in self.include_matches:
-                sup, mark, mod = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
                 included_matches[match.id] = mark
 
             if len(included_matches) > 0:
@@ -802,7 +802,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         return mark_only, sup_and_mark, sup_only
 
     def _get_group_CATS(self, group):
-        fsum = lambda x: x[0] + x[1] + x[2]
+        fsum = lambda x: x[0] + x[1]
 
         # compute our self-CATS
         CAT_lists = {"self": [fsum(self.get_faculty_CATS(x.id)) for x in group]}

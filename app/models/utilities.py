@@ -1516,34 +1516,11 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
 
 
 @cache.memoize()
-def _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id):
-    from .matching import MatchingAttempt
-
-    # obtain MatchingAttempt
-    obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
-
-    CATS = 0
-
-    for item in obj.get_moderator_records(fac_id).all():
-        item: "MatchingRecord"
-        proj: "LiveProject" = item.project
-        selector: "SelectingStudent" = item.selector
-
-        if pclass_id is None or selector.config.pclass_id == pclass_id:
-            c = proj.CATS_moderation
-            if c is not None:
-                CATS += c
-
-    return CATS
-
-
-@cache.memoize()
 def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
     CATS_sup = _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id)
     CATS_mark = _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id)
-    CATS_mod = _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id)
 
-    return CATS_sup, CATS_mark, CATS_mod
+    return CATS_sup, CATS_mark
 
 
 @cache.memoize()
@@ -1677,7 +1654,7 @@ def _MatchingAttempt_is_valid(id):
             rec: "EnrollmentRecord" = fac.get_enrollment_record(config.pclass_id)
 
             if rec is not None:
-                sup, mark, mod = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
+                sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
                 if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
                     errors[("custom_sup", fac.id)] = (

@@ -24,32 +24,32 @@ depends_on = None
 def upgrade():
     insp = sa_inspect(op.get_bind())
 
-    # Drop number_moderators from submission_period_definitions
-    if "submission_period_definitions" in insp.get_table_names():
-        cols = [c["name"] for c in insp.get_columns("submission_period_definitions")]
+    # Drop number_moderators from period_definitions (SubmissionPeriodDefinition.__tablename__)
+    if "period_definitions" in insp.get_table_names():
+        cols = [c["name"] for c in insp.get_columns("period_definitions")]
         if "number_moderators" in cols:
-            with op.batch_alter_table("submission_period_definitions") as batch_op:
+            with op.batch_alter_table("period_definitions") as batch_op:
                 batch_op.drop_column("number_moderators")
 
-    # Drop number_moderators from submission_period_records
-    if "submission_period_records" in insp.get_table_names():
-        cols = [c["name"] for c in insp.get_columns("submission_period_records")]
+    # Drop number_moderators from submission_periods (SubmissionPeriodRecord.__tablename__)
+    if "submission_periods" in insp.get_table_names():
+        cols = [c["name"] for c in insp.get_columns("submission_periods")]
         if "number_moderators" in cols:
-            with op.batch_alter_table("submission_period_records") as batch_op:
+            with op.batch_alter_table("submission_periods") as batch_op:
                 batch_op.drop_column("number_moderators")
 
 
 def downgrade():
     insp = sa_inspect(op.get_bind())
 
-    if "submission_period_definitions" in insp.get_table_names():
-        cols = [c["name"] for c in insp.get_columns("submission_period_definitions")]
+    if "period_definitions" in insp.get_table_names():
+        cols = [c["name"] for c in insp.get_columns("period_definitions")]
         if "number_moderators" not in cols:
-            with op.batch_alter_table("submission_period_definitions") as batch_op:
+            with op.batch_alter_table("period_definitions") as batch_op:
                 batch_op.add_column(sa.Column("number_moderators", sa.Integer(), nullable=True))
 
-    if "submission_period_records" in insp.get_table_names():
-        cols = [c["name"] for c in insp.get_columns("submission_period_records")]
+    if "submission_periods" in insp.get_table_names():
+        cols = [c["name"] for c in insp.get_columns("submission_periods")]
         if "number_moderators" not in cols:
-            with op.batch_alter_table("submission_period_records") as batch_op:
+            with op.batch_alter_table("submission_periods") as batch_op:
                 batch_op.add_column(sa.Column("number_moderators", sa.Integer(), nullable=True))

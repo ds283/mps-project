@@ -2044,13 +2044,22 @@ def dashboard():
     if pane is None and session.get("faculty_dashboard_pane"):
         pane = session["faculty_dashboard_pane"]
 
+    # Validate data-dependent panes from session: if the backing data is gone, reset so
+    # auto-select can pick the right tab rather than showing a blank dashboard.
+    if pane == "marking" and not pending_marking_reports:
+        pane = None
+    elif pane == "signoff" and not pending_sign_off_reports:
+        pane = None
+    elif pane == "moderation" and not pending_moderator_reports:
+        pane = None
+
     if pane is None:
         if current_user.has_role("root"):
             pane = "system"
-        elif pending_sign_off_reports:
-            pane = "signoff"
         elif pending_moderator_reports:
             pane = "moderation"
+        elif pending_sign_off_reports:
+            pane = "signoff"
         elif actionable_marking_count:
             pane = "marking"
         elif len(enrolments) > 0:
@@ -2076,14 +2085,8 @@ def dashboard():
             else:
                 pane = None
 
-    elif pane == "marking":
-        pass  # always valid if pending_marking_reports is non-empty
-
-    elif pane == "signoff":
-        pass  # always valid if pending_sign_off_reports is non-empty
-
-    elif pane == "moderation":
-        pass  # always valid if pending_moderator_reports is non-empty
+    elif pane in ("marking", "signoff", "moderation"):
+        pass  # validated above; still a recognised pane
 
     else:
         if pane != "enrolments" and pane not in enrolment_panes:

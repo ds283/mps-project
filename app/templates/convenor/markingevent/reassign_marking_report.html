@@ -1,0 +1,76 @@
+{% extends "base_app.html" %}
+
+{% block title %}Reassign marking report – {{ report.user.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> Return
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-exchange-alt fa-fw me-1"></i>
+            Reassign marking report: <strong>{{ report.user.name }}</strong>
+        </h4>
+    </div>
+
+    {# Context card #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header" style="background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color)">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Current assignment
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-body-secondary">Assignee</dt>
+                <dd class="col-sm-9">{{ report.user.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Role</dt>
+                <dd class="col-sm-9">{{ report.role.role_as_str }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Student</dt>
+                <dd class="col-sm-9">{{ report.student.user.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Workflow</dt>
+                <dd class="col-sm-9">{{ workflow.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Project class</dt>
+                <dd class="col-sm-9">{{ pclass.name }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    {% if report.distributed %}
+        <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+            <i class="fas fa-exclamation-triangle fa-lg flex-shrink-0"></i>
+            <div>
+                <strong>This report has already been distributed.</strong>
+                &mdash; The current assignee has already received a notification email. After
+                reassigning, use <em>Actions &rarr; Dispatch email</em> on the new report to
+                notify the new assignee.
+            </div>
+        </div>
+    {% endif %}
+
+    {# Reassign form #}
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-exchange-alt fa-fw me-1"></i> Reassign to
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() if form.hidden_tag is defined }}
+                <div class="mb-3">
+                    {{ form.new_role_id.label(class="form-label fw-semibold") }}
+                    {{ form.new_role_id(class="form-select" + (" is-invalid" if form.new_role_id.errors else ""), style="max-width: 30rem") }}
+                    {% for error in form.new_role_id.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                    <div class="form-text text-body-secondary">
+                        The existing marking report will be deleted and a new one created for the
+                        selected role. Any distribution emails already sent to the previous assignee
+                        are not withdrawn.
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

@@ -1636,6 +1636,13 @@ class MarkingReportPropertiesForm(Form):
     submit = SubmitField("Save changes")
 
 
+class ReassignMarkingReportForm(Form):
+    """Form for convenors to reassign a MarkingReport to a different SubmissionRole."""
+
+    new_role_id = SelectField("Reassign to", coerce=int)
+    submit = SubmitField("Reassign")
+
+
 class EnterTurnitinScoreForm(Form):
     """Form for convenors to manually enter a Turnitin similarity score when Canvas data is unavailable."""
 

@@ -968,6 +968,13 @@ _marking_report_actions = """
                          url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
                 <i class="fas fa-sliders-h fa-fw"></i> Edit properties&hellip;
             </a>
+            {% if not report.report_submitted %}
+                <a class="dropdown-item d-flex gap-2"
+                   href="{{ url_for('convenor.reassign_marking_report', report_id=report.id,
+                             url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
+                    <i class="fas fa-exchange-alt fa-fw"></i> Reassign&hellip;
+                </a>
+            {% endif %}
         {% endif %}
         {% if report.grade_submitted_timestamp is not none and not event_is_closed %}
             <form method="POST"

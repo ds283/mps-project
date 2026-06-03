@@ -89,6 +89,7 @@ from .forms import (
     EnterTurnitinScoreForm,
     GenerateFeedbackFormFactory,
     MarkingReportPropertiesForm,
+    ReassignMarkingReportForm,
     MarkingWorkflowFormFactory,
     PushFeedbackForm,
     TestMarkingEventFormFactory,
@@ -5266,6 +5267,105 @@ def marking_report_properties(report_id):
         report=report,
         workflow=workflow,
         pclass=pclass,
+        url=url,
+    )
+
+
+@convenor.route("/reassign_marking_report/<int:report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def reassign_marking_report(report_id):
+    """
+    Reassign a MarkingReport to a different SubmissionRole on the same SubmissionRecord.
+    Deletes the existing report and creates a replacement pointing to the chosen role.
+    """
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    sr: SubmitterReport = report.submitter_report
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+    record = sr.record
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
+    )
+
+    if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash("Cannot reassign reports in a closed marking event.", "error")
+        return redirect(url)
+
+    if report.report_submitted:
+        flash("Cannot reassign a marking report that has already been submitted.", "error")
+        return redirect(url)
+
+    other_roles = [r for r in record.roles.all() if r.id != report.role_id]
+
+    if not other_roles:
+        flash("No other submission roles exist on this record to reassign to.", "error")
+        return redirect(url)
+
+    form = ReassignMarkingReportForm(request.form)
+    form.new_role_id.choices = [(r.id, f"{r.user.name} ({r.role_as_str})") for r in other_roles]
+
+    if form.validate_on_submit():
+        new_role_id = form.new_role_id.data
+        new_role = next((r for r in other_roles if r.id == new_role_id), None)
+        if new_role is None:
+            flash("Invalid role selection.", "error")
+            return redirect(url)
+
+        old_weight = report.weight
+        old_assignee = report.user.name
+
+        try:
+            db.session.delete(report)
+            db.session.flush()
+
+            new_mr = MarkingReport(
+                role_id=new_role.id,
+                submitter_report_id=sr.id,
+                report="{}",
+                report_submitted=False,
+                feedback_submitted=False,
+                grade=None,
+                weight=old_weight,
+                feedback_positive=None,
+                feedback_improvement=None,
+                signed_off_id=None,
+                signed_off_timestamp=None,
+                feedback_timestamp=None,
+                creator_id=current_user.id,
+                creation_timestamp=datetime.now(),
+            )
+            db.session.add(new_mr)
+
+            log_db_commit(
+                f"Reassigned MarkingReport for SubmitterReport #{sr.id} "
+                f"(workflow: {workflow.name}, student: {sr.student.user.name}) "
+                f"from {old_assignee} to {new_role.user.name}",
+                user=current_user,
+                project_classes=pclass,
+            )
+            flash(
+                f"Marking report reassigned from {old_assignee} to {new_role.user.name}.",
+                "success",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not reassign marking report due to a database error.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/reassign_marking_report.html",
+        form=form,
+        report=report,
+        workflow=workflow,
+        pclass=pclass,
+        other_roles=other_roles,
         url=url,
     )
 

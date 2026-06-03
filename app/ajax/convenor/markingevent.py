@@ -306,14 +306,6 @@ _submitter_report_actions = """
         </a>
     {% endif %}
 {% endif %}
-{% if is_dropped %}
-    <div class="mb-2">
-        <span class="badge bg-secondary py-2 px-3">
-            <i class="fas fa-ban fa-fw"></i> Withdrawn
-        </span>
-    </div>
-{% endif %}
-
 {# --- Actions dropdown --- #}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -459,7 +451,12 @@ _submitter_report_actions = """
 
 # language=jinja2
 _submitter_report_grade = """
-{% if report.grade is not none %}
+{% set is_dropped = (report.workflow_state == DROPPED) %}
+{% if is_dropped %}
+    <span class="badge bg-secondary">
+        <i class="fas fa-ban fa-fw"></i> Withdrawn
+    </span>
+{% elif report.grade is not none %}
     <div class="text-primary fw-semibold fs-4">{{ "%.1f"|format(report.grade) }}%</div>
     {% if report.grade_generated_by is not none %}
         <div class="small text-muted mt-1">by {{ report.grade_generated_by.name }}</div>
@@ -477,7 +474,18 @@ _submitter_report_grade = """
 
 # language=jinja2
 _submitter_report_signoff = """
-{% if report.signed_off_by is not none %}
+{% set is_dropped = (report.workflow_state == DROPPED) %}
+{% if is_dropped %}
+    <span class="badge bg-secondary py-2 px-3">
+        <i class="fas fa-ban fa-fw"></i> Withdrawn
+    </span>
+    {% if report.dropped_by is not none %}
+        <div class="small text-muted mt-1">by {{ report.dropped_by.name }}</div>
+    {% endif %}
+    {% if report.dropped_by_timestamp is not none %}
+        <div class="small text-muted">{{ report.dropped_by_timestamp.strftime("%d/%m/%Y") }}</div>
+    {% endif %}
+{% elif report.signed_off_by is not none %}
     <span class="badge bg-success py-2 px-3">
         <i class="fas fa-check-circle fa-fw"></i> Signed off
     </span>
@@ -1144,8 +1152,8 @@ def submitter_report_data(reports):
                 "student": render_template(student_tmpl, report=report),
                 "project": render_template(project_tmpl, report=report),
                 "reports": render_template(reports_tmpl, report=report, **state_ctx),
-                "grade": render_template(grade_tmpl, report=report),
-                "signoff": render_template(signoff_tmpl, report=report),
+                "grade": render_template(grade_tmpl, report=report, **state_ctx),
+                "signoff": render_template(signoff_tmpl, report=report, **state_ctx),
                 "risk_factors": render_template(
                     risk_factors_tmpl, report=report, event_is_closed=event_is_closed
                 ),

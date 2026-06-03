@@ -1091,6 +1091,14 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     )
     completed_timestamp = db.Column(db.DateTime(), nullable=True)
 
+    # DROPPED tracking
+    # Written when the convenor withdraws a student (transitions to DROPPED).
+    # Cleared to NULL when the report is returned to convenor and leaves the DROPPED state.
+
+    dropped_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    dropped_by = db.relationship("User", foreign_keys=[dropped_by_id], uselist=False)
+    dropped_by_timestamp = db.Column(db.DateTime(), nullable=True)
+
     # convenience accessors
     @property
     def submitter(self) -> SubmittingStudent:

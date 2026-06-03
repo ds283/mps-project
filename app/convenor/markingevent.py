@@ -5703,6 +5703,8 @@ def drop_submitter_report(sr_id):
         return redirect(url)
 
     sr.workflow_state = SubmitterReportWorkflowStates.DROPPED
+    sr.dropped_by_id = current_user.id
+    sr.dropped_by_timestamp = datetime.datetime.now()
     workflow.refresh_completed()
     event.refresh_completed()
 
@@ -5753,6 +5755,8 @@ def return_submitter_report_to_convenor(sr_id):
 
     if from_dropped:
         sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+        sr.dropped_by_id = None
+        sr.dropped_by_timestamp = None
     else:
         sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
         sr.completed_by_id = None
@@ -5851,6 +5855,8 @@ def return_all_submitter_reports(workflow_id):
                 any_completed = True
             elif sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
                 sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                sr.dropped_by_id = None
+                sr.dropped_by_timestamp = None
                 returned_count += 1
 
         workflow.refresh_completed()

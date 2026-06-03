@@ -1885,23 +1885,42 @@ _conflation_report_menu = """
             <div role="separator" class="dropdown-divider"></div>
             <h6 class="dropdown-header">Canvas</h6>
             {% if canvas_push_ready %}
+                {# Step 1: grade push #}
                 {% if not canvas_grade_pushed %}
                     <a class="dropdown-item d-flex gap-2"
                        href="{{ url_for('convenor.push_cr_to_canvas', cr_id=cr.id,
                                         url=return_url, text='Conflation reports') }}">
                         <i class="fas fa-cloud-upload-alt fa-fw"></i>
-                        Push grade + feedback to Canvas
+                        Push grade to Canvas
                     </a>
                 {% else %}
-                    <a class="dropdown-item d-flex gap-2"
-                       href="{{ url_for('convenor.push_cr_to_canvas', cr_id=cr.id,
-                                        url=return_url, text='Conflation reports') }}">
-                        <i class="fas fa-cloud-upload-alt fa-fw"></i>
-                        Update grade on Canvas
-                        {% if canvas_grade_target %}
-                            <span class="ms-1 text-body-secondary small">({{ canvas_grade_target }})</span>
-                        {% endif %}
-                    </a>
+                    <span class="dropdown-item text-body-secondary small disabled d-flex gap-2">
+                        <i class="fas fa-check-circle fa-fw text-success"></i>
+                        Grade on Canvas
+                        {% if canvas_grade_target %}({{ canvas_grade_target }}){% endif %}
+                    </span>
+                {% endif %}
+                {# Step 2: feedback push — only available after grade is pushed #}
+                {% if canvas_grade_pushed and not canvas_feedback_pushed %}
+                    {% if has_feedback %}
+                        <a class="dropdown-item d-flex gap-2"
+                           href="{{ feedback_push_url }}">
+                            <i class="fas fa-file-pdf fa-fw"></i>
+                            Upload feedback PDF to Canvas
+                        </a>
+                    {% else %}
+                        <span class="dropdown-item text-body-secondary small disabled d-flex gap-2"
+                              data-bs-toggle="tooltip"
+                              title="Generate feedback PDF first">
+                            <i class="fas fa-file-pdf fa-fw"></i>
+                            Upload feedback PDF to Canvas
+                        </span>
+                    {% endif %}
+                {% elif canvas_feedback_pushed %}
+                    <span class="dropdown-item text-body-secondary small disabled d-flex gap-2">
+                        <i class="fas fa-check-circle fa-fw text-success"></i>
+                        Feedback PDF on Canvas
+                    </span>
                 {% endif %}
             {% else %}
                 <span class="dropdown-item text-body-secondary disabled">
@@ -2009,6 +2028,13 @@ def conflation_report_data(event_id, crs):
                     canvas_feedback_pushed=cr.canvas_feedback_pushed,
                     canvas_grade_target=cr.canvas_grade_target,
                     canvas_grade_push_timestamp=cr.canvas_grade_push_timestamp,
+                    has_feedback=feedback_count > 0,
+                    feedback_push_url=_url_for(
+                        "convenor.push_cr_feedback_to_canvas",
+                        cr_id=cr.id,
+                        url=inspector_url,
+                        text="Conflation reports",
+                    ),
                     return_url=inspector_url,
                     form=form,
                 ),

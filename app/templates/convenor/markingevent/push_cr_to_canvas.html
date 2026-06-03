@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 {% import "bootstrap/form.html" as wtf %}
 
-{% block title %}Push to Canvas – {{ event.name }}{% endblock %}
+{% block title %}Push grade to Canvas – {{ event.name }}{% endblock %}
 
 {% block bodyblock %}
     <div class="d-flex align-items-center mt-3 mb-2 gap-2">
@@ -9,7 +9,7 @@
             <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
         </a>
         <h4 class="mb-0">
-            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Push to Canvas &mdash; {{ event.name }}
+            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Push grade to Canvas &mdash; {{ event.name }}
         </h4>
     </div>
 
@@ -88,7 +88,7 @@
     {# Push form card #}
     <div class="card border-primary mb-3">
         <div class="card-header bg-primary text-white">
-            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Push to Canvas
+            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i> Push grade to Canvas
         </div>
         <div class="card-body">
             <form action="{{ url_for('convenor.push_cr_to_canvas', cr_id=cr.id,
@@ -113,14 +113,14 @@
                     {% endif %}
                 </div>
 
-                <div class="alert alert-secondary py-2 mb-3 small">
-                    <i class="fas fa-info-circle fa-fw me-1"></i>
-                    The feedback PDF will be attached to the Canvas submission comment on first push only.
-                    Subsequent pushes update the grade without re-uploading the PDF.
-                </div>
-
                 {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
             </form>
+
+            <div class="alert alert-secondary py-2 mt-3 mb-0 small">
+                <i class="fas fa-info-circle fa-fw me-1"></i>
+                After pushing the grade, have the exam board ratify all grades and post them in Canvas.
+                Then return to upload the feedback PDF as a separate step.
+            </div>
         </div>
     </div>
 {% endblock %}

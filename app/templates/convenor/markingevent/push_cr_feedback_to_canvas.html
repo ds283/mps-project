@@ -1,0 +1,101 @@
+{% extends "base_app.html" %}
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}Upload feedback to Canvas – {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-file-pdf fa-fw me-1"></i> Upload feedback to Canvas &mdash; {{ event.name }}
+        </h4>
+    </div>
+
+    {# Event and student summary card #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Summary
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-body-secondary">Event</dt>
+                <dd class="col-sm-9">{{ event.name }}</dd>
+                <dt class="col-sm-3 text-body-secondary">Period</dt>
+                <dd class="col-sm-9">{{ event.period.display_name }}</dd>
+                {% set student = cr.submission_record.owner.student %}
+                <dt class="col-sm-3 text-body-secondary">Student</dt>
+                <dd class="col-sm-9">
+                    {{ student.user.name }}
+                    {% if student.registration_number %}
+                        <span class="text-body-secondary ms-1">({{ student.registration_number }})</span>
+                    {% endif %}
+                </dd>
+                {% if cr.submission_record.project %}
+                    <dt class="col-sm-3 text-body-secondary">Project</dt>
+                    <dd class="col-sm-9">{{ cr.submission_record.project.name }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {# Grade already on Canvas card — confirms step 1 is complete #}
+    <div class="card border-success mb-3">
+        <div class="card-header bg-success text-white">
+            <i class="fas fa-check-circle fa-fw me-1"></i> Grade on Canvas
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-body-secondary">Grade target</dt>
+                <dd class="col-sm-9">{{ cr.canvas_grade_target or '—' }}</dd>
+                {% if cr.canvas_grade_push_timestamp %}
+                    <dt class="col-sm-3 text-body-secondary">Pushed at</dt>
+                    <dd class="col-sm-9">{{ cr.canvas_grade_push_timestamp.strftime("%d/%m/%Y %H:%M") }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {# Feedback PDF list #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-file-pdf fa-fw me-1"></i> Feedback PDF
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0 small">
+                {% for report in cr.feedback_reports %}
+                    <li>
+                        <i class="fas fa-file-pdf fa-fw me-1 text-body-secondary"></i>
+                        {{ report.asset.target_name }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {# Info alert #}
+    <div class="alert alert-primary d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-info-circle fa-fw flex-shrink-0"></i>
+        <div>
+            Uploading the feedback PDF attaches it to the student&rsquo;s Canvas submission comment.
+            The PDF will become visible to the student immediately if their grade has already been
+            posted in Canvas. <strong>Ensure grades have been posted before proceeding.</strong>
+        </div>
+    </div>
+
+    {# Confirmation form card #}
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-file-pdf fa-fw me-1"></i> Upload feedback PDF to Canvas
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('convenor.push_cr_feedback_to_canvas', cr_id=cr.id,
+                                     url=url, text=text) }}"
+                  method="POST">
+                {{ form.hidden_tag() }}
+                {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+            </form>
+        </div>
+    </div>
+{% endblock %}

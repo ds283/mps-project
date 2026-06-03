@@ -1202,7 +1202,8 @@ class CanvasPushForm(Form):
 
     grade_target = SelectField(
         "Grade target",
-        description="Select which conflated grade value to post to the Canvas gradebook.",
+        description="Select which conflated grade value to post to the Canvas gradebook. "
+                    "The feedback PDF will be uploaded separately in a second step.",
         validators=[DataRequired()],
     )
 
@@ -1215,6 +1216,18 @@ class CanvasPushEventForm(Form):
     grade_target = StringField("Grade target", validators=[DataRequired()])
 
     submit = SubmitField("Push all to Canvas")
+
+
+class CanvasFeedbackPushForm(Form):
+    """Confirmation form for the feedback-only Canvas push."""
+
+    submit = SubmitField("Upload feedback PDF to Canvas")
+
+
+class CanvasFeedbackPushEventForm(Form):
+    """Minimal form for the bulk feedback-only push."""
+
+    submit = SubmitField("Push all feedback PDFs to Canvas")
 
 
 # ---- MarkingWorkflow forms ----

@@ -280,6 +280,13 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     #     "stale_count": int }    — number of stale ConflationReports at push time
     grade_push_log = db.Column(db.Text(collation="utf8_bin"), nullable=True, default=None)
 
+    # Locked Canvas grade target for this event. Set the first time a grade push is confirmed
+    # (either bulk or per-student) and used for all subsequent pushes to ensure consistency.
+    # Cleared when a bulk re-conflation is performed so the target can be re-selected.
+    canvas_grade_target = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True, default=None
+    )
+
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
 
     @property

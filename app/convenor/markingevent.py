@@ -84,8 +84,8 @@ from .forms import (
     AssignModeratorFormFactory,
     CanvasFeedbackPushEventForm,
     CanvasFeedbackPushForm,
-    CanvasPushEventForm,
     CanvasPushForm,
+    ConfirmCanvasPushEventForm,
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     EnterTurnitinScoreForm,
@@ -490,15 +490,6 @@ def marking_event_conflation_reports(event_id):
     canvas_enabled = period.canvas_enabled
     canvas_pushable_count = sum(1 for cr in all_crs if cr.canvas_push_ready and not cr.canvas_grade_pushed)
     canvas_pushed_count = sum(1 for cr in all_crs if cr.canvas_grade_pushed)
-    _all_targets = [k for cr in all_crs for k in cr.conflation_report_as_dict.keys()]
-    from collections import Counter
-
-    default_canvas_target = (
-        "report"
-        if "report" in _all_targets
-        else (Counter(_all_targets).most_common(1)[0][0] if _all_targets else "")
-    )
-    canvas_push_event_form = CanvasPushEventForm()
     canvas_feedback_pushable_count = sum(
         1
         for cr in all_crs
@@ -635,8 +626,6 @@ def marking_event_conflation_reports(event_id):
         canvas_enabled=canvas_enabled,
         canvas_pushable_count=canvas_pushable_count,
         canvas_pushed_count=canvas_pushed_count,
-        default_canvas_target=default_canvas_target,
-        canvas_push_event_form=canvas_push_event_form,
         canvas_feedback_pushable_count=canvas_feedback_pushable_count,
         canvas_feedback_push_event_form=canvas_feedback_push_event_form,
     )
@@ -1246,15 +1235,50 @@ def push_cr_to_canvas(cr_id):
         )
         return redirect(url)
 
+    # Use the locked event-level target if one has been set; otherwise let the user choose.
+    locked_target = event.canvas_grade_target
     choices = [(k, f"{k} ({v:.1f})") for k, v in sorted(grade_dict.items())]
     form = CanvasPushForm(request.form)
     form.grade_target.choices = choices
 
     if request.method == "GET":
-        form.grade_target.data = "report" if "report" in grade_dict else choices[0][0]
+        if locked_target and locked_target in grade_dict:
+            form.grade_target.data = locked_target
+        else:
+            form.grade_target.data = "report" if "report" in grade_dict else choices[0][0]
 
-    if form.validate_on_submit():
-        grade_target = form.grade_target.data
+    if request.method == "POST":
+        # When the event-level target is already locked, use it directly and skip form validation
+        # (the template renders a disabled select + hidden field, so the submitted value is reliable).
+        if locked_target and locked_target in grade_dict:
+            grade_target = locked_target
+        elif form.validate_on_submit():
+            grade_target = form.grade_target.data
+        else:
+            return render_template_context(
+                "convenor/markingevent/push_cr_to_canvas.html",
+                cr=cr,
+                event=event,
+                pclass=pclass,
+                form=form,
+                grade_dict=grade_dict,
+                locked_target=locked_target,
+                url=url,
+                text=text,
+                CanvasPushStatus=CanvasPushStatus,
+            )
+
+        # Lock the event-level target if not already set (so subsequent pushes are consistent).
+        if not event.canvas_grade_target:
+            try:
+                event.canvas_grade_target = grade_target
+                db.session.flush()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError locking canvas_grade_target", exc_info=e)
+                flash("Could not lock the grade target due to a database error.", "error")
+                return redirect(url)
+
         celery = current_app.extensions["celery"]
         task = celery.tasks.get("app.tasks.canvas_push.push_cr_to_canvas")
         if task is None:
@@ -1279,6 +1303,7 @@ def push_cr_to_canvas(cr_id):
         pclass=pclass,
         form=form,
         grade_dict=grade_dict,
+        locked_target=locked_target,
         url=url,
         text=text,
         CanvasPushStatus=CanvasPushStatus,
@@ -6087,6 +6112,9 @@ def calculate_conflation(event_id):
         for cr in event.conflation_reports.all():
             _delete_feedback_for_cr(cr)
             db.session.delete(cr)
+
+        # Clear the locked Canvas grade target so it can be re-selected on the next push.
+        event.canvas_grade_target = None
         db.session.flush()
 
         submissions = event.period.submissions.all()
@@ -6406,15 +6434,18 @@ def propagate_presentation_grade(event_id):
     return redirect(url)
 
 
-@convenor.route("/push_event_to_canvas/<int:event_id>", methods=["POST"])
+@convenor.route("/push_event_to_canvas/<int:event_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root", "convenor")
 def push_event_to_canvas(event_id):
     """
-    Bulk dispatch: fan out Canvas push tasks for all eligible ConflationReports in a MarkingEvent.
+    Bulk dispatch: fan out Canvas grade push tasks for all eligible ConflationReports in a MarkingEvent.
 
-    Accepts a 'mode' field in the POST body:
-      "grade"    — push grades for all unpushed CRs (requires grade_target)
-      "feedback" — upload feedback PDFs for all CRs where grade is pushed but feedback is not
+    GET: render a confirmation page. If the event's canvas_grade_target is not yet locked and
+         the event has multiple targets, the user selects which target to use. Once confirmed,
+         the chosen target is locked on the MarkingEvent for consistency across all subsequent
+         pushes. It is cleared when a bulk re-conflation is performed.
+
+    POST: validate, lock the target if not already locked, then dispatch the Celery task.
     """
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
@@ -6424,10 +6455,66 @@ def push_event_to_canvas(event_id):
 
     url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
 
-    mode = request.form.get("mode", "grade")
-    if mode not in ("grade", "feedback"):
-        flash("Invalid mode specified.", "error")
+    all_crs = event.conflation_reports.all()
+    canvas_pushable_count = sum(1 for cr in all_crs if cr.canvas_push_ready and not cr.canvas_grade_pushed)
+
+    if canvas_pushable_count == 0:
+        flash("There are no students eligible for a Canvas grade push at this time.", "info")
         return redirect(url)
+
+    target_keys = sorted(event.targets_as_dict.keys())
+    if not target_keys:
+        flash("This event has no conflation targets defined.", "error")
+        return redirect(url)
+
+    locked_target = event.canvas_grade_target
+
+    if request.method == "GET":
+        if locked_target:
+            form = ActionForm()
+        elif len(target_keys) == 1:
+            form = ActionForm()
+            locked_target = target_keys[0]
+        else:
+            sample_dict = all_crs[0].conflation_report_as_dict if all_crs else {}
+            choices = [(k, f"{k} ({sample_dict[k]:.1f})" if k in sample_dict else k) for k in target_keys]
+            form = ConfirmCanvasPushEventForm()
+            form.grade_target.choices = choices
+            form.grade_target.data = "report" if "report" in target_keys else target_keys[0]
+
+        return render_template_context(
+            "convenor/markingevent/confirm_push_event_to_canvas.html",
+            event=event,
+            pclass=pclass,
+            form=form,
+            locked_target=locked_target,
+            target_keys=target_keys,
+            canvas_pushable_count=canvas_pushable_count,
+            url=url,
+        )
+
+    # POST: determine grade_target and lock it
+    if locked_target:
+        form = ActionForm(request.form)
+        if not form.validate_on_submit():
+            flash("Invalid request.", "error")
+            return redirect(url)
+        grade_target = locked_target
+    elif len(target_keys) == 1:
+        form = ActionForm(request.form)
+        if not form.validate_on_submit():
+            flash("Invalid request.", "error")
+            return redirect(url)
+        grade_target = target_keys[0]
+    else:
+        sample_dict = all_crs[0].conflation_report_as_dict if all_crs else {}
+        choices = [(k, f"{k} ({sample_dict[k]:.1f})" if k in sample_dict else k) for k in target_keys]
+        form = ConfirmCanvasPushEventForm(request.form)
+        form.grade_target.choices = choices
+        if not form.validate_on_submit():
+            flash("Please select a grade target.", "error")
+            return redirect(url)
+        grade_target = form.grade_target.data.strip()
 
     celery = current_app.extensions["celery"]
     task = celery.tasks.get("app.tasks.canvas_push.push_event_to_canvas")
@@ -6435,31 +6522,20 @@ def push_event_to_canvas(event_id):
         flash("Canvas push task is not registered. Please contact a system administrator.", "error")
         return redirect(url)
 
-    if mode == "grade":
-        form = CanvasPushEventForm(request.form)
-        if not form.validate_on_submit():
-            flash("Invalid request.", "error")
-            return redirect(url)
+    try:
+        event.canvas_grade_target = grade_target
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError locking canvas_grade_target", exc_info=e)
+        flash("Could not lock the grade target due to a database error.", "error")
+        return redirect(url)
 
-        grade_target = form.grade_target.data.strip()
-        if not grade_target:
-            flash("No grade target specified.", "error")
-            return redirect(url)
-
-        task.apply_async(args=[event_id, grade_target], kwargs={"mode": "grade"})
-        flash(
-            f"Bulk grade push queued for all eligible students (target: '{grade_target}').",
-            "success",
-        )
-    else:
-        form = CanvasFeedbackPushEventForm(request.form)
-        if not form.validate_on_submit():
-            flash("Invalid request.", "error")
-            return redirect(url)
-
-        task.apply_async(args=[event_id, ""], kwargs={"mode": "feedback"})
-        flash("Bulk feedback PDF upload queued for all eligible students.", "success")
-
+    task.apply_async(args=[event_id, grade_target], kwargs={"mode": "grade"})
+    flash(
+        f"Bulk grade push queued for all eligible students (target: '{grade_target}').",
+        "success",
+    )
     return redirect(url)
 
 

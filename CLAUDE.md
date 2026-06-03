@@ -121,8 +121,44 @@ Migrations use Flask-Migrate (Alembic). Migrations cannot be generated directly 
 needs configuration, which is only available inside a Docker container.
 
 Do NOT generate Alembic migrations by calling `flask db migrate`. Instead, write migrations by hand.
-Ensure that you do NOT duplicate migration identifiers. Ensure that you carefully read the migration chain
-and add new migrations at the tip. Do not create forks.
+
+#### Finding the chain tip (always do this before writing a new migration)
+
+Run this exact command — it handles both single-quoted and double-quoted revision strings:
+
+```bash
+comm -23 \
+  <(grep -hrE "^revision\s*=" migrations/versions/ | grep -oE "[a-f0-9]{12}" | sort -u) \
+  <(grep -hrE "^down_revision\s*=" migrations/versions/ | grep -oE "[a-f0-9]{12}" | sort -u)
+```
+
+The output must be **exactly one line** — that is the current tip revision ID. If it is more than one
+line the chain is forked and must be investigated before adding a new migration.
+
+Do NOT use `awk -F'"'` or any quote-delimited parsing to extract revision IDs: some migration files
+use single quotes, others use double quotes, and quote-based parsing will silently miss entries and
+produce a wrong answer.
+
+#### Choosing a new migration ID
+
+Migration IDs in this project are 12 hex characters (e.g. `d2e3f4a5b6c7`). Before using a new ID,
+verify it is not already in use:
+
+```bash
+grep -r "NEW_ID" migrations/versions/
+```
+
+If this returns any output, choose a different ID.
+
+#### Writing the migration file
+
+- Set `down_revision` to the single tip revision ID found above (a plain string, never a tuple
+  unless you are intentionally writing a merge migration — which should be rare and only done
+  when the chain is genuinely forked).
+- Use double quotes for `revision` and `down_revision` values, consistent with the majority of
+  existing migration files.
+- Do not create forks: each new migration must have exactly one `down_revision` string that
+  matches the current tip.
 
 ## Implementation policies
 

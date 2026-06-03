@@ -1,0 +1,141 @@
+{% extends "base_app.html" %}
+
+{% block title %}Confirm bulk Canvas grade push – {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> Back
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                    Confirm bulk Canvas grade push &mdash; <strong>{{ event.name }}</strong>
+                </h4>
+            </div>
+
+            <div class="card border-danger mb-3">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                    <strong>Confirm push to Canvas</strong>
+                </div>
+                <div class="card-body">
+
+                    <dl class="row mb-3 small">
+                        <dt class="col-sm-4 text-body-secondary">Event</dt>
+                        <dd class="col-sm-8">{{ event.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Period</dt>
+                        <dd class="col-sm-8">{{ event.period.display_name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Project class</dt>
+                        <dd class="col-sm-8">{{ pclass.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Students to push</dt>
+                        <dd class="col-sm-8"><strong>{{ canvas_pushable_count }}</strong></dd>
+                    </dl>
+
+                    <div class="alert alert-danger py-2 mb-3">
+                        <i class="fas fa-exclamation-circle fa-fw me-1"></i>
+                        <strong>This is a one-time operation.</strong>
+                        Once grades have been pushed to Canvas they cannot be updated without
+                        performing a <strong>re-conflation</strong> of this event first. Ensure
+                        all grades are correct and have been approved before proceeding.
+                    </div>
+
+                    {% if locked_target %}
+                        {# Target already locked — no choice #}
+                        <div class="mb-3">
+                            <p class="mb-1">
+                                The Canvas grade target for this event is
+                                <strong class="text-danger">locked</strong> to:
+                            </p>
+                            <span class="badge bg-primary fs-6 px-3 py-2">{{ locked_target }}</span>
+                        </div>
+                        {% if event.canvas_grade_target %}
+                            <div class="alert alert-secondary py-2 mb-3 small">
+                                <i class="fas fa-lock fa-fw me-1"></i>
+                                The target was locked when the first grade was pushed for this event.
+                                To use a different target you must perform a re-conflation first.
+                            </div>
+                        {% endif %}
+                        <form method="POST"
+                              action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
+                            {{ form.hidden_tag() }}
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                                    Push {{ canvas_pushable_count }} grade{{ 's' if canvas_pushable_count != 1 else '' }} to Canvas
+                                </button>
+                                <a class="btn btn-outline-secondary" href="{{ url }}">
+                                    <i class="fas fa-times fa-fw"></i> Cancel
+                                </a>
+                            </div>
+                        </form>
+
+                    {% elif target_keys | length == 1 %}
+                        {# Single target — no choice needed #}
+                        <div class="mb-3">
+                            <p class="mb-1">The following target will be pushed and locked for this event:</p>
+                            <span class="badge bg-primary fs-6 px-3 py-2">{{ target_keys[0] }}</span>
+                        </div>
+                        <form method="POST"
+                              action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
+                            {{ form.hidden_tag() }}
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                                    Push {{ canvas_pushable_count }} grade{{ 's' if canvas_pushable_count != 1 else '' }} to Canvas
+                                </button>
+                                <a class="btn btn-outline-secondary" href="{{ url }}">
+                                    <i class="fas fa-times fa-fw"></i> Cancel
+                                </a>
+                            </div>
+                        </form>
+
+                    {% else %}
+                        {# Multiple targets — user must select #}
+                        <div class="mb-3">
+                            <p class="mb-1 fw-semibold">Select which conflated grade to push to Canvas:</p>
+                            <p class="text-body-secondary small mb-2">
+                                Your selection will be locked for this event and used for all
+                                subsequent pushes. It cannot be changed without re-conflating.
+                            </p>
+                        </div>
+                        <form method="POST"
+                              action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
+                            {{ form.hidden_tag() }}
+                            <div class="mb-3">
+                                {% for subfield in form.grade_target %}
+                                    <div class="form-check">
+                                        {{ subfield(class="form-check-input") }}
+                                        <label class="form-check-label" for="{{ subfield.id }}">
+                                            {{ subfield.label.text }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                                {% if form.grade_target.errors %}
+                                    {% for error in form.grade_target.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                                    Push {{ canvas_pushable_count }} grade{{ 's' if canvas_pushable_count != 1 else '' }} to Canvas
+                                </button>
+                                <a class="btn btn-outline-secondary" href="{{ url }}">
+                                    <i class="fas fa-times fa-fw"></i> Cancel
+                                </a>
+                            </div>
+                        </form>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

@@ -1230,6 +1230,18 @@ class CanvasFeedbackPushEventForm(Form):
     submit = SubmitField("Push all feedback PDFs to Canvas")
 
 
+class ConfirmCanvasPushEventForm(Form):
+    """
+    Confirmation form for bulk Canvas grade push when the target has not yet been locked.
+    The grade_target RadioField choices are set dynamically by the view from the event's
+    target keys. When the target is already locked, the view uses ActionForm() instead.
+    """
+
+    grade_target = RadioField("Grade target", validators=[DataRequired()])
+
+    submit = SubmitField("Confirm push to Canvas")
+
+
 # ---- MarkingWorkflow forms ----
 
 # Role choices for MarkingWorkflow: ROLE_SUPERVISOR covers both supervisor types

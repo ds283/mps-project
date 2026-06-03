@@ -314,17 +314,12 @@
             </div>
             <div class="card-body d-flex flex-wrap gap-2">
                 {% if canvas_pushable_count > 0 %}
-                    <form method="POST"
-                          action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
-                        {{ canvas_push_event_form.hidden_tag() }}
-                        <input type="hidden" name="grade_target" value="{{ default_canvas_target }}">
-                        <input type="hidden" name="mode" value="grade">
-                        <button type="submit" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
-                            Push all grades to Canvas
-                            <span class="badge bg-primary ms-1">{{ canvas_pushable_count }}</span>
-                        </button>
-                    </form>
+                    <a href="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                        Push all grades to Canvas
+                        <span class="badge bg-primary ms-1">{{ canvas_pushable_count }}</span>
+                    </a>
                 {% endif %}
                 {% if canvas_feedback_pushable_count > 0 %}
                     <form method="POST"

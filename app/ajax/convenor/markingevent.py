@@ -1813,7 +1813,7 @@ _conflation_report_menu = """
                 </form>
             {% endif %}
         {% else %}
-            <span class="dropdown-item text-body-secondary disabled">No grades available</span>
+            <span class="dropdown-item disabled">No grades available</span>
         {% endfor %}
 
         {# ── Section 2: Feedback ───────────────────────────────────────────── #}
@@ -1855,7 +1855,7 @@ _conflation_report_menu = """
             </form>
         {% endif %}
         {% if feedback_count == 0 and cr.feedback_emails.count() == 0 and cr.feedback_sent %}
-            <span class="dropdown-item text-body-secondary disabled">
+            <span class="dropdown-item disabled">
                 <i class="fas fa-check-circle fa-fw"></i> Feedback sent
             </span>
         {% endif %}
@@ -1875,7 +1875,7 @@ _conflation_report_menu = """
                 </button>
             </form>
         {% else %}
-            <span class="dropdown-item text-body-secondary disabled">
+            <span class="dropdown-item disabled">
                 <i class="fas fa-lock fa-fw"></i> Feedback sent &mdash; cannot reconflate
             </span>
         {% endif %}
@@ -1894,7 +1894,7 @@ _conflation_report_menu = """
                         Push grade to Canvas
                     </a>
                 {% else %}
-                    <span class="dropdown-item text-body-secondary small disabled d-flex gap-2">
+                    <span class="dropdown-item small disabled d-flex gap-2">
                         <i class="fas fa-check-circle fa-fw text-success"></i>
                         Grade on Canvas
                         {% if canvas_grade_target %}({{ canvas_grade_target }}){% endif %}
@@ -1909,7 +1909,7 @@ _conflation_report_menu = """
                             Upload feedback PDF to Canvas
                         </a>
                     {% else %}
-                        <span class="dropdown-item text-body-secondary small disabled d-flex gap-2"
+                        <span class="dropdown-item small disabled d-flex gap-2"
                               data-bs-toggle="tooltip"
                               title="Generate feedback PDF first">
                             <i class="fas fa-file-pdf fa-fw"></i>
@@ -1917,13 +1917,13 @@ _conflation_report_menu = """
                         </span>
                     {% endif %}
                 {% elif canvas_feedback_pushed %}
-                    <span class="dropdown-item text-body-secondary small disabled d-flex gap-2">
+                    <span class="dropdown-item small disabled d-flex gap-2">
                         <i class="fas fa-check-circle fa-fw text-success"></i>
                         Feedback PDF on Canvas
                     </span>
                 {% endif %}
             {% else %}
-                <span class="dropdown-item text-body-secondary disabled">
+                <span class="dropdown-item disabled">
                     <i class="fas fa-cloud-upload-alt fa-fw"></i>
                     Canvas push unavailable
                 </span>

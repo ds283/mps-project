@@ -1317,7 +1317,13 @@ def register_marking_tasks(celery):
           the absolute filesystem path (str) to the downloaded scratch file.
 
         Filters:
-          markdown  -- renders a Markdown string to HTML (wraps markdown.markdown())
+          markdown        -- renders a Markdown string to HTML (wraps markdown.markdown())
+
+        Callables:
+          raise_exception(msg: str) -- raises ValueError(msg); use this to abort
+                                       PDF generation from within the template when
+                                       required data is absent or invalid (see
+                                       ABORT PROTOCOL below)
 
         CONFLATION REPORT SCHEMA  (variable: conflation_report)
         ========================================================
@@ -1364,9 +1370,13 @@ def register_marking_tasks(celery):
         ==============
         The template may raise any Exception to signal that it cannot produce a
         valid PDF from the available data (e.g. required grades are missing).
+        The preferred way to do this from Jinja2 is via the injected callable:
+
+          {{ raise_exception("reason") }}
+
         The task catches the exception, sets cr.feedback_generation_failed = True,
         clears cr.feedback_celery_id, commits, and returns {"generated": 0}
-        without retrying.  The exception is logged at WARNING level.
+        without retrying.  The exception message is logged at WARNING level.
 
         MAINTENANCE NOTE FOR FUTURE AGENTS
         ===================================
@@ -1525,6 +1535,11 @@ def register_marking_tasks(celery):
 
         template_env.globals["conflation_report"] = conflation_data
         template_env.globals["workflow_data"] = workflow_data
+
+        def _raise(msg: str):
+            raise ValueError(msg)
+
+        template_env.globals["raise_exception"] = _raise
 
         template = template_env.get_template("template")
         try:

@@ -5442,6 +5442,21 @@ def reassign_marking_report(report_id):
                 creation_timestamp=datetime.now(),
             )
             db.session.add(new_mr)
+            db.session.flush()  # materialise new MR before re-evaluation
+
+            # Re-evaluate SR state. Both old and new reports are unsubmitted, so this
+            # is a no-op for most states. It does handle READY_TO_DISTRIBUTE correctly:
+            # if the old report was distributed but the new one is not, the SR must
+            # remain in READY_TO_DISTRIBUTE rather than advancing to AWAITING_GRADING_REPORTS.
+            if sr.workflow_state not in (
+                SubmitterReportWorkflowStates.COMPLETED,
+                SubmitterReportWorkflowStates.DROPPED,
+            ):
+                from ..tasks.markingevent import advance_submitter_report
+
+                advance_submitter_report(sr)
+                workflow.refresh_completed()
+                event.refresh_completed()
 
             log_db_commit(
                 f"Reassigned MarkingReport for SubmitterReport #{sr.id} "
@@ -5806,7 +5821,7 @@ def drop_submitter_report(sr_id):
 
     sr.workflow_state = SubmitterReportWorkflowStates.DROPPED
     sr.dropped_by_id = current_user.id
-    sr.dropped_by_timestamp = datetime.datetime.now()
+    sr.dropped_by_timestamp = datetime.now()
     workflow.refresh_completed()
     event.refresh_completed()
 

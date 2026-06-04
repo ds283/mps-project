@@ -46,7 +46,7 @@ from ..models import (
     SubmittingStudent,
     User,
 )
-from ..models.markingevent import MarkingEventWorkflowStates
+from ..models.markingevent import MarkingEventWorkflowStates, SubmitterReportWorkflowStates
 from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
@@ -1174,8 +1174,13 @@ def perform_delete_role(role_id):
     deleted_role_type = role.role
 
     try:
-        # Sync: remove any MarkingReports linked to this role before deleting it
-        for mr in db.session.query(MarkingReport).filter_by(role_id=role.id).all():
+        # Sync: collect affected SubmitterReports before deleting their MarkingReports,
+        # so we can re-evaluate state after the operation completes.
+        _mrs_to_delete = db.session.query(MarkingReport).filter_by(role_id=role.id).all()
+        affected_srs: dict[int, SubmitterReport] = {
+            mr.submitter_report_id: mr.submitter_report for mr in _mrs_to_delete
+        }
+        for mr in _mrs_to_delete:
             db.session.delete(mr)
 
         db.session.delete(role)
@@ -1186,6 +1191,7 @@ def perform_delete_role(role_id):
         _supervisor_role_types = frozenset(
             {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
         )
+        rebuilt_sr_ids: set[int] = set()
         if deleted_role_type in _supervisor_role_types:
             for event in period.marking_events.filter(
                 MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED
@@ -1231,6 +1237,10 @@ def perform_delete_role(role_id):
                             creation_timestamp=datetime.now(),
                         )
                         db.session.add(mr)
+                        rebuilt_sr_ids.add(sr.id)
+                        affected_srs[sr.id] = sr
+
+        db.session.flush()  # materialise replacement MRs before re-evaluation
 
         log_db_commit(
             "Deleted submission role from submission record",
@@ -1238,6 +1248,31 @@ def perform_delete_role(role_id):
             student=sub.student,
             project_classes=config.project_class,
         )
+
+        # Re-evaluate SubmitterReport workflow states affected by the role deletion.
+        # For SRs that received a fresh replacement MR, regress advanced states back
+        # to READY_TO_DISTRIBUTE since the new report has not yet been distributed.
+        from ..tasks.markingevent import advance_submitter_report
+
+        _advanced_states = frozenset({
+            SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
+            SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+            SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+        })
+        for sr in affected_srs.values():
+            if sr.workflow_state in (
+                SubmitterReportWorkflowStates.COMPLETED,
+                SubmitterReportWorkflowStates.DROPPED,
+            ):
+                continue
+            if sr.id in rebuilt_sr_ids and sr.workflow_state in _advanced_states:
+                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+            advance_submitter_report(sr)
+            sr.workflow.refresh_completed()
+            sr.workflow.event.refresh_completed()
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1300,6 +1335,7 @@ def add_role(record_id):
             _supervisor_roles = frozenset(
                 {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
             )
+            affected_srs: dict[int, SubmitterReport] = {}
             for event in period.marking_events.filter(
                 MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED
             ).all():
@@ -1345,6 +1381,7 @@ def add_role(record_id):
                             creation_timestamp=datetime.now(),
                         )
                         db.session.add(mr)
+                        affected_srs[sr.id] = sr
 
                     else:
                         if role.role != wf_role:
@@ -1373,6 +1410,9 @@ def add_role(record_id):
                             creation_timestamp=datetime.now(),
                         )
                         db.session.add(mr)
+                        affected_srs[sr.id] = sr
+
+            db.session.flush()  # materialise new MRs before re-evaluation
 
             log_db_commit(
                 "Added new submission role to submission record",
@@ -1380,6 +1420,32 @@ def add_role(record_id):
                 student=sub.student,
                 project_classes=config.project_class,
             )
+
+            # Re-evaluate SubmitterReport workflow states. Adding a fresh unsubmitted MR to
+            # a SR that had already advanced past AWAITING_GRADING_REPORTS means the grade
+            # conditions are no longer satisfied; regress to READY_TO_DISTRIBUTE so the new
+            # assessor receives a distribution notification.
+            from ..tasks.markingevent import advance_submitter_report
+
+            _advanced_states = frozenset({
+                SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
+                SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
+                SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+                SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+                SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+            })
+            for sr in affected_srs.values():
+                if sr.workflow_state in (
+                    SubmitterReportWorkflowStates.COMPLETED,
+                    SubmitterReportWorkflowStates.DROPPED,
+                ):
+                    continue
+                if sr.workflow_state in _advanced_states:
+                    sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                advance_submitter_report(sr)
+                sr.workflow.refresh_completed()
+                sr.workflow.event.refresh_completed()
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

@@ -108,12 +108,11 @@
                     $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
                 },
                 columns: [
-                    {data: 'name', orderable: true, searchable: true},
-                    {data: 'scheme', orderable: false, searchable: false},
-                    {data: 'attachments', orderable: false, searchable: false},
-                    {data: 'reports', orderable: false, searchable: false},
+                    {data: 'name',         orderable: true,  searchable: true},
+                    {data: 'reports',      orderable: false, searchable: false},
+                    {data: 'signoff',      orderable: false, searchable: false},
                     {data: 'distribution', orderable: false, searchable: false},
-                    {data: 'menu', orderable: false, searchable: false}
+                    {data: 'menu',         orderable: false, searchable: false}
                 ],
                 order: [[0, 'asc']]
             });
@@ -342,11 +341,10 @@
                         <thead>
                         <tr>
                             <th width="18%">Workflow</th>
-                            <th width="15%">Marking scheme</th>
-                            <th width="12%">Attachments</th>
-                            <th width="15%">Reports</th>
-                            <th width="20%">Distribution</th>
-                            <th width="20%">Actions</th>
+                            <th width="30%">Reports &amp; progress</th>
+                            <th width="28%">Sign-off &amp; moderation</th>
+                            <th width="16%">Distribution &amp; attachments</th>
+                            <th width="8%">Actions</th>
                         </tr>
                         </thead>
                     </table>

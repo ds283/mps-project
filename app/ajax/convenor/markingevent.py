@@ -32,6 +32,14 @@ _EVENT_STATES = {
     "CLOSED": MarkingEventWorkflowStates.CLOSED,
 }
 
+_SR_STATES = {
+    "COMPLETED": SubmitterReportWorkflowStates.COMPLETED,
+    "FEEDBACK_AVAILABLE": SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+    "READY_TO_SIGN_OFF": SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+    "NEEDS_MODERATOR_ASSIGNED": SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+    "AWAITING_MODERATOR_REPORT": SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+}
+
 # language=jinja2
 _marking_event_period = """
 <div class="text-primary">{{ event.period.display_name }}</div>
@@ -49,29 +57,67 @@ _marking_event_period = """
 # language=jinja2
 _marking_event_name = """
 <div>{{ event.name }}</div>
-{% set pclass = event.pclass %}
-{% set swatch_colour = pclass.make_CSS_style() %}
-<div class="d-flex flex-row justify-content-start align-items-center gap-2">
-    {{ small_swatch(swatch_colour) }}
-    <span class="small">{{ pclass.name }}</span>
-</div>
 """
 
 # language=jinja2
-_marking_event_workflows = """
+_marking_event_workflow_cards = """
 {% set workflows = event.workflows.all() %}
 {% if workflows|length > 0 %}
-    <div class="d-flex flex-column gap-1">
-        {% for wf in workflows %}
-            <div>
-                <i class="fas fa-clipboard-check me-1"></i>
-                <span class="text-primary">{{ wf.name }}</span>
-                {% if wf.completed %}
-                    <span class="badge bg-success ms-1 small">Complete</span>
-                {% endif %}
-            </div>
+    {% for wf in workflows %}
+        {% set ns = namespace(returned=0, sr_signoff=0, mr_submitted=0) %}
+        {% for sr in wf.submitter_reports %}
+            {% if sr.workflow_state == COMPLETED or sr.workflow_state == FEEDBACK_AVAILABLE %}
+                {% set ns.returned = ns.returned + 1 %}
+            {% endif %}
+            {% if sr.completed_by_id is not none %}
+                {% set ns.sr_signoff = ns.sr_signoff + 1 %}
+            {% endif %}
+            {% for mr in sr.marking_reports %}
+                {% if mr.report_submitted %}{% set ns.mr_submitted = ns.mr_submitted + 1 %}{% endif %}
+            {% endfor %}
         {% endfor %}
-    </div>
+        {% set sr_total = wf.number_submitter_reports %}
+        {% set mr_total = wf.number_marking_reports %}
+        <div class="border rounded-2 p-2 mb-1 small {% if wf.completed %}border-success bg-success-subtle{% else %}border-secondary{% endif %}">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-clipboard-check {% if wf.completed %}text-success{% else %}text-primary{% endif %}"></i>
+                <span class="fw-semibold {% if wf.completed %}text-success{% else %}text-primary{% endif %}">{{ wf.name }}</span>
+                {% if wf.completed %}<span class="badge bg-success ms-auto">Complete</span>{% endif %}
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span class="text-body-secondary" style="min-width:52px">Returned</span>
+                <div class="progress flex-grow-1" style="height:4px">
+                    <div class="progress-bar bg-success" role="progressbar"
+                         style="width:{{ ((ns.returned / sr_total) * 100)|int if sr_total > 0 else 0 }}%"
+                         aria-valuenow="{{ ((ns.returned / sr_total) * 100)|int if sr_total > 0 else 0 }}"
+                         aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <span class="text-body-secondary">{{ ns.returned }}/{{ sr_total }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span class="text-body-secondary" style="min-width:52px">Signed off</span>
+                <div class="progress flex-grow-1" style="height:4px">
+                    <div class="progress-bar bg-success" role="progressbar"
+                         style="width:{{ ((ns.sr_signoff / sr_total) * 100)|int if sr_total > 0 else 0 }}%"
+                         aria-valuenow="{{ ((ns.sr_signoff / sr_total) * 100)|int if sr_total > 0 else 0 }}"
+                         aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <span class="text-body-secondary">{{ ns.sr_signoff }}/{{ sr_total }}</span>
+            </div>
+            {% if mr_total > 0 %}
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="text-body-secondary" style="min-width:52px">MR sub.</span>
+                    <div class="progress flex-grow-1" style="height:4px">
+                        <div class="progress-bar bg-info" role="progressbar"
+                             style="width:{{ ((ns.mr_submitted / mr_total) * 100)|int if mr_total > 0 else 0 }}%"
+                             aria-valuenow="{{ ((ns.mr_submitted / mr_total) * 100)|int if mr_total > 0 else 0 }}"
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <span class="text-body-secondary">{{ ns.mr_submitted }}/{{ mr_total }}</span>
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
 {% else %}
     <span class="badge bg-secondary">None</span>
 {% endif %}
@@ -131,6 +177,22 @@ _marking_workflow_name = """
 {% if deadline is not none %}
     <div class="small text-muted mt-1"><i class="fas fa-clock fa-fw"></i> Deadline: {{ deadline.strftime("%d/%m/%Y") }}</div>
 {% endif %}
+<hr class="my-1">
+{% if workflow.scheme is not none %}
+    <div class="small text-success"><i class="fas fa-check-circle fa-fw"></i> {{ workflow.scheme.name }}</div>
+    {% if workflow.scheme.creation_timestamp is not none
+         and workflow.scheme.parent is not none
+         and workflow.scheme.parent.last_edit_timestamp is not none
+         and workflow.scheme.creation_timestamp < workflow.scheme.parent.last_edit_timestamp %}
+        <div class="mt-1">
+            <span class="badge bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> Scheme updated
+            </span>
+        </div>
+    {% endif %}
+{% else %}
+    <span class="badge bg-warning text-dark small">No scheme</span>
+{% endif %}
 """
 
 # language=jinja2
@@ -168,32 +230,157 @@ _marking_workflow_attachments = """
 """
 
 # language=jinja2
-_marking_workflow_reports = """
-{% set submitter_count = workflow.number_submitter_reports %}
-{% set marking_count = workflow.number_marking_reports %}
+_marking_workflow_reports_progress = """
+{% set sr_total = workflow.number_submitter_reports %}
+{% set mr_total = workflow.number_marking_reports %}
 {% set failure_count = workflow.number_processing_failures %}
-<div class="small">
-    <div><i class="fas fa-user-graduate"></i> <strong>{{ submitter_count }}</strong> submitter report{{ 's' if submitter_count != 1 else '' }}</div>
-    <div class="mt-1"><i class="fas fa-marker"></i> <strong>{{ marking_count }}</strong> marking report{{ 's' if marking_count != 1 else '' }}</div>
-    {% if failure_count > 0 %}
-        <div class="mt-1"><span class="badge bg-danger">{{ failure_count }} processing failure{{ 's' if failure_count != 1 else '' }}</span></div>
+{% set sr_ns = namespace(returned=0, signed_off=0) %}
+{% set mr_ns = namespace(submitted=0, signed_off=0, pending_signoff=0) %}
+{% set mod_ns = namespace(total=0) %}
+{% for sr in workflow.submitter_reports %}
+    {% if sr.workflow_state == COMPLETED or sr.workflow_state == FEEDBACK_AVAILABLE %}
+        {% set sr_ns.returned = sr_ns.returned + 1 %}
     {% endif %}
+    {% if sr.completed_by_id is not none %}
+        {% set sr_ns.signed_off = sr_ns.signed_off + 1 %}
+    {% endif %}
+    {% for mr in sr.marking_reports %}
+        {% if mr.report_submitted %}{% set mr_ns.submitted = mr_ns.submitted + 1 %}{% endif %}
+        {% if mr.signed_off_id is not none %}{% set mr_ns.signed_off = mr_ns.signed_off + 1 %}{% endif %}
+        {% if mr.report_submitted and mr.signed_off_id is none %}{% set mr_ns.pending_signoff = mr_ns.pending_signoff + 1 %}{% endif %}
+    {% endfor %}
+    {% if workflow.scheme is not none and workflow.scheme.uses_tolerance %}
+        {% set mod_ns.total = mod_ns.total + sr.moderator_reports.count() %}
+    {% endif %}
+{% endfor %}
+<div class="small text-body-secondary fw-semibold mb-1">Submitter reports</div>
+{% set sr_ret_pct = ((sr_ns.returned / sr_total) * 100)|int if sr_total > 0 else 0 %}
+<div class="d-flex align-items-center gap-2 small mb-1">
+    <span class="text-body-secondary" style="min-width:60px">Returned</span>
+    <div class="progress flex-grow-1" style="height:4px">
+        <div class="progress-bar bg-success" role="progressbar"
+             style="width:{{ sr_ret_pct }}%" aria-valuenow="{{ sr_ret_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <span class="text-body-secondary">{{ sr_ns.returned }}/{{ sr_total }}</span>
 </div>
+{% set sr_so_pct = ((sr_ns.signed_off / sr_total) * 100)|int if sr_total > 0 else 0 %}
+<div class="d-flex align-items-center gap-2 small mb-1">
+    <span class="text-body-secondary" style="min-width:60px">Signed off</span>
+    <div class="progress flex-grow-1" style="height:4px">
+        <div class="progress-bar bg-success" role="progressbar"
+             style="width:{{ sr_so_pct }}%" aria-valuenow="{{ sr_so_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <span class="text-body-secondary">{{ sr_ns.signed_off }}/{{ sr_total }}</span>
+</div>
+{% if failure_count > 0 %}
+    <span class="badge bg-danger">{{ failure_count }} processing failure{{ 's' if failure_count != 1 else '' }}</span>
+{% endif %}
+<hr class="my-1">
+<div class="small text-body-secondary fw-semibold mb-1">Marking reports</div>
+{% set mr_sub_pct = ((mr_ns.submitted / mr_total) * 100)|int if mr_total > 0 else 0 %}
+<div class="d-flex align-items-center gap-2 small mb-1">
+    <span class="text-body-secondary" style="min-width:60px">Submitted</span>
+    <div class="progress flex-grow-1" style="height:4px">
+        <div class="progress-bar bg-info" role="progressbar"
+             style="width:{{ mr_sub_pct }}%" aria-valuenow="{{ mr_sub_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <span class="text-body-secondary">{{ mr_ns.submitted }}/{{ mr_total }}</span>
+</div>
+{% set mr_fb_count = workflow.number_marking_reports_with_feedback %}
+{% set mr_fb_pct = ((mr_fb_count / mr_total) * 100)|int if mr_total > 0 else 0 %}
+<div class="d-flex align-items-center gap-2 small mb-1">
+    <span class="text-body-secondary" style="min-width:60px">Feedback</span>
+    <div class="progress flex-grow-1" style="height:4px">
+        <div class="progress-bar bg-success" role="progressbar"
+             style="width:{{ mr_fb_pct }}%" aria-valuenow="{{ mr_fb_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <span class="text-body-secondary">{{ mr_fb_count }}/{{ mr_total }}</span>
+</div>
+{% set mr_so_pct = ((mr_ns.signed_off / mr_total) * 100)|int if mr_total > 0 else 0 %}
+<div class="d-flex align-items-center gap-2 small mb-1">
+    <span class="text-body-secondary" style="min-width:60px">Signed off</span>
+    <div class="progress flex-grow-1" style="height:4px">
+        <div class="progress-bar bg-success" role="progressbar"
+             style="width:{{ mr_so_pct }}%" aria-valuenow="{{ mr_so_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <span class="text-body-secondary">{{ mr_ns.signed_off }}/{{ mr_total }}</span>
+</div>
+{% if mr_ns.pending_signoff > 0 %}
+    <span class="badge bg-warning text-dark">{{ mr_ns.pending_signoff }} pending sign-off</span>
+{% endif %}
+{% if workflow.scheme is not none and workflow.scheme.uses_tolerance %}
+    <div class="small text-body-secondary mt-1">
+        <i class="fas fa-gavel fa-fw"></i> {{ mod_ns.total }} moderator report{{ 's' if mod_ns.total != 1 else '' }}
+    </div>
+{% endif %}
 """
 
 # language=jinja2
-_marking_workflow_distribution = """
+_marking_workflow_signoff = """
+{% set sr_total = workflow.number_submitter_reports %}
+{% set so_ns = namespace(signed_off=0, awaiting=0, oot=0, oot_resolved=0, awaiting_mod=0, needs_mod=0) %}
+{% for sr in workflow.submitter_reports %}
+    {% if sr.completed_by_id is not none %}{% set so_ns.signed_off = so_ns.signed_off + 1 %}{% endif %}
+    {% if sr.workflow_state == READY_TO_SIGN_OFF %}{% set so_ns.awaiting = so_ns.awaiting + 1 %}{% endif %}
+    {% if workflow.scheme is not none and workflow.scheme.uses_tolerance %}
+        {% if sr.out_of_tolerance %}
+            {% set so_ns.oot = so_ns.oot + 1 %}
+            {% if sr.accepted_moderator_report is not none %}{% set so_ns.oot_resolved = so_ns.oot_resolved + 1 %}{% endif %}
+        {% endif %}
+        {% if sr.workflow_state == AWAITING_MODERATOR_REPORT %}{% set so_ns.awaiting_mod = so_ns.awaiting_mod + 1 %}{% endif %}
+        {% if sr.workflow_state == NEEDS_MODERATOR_ASSIGNED %}{% set so_ns.needs_mod = so_ns.needs_mod + 1 %}{% endif %}
+    {% endif %}
+{% endfor %}
+{% set so_pct = ((so_ns.signed_off / sr_total) * 100)|int if sr_total > 0 else 0 %}
+<div class="small text-body-secondary fw-semibold mb-1">Convenor sign-off</div>
+<div class="d-flex align-items-center gap-2 small mb-1">
+    <span class="text-body-secondary" style="min-width:60px">Signed off</span>
+    <div class="progress flex-grow-1" style="height:4px">
+        <div class="progress-bar bg-success" role="progressbar"
+             style="width:{{ so_pct }}%" aria-valuenow="{{ so_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <span class="text-body-secondary">{{ so_ns.signed_off }}/{{ sr_total }}</span>
+</div>
+{% if so_ns.awaiting > 0 %}
+    <span class="badge bg-warning text-dark">{{ so_ns.awaiting }} awaiting sign-off</span>
+{% endif %}
+{% if workflow.scheme is not none and workflow.scheme.uses_tolerance %}
+    <hr class="my-1">
+    <div class="small text-body-secondary fw-semibold mb-1">Tolerance &amp; moderation</div>
+    {% if so_ns.oot > 0 %}
+        <span class="badge bg-danger mb-1">{{ so_ns.oot }} out of tolerance</span>
+        <div class="small text-body-secondary">resolved {{ so_ns.oot_resolved }}/{{ so_ns.oot }}
+            ({{ ((so_ns.oot_resolved / so_ns.oot) * 100)|int }}%)</div>
+    {% else %}
+        <span class="badge bg-success mb-1">No tolerance issues</span>
+    {% endif %}
+    {% if so_ns.awaiting_mod > 0 %}
+        <div class="mt-1"><span class="badge bg-warning text-dark">{{ so_ns.awaiting_mod }} awaiting moderator</span></div>
+    {% endif %}
+    {% if so_ns.needs_mod > 0 %}
+        <div class="mt-1"><span class="badge bg-danger">{{ so_ns.needs_mod }} need moderator assigned</span></div>
+    {% endif %}
+{% endif %}
+"""
+
+# language=jinja2
+_marking_workflow_distribution_attachments = """
 {% set total = workflow.number_marking_reports %}
 {% set distributed = workflow.number_marking_reports_distributed %}
 {% set not_distributed = workflow.number_marking_reports_undistributed %}
-{% set failure_count = workflow.number_processing_failures %}
-<div class="small">
-    {% if distributed > 0 %}
-        <div class="text-success"><i class="fas fa-check-circle"></i> {{ distributed }} distributed</div>
-    {% endif %}
+{% set dist_pct = ((distributed / total) * 100)|int if total > 0 else 0 %}
+{% if total > 0 %}
+    <div class="d-flex align-items-center gap-2 small mb-1">
+        <span class="text-body-secondary" style="min-width:60px">Sent</span>
+        <div class="progress flex-grow-1" style="height:4px">
+            <div class="progress-bar bg-success" role="progressbar"
+                 style="width:{{ dist_pct }}%" aria-valuenow="{{ dist_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <span class="text-body-secondary">{{ distributed }}/{{ total }}</span>
+    </div>
     {% if not_distributed > 0 %}
         {% if workflow.event.workflow_state >= OPEN and workflow.event.workflow_state != CLOSED %}
-            <div class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ not_distributed }} not distributed</div>
+            <span class="badge bg-danger mb-1">{{ not_distributed }} not distributed</span>
             <div class="mt-1">
                 <form method="POST"
                       action="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
@@ -205,16 +392,33 @@ _marking_workflow_distribution = """
                 </form>
             </div>
         {% else %}
-            <div class="text-muted"><i class="fas fa-clock fa-fw"></i> {{ not_distributed }} pending opening</div>
+            <div class="small text-body-secondary"><i class="fas fa-clock fa-fw"></i> {{ not_distributed }} pending opening</div>
         {% endif %}
     {% endif %}
-    {% if failure_count > 0 %}
-        <div class="mt-1"><span class="badge bg-danger">{{ failure_count }} processing failure{{ 's' if failure_count != 1 else '' }}</span></div>
+{% else %}
+    <span class="badge bg-secondary">No reports</span>
+{% endif %}
+<hr class="my-1">
+<div class="small text-body-secondary fw-semibold mb-1">Attachments</div>
+{% if workflow.attachments|length > 0 %}
+    {% for att in workflow.attachments %}
+        <div class="small"><i class="fas fa-paperclip fa-fw"></i> {{ att.filename }}</div>
+    {% endfor %}
+{% else %}
+    <span class="text-body-secondary small fst-italic">None</span>
+{% endif %}
+{% set missing_tur = namespace(count=0) %}
+{% for sr in workflow.submitter_reports %}
+    {% if sr.record is not none and sr.record.turnitin_score is none %}
+        {% set missing_tur.count = missing_tur.count + 1 %}
     {% endif %}
-    {% if total == 0 %}
-        <span class="badge bg-secondary">No reports</span>
-    {% endif %}
-</div>
+{% endfor %}
+{% if missing_tur.count > 0 %}
+    <hr class="my-1">
+    <span class="badge bg-warning text-dark">
+        <i class="fas fa-exclamation-triangle fa-fw"></i> {{ missing_tur.count }} missing Turnitin
+    </span>
+{% endif %}
 """
 
 # language=jinja2
@@ -1054,16 +1258,14 @@ def marking_event_data(events):
 
     period_tmpl = env.from_string(_marking_event_period)
     name_tmpl = env.from_string(_marking_event_name)
-    workflows_tmpl = env.from_string(_marking_event_workflows)
+    workflow_cards_tmpl = env.from_string(_marking_event_workflow_cards)
     menu_tmpl = env.from_string(_marking_event_menu)
-
-    small_swatch = get_template_attribute("swatch.html", "small_swatch")
 
     return [
         {
             "period": render_template(period_tmpl, event=event),
-            "name": render_template(name_tmpl, event=event, small_swatch=small_swatch),
-            "workflows": render_template(workflows_tmpl, event=event),
+            "name": render_template(name_tmpl, event=event),
+            "workflow_cards": render_template(workflow_cards_tmpl, event=event, **_SR_STATES),
             "menu": render_template(menu_tmpl, event=event, pclass=event.pclass),
         }
         for event in events
@@ -1593,6 +1795,8 @@ def _workflow_row_class(workflow) -> str:
     for sr in workflow.submitter_reports:
         if sr.workflow_state in _URGENT_WORKFLOW_STATES:
             return "table-danger"
+    if workflow.completed:
+        return "table-success"
     return ""
 
 
@@ -1602,10 +1806,9 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
     env = current_app.jinja_env
 
     name_tmpl = env.from_string(_marking_workflow_name)
-    scheme_tmpl = env.from_string(_marking_workflow_scheme)
-    attachments_tmpl = env.from_string(_marking_workflow_attachments)
-    reports_tmpl = env.from_string(_marking_workflow_reports)
-    distribution_tmpl = env.from_string(_marking_workflow_distribution)
+    reports_tmpl = env.from_string(_marking_workflow_reports_progress)
+    signoff_tmpl = env.from_string(_marking_workflow_signoff)
+    distribution_tmpl = env.from_string(_marking_workflow_distribution_attachments)
     menu_tmpl = env.from_string(_event_marking_workflow_menu)
 
     form = ActionForm()
@@ -1614,9 +1817,8 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
         {
             "DT_RowClass": _workflow_row_class(workflow),
             "name": render_template(name_tmpl, workflow=workflow),
-            "scheme": render_template(scheme_tmpl, workflow=workflow),
-            "attachments": render_template(attachments_tmpl, workflow=workflow),
-            "reports": render_template(reports_tmpl, workflow=workflow),
+            "reports": render_template(reports_tmpl, workflow=workflow, **_SR_STATES),
+            "signoff": render_template(signoff_tmpl, workflow=workflow, **_SR_STATES),
             "distribution": render_template(
                 distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES
             ),
@@ -1692,24 +1894,31 @@ _conflation_report_grades = """
 {% if grades %}
     <div class="d-flex flex-column gap-1">
         {% for target_name, value in grades.items() %}
-            {% if value is not none %}
-                {% if value >= 70 %}
-                    {% set badge_class = "bg-success" %}
-                {% elif value >= 50 %}
-                    {% set badge_class = "bg-warning text-dark" %}
-                {% else %}
-                    {% set badge_class = "bg-danger" %}
-                {% endif %}
-                <div class="d-flex flex-row align-items-center gap-2">
-                    <span class="badge {{ badge_class }}" style="min-width:5rem;">{{ target_name }}</span>
-                    <span class="fw-semibold text-primary">{{ "%.1f"|format(value) }}%</span>
-                </div>
+            {% if target_name == 'report' %}
+                {% set badge_bg = 'bg-success-subtle' %}
+                {% set badge_text = 'text-success-emphasis' %}
+                {% set badge_border = 'border border-success-subtle' %}
+            {% elif target_name == 'supervisor' %}
+                {% set badge_bg = 'bg-primary-subtle' %}
+                {% set badge_text = 'text-primary-emphasis' %}
+                {% set badge_border = 'border border-primary-subtle' %}
+            {% elif target_name == 'presentation' %}
+                {% set badge_bg = 'bg-warning-subtle' %}
+                {% set badge_text = 'text-warning-emphasis' %}
+                {% set badge_border = 'border border-warning-subtle' %}
             {% else %}
-                <div class="d-flex flex-row align-items-center gap-2">
-                    <span class="badge bg-secondary" style="min-width:5rem;">{{ target_name }}</span>
-                    <span class="text-body-secondary">—</span>
-                </div>
+                {% set badge_bg = 'bg-secondary-subtle' %}
+                {% set badge_text = 'text-secondary-emphasis' %}
+                {% set badge_border = 'border border-secondary-subtle' %}
             {% endif %}
+            <div class="d-flex flex-row align-items-center gap-2">
+                <span class="badge {{ badge_bg }} {{ badge_text }} {{ badge_border }}" style="min-width:5rem;">{{ target_name }}</span>
+                {% if value is not none %}
+                    <span class="fw-semibold text-body">{{ "%.1f"|format(value) }}%</span>
+                {% else %}
+                    <span class="text-body-secondary">—</span>
+                {% endif %}
+            </div>
         {% endfor %}
     </div>
     <div class="small text-muted mt-2">
@@ -1720,12 +1929,12 @@ _conflation_report_grades = """
             <i class="fas fa-clock fa-fw"></i> {{ cr.generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
         {% endif %}
         {% if cr.is_stale %}
-            <div class="mt-1"><span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle fa-fw"></i> Stale</span></div>
+            <div class="mt-1"><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="fas fa-exclamation-triangle fa-fw"></i> Stale</span></div>
         {% endif %}
         {% set policy = cr.rounding_policy %}
         {% if policy and policy.identifier != event_rounding_policy.identifier %}
             <div class="mt-1">
-                <span class="badge bg-warning text-dark"
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"
                       title="Differs from event default">
                     <i class="fas fa-exclamation-triangle fa-fw"></i>
                     {{ policy.label }}
@@ -1734,7 +1943,7 @@ _conflation_report_grades = """
         {% endif %}
     </div>
 {% else %}
-    <span class="badge bg-secondary">No grades</span>
+    <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">No grades</span>
 {% endif %}
 """
 
@@ -1785,13 +1994,13 @@ _conflation_report_feedback = """
                 {% endif %}
             </div>
         {% else %}
-            <span class="badge bg-primary small mt-1">
+            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle small mt-1">
                 <i class="fas fa-hourglass-half fa-fw"></i> Not yet sent
             </span>
         {% endif %}
     </div>
 {% else %}
-    <span class="badge bg-secondary">No feedback</span>
+    <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">No feedback</span>
 {% endif %}
 """
 
@@ -1950,7 +2159,7 @@ _conflation_report_canvas = """
 {% else %}
     <div class="d-flex flex-column gap-1">
         {% if feedback_pushed %}
-            <span class="badge bg-success py-1 px-2"
+            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle py-1 px-2"
                   {% if feedback_ts %}
                   data-bs-toggle="tooltip"
                   title="PDF uploaded {{ feedback_ts.strftime('%d %b %Y %H:%M') }}"
@@ -1959,7 +2168,7 @@ _conflation_report_canvas = """
             </span>
         {% endif %}
         {% if grade_pushed %}
-            <span class="badge bg-primary py-1 px-2"
+            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle py-1 px-2"
                   {% if grade_ts %}
                   data-bs-toggle="tooltip"
                   title="Grade '{{ grade_target }}' pushed {{ grade_ts.strftime('%d %b %Y %H:%M') }}"

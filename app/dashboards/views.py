@@ -492,30 +492,21 @@ def _get_accessible_years_for_marking(
 # ---------------------------------------------------------------------------
 
 
-def _compute_workflow_health(
-    workflow: MarkingWorkflow,
-    dropped_record_ids: Optional[Set[int]] = None,
-) -> Dict:
+def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
     """
     Compute all health metrics for a single MarkingWorkflow.
     Fetches submitter_reports and marking_reports in a minimal number of
     round trips and returns a dict safe to pass directly to the template.
 
-    dropped_record_ids: optional set of SubmissionRecord IDs that are DROPPED in any
-    workflow of the same event; SRs whose record_id appears here are also excluded even
-    if their own workflow_state is not yet DROPPED (cross-workflow withdrawal detection).
+    Only SRs that are DROPPED within this specific workflow are excluded from
+    the active count. A student dropped from another workflow in the same event
+    is still counted here.
     """
     srs = workflow.submitter_reports.all()
-    # Exclude DROPPED records from all health metrics: they are terminal and require no
-    # action, so they must not inflate denominators or suppress percentages below 100%.
-    # Also exclude records withdrawn from any other workflow of the same event so that
-    # a student dropped from the Examiners workflow (for example) is not counted as
-    # outstanding in the Supervisors workflow.
+    # Exclude only SRs that are DROPPED in this workflow — DROPPED is a terminal
+    # per-workflow state that requires no further action.
     active_srs = [
-        sr
-        for sr in srs
-        if sr.workflow_state != SubmitterReportWorkflowStates.DROPPED
-        and (dropped_record_ids is None or sr.record_id not in dropped_record_ids)
+        sr for sr in srs if sr.workflow_state != SubmitterReportWorkflowStates.DROPPED
     ]
     n_dropped = len(srs) - len(active_srs)
     n_sr = len(active_srs)
@@ -654,15 +645,7 @@ def _build_marking_dashboard_sections(events: List[MarkingEvent]) -> List[Dict]:
         if period.id not in period_map:
             period_map[period.id] = {"period": period, "events": []}
 
-        # Collect record_ids that are DROPPED in any workflow of this event so that
-        # _compute_workflow_health can exclude them from all other workflow tiles.
-        dropped_record_ids: Set[int] = set()
-        for wf in event.workflows:
-            for sr in wf.submitter_reports:
-                if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
-                    dropped_record_ids.add(sr.record_id)
-
-        workflow_healths = [_compute_workflow_health(wf, dropped_record_ids) for wf in event.workflows]
+        workflow_healths = [_compute_workflow_health(wf) for wf in event.workflows]
         risk_summary = _compute_event_risk_summary(event)
 
         period_map[period.id]["events"].append(
@@ -2383,17 +2366,21 @@ def marking_register(event_id: int):
     back_sort_order = request.args.get("sort_order", "desc")
     back_include_closed = request.args.get("include_closed", "0")
 
-    # Collect unique SubmissionRecord IDs, excluding those withdrawn (DROPPED) from any workflow.
-    # A student dropped from the Examiners workflow (for example) should not appear in the
-    # register under the Supervisors workflow either, even if that SR was never explicitly dropped.
-    dropped_record_ids: set = set()
-    all_record_ids: set = set()
+    # Collect per-record workflow states so we can determine which students to include.
+    # A student is excluded only when ALL of their SRs across all workflows are DROPPED.
+    # If a student is DROPPED in some workflows but active in others, they still appear
+    # in the register — the dropped workflow columns are rendered as disabled.
+    record_wf_states: Dict[int, list] = {}
     for wf in event.workflows:
         for sr in wf.submitter_reports:
-            all_record_ids.add(sr.record_id)
-            if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
-                dropped_record_ids.add(sr.record_id)
-    record_id_set = all_record_ids - dropped_record_ids
+            record_wf_states.setdefault(sr.record_id, []).append(sr.workflow_state)
+
+    dropped_record_ids: set = {
+        rid
+        for rid, states in record_wf_states.items()
+        if all(s == SubmitterReportWorkflowStates.DROPPED for s in states)
+    }
+    record_id_set = set(record_wf_states.keys()) - dropped_record_ids
 
     # Build paginated query over SubmissionRecords, sorted by student name
     records_q = (
@@ -2471,10 +2458,11 @@ def marking_register(event_id: int):
         wf_cells = []
         for wf in workflows:
             sr = sr_lookup.get((wf.id, record.id))
+            sr_dropped = sr is not None and sr.workflow_state == SubmitterReportWorkflowStates.DROPPED
             sr_pct = _SR_STATE_PCT.get(sr.workflow_state, 0) if sr else 0
 
             mr_cells = []
-            if sr:
+            if sr and not sr_dropped:
                 mrs = mr_lookup.get(sr.id, [])
                 for mr in mrs:
                     mr_cells.append(
@@ -2494,7 +2482,7 @@ def marking_register(event_id: int):
             # Determine feedback status for this SubmitterReport
             has_feedback = (
                 any(m["mr"].feedback_submitted for m in mr_cells if m is not None)
-                if sr
+                if (sr and not sr_dropped)
                 else False
             )
 
@@ -2504,6 +2492,7 @@ def marking_register(event_id: int):
                     "sr_pct": sr_pct,
                     "mr_cells": mr_cells,
                     "has_feedback": has_feedback,
+                    "dropped": sr_dropped,
                 }
             )
 

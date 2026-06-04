@@ -203,9 +203,12 @@
 
                             {# ── Per-workflow cells ── #}
                             {% for wf_cell in row.wf_cells %}
-                                {# SubmitterReport cell #}
-                                <td>
-                                    {% if wf_cell.sr %}
+                                {# SubmitterReport cell — grey background when this workflow's SR is DROPPED #}
+                                <td {% if wf_cell.dropped %}style="background-color:var(--bs-secondary-bg);"{% endif %}>
+                                    {% if wf_cell.dropped %}
+                                        {# Withdrawn in this workflow — show badge only, no grade or progress bar #}
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">Withdrawn</span>
+                                    {% elif wf_cell.sr %}
                                         {% set sr = wf_cell.sr %}
                                         <div class="progress mb-1" style="height:5px;"
                                              title="Progress: {{ wf_cell.sr_pct }}%">
@@ -238,8 +241,6 @@
                                                 <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">Awaiting sign-off</span>
                                             {% elif sr_state == SubmitterReportWorkflowStates.COMPLETED or sr_state == SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE %}
                                                 <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">Complete</span>
-                                            {% elif sr_state == SubmitterReportWorkflowStates.DROPPED %}
-                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:9px;">Withdrawn</span>
                                             {% endif %}
                                         </div>
                                     {% else %}
@@ -251,7 +252,7 @@
                                 {% for mr_cell in wf_cell.mr_cells %}
                                     {% if mr_cell is not none %}
                                         {% set mr = mr_cell.mr %}
-                                        <td>
+                                        <td {% if wf_cell.dropped %}style="background-color:var(--bs-secondary-bg);"{% endif %}>
                                             <div class="progress mb-1" style="height:5px;">
                                                 <div class="progress-bar {{ bar_color(mr_cell.pct) }}"
                                                      role="progressbar"
@@ -272,13 +273,17 @@
                                             {% endif %}
                                         </td>
                                     {% else %}
-                                        <td class="text-body-secondary text-center">&mdash;</td>
+                                        <td class="text-body-secondary text-center"
+                                            {% if wf_cell.dropped %}style="background-color:var(--bs-secondary-bg);"{% endif %}>&mdash;</td>
                                     {% endif %}
                                 {% endfor %}
 
                                 {# Feedback cell #}
-                                <td class="text-center">
-                                    {% if wf_cell.has_feedback %}
+                                <td class="text-center"
+                                    {% if wf_cell.dropped %}style="background-color:var(--bs-secondary-bg);"{% endif %}>
+                                    {% if wf_cell.dropped %}
+                                        <span class="text-body-secondary">&mdash;</span>
+                                    {% elif wf_cell.has_feedback %}
                                         <span class="badge bg-success-subtle text-success-emphasis" style="font-size:9px;">
                                             <i class="fas fa-check me-1"></i>Submitted
                                         </span>

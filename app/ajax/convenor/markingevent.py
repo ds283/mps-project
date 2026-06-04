@@ -1692,17 +1692,24 @@ _conflation_report_grades = """
 {% if grades %}
     <div class="d-flex flex-column gap-1">
         {% for target_name, value in grades.items() %}
-            {% if value >= 70 %}
-                {% set badge_class = "bg-success" %}
-            {% elif value >= 50 %}
-                {% set badge_class = "bg-warning text-dark" %}
+            {% if value is not none %}
+                {% if value >= 70 %}
+                    {% set badge_class = "bg-success" %}
+                {% elif value >= 50 %}
+                    {% set badge_class = "bg-warning text-dark" %}
+                {% else %}
+                    {% set badge_class = "bg-danger" %}
+                {% endif %}
+                <div class="d-flex flex-row align-items-center gap-2">
+                    <span class="badge {{ badge_class }}" style="min-width:5rem;">{{ target_name }}</span>
+                    <span class="fw-semibold text-primary">{{ "%.1f"|format(value) }}%</span>
+                </div>
             {% else %}
-                {% set badge_class = "bg-danger" %}
+                <div class="d-flex flex-row align-items-center gap-2">
+                    <span class="badge bg-secondary" style="min-width:5rem;">{{ target_name }}</span>
+                    <span class="text-body-secondary">—</span>
+                </div>
             {% endif %}
-            <div class="d-flex flex-row align-items-center gap-2">
-                <span class="badge {{ badge_class }}" style="min-width:5rem;">{{ target_name }}</span>
-                <span class="fw-semibold text-primary">{{ "%.1f"|format(value) }}%</span>
-            </div>
         {% endfor %}
     </div>
     <div class="small text-muted mt-2">

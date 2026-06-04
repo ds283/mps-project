@@ -808,27 +808,18 @@ def reconflate_conflation_report(cr_id):
             .filter_by(record_id=record.id, workflow_id=wf.id)
             .first()
         )
-        if sr is None or sr.grade is None:
-            flash(
-                f"Reconflation failed: missing grade in workflow '{wf.name}' "
-                f"for student '{record.owner.student.user.name}'.",
-                "error",
-            )
-            return redirect(url)
-        grades[wf.key] = float(sr.grade)
+        if sr is None or sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+            continue
+        if sr.grade is not None:
+            grades[wf.key] = float(sr.grade)
 
     result = {}
     for target_name, expr in targets.items():
         try:
             value = eval(expr, {"__builtins__": {}}, grades)  # noqa: S307
             result[target_name] = ACTIVE_ROUNDING_POLICY.round(float(value))
-        except Exception as exc:
-            flash(
-                f"Reconflation failed: error evaluating target '{target_name}' "
-                f"(expression: {expr!r}): {exc}.",
-                "error",
-            )
-            return redirect(url)
+        except Exception:
+            result[target_name] = None
 
     try:
         cr.conflation_report = json.dumps(
@@ -6122,61 +6113,50 @@ def calculate_conflation(event_id):
         generated_count = 0
         dropped_count = 0
 
-        for record in submissions:
-            # Build grades dict: {workflow.key: float(sr.grade)}
-            # Skip records where any workflow has a DROPPED SubmitterReport.
-            grades = {}
-            skip_record = False
-            for wf in workflows:
-                sr = (
-                    db.session.query(SubmitterReport)
-                    .filter_by(record_id=record.id, workflow_id=wf.id)
-                    .first()
-                )
-                if sr is None:
-                    flash(
-                        f"Conflation failed: no SubmitterReport found for student "
-                        f"'{record.owner.student.user.name}' in workflow '{wf.name}'. "
-                        f"All ConflationReports have been discarded.",
-                        "error",
-                    )
-                    db.session.rollback()
-                    return redirect(url)
-                if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
-                    skip_record = True
-                    break
-                if sr.grade is None:
-                    flash(
-                        f"Conflation failed: SubmitterReport for student "
-                        f"'{record.owner.student.user.name}' in workflow '{wf.name}' "
-                        f"has no grade. All ConflationReports have been discarded.",
-                        "error",
-                    )
-                    db.session.rollback()
-                    return redirect(url)
-                grades[wf.key] = float(sr.grade)
+        # Pre-flight: determine which records are in scope for conflation.
+        # A record is in scope if it has at least one non-DROPPED SubmitterReport
+        # in any workflow.  Records whose every SubmitterReport is DROPPED are
+        # excluded entirely (no ConflationReport is generated for them).
+        non_dropped_srs = (
+            db.session.query(SubmitterReport)
+            .filter(
+                SubmitterReport.workflow_id.in_([wf.id for wf in workflows]),
+                SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
+            )
+            .all()
+        )
+        in_scope_record_ids = {sr.record_id for sr in non_dropped_srs}
 
-            if skip_record:
+        # Build a (workflow_id, record_id) → grade lookup for non-DROPPED SRs
+        # that have a grade.  SRs with grade=None are simply absent from the dict;
+        # any expression that references their key will fail evaluation and yield
+        # a None target on the resulting ConflationReport.
+        sr_grade_lookup: dict[tuple[int, int], float] = {}
+        for sr in non_dropped_srs:
+            if sr.grade is not None:
+                sr_grade_lookup[(sr.workflow_id, sr.record_id)] = float(sr.grade)
+
+        for record in submissions:
+            if record.id not in in_scope_record_ids:
                 dropped_count += 1
                 continue
 
-            # Evaluate each target expression in the restricted namespace, then apply
-            # the institutional rounding policy to produce whole-number module marks.
+            # Build the grades namespace from workflows that have a usable grade.
+            grades = {
+                wf.key: sr_grade_lookup[(wf.id, record.id)]
+                for wf in workflows
+                if (wf.id, record.id) in sr_grade_lookup
+            }
+
+            # Evaluate each target expression.  A failed evaluation (missing grade,
+            # NameError, etc.) sets that target to None rather than aborting the run.
             result = {}
             for target_name, expr in targets.items():
                 try:
                     value = eval(expr, {"__builtins__": {}}, grades)  # noqa: S307
                     result[target_name] = ACTIVE_ROUNDING_POLICY.round(float(value))
-                except Exception as exc:
-                    flash(
-                        f"Conflation failed: error evaluating target '{target_name}' "
-                        f"(expression: {expr!r}) for student "
-                        f"'{record.owner.student.user.name}': {exc}. "
-                        f"All ConflationReports have been discarded.",
-                        "error",
-                    )
-                    db.session.rollback()
-                    return redirect(url)
+                except Exception:
+                    result[target_name] = None
 
             cr = ConflationReport(
                 marking_event_id=event.id,
@@ -6249,7 +6229,7 @@ def _propagate_grade_to_records(
     updated = 0
     for cr in conflation_reports:
         result = cr.conflation_report_as_dict
-        if target_key not in result:
+        if result.get(target_key) is None:
             continue
         record = cr.submission_record
         setattr(record, grade_field, result[target_key])

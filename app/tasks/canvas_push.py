@@ -61,9 +61,10 @@ def register_canvas_push_tasks(celery):
             )
             return
 
-        if grade_target not in cr.conflation_report_as_dict:
+        if cr.conflation_report_as_dict.get(grade_target) is None:
             current_app.logger.warning(
-                f"push_cr_to_canvas: grade target '{grade_target}' not found in ConflationReport id={cr_id}"
+                f"push_cr_to_canvas: grade target '{grade_target}' is absent or None "
+                f"in ConflationReport id={cr_id}, skipping Canvas push"
             )
             return
 

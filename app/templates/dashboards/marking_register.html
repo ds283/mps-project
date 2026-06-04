@@ -154,7 +154,11 @@
                                             {% for target, pct in cr_data.items() %}
                                                 <div style="font-size:10px;">
                                                     <span class="text-body-secondary">{{ target }}:</span>
-                                                    <span class="fw-semibold">{{ "%.0f"|format(pct) }}%</span>
+                                                    {% if pct is not none %}
+                                                        <span class="fw-semibold">{{ "%.0f"|format(pct) }}%</span>
+                                                    {% else %}
+                                                        <span class="text-body-secondary">—</span>
+                                                    {% endif %}
                                                 </div>
                                             {% endfor %}
                                         </div>

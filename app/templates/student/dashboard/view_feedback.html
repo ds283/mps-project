@@ -41,10 +41,12 @@
                                     <span class="small text-body-secondary fw-semibold me-2">Grades</span>
                                     <div class="d-flex flex-row flex-wrap gap-3 mt-1">
                                         {% for target, value in grade_dict.items() %}
-                                            <div class="d-flex flex-column align-items-center border rounded px-3 py-2 bg-light">
-                                                <span class="small text-body-secondary text-capitalize">{{ target }}</span>
-                                                <span class="fw-bold text-success fs-5">{{ value | round(1) }}%</span>
-                                            </div>
+                                            {% if value is not none %}
+                                                <div class="d-flex flex-column align-items-center border rounded px-3 py-2 bg-light">
+                                                    <span class="small text-body-secondary text-capitalize">{{ target }}</span>
+                                                    <span class="fw-bold text-success fs-5">{{ value | round(1) }}%</span>
+                                                </div>
+                                            {% endif %}
                                         {% endfor %}
                                     </div>
                                 </div>

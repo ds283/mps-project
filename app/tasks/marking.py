@@ -52,10 +52,10 @@ from ..models import (
 )
 from ..models.emails import encode_email_payload
 from ..models.markingevent import (
+    _TERMINAL_STATES,
     MarkingEventWorkflowStates,
     MarkingReportDistributionStates,
     SubmitterReportWorkflowStates,
-    _TERMINAL_STATES,
 )
 from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import (
@@ -129,7 +129,9 @@ def _resolve_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass):
     return workflow.resolve_email_template()
 
 
-def _resolve_workflow_reminder_template(workflow: MarkingWorkflow, pclass: ProjectClass):
+def _resolve_workflow_reminder_template(
+    workflow: MarkingWorkflow, pclass: ProjectClass
+):
     """Return the best-matching active reminder EmailTemplate for this workflow+pclass, or None."""
     if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
         template_type = EmailTemplate.MARKING_MARKER_REMINDER
@@ -146,7 +148,10 @@ def _resolve_workflow_reminder_template(workflow: MarkingWorkflow, pclass: Proje
 def _try_advance_to_awaiting_grading(sr: SubmitterReport) -> bool:
     """Advance sr to AWAITING_GRADING_REPORTS if every MarkingReport is in a terminal
     distribution state (EMAIL_CONFIRMED or NOT_REQUIRED). Returns True if transitioned."""
-    if sr is None or sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+    if (
+        sr is None
+        or sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+    ):
         return False
     mrs = list(sr.marking_reports)
     if not mrs:
@@ -188,9 +193,14 @@ def register_marking_tasks(celery):
         event: MarkingEvent = workflow.event
         pclass: ProjectClass = event.pclass
 
-        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        if (
+            test_user_id is None
+            and event.workflow_state == MarkingEventWorkflowStates.WAITING
+        ):
             convenor: Optional[User] = (
-                db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
+                db.session.query(User).filter_by(id=convenor_id).first()
+                if convenor_id is not None
+                else None
             )
             report_error(
                 f'Cannot send marking emails: marking event "{event.name}" has not been opened yet.',
@@ -216,7 +226,9 @@ def register_marking_tasks(celery):
                     continue
                 for mr in sr.marking_reports:
                     if not mr.distributed:
-                        mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
+                        mr.distribution_state = (
+                            MarkingReportDistributionStates.NOT_REQUIRED
+                        )
                 if _try_advance_to_awaiting_grading(sr):
                     advanced += 1
             try:
@@ -315,9 +327,14 @@ def register_marking_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        if (
+            test_user_id is None
+            and event.workflow_state == MarkingEventWorkflowStates.WAITING
+        ):
             convenor: Optional[User] = (
-                db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
+                db.session.query(User).filter_by(id=convenor_id).first()
+                if convenor_id is not None
+                else None
             )
             report_error(
                 f'Cannot send marking emails: marking event "{event.name}" has not been opened yet.',
@@ -357,7 +374,9 @@ def register_marking_tasks(celery):
                         continue
                     for mr in sr.marking_reports:
                         if not mr.distributed:
-                            mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
+                            mr.distribution_state = (
+                                MarkingReportDistributionStates.NOT_REQUIRED
+                            )
                             not_required_changed = True
                     _try_advance_to_awaiting_grading(sr)
                 continue
@@ -912,9 +931,14 @@ def register_marking_tasks(celery):
         event: MarkingEvent = workflow.event
         pclass: ProjectClass = event.pclass
 
-        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+        if (
+            test_user_id is None
+            and event.workflow_state == MarkingEventWorkflowStates.WAITING
+        ):
             convenor: Optional[User] = (
-                db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
+                db.session.query(User).filter_by(id=convenor_id).first()
+                if convenor_id is not None
+                else None
             )
             report_error(
                 f'Cannot send marking reminders: marking event "{event.name}" has not been opened yet.',
@@ -1190,7 +1214,9 @@ def register_marking_tasks(celery):
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
                     raise self.retry()
             return {"sent": 0}
 
@@ -1270,6 +1296,86 @@ def register_marking_tasks(celery):
     def generate_feedback_report(
         self, conflation_report_id: int, recipe_id: int, convenor_id: Optional[int]
     ):
+        """
+        Render a feedback PDF for a single student using a Jinja2/WeasyPrint recipe.
+
+        TEMPLATE ENVIRONMENT
+        ====================
+        The following variables are injected into the Jinja2 template environment.
+
+        ORM objects (full SQLAlchemy model instances):
+          student_user  -- User
+          sd            -- StudentData
+          pclass        -- ProjectClass
+          config        -- ProjectClassConfig
+          period        -- SubmissionPeriodRecord
+          event         -- MarkingEvent
+          record        -- SubmissionRecord
+
+        Dynamic asset labels:
+          One variable per FeedbackAsset.label in the recipe, each containing
+          the absolute filesystem path (str) to the downloaded scratch file.
+
+        Filters:
+          markdown  -- renders a Markdown string to HTML (wraps markdown.markdown())
+
+        CONFLATION REPORT SCHEMA  (variable: conflation_report)
+        ========================================================
+        Dict[str, float] — flat mapping from grade target names to evaluated
+        float values, e.g. {"report": 72.5, "supervisor": 68.0}.
+
+        Sourced from ConflationReport.conflation_report_as_dict, which normalises
+        both the current structured format {"targets": {...}, "metadata": {...}}
+        and the legacy flat format {"target_name": value, ...} into the same flat
+        dict.  Returns {} when no conflation data exists.
+
+        WORKFLOW DATA SCHEMA  (variable: workflow_data)
+        ================================================
+        Dict[str, WorkflowEntry] keyed by MarkingWorkflow.key.  Workflows with no
+        key, or with no matching SubmitterReport for this record, are omitted.
+        A SubmitterReport in the DROPPED state appears with all-None grade fields
+        and an empty reports list so the template can distinguish "dropped" from
+        "not applicable".
+
+          workflow_data = {
+              "<workflow_key>": {
+                  "grade": float | None,
+                  "grade_generated_by": str | None,         # User.name
+                  "grade_generated_timestamp": str | None,  # "YYYY/MM/DD HH:MM"
+                  "reports": [
+                      {
+                          "name": str | None,               # assessor display name
+                          "role": SubmissionRole,           # ORM object
+                          "grade": float | None,            # percentage, 2 dp
+                          "report": str | None,             # JSON-serialised marking form data:
+                                                            #   {"fields": {key: bool|str|float, ...},
+                                                            #    "validation_failures": [...]}  (optional key)
+                          "feedback_positive": str | None,
+                          "feedback_improvement": str | None,
+                          "feedback_timestamp": str | None,  # "YYYY/MM/DD HH:MM"
+                      },
+                      ...
+                  ],
+              },
+              ...
+          }
+
+        ABORT PROTOCOL
+        ==============
+        The template may raise any Exception to signal that it cannot produce a
+        valid PDF from the available data (e.g. required grades are missing).
+        The task catches the exception, sets cr.feedback_generation_failed = True,
+        clears cr.feedback_celery_id, commits, and returns {"generated": 0}
+        without retrying.  The exception is logged at WARNING level.
+
+        MAINTENANCE NOTE FOR FUTURE AGENTS
+        ===================================
+        This docstring is the authoritative reference for the template contract.
+        It must be kept in sync with the environment-building code below whenever:
+          - a new variable is added to or removed from template_env.globals
+          - the structure of conflation_report or workflow_data changes
+          - the abort protocol changes
+        """
         try:
             cr: ConflationReport = (
                 db.session.query(ConflationReport)
@@ -1379,6 +1485,14 @@ def register_marking_tasks(celery):
             ).first()
             if sr is None:
                 continue
+            if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
+                workflow_data[workflow.key] = {
+                    "grade": None,
+                    "grade_generated_by": None,
+                    "grade_generated_timestamp": None,
+                    "reports": [],
+                }
+                continue
             reports = []
             for mr in sr.marking_reports:
                 reports.append(
@@ -1413,7 +1527,23 @@ def register_marking_tasks(celery):
         template_env.globals["workflow_data"] = workflow_data
 
         template = template_env.get_template("template")
-        output = template.render()
+        try:
+            output = template.render()
+        except Exception as e:
+            current_app.logger.warning(
+                f"generate_feedback_report: template raised exception for "
+                f"ConflationReport #{conflation_report_id}: {e}"
+            )
+            cr.feedback_generation_failed = True
+            cr.feedback_celery_id = None
+            try:
+                db.session.commit()
+            except SQLAlchemyError as db_e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=db_e)
+                raise self.retry()
+            mgr.cleanup()
+            return {"generated": 0}
 
         with ScratchFileManager(suffix=".html") as html_mgr:
             HTML_file = open(html_mgr.path, "w")

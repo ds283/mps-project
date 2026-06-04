@@ -1758,7 +1758,7 @@ def period_marking_event_data(url, text, can_delete, events):
 
     period_tmpl = env.from_string(_marking_event_period)
     name_tmpl = env.from_string(_marking_event_name)
-    workflows_tmpl = env.from_string(_marking_event_workflows)
+    workflows_tmpl = env.from_string(_marking_event_workflow_cards)
     status_tmpl = env.from_string(_period_marking_event_status)
     menu_tmpl = env.from_string(_period_marking_event_menu)
 

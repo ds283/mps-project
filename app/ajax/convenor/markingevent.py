@@ -2016,7 +2016,7 @@ _conflation_report_menu = """
         {# ── Section 1: Propagate grades ───────────────────────────────────── #}
         <h6 class="dropdown-header">Propagate grades</h6>
         {% for target, value in grade_dict.items() %}
-            {% if target in ('report', 'supervisor', 'presentation') %}
+            {% if target in ('report', 'supervisor', 'presentation') and value is not none %}
                 <form method="POST"
                       action="{{ url_for('convenor.propagate_cr_grade', cr_id=cr.id,
                                          target=target, url=return_url) }}"

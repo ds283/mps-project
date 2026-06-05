@@ -102,6 +102,42 @@ def _letter_label(n: int) -> str:
     return result
 
 
+def _is_box_auth_error(exc: Exception) -> bool:
+    """
+    Return True when *exc* signals that the Box OAuth tokens are invalid or expired.
+    This covers the `invalid_grant` 400 that the SDK raises when it tries to
+    use the refresh token and Box rejects it.
+    """
+    try:
+        from box_sdk_gen.box.errors import BoxAPIError
+
+        if not isinstance(exc, BoxAPIError):
+            return False
+        body = exc.response_info.body or {}
+        # 400 invalid_grant = refresh token expired / revoked
+        if exc.response_info.status_code == 400 and body.get("error") == "invalid_grant":
+            return True
+        # 401 without a usable refresh token (access token invalid and no refresh possible)
+        if exc.response_info.status_code == 401:
+            return True
+        return False
+    except Exception:
+        return False
+
+
+def _post_relink_notification(requesting_user: User) -> None:
+    """Post a 'please re-link your Box account' notification to *requesting_user*."""
+    try:
+        link = url_for("oauth2.box_login", _external=False)
+        msg = (
+            "Box export failed: your Box account credentials are no longer valid. "
+            f'Please <a href="{link}">re-link your Box account</a> and try again.'
+        )
+    except Exception:
+        msg = "Box export failed: your Box account credentials are no longer valid. Please re-link your account."
+    requesting_user.post_message(msg, "danger", autocommit=True)
+
+
 def _build_box_client(box_user: User):
     from box_sdk_gen import BoxClient, BoxOAuth, OAuthConfig
 
@@ -583,20 +619,9 @@ def register_box_export_period_marking_tasks(celery):
 
         try:
             client = _build_box_client(box_user)
-            # Eagerly fetch a token to detect auth errors immediately
-            client.auth.retrieve_token()
         except Exception as exc:
-            current_app.logger.exception("Box authentication error in box_export_period_marking", exc_info=exc)
-            try:
-                link = url_for("oauth2.box_login", _external=False)
-                msg = (
-                    f"Box export failed: could not authenticate with Box. "
-                    f'Please <a href="{link}">re-link your Box account</a> and try again.'
-                )
-            except Exception:
-                msg = "Box export failed: could not authenticate with Box. Please re-link your account."
-            requesting_user.post_message(msg, "danger", autocommit=True)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed.", autocommit=True)
+            current_app.logger.exception("Box client setup error in box_export_period_marking", exc_info=exc)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Box is not configured on this server.", autocommit=True)
             return
 
         # ------------------------------------------------------------------
@@ -623,8 +648,12 @@ def register_box_export_period_marking_tasks(celery):
         try:
             reports_folder_id = _get_or_create_subfolder(client, folder_id, "Reports")
         except Exception as exc:
-            current_app.logger.exception("Box API error creating Reports subfolder", exc_info=exc)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error creating Reports subfolder.", autocommit=True)
+            if _is_box_auth_error(exc):
+                _post_relink_notification(requesting_user)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+            else:
+                current_app.logger.exception("Box API error creating Reports subfolder", exc_info=exc)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error creating Reports subfolder.", autocommit=True)
             return
 
         # ------------------------------------------------------------------
@@ -678,6 +707,10 @@ def register_box_export_period_marking_tasks(celery):
                 url = _get_shared_link(client, file_id)
                 box_url_map[record.id] = url
             except Exception as exc:
+                if _is_box_auth_error(exc):
+                    _post_relink_notification(requesting_user)
+                    progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+                    return
                 current_app.logger.warning("Could not upload report for record %s: %s", record.id, exc)
                 box_url_map[record.id] = None
 
@@ -714,8 +747,12 @@ def register_box_export_period_marking_tasks(celery):
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         except Exception as exc:
-            current_app.logger.exception("Box API error uploading Excel workbook", exc_info=exc)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error uploading marking summary.", autocommit=True)
+            if _is_box_auth_error(exc):
+                _post_relink_notification(requesting_user)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+            else:
+                current_app.logger.exception("Box API error uploading Excel workbook", exc_info=exc)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error uploading marking summary.", autocommit=True)
             return
 
         # ------------------------------------------------------------------

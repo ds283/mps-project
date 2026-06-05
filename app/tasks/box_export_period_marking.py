@@ -612,6 +612,15 @@ def register_box_export_period_marking_tasks(celery):
             progress_update(task_id, TaskRecord.FAILURE, 100, "Could not find required records.", autocommit=True)
             return
 
+        # Diagnostic: log token state so we can detect None/missing tokens without a live debugger.
+        current_app.logger.info(
+            "box_export: box_user=%s box_token_valid=%s has_access=%s has_refresh=%s",
+            box_user.id,
+            box_user.box_token_valid,
+            box_user.box_access_token is not None,
+            box_user.box_refresh_token is not None,
+        )
+
         # ------------------------------------------------------------------
         # Build Box client
         # ------------------------------------------------------------------
@@ -648,11 +657,11 @@ def register_box_export_period_marking_tasks(celery):
         try:
             reports_folder_id = _get_or_create_subfolder(client, folder_id, "Reports")
         except Exception as exc:
+            current_app.logger.exception("box_export: Box error during subfolder creation", exc_info=exc)
             if _is_box_auth_error(exc):
                 _post_relink_notification(requesting_user)
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
             else:
-                current_app.logger.exception("Box API error creating Reports subfolder", exc_info=exc)
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error creating Reports subfolder.", autocommit=True)
             return
 
@@ -708,10 +717,11 @@ def register_box_export_period_marking_tasks(celery):
                 box_url_map[record.id] = url
             except Exception as exc:
                 if _is_box_auth_error(exc):
+                    current_app.logger.exception("box_export: Box auth error during file upload", exc_info=exc)
                     _post_relink_notification(requesting_user)
                     progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
                     return
-                current_app.logger.warning("Could not upload report for record %s: %s", record.id, exc)
+                current_app.logger.warning("box_export: Could not upload report for record %s: %s", record.id, exc)
                 box_url_map[record.id] = None
 
         # ------------------------------------------------------------------
@@ -747,11 +757,11 @@ def register_box_export_period_marking_tasks(celery):
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         except Exception as exc:
+            current_app.logger.exception("box_export: Box error during Excel upload", exc_info=exc)
             if _is_box_auth_error(exc):
                 _post_relink_notification(requesting_user)
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
             else:
-                current_app.logger.exception("Box API error uploading Excel workbook", exc_info=exc)
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error uploading marking summary.", autocommit=True)
             return
 

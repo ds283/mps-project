@@ -50,6 +50,7 @@ from .language_analysis import register_language_analysis_tasks
 from .llm_orchestration import register_llm_orchestration_tasks
 from .feedback_orchestration import register_feedback_orchestration_tasks
 from .marking_export import register_marking_export_tasks
+from .box_export_period_marking import register_box_export_period_marking_tasks
 from .similarity_analysis import register_similarity_analysis_tasks
 from .data_export import register_data_export_tasks
 from .allocation_export import register_allocation_export_tasks

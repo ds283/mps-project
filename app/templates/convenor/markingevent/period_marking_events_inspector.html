@@ -76,10 +76,16 @@
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
                     <span>Marking events</span>
-                    <a href="{{ url_for('convenor.add_marking_event', period_id=period.id, url=request.url, text='Marking events') }}"
-                       class="btn btn-sm btn-ghost-header">
-                        <i class="fas fa-plus fa-fw"></i> Add marking event&hellip;
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('convenor.export_period_to_box', period_id=period.id, url=request.url, text='Marking events') }}"
+                           class="btn btn-sm btn-ghost-header">
+                            <i class="fas fa-box fa-fw"></i> Export assets to Box&hellip;
+                        </a>
+                        <a href="{{ url_for('convenor.add_marking_event', period_id=period.id, url=request.url, text='Marking events') }}"
+                           class="btn btn-sm btn-ghost-header">
+                            <i class="fas fa-plus fa-fw"></i> Add marking event&hellip;
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <table id="period-marking-events-table" class="table table-striped table-bordered">

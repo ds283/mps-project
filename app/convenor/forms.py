@@ -31,6 +31,7 @@ from wtforms.validators import (
     Length,
     NumberRange,
     Optional,
+    Regexp,
     ValidationError,
 )
 from wtforms_alchemy import (
@@ -1778,3 +1779,32 @@ def RemoveMarkersFormFactory(scoped_configs: List[ProjectClassConfig]):
         submit = SubmitField("Remove markers")
 
     return RemoveMarkersForm
+
+
+def ExportPeriodToBoxFormFactory(box_users: list):
+    """
+    Build a form for initiating a Box export of a SubmissionPeriodRecord.
+
+    box_users: list of User instances that have box_token_valid == True and are convenors or
+    co-convenors for the relevant project class.
+    """
+    _users = list(box_users)
+
+    class ExportPeriodToBoxForm(Form):
+        box_user = QuerySelectField(
+            "Box account",
+            validators=[DataRequired(message="Please select a Box account.")],
+            query_factory=lambda: _users,
+            get_pk=lambda u: u.id,
+            get_label=lambda u: u.name,
+        )
+        box_folder_id = StringField(
+            "Box folder ID",
+            validators=[
+                DataRequired(message="Please enter a Box folder ID."),
+                Regexp(r"^\d+$", message="Box folder ID must be a number."),
+            ],
+        )
+        submit = SubmitField("Export…")
+
+    return ExportPeriodToBoxForm

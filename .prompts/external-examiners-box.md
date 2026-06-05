@@ -155,3 +155,6 @@ are replaced with underscores.
 
 If the user's Box OAuth token has expired, report this to the user by posting a `Notification` directing them
 to refresh it. Include a suitable link to the necessary page.
+
+Provide suitable updates to the user via the `TaskRecord` notification mechanism, as the Celery task proceeds.
+Issue a notification when the task completes.

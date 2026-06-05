@@ -77,6 +77,7 @@ from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD
 from ..tasks.thumbnails import dispatch_thumbnail_task
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import convenor
+from ..task_queue import register_task
 from .forms import (
     ActionForm,
     AddMarkingEventForm,
@@ -89,6 +90,7 @@ from .forms import (
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     EnterTurnitinScoreForm,
+    ExportPeriodToBoxFormFactory,
     GenerateFeedbackFormFactory,
     MarkingReportPropertiesForm,
     ReassignMarkingReportForm,
@@ -3292,6 +3294,123 @@ def period_marking_events_ajax(period_id):
         return handler.build_payload(
             partial(ajax.convenor.period_marking_event_data, url, text, can_delete)
         )
+
+
+@convenor.route("/export_period_to_box/<int:period_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def export_period_to_box(period_id):
+    """
+    Show an intermediate form so a convenor can specify the Box account and target folder,
+    then dispatch a Celery task to upload reports and a marking summary spreadsheet.
+    """
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    pclass: ProjectClass = period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.period_marking_events_inspector", period_id=period_id),
+    )
+    text = request.args.get("text", "Marking events")
+
+    config: ProjectClassConfig = period.config
+
+    # Collect all convenors (current + co-convenors) who have linked their Box account.
+    seen_ids = set()
+    candidates = []
+
+    def _add_if_box_linked(faculty):
+        if faculty is None:
+            return
+        u = faculty.user
+        if u is not None and u.box_token_valid and u.id not in seen_ids:
+            seen_ids.add(u.id)
+            candidates.append(u)
+
+    _add_if_box_linked(config.convenor)
+    for co in config.project_class.coconvenors:
+        _add_if_box_linked(co)
+
+    if not candidates:
+        banners = [
+            ConvenorAction(
+                severity="warning",
+                icon="exclamation-triangle",
+                title="No Box account linked",
+                description=(
+                    "No convenors or co-convenors for this project class have linked a Box account. "
+                    "At least one must link their account before an export can proceed."
+                ),
+                buttons=[
+                    ConvenorActionButton(
+                        label="Cancel",
+                        icon="arrow-left",
+                        outline=True,
+                        url=url,
+                    )
+                ],
+            )
+        ]
+        return render_template_context(
+            "convenor/markingevent/export_period_to_box.html",
+            period=period,
+            pclass=pclass,
+            banners=banners,
+            form=None,
+            url=url,
+            text=text,
+        )
+
+    ExportPeriodToBoxForm = ExportPeriodToBoxFormFactory(candidates)
+    form = ExportPeriodToBoxForm(request.form)
+
+    if form.validate_on_submit():
+        box_user: User = form.box_user.data
+        folder_id: str = form.box_folder_id.data.strip()
+
+        celery = current_app.extensions["celery"]
+        export_task = celery.tasks[
+            "app.tasks.box_export_period_marking.box_export_period_marking"
+        ]
+
+        config = period.config
+        abbr = getattr(config, "abbreviation", None) or "period"
+        tk_name = f'Export "{abbr}: {period.display_name}" to Box'
+        task_id = register_task(
+            tk_name,
+            owner=current_user,
+            description=f"Upload reports and marking summary for {period.display_name} to Box folder {folder_id}",
+        )
+
+        if task_id is None:
+            flash("Could not register the export task. Please try again.", "error")
+            return redirect(url)
+
+        export_task.apply_async(
+            args=[period_id, box_user.id, current_user.id, folder_id, task_id],
+            task_id=task_id,
+        )
+
+        flash(
+            f'Box export for "{period.display_name}" has been queued. '
+            "You will be notified when it completes.",
+            "success",
+        )
+        return redirect(
+            url_for("convenor.period_marking_events_inspector", period_id=period_id)
+        )
+
+    return render_template_context(
+        "convenor/markingevent/export_period_to_box.html",
+        period=period,
+        pclass=pclass,
+        banners=None,
+        form=form,
+        url=url,
+        text=text,
+    )
 
 
 @convenor.route("/add_marking_event/<int:period_id>", methods=["GET", "POST"])

@@ -182,7 +182,7 @@ class User(db.Model, UserMixin):
     # but that is acceptable here because we never need to filter by token value.
     box_access_token = db.Column(
         EncryptedType(
-            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+            db.Text(collation="utf8_bin"),
             get_AES_key,
             AesGcmEngine,
             "pkcs5",
@@ -194,7 +194,7 @@ class User(db.Model, UserMixin):
     # Box OAuth2 refresh token; encrypted as above.
     box_refresh_token = db.Column(
         EncryptedType(
-            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+            db.Text(collation="utf8_bin"),
             get_AES_key,
             AesGcmEngine,
             "pkcs5",

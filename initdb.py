@@ -545,3 +545,52 @@ def ensure_config_rubrics(app) -> None:
                 app.logger.exception("SQLAlchemyError in ensure_config_rubrics", exc_info=e)
         else:
             print("** ensure_config_rubrics: all ProjectClassConfig instances already have a rubric (or none available)")
+
+
+# ---------------------------------------------------------------------------
+# Box token maintenance beat schedule
+# ---------------------------------------------------------------------------
+
+
+def ensure_box_token_schedule(app) -> None:
+    """
+    Idempotently create the DatabaseSchedulerEntry for the Box token maintenance
+    task if it does not already exist.  Safe to call on every startup.
+    """
+    with app.app_context():
+        existing = db.session.query(DatabaseSchedulerEntry).filter_by(name="box-token-maintenance").first()
+        if existing is not None:
+            print("** ensure_box_token_schedule: schedule entry already present")
+            return
+
+        interval = db.session.query(IntervalSchedule).filter_by(every=24, period="hours").first()
+        if interval is None:
+            interval = IntervalSchedule(every=24, period="hours")
+            db.session.add(interval)
+            db.session.flush()
+
+        now = datetime.now()
+        entry = DatabaseSchedulerEntry(
+            name="box-token-maintenance",
+            task="app.tasks.box_tokens.maintain_box_tokens",
+            interval_id=interval.id,
+            crontab_id=None,
+            args=[],
+            kwargs={},
+            queue="default",
+            exchange=None,
+            routing_key=None,
+            expires=None,
+            enabled=True,
+            last_run_at=now,
+            total_run_count=0,
+            owner_id=None,
+        )
+        db.session.add(entry)
+
+        try:
+            db.session.commit()
+            print("** ensure_box_token_schedule: created 'box-token-maintenance' schedule entry")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in ensure_box_token_schedule", exc_info=e)

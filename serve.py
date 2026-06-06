@@ -18,6 +18,7 @@ from app import create_app
 from app.database import db
 from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
+    ensure_box_token_schedule,
     ensure_config_rubrics,
     ensure_roles,
     initial_populate_database,
@@ -73,6 +74,7 @@ with app.app_context():
         populate_CATS_limits(app, initdb_module)
 
     ensure_roles(app)
+    ensure_box_token_schedule(app)
     reconcile_background_tasks(app)
 
 

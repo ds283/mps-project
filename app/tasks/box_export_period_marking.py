@@ -34,51 +34,8 @@ from ..models.markingevent import (
     SubmitterReportWorkflowStates,
 )
 from ..shared.asset_tools import AssetCloudAdapter
+from ..shared.box_api import get_box_client
 from ..task_queue import progress_update
-
-
-def _make_db_token_storage_class():
-    """
-    Build a TokenStorage subclass that persists refreshed tokens to the DB User row.
-    Deferred so box_sdk_gen is not imported at module load time.
-    """
-    from box_sdk_gen import AccessToken, TokenStorage
-
-    class DBTokenStorage(TokenStorage):
-        def __init__(self, user: User):
-            self._user_id = user.id
-
-        def _get_user(self) -> User:
-            return db.session.query(User).filter_by(id=self._user_id).one()
-
-        def store(self, token) -> None:
-            u = self._get_user()
-            u.box_access_token = token.access_token
-            u.box_refresh_token = token.refresh_token
-            u.box_token_valid = True
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        def get(self) -> Optional[AccessToken]:
-            u = self._get_user()
-            if not u.box_token_valid:
-                return None
-            return AccessToken(
-                access_token=u.box_access_token,
-                refresh_token=u.box_refresh_token,
-            )
-
-        def clear(self) -> None:
-            u = self._get_user()
-            u.box_token_valid = False
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-    return DBTokenStorage
 
 
 # ---------------------------------------------------------------------------
@@ -136,26 +93,6 @@ def _post_relink_notification(requesting_user: User) -> None:
     except Exception:
         msg = "Box export failed: your Box account credentials are no longer valid. Please re-link your account."
     requesting_user.post_message(msg, "danger", autocommit=True)
-
-
-def _build_box_client(box_user: User):
-    from box_sdk_gen import BoxClient, BoxOAuth, OAuthConfig
-
-    client_id = current_app.config.get("BOX_CLIENT_ID")
-    client_secret = current_app.config.get("BOX_CLIENT_SECRET")
-    if not client_id or not client_secret:
-        raise RuntimeError("Box is not configured on this server.")
-
-    DBTokenStorage = _make_db_token_storage_class()
-    token_storage = DBTokenStorage(box_user)
-    box_oauth = BoxOAuth(
-        config=OAuthConfig(
-            client_id=client_id,
-            client_secret=client_secret,
-            token_storage=token_storage,
-        )
-    )
-    return BoxClient(auth=box_oauth)
 
 
 def _get_folder_items(client, folder_id: str) -> list:
@@ -628,7 +565,7 @@ def register_box_export_period_marking_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 10, "Connecting to Box...", autocommit=True)
 
         try:
-            client = _build_box_client(box_user)
+            client = get_box_client(box_user)
         except Exception as exc:
             current_app.logger.exception("Box client setup error in box_export_period_marking", exc_info=exc)
             progress_update(task_id, TaskRecord.FAILURE, 100, "Box is not configured on this server.", autocommit=True)

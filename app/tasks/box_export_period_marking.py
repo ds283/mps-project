@@ -493,8 +493,9 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, box_url_map: dic
             rf_data = record.risk_factors_data
             t = rf_data.get(record.RISK_TURNITIN, {})
             row_values[4] = record.turnitin_score
-            row_values[5] = "Yes" if t.get("present", False) else "No"
-            row_values[6] = "Yes" if t.get("resolved", False) else "No"
+            flagged = t.get("present", False)
+            row_values[5] = "Yes" if flagged else "No"
+            row_values[6] = ("Yes" if t.get("resolved", False) else "No") if flagged else None
             row_values[7] = t.get("annotation")
         except Exception:
             pass

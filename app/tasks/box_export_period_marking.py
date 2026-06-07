@@ -37,7 +37,6 @@ from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.box_api import get_box_client
 from ..task_queue import progress_update
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -147,7 +146,11 @@ def _upsert_file(
     mimetype: str = "application/octet-stream",
 ) -> str:
     """Upload or version-replace *filename* in *folder_id*. Returns Box file ID."""
-    from box_sdk_gen import UploadFileAttributes, UploadFileAttributesParentField, UploadFileVersionAttributes
+    from box_sdk_gen import (
+        UploadFileAttributes,
+        UploadFileAttributesParentField,
+        UploadFileVersionAttributes,
+    )
 
     existing_id = _find_file_in_folder(client, folder_id, filename)
     buf = BytesIO(data)
@@ -177,7 +180,10 @@ def _upsert_file(
 def _get_shared_link(client, file_id: str) -> Optional[str]:
     """Create/update a shared link for *file_id* with open (company) access and return the URL."""
     try:
-        from box_sdk_gen import AddShareLinkToFileSharedLink, AddShareLinkToFileSharedLinkAccessField
+        from box_sdk_gen import (
+            AddShareLinkToFileSharedLink,
+            AddShareLinkToFileSharedLinkAccessField,
+        )
 
         file_full = client.shared_links_files.add_share_link_to_file(
             file_id=file_id,
@@ -683,8 +689,7 @@ def register_box_export_period_marking_tasks(celery):
             config = period.config
             abbr = getattr(config, "abbreviation", None) or "period"
             period_name = period.display_name or "period"
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            raw_name = f"marking-report-{abbr}-{period_name}-{timestamp}.xlsx"
+            raw_name = f"marking-report-{abbr}-{period_name}.xlsx"
             xlsx_filename = _normalize_filename(raw_name)
 
             _upsert_file(

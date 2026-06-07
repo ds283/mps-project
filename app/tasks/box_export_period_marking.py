@@ -578,6 +578,12 @@ def register_box_export_period_marking_tasks(celery):
             return
 
         # ------------------------------------------------------------------
+        # Derive target subfolder name from ProjectClass abbreviation
+        # ------------------------------------------------------------------
+        config = period.config
+        abbr = _normalize_filename(getattr(config, "abbreviation", None) or "export")
+
+        # ------------------------------------------------------------------
         # Build in-scope SubmissionRecord set
         # ------------------------------------------------------------------
         progress_update(task_id, TaskRecord.RUNNING, 15, "Determining in-scope submissions...", autocommit=True)
@@ -594,14 +600,25 @@ def register_box_export_period_marking_tasks(celery):
             return
 
         # ------------------------------------------------------------------
-        # Create "Reports" subfolder
+        # Create project subfolder and "Reports" subfolder within it
         # ------------------------------------------------------------------
         progress_update(task_id, TaskRecord.RUNNING, 20, "Preparing Box folder structure...", autocommit=True)
 
         try:
-            reports_folder_id = _get_or_create_subfolder(client, folder_id, "Reports")
+            project_folder_id = _get_or_create_subfolder(client, folder_id, abbr)
         except Exception as exc:
-            current_app.logger.exception("box_export: Box error during subfolder creation", exc_info=exc)
+            current_app.logger.exception("box_export: Box error creating project subfolder", exc_info=exc)
+            if _is_box_auth_error(exc):
+                _post_relink_notification(requesting_user)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+            else:
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error creating project subfolder.", autocommit=True)
+            return
+
+        try:
+            reports_folder_id = _get_or_create_subfolder(client, project_folder_id, "Reports")
+        except Exception as exc:
+            current_app.logger.exception("box_export: Box error creating Reports subfolder", exc_info=exc)
             if _is_box_auth_error(exc):
                 _post_relink_notification(requesting_user)
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
@@ -686,15 +703,13 @@ def register_box_export_period_marking_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 85, "Uploading marking summary spreadsheet...", autocommit=True)
 
         try:
-            config = period.config
-            abbr = getattr(config, "abbreviation", None) or "period"
             period_name = period.display_name or "period"
             raw_name = f"marking-report-{abbr}-{period_name}.xlsx"
             xlsx_filename = _normalize_filename(raw_name)
 
             _upsert_file(
                 client,
-                folder_id,
+                project_folder_id,
                 xlsx_filename,
                 xlsx_bytes,
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -1781,7 +1781,6 @@ def todo_list(id):
         pane="todo",
         pclass=pclass,
         config=config,
-        convenor_date=data,
         current_year=current_year,
         status_filter=status_filter,
         blocking_filter=blocking_filter,

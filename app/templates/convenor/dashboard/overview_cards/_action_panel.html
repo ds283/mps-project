@@ -1,0 +1,47 @@
+{% macro action_panel(action_items) %}
+    {% if not action_items %}
+        <div class="d-flex align-items-center gap-2 py-2 text-body-secondary small mb-2">
+            <i class="fas fa-check-circle text-success fa-fw"></i>
+            No actions required
+        </div>
+    {% else %}
+        <div class="mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-secondary rounded-pill">{{ action_items | length }}</span>
+                <span class="small text-body-secondary">
+                    item{{ 's' if action_items | length != 1 else '' }} requiring attention
+                </span>
+            </div>
+            {% for item in action_items %}
+                {% if item.severity == 'blocking' %}
+                    {% set border_cls = 'border-danger' %}
+                    {% set icon_cls = 'text-danger' %}
+                    {% set btn_cls = 'btn-outline-danger' %}
+                {% elif item.severity == 'warning' %}
+                    {% set border_cls = 'border-warning' %}
+                    {% set icon_cls = 'text-warning-emphasis' %}
+                    {% set btn_cls = 'btn-outline-warning' %}
+                {% else %}
+                    {% set border_cls = '' %}
+                    {% set icon_cls = 'text-body-secondary' %}
+                    {% set btn_cls = 'btn-outline-secondary' %}
+                {% endif %}
+                <div class="card mb-2 {{ border_cls }}">
+                    <div class="card-body p-2 d-flex align-items-start gap-3">
+                        <i class="{{ item.icon }} {{ icon_cls }} fa-fw flex-shrink-0 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <div class="small">{{ item.message }}</div>
+                            {% if item.detail %}
+                                <div class="small text-body-secondary">{{ item.detail }}</div>
+                            {% endif %}
+                        </div>
+                        <a href="{{ item.action_url }}"
+                           class="btn btn-sm {{ btn_cls }} flex-shrink-0">
+                            {{ item.action_label }}
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endmacro %}

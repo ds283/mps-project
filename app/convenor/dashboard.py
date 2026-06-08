@@ -49,6 +49,7 @@ from ..models import (
 )
 from ..shared.context.convenor_dashboard import (
     get_capacity_data,
+    get_convenor_action_items,
     get_convenor_approval_data,
     get_convenor_dashboard_data,
     get_convenor_todo_data,
@@ -204,6 +205,7 @@ def status(id):
         )
 
     data = get_convenor_dashboard_data(pclass, config)
+    action_items = get_convenor_action_items(pclass, config, data)
     todo = get_convenor_todo_data(config)
     approval_data = get_convenor_approval_data(pclass)
 
@@ -221,6 +223,7 @@ def status(id):
         config=config,
         current_year=current_year,
         convenor_data=data,
+        action_items=action_items,
         approval_data=approval_data,
         todo=todo,
         return_url=return_url,

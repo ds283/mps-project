@@ -10,44 +10,45 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import or_, and_, func
+from flask import url_for
+from sqlalchemy import and_, func, or_
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import with_polymorphic
 
-from ..convenor import (
-    build_outstanding_confirmations_query,
-    build_all_confirmations_query,
-    build_accepted_confirmations_query,
-    build_all_custom_query,
-    build_declined_confirmations_query,
-    build_outstanding_custom_query,
-    build_accepted_custom_query,
-    build_declined_custom_query,
-)
-from ..sqlalchemy import get_count
 from ...cache import cache
 from ...database import db
 from ...models import (
-    User,
-    ProjectClass,
-    ProjectClassConfig,
-    FacultyData,
-    Project,
-    EnrollmentRecord,
-    SelectingStudent,
-    SubmittingStudent,
+    ConfirmRequest,
+    ConvenorGenericTask,
     ConvenorSelectorTask,
     ConvenorSubmitterTask,
-    ConvenorGenericTask,
     ConvenorTask,
-    WorkflowMixin,
+    EnrollmentRecord,
+    FacultyData,
+    MarkingEvent,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
     ProjectDescription,
     ResearchGroup,
-    ConfirmRequest,
-    Tenant,
-    MarkingEvent,
+    SelectingStudent,
     SubmissionPeriodRecord,
+    SubmittingStudent,
+    Tenant,
+    User,
+    WorkflowMixin,
 )
+from ..convenor import (
+    build_accepted_confirmations_query,
+    build_accepted_custom_query,
+    build_all_confirmations_query,
+    build_all_custom_query,
+    build_declined_confirmations_query,
+    build_declined_custom_query,
+    build_outstanding_confirmations_query,
+    build_outstanding_custom_query,
+)
+from ..sqlalchemy import get_count
 
 
 def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig):
@@ -100,7 +101,9 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     sel_count = get_count(config.selecting_students.filter_by(retired=False))
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
-    missing_canvas_count = get_count(config.missing_canvas_students) if config.canvas_enabled else 0
+    missing_canvas_count = (
+        get_count(config.missing_canvas_students) if config.canvas_enabled else 0
+    )
 
     todos = build_convenor_tasks_query(
         config, status_filter="available", due_date_order=True
@@ -158,7 +161,9 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     # Count marking events from closed submission periods
     marking_events_count = get_count(
         db.session.query(MarkingEvent)
-        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
+        .join(
+            SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id
+        )
         .filter(
             and_(
                 SubmissionPeriodRecord.config.has(pclass_id=pclass.id),
@@ -199,6 +204,121 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     }
 
 
+def get_convenor_action_items(
+    pclass: ProjectClass, config: ProjectClassConfig, convenor_data: dict
+) -> list:
+    """
+    Build a prioritised list of action items for the convenor actions panel.
+    Takes the already-computed convenor_data dict — does not re-call
+    get_convenor_dashboard_data.
+    """
+    blocking = []
+    warnings = []
+    advisory = []
+
+    # --- BLOCKING: outstanding confirmation requests >= 14 days old ---
+    outstanding = convenor_data.get("outstanding_confirms", 0)
+    age_oldest = convenor_data.get("age_oldest_confirm_request")
+    if outstanding > 0 and age_oldest is not None and age_oldest >= 14:
+        pl = "s" if outstanding != 1 else ""
+        blocking.append(
+            {
+                "severity": "blocking",
+                "icon": "fas fa-hand-paper",
+                "message": f"{outstanding} outstanding confirmation request{pl} — oldest waiting {int(age_oldest)} days",
+                "detail": None,
+                "action_label": "View confirmations",
+                "action_url": url_for("convenor.show_confirmations", id=pclass.id),
+            }
+        )
+
+    # --- BLOCKING: MarkingEvents with urgent_action_count > 0 ---
+    # Fast exit when the pre-computed aggregate is zero.
+    # When non-zero, iterate periods/events to produce one item per affected event.
+    if convenor_data.get("marking_urgent_count", 0) > 0:
+        for period in config.periods:
+            for event in period.marking_events:
+                # NOTE: urgent_action_count iterates workflows and submitter_reports
+                # per event — O(events × workflows × reports), only reached when > 0.
+                n = event.urgent_action_count
+                if n > 0:
+                    wpl = "s" if n != 1 else ""
+                    blocking.append(
+                        {
+                            "severity": "blocking",
+                            "icon": "fas fa-exclamation-circle",
+                            "message": f"{event.name} — {n} workflow{wpl} require convenor action",
+                            "detail": None,
+                            "action_label": "View workflows",
+                            "action_url": url_for(
+                                "convenor.period_marking_events_inspector",
+                                period_id=event.period_id,
+                            ),
+                        }
+                    )
+
+    # --- WARNING: open submission periods with submitters awaiting report upload ---
+    for period in config.periods:
+        if not period.closed:
+            # one query per open period
+            n = period.number_submitters_without_reports
+            if n > 0:
+                spl = "s" if n != 1 else ""
+                warnings.append(
+                    {
+                        "severity": "warning",
+                        "icon": "fas fa-file-upload",
+                        "message": f"{period.display_name} — {n} submitter{spl} awaiting report upload",
+                        "detail": None,
+                        "action_label": "View submitters",
+                        "action_url": url_for("convenor.submitters", id=pclass.id),
+                    }
+                )
+
+    # --- WARNING: Canvas integration enabled but students not enrolled ---
+    missing_canvas = convenor_data.get("missing_canvas_count", 0)
+    if missing_canvas > 0:
+        spl = "s" if missing_canvas != 1 else ""
+        warnings.append(
+            {
+                "severity": "warning",
+                "icon": "fas fa-chalkboard",
+                "message": f"{missing_canvas} student{spl} not enrolled in the Canvas module",
+                "detail": None,
+                "action_label": "View missing students",
+                "action_url": url_for("convenor.submitters", id=pclass.id),
+            }
+        )
+
+    # --- ADVISORY: selectors with no submission and no bookmarks ---
+    # NOTE: has_submitted and has_bookmarks are Python properties that run
+    # small queries each. This is O(N) for N = active selectors. Acceptable
+    # for typical class sizes; could be replaced with a join query if slow.
+    inactive = sum(
+        1
+        for s in config.selecting_students.filter_by(retired=False)
+        if not s.has_submitted and not s.has_bookmarks
+    )
+    if inactive > 0:
+        spl = "s" if inactive != 1 else ""
+        vpl = "have" if inactive != 1 else "has"
+        advisory.append(
+            {
+                "severity": "advisory",
+                "icon": "fas fa-question-circle",
+                "message": (
+                    f"{inactive} selector{spl} {vpl} neither submitted a selection "
+                    f"nor bookmarked any projects — may receive a random allocation"
+                ),
+                "detail": None,
+                "action_label": "View selectors",
+                "action_url": url_for("convenor.selectors", id=pclass.id),
+            }
+        )
+
+    return blocking + warnings + advisory
+
+
 def get_convenor_todo_data(config: ProjectClassConfig, task_limit=10):
     # get list of available tasks (not available != all, even excluding dropped and completed tasks)
     tks = build_convenor_tasks_query(
@@ -211,10 +331,10 @@ def get_convenor_todo_data(config: ProjectClassConfig, task_limit=10):
 
 
 def build_convenor_tasks_query(
-        config: ProjectClassConfig,
-        status_filter="all",
-        blocking_filter="all",
-        due_date_order=True,
+    config: ProjectClassConfig,
+    status_filter="all",
+    blocking_filter="all",
+    due_date_order=True,
 ):
     """
     Return a query that extracts convenor tasks for a particular config instance

@@ -13,6 +13,7 @@
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 
 {% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
+{% from "convenor/dashboard/overview_cards/_action_panel.html" import action_panel %}
 
 {% set rollover_in_progress = config.year < current_year %}
 
@@ -95,30 +96,22 @@
         <div class="col-1"></div>
         <div class="col-10">
 
-            {# [A] ALERT BANNERS #}
-            {% if missing_canvas_count > 0 %}
+            {# [A] ALERT BANNERS — centralised action panel #}
+            {{ action_panel(action_items) }}
+
+            {# SUPERSEDED by action_panel: canvas warning item covers missing_canvas_count > 0 #}
+            {# {% if missing_canvas_count > 0 %}
                 {{ canvas_missing_card(config, pclass, missing_canvas_count) }}
-            {% endif %}
-            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and age_oldest_confirm_request is not none and age_oldest_confirm_request > 5 %}
+            {% endif %} #}
+
+            {# SUPERSEDED by action_panel: blocking item covers outstanding_confirms with age >= 14 days.
+               Original threshold was 5 days on SELECTIONS_OPEN only; action panel uses 14 days
+               across all lifecycle states. #}
+            {# {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and age_oldest_confirm_request is not none and age_oldest_confirm_request > 5 %}
                 <div class="alert alert-danger">
-                    {% call icon_block("exclamation-circle") %}
-                        <strong>
-                            {% if outstanding_confirms == 1 %}
-                                1 meeting confirmation request is outstanding.
-                                This request has been waiting for {{ age_oldest_confirm_request }} days.
-                            {% else %}
-                                {{ outstanding_confirms }} meeting confirmation requests are outstanding.
-                                The oldest request has been waiting for {{ age_oldest_confirm_request }} days.
-                            {% endif %}
-                        </strong>
-                        <div class="mt-1">
-                            <a class="link-primary text-decoration-none"
-                               href="{{ url_for('convenor.show_confirmations', id=pclass.id) }}">View outstanding
-                                confirmation requests&hellip;</a>
-                        </div>
-                    {% endcall %}
+                    ...
                 </div>
-            {% endif %}
+            {% endif %} #}
 
             {# [B] LIFECYCLE ACTION CARD — primary CTA #}
             {% if pclass.publish %}

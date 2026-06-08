@@ -142,100 +142,7 @@
                 </div>
             {% endif %}
 
-            {# [C] LIFECYCLE STEPPER — compact read-only progress strip #}
-            {% if pclass.publish %}
-                <div class="card border-0 bg-light mt-2 mb-2 py-2 px-3">
-                    <div class="d-flex flex-row align-items-start justify-content-between">
-
-                        {# Step 1: Issue Confirmations #}
-                        {% set s1_done   = lifecycle > config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                        {% set s1_active = lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
-                            <i class="fas fa-lg mb-1
-                               {% if s1_done %}fa-check-circle text-success
-                               {% elif s1_active %}fa-dot-circle text-primary
-                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                            <span class="small text-center
-                               {% if s1_active %}fw-semibold text-primary{% elif s1_done %}text-success{% else %}text-secondary{% endif %}">
-                                Issue<br>Confirmations
-                            </span>
-                        </div>
-
-                        {# Connector 1→2 #}
-                        <div class="flex-grow-1 border-top border-2 {% if s1_done %}border-success{% else %}border-secondary{% endif %}"
-                             style="margin-top:0.6rem"></div>
-
-                        {# Step 2: Await Confirmations #}
-                        {% set s2_done   = lifecycle > config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        {% set s2_active = lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
-                            <i class="fas fa-lg mb-1
-                               {% if s2_done %}fa-check-circle text-success
-                               {% elif s2_active %}fa-dot-circle text-primary
-                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                            <span class="small text-center
-                               {% if s2_active %}fw-semibold text-primary{% elif s2_done %}text-success{% else %}text-secondary{% endif %}">
-                                Await<br>Confirmations
-                            </span>
-                        </div>
-
-                        {# Connector 2→3 #}
-                        <div class="flex-grow-1 border-top border-2 {% if s2_done %}border-success{% else %}border-secondary{% endif %}"
-                             style="margin-top:0.6rem"></div>
-
-                        {# Step 3: Go Live #}
-                        {% set s3_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                        {% set s3_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
-                            <i class="fas fa-lg mb-1
-                               {% if s3_done %}fa-check-circle text-success
-                               {% elif s3_active %}fa-dot-circle text-primary
-                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                            <span class="small text-center
-                               {% if s3_active %}fw-semibold text-primary{% elif s3_done %}text-success{% else %}text-secondary{% endif %}">
-                                Go Live
-                            </span>
-                        </div>
-
-                        {# Connector 3→4 #}
-                        <div class="flex-grow-1 border-top border-2 {% if s3_done %}border-success{% else %}border-secondary{% endif %}"
-                             style="margin-top:0.6rem"></div>
-
-                        {# Step 4: Selections Open #}
-                        {% set s4_done   = lifecycle > config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        {% set s4_active = lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
-                            <i class="fas fa-lg mb-1
-                               {% if s4_done %}fa-check-circle text-success
-                               {% elif s4_active %}fa-dot-circle text-primary
-                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                            <span class="small text-center
-                               {% if s4_active %}fw-semibold text-primary{% elif s4_done %}text-success{% else %}text-secondary{% endif %}">
-                                Selections<br>Open
-                            </span>
-                        </div>
-
-                        {# Connector 4→5 #}
-                        <div class="flex-grow-1 border-top border-2 {% if s4_done %}border-success{% else %}border-secondary{% endif %}"
-                             style="margin-top:0.6rem"></div>
-
-                        {# Step 5: Closed / Matching #}
-                        {% set s5_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                        {% set s5_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
-                            <i class="fas fa-lg mb-1
-                               {% if s5_done %}fa-check-circle text-success
-                               {% elif s5_active %}fa-dot-circle text-primary
-                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                            <span class="small text-center
-                               {% if s5_active %}fw-semibold text-primary{% elif s5_done %}text-success{% else %}text-secondary{% endif %}">
-                                Closed /<br>Matching
-                            </span>
-                        </div>
-
-                    </div>
-                </div>
-            {% endif %}
+            {# [C] SUPERSEDED by Phase 3: lifecycle stepper moved to right column cycle lifecycle card #}
 
             {# [D] CONFIGURATION ACCORDION — collapsed by default #}
             <div class="card mt-3 mb-3 card-body border-primary bg-well">
@@ -595,46 +502,38 @@
                 </div>
             </div>
 
-            {# [E] COMPACT SUBMISSION PERIOD SUMMARY — lightweight table #}
-            <div class="card mt-2 mb-2 border-secondary">
-                <div class="card-header d-flex flex-row justify-content-between align-items-center py-2">
-                    <span class="fw-semibold text-secondary">
-                        <i class="fas fa-layer-group me-1"></i> Submission periods
-                    </span>
-                    <a class="btn btn-xs btn-outline-secondary"
-                       href="{{ url_for('convenor.periods', id=pclass.id) }}">
-                        Full detail <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
-                </div>
-                <div class="card-body p-2">
+            {# [E] SUPERSEDED by Phase 3: compact periods table replaced by two-column layout below #}
+
+            {# [G] TWO-COLUMN LAYOUT — 60% submission management / 40% selection management #}
+            <div class="row g-3 mt-1 mb-3">
+
+                {# ── LEFT COLUMN (60%) — Submission management ── #}
+                <div class="col-12 col-lg-7">
+                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2">
+                        <i class="fas fa-file-alt fa-fw"></i> Submission management
+                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill ms-1">Period #{{ config.submission_period }} active</span>
+                    </p>
+
+                    {# Period cards — one per submission period #}
                     {% if config.periods|list|length > 0 %}
-                        <table class="table table-sm table-hover mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th class="small" style="width:34%">Period</th>
-                                <th class="small" style="width:20%">Start</th>
-                                <th class="small" style="width:20%">Hand-in</th>
-                                <th class="small" style="width:18%">Status</th>
-                                <th class="small" style="width:8%"></th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for p in config.periods %}
-                                {% set is_current = (p.submission_period == config.submission_period) %}
-                                <tr class="{% if is_current %}table-primary{% endif %}">
-                                    <td class="small align-middle">
-                                        {% if is_current %}<strong>{{ p.display_name|safe }}</strong>
-                                        {% else %}{{ p.display_name|safe }}{% endif %}
-                                    </td>
-                                    <td class="small align-middle text-body-secondary">
-                                        {% if p.start_date %}{{ p.start_date.strftime("%d %b %Y") }}{% else %}
-                                            &ndash;{% endif %}
-                                    </td>
-                                    <td class="small align-middle text-body-secondary">
-                                        {% if p.hand_in_date %}{{ p.hand_in_date.strftime("%d %b %Y") }}{% else %}
-                                            &ndash;{% endif %}
-                                    </td>
-                                    <td class="align-middle">
+                        {% for p in config.periods %}
+                            {% set is_current = (p.submission_period == config.submission_period) %}
+                            {% set collapse_id = 'period-collapse-' ~ p.id %}
+                            <div class="card mb-2 {% if is_current %}border-primary{% else %}border-secondary{% endif %}">
+
+                                {# Card header #}
+                                <div class="card-header d-flex justify-content-between align-items-center py-2"
+                                     style="background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color)">
+                                    <div class="d-flex flex-wrap align-items-center gap-1">
+                                        <button class="btn btn-link p-0 text-start text-decoration-none fw-semibold"
+                                                style="font-size:14px; color: var(--bs-primary)"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#{{ collapse_id }}"
+                                                aria-expanded="{{ 'true' if is_current else 'false' }}"
+                                                aria-controls="{{ collapse_id }}">
+                                            {{ p.display_name|safe }}
+                                        </button>
                                         {% if p.closed %}
                                             <span class="badge bg-secondary">Closed</span>
                                         {% elif p.has_active_marking_event %}
@@ -647,39 +546,536 @@
                                         {% if p.submission_period <= config.submission_period %}
                                             {% set msgs = p.validate %}
                                             {% if msgs is not none and msgs|length > 0 %}
-                                                <i class="fas fa-exclamation-triangle text-danger ms-1"
-                                                   title="Validation warnings — see Periods tab for detail"></i>
+                                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">
+                                                    <i class="fas fa-exclamation-triangle fa-fw"></i> Validation warnings
+                                                </span>
                                             {% endif %}
                                         {% endif %}
-                                        {% set me_total = p.marking_events.count() %}
-                                        {% if me_total > 0 %}
-                                            {% set me_open = p.marking_events.filter(MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED).count() %}
-                                            <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=p.id) }}"
-                                               class="text-decoration-none ms-1" title="Marking events">
-                                                {% if me_open > 0 %}
-                                                    <span class="badge bg-success">{{ me_open }} open event{{ 's' if me_open != 1 }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">{{ me_total }} event{{ 's' if me_total != 1 }} closed</span>
-                                                {% endif %}
-                                            </a>
+                                        {% set n_missing = p.number_submitters_without_reports %}
+                                        {% if n_missing > 0 and not p.closed %}
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                                <i class="fas fa-exclamation-triangle fa-fw"></i> {{ n_missing }} pending upload
+                                            </span>
                                         {% endif %}
-                                    </td>
-                                    <td class="small align-middle text-end">
+                                    </div>
+                                    <div class="d-flex gap-1 align-items-center flex-shrink-0 ms-2">
                                         {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.has_active_marking_event or p.closed)) }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
+                                        <a class="btn btn-xs btn-outline-secondary"
+                                           href="{{ url_for('convenor.periods', id=pclass.id) }}">
+                                            Full detail <i class="fas fa-arrow-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                {# Collapsible body #}
+                                <div class="collapse {% if is_current %}show{% endif %}" id="{{ collapse_id }}">
+                                    <div class="card-body p-2">
+
+                                        {# Date / settings summary line #}
+                                        <p class="small text-body-secondary mb-2">
+                                            {% if p.start_date %}Start:
+                                                {{ p.start_date.strftime("%d %b %Y") }}{% endif %}
+                                            {% if p.hand_in_date %}&middot;
+                                                Hand-in: {{ p.hand_in_date.strftime("%d %b %Y") }}{% endif %}
+                                            {% if config.uses_supervisor %}&middot; {{ config.CATS_supervision }} CATS
+                                                supervision{% endif %}
+                                            {% if config.uses_marker and p.number_markers %}&middot;
+                                                {{ p.number_markers }} marker{{ 's' if p.number_markers != 1 }} per
+                                                submission{% endif %}
+                                        </p>
+
+                                        {# Marking events sub-section #}
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="small fw-semibold text-secondary">
+                                                    <i class="fas fa-calendar-check fa-fw"></i> Marking events
+                                                </span>
+                                                <a href="{{ url_for('convenor.add_marking_event', period_id=p.id) }}"
+                                                   class="btn btn-xs btn-outline-secondary">
+                                                    <i class="fas fa-plus"></i> Add event
+                                                </a>
+                                            </div>
+                                            {% set events = p.marking_events.all() %}
+                                            {% if events %}
+                                                {# Accumulate aggregate workflow status across all events #}
+                                                {% set ns = namespace(complete=0, pending_upload=0, in_progress=0, risk_flags=0) %}
+                                                <div class="list-group list-group-flush border rounded mb-2">
+                                                    {% for event in events %}
+                                                        {% set wss = event.workflow_status_summary %}
+                                                        {% set ns.complete = ns.complete + wss['complete'] %}
+                                                        {% set ns.pending_upload = ns.pending_upload + wss['pending_upload'] %}
+                                                        {% set ns.in_progress = ns.in_progress + wss['in_progress'] %}
+                                                        {% set ns.risk_flags = ns.risk_flags + wss['risk_flags'] %}
+                                                        <div class="list-group-item px-2 py-1
+                                                            {% if event.workflow_state >= MarkingEventWorkflowStates.OPEN and event.workflow_state < MarkingEventWorkflowStates.CLOSED %}border-start border-3 border-info{% endif %}">
+                                                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                                                <div class="small">
+                                                                    <span class="fw-semibold">{{ event.name }}</span>
+                                                                    {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
+                                                                        <span class="badge bg-secondary ms-1">Closed</span>
+                                                                    {% elif event.workflow_state >= MarkingEventWorkflowStates.OPEN %}
+                                                                        <span class="badge bg-success ms-1">Active</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-primary ms-1">Pending</span>
+                                                                    {% endif %}
+                                                                    {% set wf_count = event.workflows.count() %}
+                                                                    {% if wf_count > 0 %}
+                                                                        <span class="text-body-secondary ms-1">{{ wf_count }} workflow{{ 's' if wf_count != 1 }}</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
+                                                                    <a href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id) }}"
+                                                                       class="btn btn-xs btn-outline-secondary flex-shrink-0">
+                                                                        <i class="fas fa-search fa-fw"></i> Workflows
+                                                                    </a>
+                                                                {% else %}
+                                                                    <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=p.id) }}"
+                                                                       class="btn btn-xs btn-primary flex-shrink-0">
+                                                                        <i class="fas fa-search fa-fw"></i> Inspect
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+
+                                                {# 4-cell aggregate workflow status grid #}
+                                                <div class="row g-1 mb-2">
+                                                    <div class="col-6 col-sm-3">
+                                                        <div class="rounded p-1 text-center"
+                                                             style="background: var(--bs-success-bg-subtle); border: 1px solid var(--bs-success-border-subtle)">
+                                                            <div class="small fw-bold"
+                                                                 style="color: var(--bs-success-text-emphasis)">{{ ns.complete }}</div>
+                                                            <div class="text-body-secondary" style="font-size:10px">
+                                                                Complete
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6 col-sm-3">
+                                                        <div class="rounded p-1 text-center"
+                                                             style="background: var(--bs-warning-bg-subtle); border: 1px solid var(--bs-warning-border-subtle)">
+                                                            <div class="small fw-bold"
+                                                                 style="color: var(--bs-warning-text-emphasis)">{{ ns.pending_upload }}</div>
+                                                            <div class="text-body-secondary" style="font-size:10px">
+                                                                Pending upload
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6 col-sm-3">
+                                                        <div class="rounded p-1 text-center"
+                                                             style="background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color)">
+                                                            <div class="small fw-bold text-body-secondary">{{ ns.in_progress }}</div>
+                                                            <div class="text-body-secondary" style="font-size:10px">In
+                                                                progress
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6 col-sm-3">
+                                                        <div class="rounded p-1 text-center"
+                                                             style="background: var(--bs-danger-bg-subtle); border: 1px solid var(--bs-danger-border-subtle)">
+                                                            <div class="small fw-bold"
+                                                                 style="color: var(--bs-danger-text-emphasis)">{{ ns.risk_flags }}</div>
+                                                            <div class="text-body-secondary" style="font-size:10px">Risk
+                                                                flags
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {# Per-event action buttons for non-closed events #}
+                                                {% set has_open_event = events | rejectattr('workflow_state', 'equalto', MarkingEventWorkflowStates.CLOSED) | list | length > 0 %}
+                                                {% if has_open_event %}
+                                                    <div class="d-flex gap-1 flex-wrap">
+                                                        {% for event in events %}
+                                                            {% if event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
+                                                                <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+                                                                   class="btn btn-xs btn-outline-secondary">
+                                                                    <i class="fas fa-file-export fa-fw"></i> Generate
+                                                                    feedback
+                                                                </a>
+                                                                <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=event.id) }}"
+                                                                   class="btn btn-xs btn-outline-secondary">
+                                                                    <i class="fas fa-compress-arrows-alt fa-fw"></i>
+                                                                    Conflation reports
+                                                                </a>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <p class="small text-body-secondary mb-1">No marking events defined for
+                                                    this period.</p>
+                                            {% endif %}
+                                        </div>
+
+                                        {# Supervision units summary line #}
+                                        {% if p.has_units %}
+                                            <div class="d-flex justify-content-between align-items-center small text-body-secondary mb-2">
+                                                <span>
+                                                    {{ p.number_units }} supervision unit{{ 's' if p.number_units != 1 }}
+                                                    {% set first_unit = p.ordered_units.first() %}
+                                                    {% set all_units = p.ordered_units.all() %}
+                                                    {% if first_unit and all_units %}
+                                                        &middot;
+                                                        {% if first_unit.start_date %}wk
+                                                            {{ first_unit.start_date.strftime("%d %b") }}{% endif %}
+                                                        &ndash;
+                                                        {% if all_units[-1].end_date %}wk
+                                                            {{ all_units[-1].end_date.strftime("%d %b") }}{% endif %}
+                                                    {% endif %}
+                                                </span>
+                                                <div class="d-flex gap-1">
+                                                    <a href="{{ url_for('convenor.inspect_period_units', period_id=p.id) }}"
+                                                       class="btn btn-xs btn-outline-secondary">Inspect units</a>
+                                                    <a href="{{ url_for('convenor.populate_supervision_events', period_id=p.id) }}"
+                                                       class="btn btn-xs btn-outline-secondary">Populate events</a>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
+                                        {# Period closure notice #}
+                                        {% if p.has_active_marking_event %}
+                                            <p class="small text-danger mb-0">
+                                                <i class="fas fa-lock fa-fw"></i>
+                                                Period closure unavailable while marking events are active.
+                                            </p>
+                                        {% endif %}
+
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     {% else %}
-                        <div class="p-2">
+                        <div class="card border-secondary p-2">
                             {% call icon_block('ban') %}
                                 <strong>No configured submission periods</strong>
                             {% endcall %}
                         </div>
                     {% endif %}
+
+                    {# Submitters card #}
+                    <div class="card border-secondary mt-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                            <span class="fw-semibold text-secondary small">
+                                <i class="fas fa-users fa-fw"></i> Submitters
+                            </span>
+                            <a href="{{ url_for('convenor.submitters', id=pclass.id) }}"
+                               class="btn btn-xs btn-outline-secondary">
+                                View all {{ convenor_data['submitters'] }} <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        <div class="card-body p-2">
+                            {% set current_period = config.get_period(config.submission_period) %}
+                            {% set n_total = convenor_data['submitters'] %}
+                            {% set n_missing = current_period.number_submitters_without_reports if current_period else 0 %}
+                            {% set n_uploaded = n_total - n_missing %}
+                            <div class="row g-1 mb-2">
+                                <div class="col-6">
+                                    <div class="rounded p-1 text-center"
+                                         style="background: var(--bs-success-bg-subtle); border: 1px solid var(--bs-success-border-subtle)">
+                                        <div class="small fw-bold"
+                                             style="color: var(--bs-success-text-emphasis)">{{ n_uploaded }}</div>
+                                        <div class="text-body-secondary" style="font-size:10px">Uploaded</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="rounded p-1 text-center"
+                                         style="background: {% if n_missing > 0 %}var(--bs-warning-bg-subtle){% else %}var(--bs-secondary-bg){% endif %}; border: 1px solid {% if n_missing > 0 %}var(--bs-warning-border-subtle){% else %}var(--bs-border-color){% endif %}">
+                                        <div class="small fw-bold"
+                                             style="color: {% if n_missing > 0 %}var(--bs-warning-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">{{ n_missing }}</div>
+                                        <div class="text-body-secondary" style="font-size:10px">Missing</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1 flex-wrap">
+                                <a href="{{ url_for('convenor.populate_markers', configid=config.id) }}"
+                                   class="btn btn-xs btn-outline-secondary">
+                                    <i class="fas fa-user-tag fa-fw"></i> Assign markers
+                                </a>
+                                <a href="{{ url_for('convenor.faculty_workload', id=pclass.id) }}"
+                                   class="btn btn-xs btn-outline-secondary">
+                                    <i class="fas fa-chart-bar fa-fw"></i> Workload analysis
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
+                {# END LEFT COLUMN #}
+
+                {# ── RIGHT COLUMN (40%) — Selection management ── #}
+                <div class="col-12 col-lg-5">
+                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2">
+                        <i class="fas fa-calendar fa-fw"></i> Selection management
+                    </p>
+
+                    {# A. Cycle lifecycle card — stepper moved here from [C] #}
+                    {% if pclass.publish %}
+                        <div class="card border-secondary mb-2">
+                            <div class="card-header py-2">
+                                <span class="fw-semibold text-secondary small">
+                                    <i class="fas fa-map-signs fa-fw"></i> Selection lifecycle
+                                </span>
+                            </div>
+                            <div class="card-body p-2">
+
+                                {# Small blocking alert strip #}
+                                {% set blocking_items = action_items | selectattr('severity', 'equalto', 'blocking') | list %}
+                                {% if blocking_items %}
+                                    <div class="alert alert-danger py-1 px-2 mb-2 small d-flex align-items-center gap-2">
+                                        <i class="fas fa-exclamation-circle fa-fw flex-shrink-0"></i>
+                                        <span>
+                                            {{ blocking_items | length }} blocking item{{ 's' if blocking_items | length != 1 }} &mdash;
+                                            <a href="#" onclick="window.scrollTo(0,0); return false;"
+                                               class="alert-link">see actions panel above ↑</a>
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {# Lifecycle stepper — moved verbatim from [C] #}
+                                <div class="d-flex flex-row align-items-start justify-content-between mb-2">
+
+                                    {% set s1_done   = lifecycle > config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                                    {% set s1_active = lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                                    <div class="d-flex flex-column align-items-center" style="min-width:60px">
+                                        <i class="fas fa-lg mb-1
+                                           {% if s1_done %}fa-check-circle text-success
+                                           {% elif s1_active %}fa-dot-circle text-primary
+                                           {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                                        <span class="text-center" style="font-size:10px;
+                                                {% if s1_active %}font-weight:600; color:var(--bs-primary){% elif s1_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                            Issue<br>Confirms
+                                        </span>
+                                    </div>
+
+                                    <div class="flex-grow-1 border-top border-2 {% if s1_done %}border-success{% else %}border-secondary{% endif %}"
+                                         style="margin-top:0.6rem"></div>
+
+                                    {% set s2_done   = lifecycle > config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                                    {% set s2_active = lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                                    <div class="d-flex flex-column align-items-center" style="min-width:60px">
+                                        <i class="fas fa-lg mb-1
+                                           {% if s2_done %}fa-check-circle text-success
+                                           {% elif s2_active %}fa-dot-circle text-primary
+                                           {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                                        <span class="text-center" style="font-size:10px;
+                                                {% if s2_active %}font-weight:600; color:var(--bs-primary){% elif s2_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                            Await<br>Confirms
+                                        </span>
+                                    </div>
+
+                                    <div class="flex-grow-1 border-top border-2 {% if s2_done %}border-success{% else %}border-secondary{% endif %}"
+                                         style="margin-top:0.6rem"></div>
+
+                                    {% set s3_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                                    {% set s3_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                                    <div class="d-flex flex-column align-items-center" style="min-width:60px">
+                                        <i class="fas fa-lg mb-1
+                                           {% if s3_done %}fa-check-circle text-success
+                                           {% elif s3_active %}fa-dot-circle text-primary
+                                           {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                                        <span class="text-center" style="font-size:10px;
+                                                {% if s3_active %}font-weight:600; color:var(--bs-primary){% elif s3_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                            Go Live
+                                        </span>
+                                    </div>
+
+                                    <div class="flex-grow-1 border-top border-2 {% if s3_done %}border-success{% else %}border-secondary{% endif %}"
+                                         style="margin-top:0.6rem"></div>
+
+                                    {% set s4_done   = lifecycle > config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                    {% set s4_active = lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                    <div class="d-flex flex-column align-items-center" style="min-width:60px">
+                                        <i class="fas fa-lg mb-1
+                                           {% if s4_done %}fa-check-circle text-success
+                                           {% elif s4_active %}fa-dot-circle text-primary
+                                           {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                                        <span class="text-center" style="font-size:10px;
+                                                {% if s4_active %}font-weight:600; color:var(--bs-primary){% elif s4_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                            Selections<br>Open
+                                        </span>
+                                    </div>
+
+                                    <div class="flex-grow-1 border-top border-2 {% if s4_done %}border-success{% else %}border-secondary{% endif %}"
+                                         style="margin-top:0.6rem"></div>
+
+                                    {% set s5_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                                    {% set s5_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                                    <div class="d-flex flex-column align-items-center" style="min-width:60px">
+                                        <i class="fas fa-lg mb-1
+                                           {% if s5_done %}fa-check-circle text-success
+                                           {% elif s5_active %}fa-dot-circle text-primary
+                                           {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                                        <span class="text-center" style="font-size:10px;
+                                                {% if s5_active %}font-weight:600; color:var(--bs-primary){% elif s5_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                            Closed /<br>Matching
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                                {# Deadline line #}
+                                {% if config.live_deadline %}
+                                    <p class="small text-body-secondary mt-1 mb-1">
+                                        <i class="fas fa-calendar-alt fa-fw"></i>
+                                        Deadline: <strong>{{ config.live_deadline.strftime("%a %d %b %Y") }}</strong>
+                                    </p>
+                                {% endif %}
+
+                                {# Action buttons #}
+                                <div class="d-flex gap-1 flex-wrap mt-2">
+                                    <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
+                                       class="btn btn-xs btn-outline-secondary">
+                                        <i class="fas fa-sync fa-fw"></i> Reset popularity
+                                    </a>
+                                    {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                        <form action="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
+                                              method="POST" class="d-inline">
+                                            {{ change_form.hidden_tag() }}
+                                            <button type="submit" class="btn btn-xs btn-outline-danger">
+                                                <i class="fas fa-lock fa-fw"></i> Close selections
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {# B. Selection metrics card #}
+                    {% set selector_data = config.selector_data %}
+                    {% set sel_total = selector_data['total'] %}
+                    {% set sel_submitted = selector_data['have_submitted'] %}
+                    {% set sel_bookmarks = selector_data['have_bookmarks'] %}
+                    {% set sel_missing = selector_data['missing'] %}
+                    {% set sel_outstanding_confirm = convenor_data['outstanding_confirms'] %}
+                    <div class="card border-secondary mb-2">
+                        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold text-secondary small">
+                                <i class="fas fa-hand-pointer fa-fw"></i> Selection metrics
+                            </span>
+                            <a href="{{ url_for('convenor.selectors', id=pclass.id) }}"
+                               class="btn btn-xs btn-outline-secondary">
+                                View selectors <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        <div class="card-body p-2">
+                            <div class="row g-1 mb-1">
+                                <div class="col-4">
+                                    {% set submitted_ok = sel_submitted == sel_total %}
+                                    <div class="rounded p-1 text-center"
+                                         style="background: var(--bs-{% if submitted_ok %}success{% else %}danger{% endif %}-bg-subtle); border: 1px solid var(--bs-{% if submitted_ok %}success{% else %}danger{% endif %}-border-subtle)">
+                                        <div class="small fw-bold"
+                                             style="color: var(--bs-{% if submitted_ok %}success{% else %}danger{% endif %}-text-emphasis)">
+                                            {{ sel_submitted }}<span
+                                                class="fw-normal text-body-secondary">/{{ sel_total }}</span>
+                                        </div>
+                                        <div class="text-body-secondary" style="font-size:10px">Submitted</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="rounded p-1 text-center"
+                                         style="background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color)">
+                                        <div class="small fw-bold text-body-secondary">
+                                            {{ sel_bookmarks }}<span class="fw-normal">/{{ sel_total }}</span>
+                                        </div>
+                                        <div class="text-body-secondary" style="font-size:10px">Bookmarked</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    {% set confirms_ok = sel_outstanding_confirm == 0 %}
+                                    <div class="rounded p-1 text-center"
+                                         style="background: var(--bs-{% if confirms_ok %}success{% else %}danger{% endif %}-bg-subtle); border: 1px solid var(--bs-{% if confirms_ok %}success{% else %}danger{% endif %}-border-subtle)">
+                                        <div class="small fw-bold"
+                                             style="color: var(--bs-{% if confirms_ok %}success{% else %}danger{% endif %}-text-emphasis)">
+                                            {{ sel_outstanding_confirm }}
+                                        </div>
+                                        <div class="text-body-secondary" style="font-size:10px">Confirms outstanding
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="small text-body-secondary mb-0">No bookmarks: {{ sel_missing }}</p>
+                        </div>
+                    </div>
+
+                    {# C. Popular projects card #}
+                    {% if pclass.publish %}
+                        <div class="card border-secondary mb-2">
+                            <div class="card-header py-2">
+                                <span class="fw-semibold text-secondary small">
+                                    <i class="fas fa-fire fa-fw"></i> Popular projects
+                                </span>
+                            </div>
+                            <div class="card-body p-2">
+                                <table class="table table-sm table-hover mb-1">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th class="small" style="width:55%">Project</th>
+                                        <th class="small" style="width:20%">Selections</th>
+                                        <th class="small" style="width:25%">Views</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="popular-projects-overview-tbody">
+                                    <tr>
+                                        <td colspan="3" class="text-body-secondary small text-center">
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            Loading&hellip;
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <div class="d-flex justify-content-between align-items-center small text-body-secondary">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span>cf.</span>
+                                        <select id="popular-overview-interval"
+                                                class="form-select form-select-sm d-inline-block w-auto">
+                                            <option value="1h">1 hour</option>
+                                            <option value="12h">12 hours</option>
+                                            <option value="1d">1 day</option>
+                                            <option value="3d" selected>3 days</option>
+                                            <option value="1w">1 week</option>
+                                        </select>
+                                    </div>
+                                    <span id="popular-overview-updated">&mdash;</span>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                            (function () {
+                                var _url = {{ url_for('convenor.popular_projects_ajax', config_id=config.id)|tojson }};
+                                var _interval = '3d';
+
+                                function refresh() {
+                                    fetch(_url + '?interval=' + encodeURIComponent(_interval))
+                                        .then(function (r) {
+                                            return r.ok ? r.json() : Promise.reject(r.status);
+                                        })
+                                        .then(function (data) {
+                                            document.getElementById('popular-projects-overview-tbody').innerHTML = data.tbody;
+                                            document.getElementById('popular-overview-updated').textContent = data.updated_at;
+                                        })
+                                        .catch(function () {
+                                        });
+                                }
+
+                                document.getElementById('popular-overview-interval').addEventListener('change', function () {
+                                    _interval = this.value;
+                                    refresh();
+                                });
+
+                                refresh();
+                                setInterval(refresh, 15 * 60 * 1000);
+                            })();
+                        </script>
+                    {% endif %}
+
+                </div>
+                {# END RIGHT COLUMN #}
+
             </div>
+            {# END TWO-COLUMN LAYOUT #}
 
             {# [F] CONDITIONAL CARDS: rollover, proposed matches/schedules, upcoming tasks #}
 

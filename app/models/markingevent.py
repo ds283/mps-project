@@ -357,6 +357,37 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                             count += 1
         return count
 
+    @property
+    def workflow_status_summary(self) -> dict:
+        complete_states = {
+            SubmitterReportWorkflowStates.COMPLETED,
+            SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+            SubmitterReportWorkflowStates.DROPPED,
+        }
+        pending_states = {SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE}
+        risk_states = {
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+        }
+        complete = pending_upload = in_progress = risk_flags = 0
+        for workflow in self.workflows.all():
+            for sr in workflow.submitter_reports:
+                s = sr.workflow_state
+                if s in complete_states:
+                    complete += 1
+                elif s in risk_states:
+                    risk_flags += 1
+                elif s in pending_states:
+                    pending_upload += 1
+                else:
+                    in_progress += 1
+        return {
+            "complete": complete,
+            "pending_upload": pending_upload,
+            "in_progress": in_progress,
+            "risk_flags": risk_flags,
+        }
+
     def get_convenor_actions(
         self,
         open_event_url: Optional[str] = None,

@@ -36,6 +36,7 @@ from ..models import (
     EnrollmentRecord,
     FacultyData,
     FilterRecord,
+    MarkingScheme,
     Project,
     ProjectClass,
     ProjectClassConfig,
@@ -437,6 +438,42 @@ def capacity(id):
         config=config,
         convenor_data=data,
         capacity_data=capacity_data,
+    )
+
+
+@convenor.route("/configure/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def configure(id):
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    marking_scheme_count = MarkingScheme.query.filter_by(pclass_id=pclass.id).count()
+    email_template_count = EmailTemplate.query.filter(
+        EmailTemplate.pclass_id == pclass.id
+    ).count()
+    feedback_recipe_count = pclass.feedback_recipes.count()
+
+    return render_template_context(
+        "convenor/dashboard/configure.html",
+        pane="configure",
+        pclass=pclass,
+        config=config,
+        convenor_data=data,
+        marking_scheme_count=marking_scheme_count,
+        email_template_count=email_template_count,
+        feedback_recipe_count=feedback_recipe_count,
     )
 
 

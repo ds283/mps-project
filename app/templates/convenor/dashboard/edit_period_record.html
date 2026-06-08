@@ -43,14 +43,20 @@
 {#        {{ wtf.form_errors(form) }}#}
 
         {{ wtf.render_field(form.name) }}
+
+        <p class="form-group-heading mt-2" id="markers">Markers per submission</p>
         {{ wtf.render_field(form.number_markers) }}
         {{ wtf.render_field(form.uses_supervision_grade) }}
+
+        <p class="form-group-heading mt-2" id="dates">Dates &amp; deadlines</p>
         {{ date_field(form.start_date, 'datetimepicker1') }}
         {{ date_field(form.hand_in_date, 'datetimepicker2') }}
+
+        <p class="form-group-heading mt-2" id="presentation">Presentation assessment</p>
         <hr class="intro-divider">
 
         {% if config.main_config.enable_canvas_sync %}
-            <p class="form-group-heading mt-2">Canvas integration</p>
+            <p class="form-group-heading mt-2" id="canvas">Canvas integration</p>
             {{ wtf.render_field(form.canvas_module_id) }}
             {{ wtf.render_field(form.canvas_assignment_id) }}
             <hr class="intro-divider">

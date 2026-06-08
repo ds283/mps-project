@@ -19,7 +19,7 @@
 
         {#        {{ wtf.form_errors(form) }}#}
 
-        <p class="form-group-heading">Settings</p>
+        <p class="form-group-heading" id="selection">Project selection</p>
         <div class="row vertical-top">
             <div class="col-6">
                 {{ wtf.render_field(form.skip_matching) }}
@@ -34,16 +34,16 @@
         <hr class="intro-divider">
 
         {% if config.main_config.enable_canvas_sync %}
-            <p class="form-group-heading mt-2">Canvas integration</p>
+            <p class="form-group-heading mt-2" id="canvas">Canvas integration</p>
             {{ wtf.render_field(form.canvas_module_id) }}
             {{ wtf.render_field(form.canvas_login) }}
         {% endif %}
 
-        <p class="form-group-heading mt-2">AI grading</p>
+        <p class="form-group-heading mt-2" id="ai">AI grading</p>
         {{ wtf.render_field(form.grading_rubric) }}
         <hr class="intro-divider">
 
-        <p class="form-group-heading mt-2">Supervision and assessment</p>
+        <p class="form-group-heading mt-2" id="supervision">Supervision and assessment</p>
         <div class="row vertical-top">
             <div class="col-6">
                 {{ wtf.render_field(form.uses_supervisor) }}
@@ -70,7 +70,7 @@
             </div>
         </div>
 
-        <p class="form-group-heading mt-2">Workload model support</p>
+        <p class="form-group-heading mt-2" id="cats">Workload model support</p>
         <div class="row vertical-top">
             <div class="col-6">
                 {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
@@ -88,7 +88,7 @@
             </div>
         </div>
 
-        <p class="form-group-heading mt-2">Document limits</p>
+        <p class="form-group-heading mt-2" id="limits">Document limits</p>
         <p class="small text-body-secondary">Leave fields blank to inherit the project class defaults. Enabling a limit
             here overrides the project class setting for this cycle only.</p>
         <div class="row vertical-top">

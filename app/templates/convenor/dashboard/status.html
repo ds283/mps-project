@@ -1,16 +1,15 @@
 {% extends "convenor/dashboard/overview_nav.html" %}
 
-{% from "macros.html" import submission_period_configure_button %}
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import submission_period_configure_button, date_field %}
 {% from "icon_block.html" import icon_block %}
 {% from "datepicker.html" import import_datepicker %}
 {% from "select2.html" import import_select2 %}
 
 {% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card, rollover_not_yet_card %}
-{% from "convenor/dashboard/overview_cards/issue_confirmations.html" import issue_confirmations %}
-{% from "convenor/dashboard/overview_cards/waiting_confirmations.html" import waiting_confirmations %}
-{% from "convenor/dashboard/overview_cards/golive.html" import golive %}
-{% from "convenor/dashboard/overview_cards/selection_open.html" import selection_open %}
-{% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
+{% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
+{% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
 {% from "convenor/dashboard/overview_cards/_action_panel.html" import action_panel %}
@@ -96,28 +95,149 @@
             {# [A] ALERT BANNERS — centralised action panel #}
             {{ action_panel(action_items) }}
 
-            {# [B] LIFECYCLE ACTION CARD — primary CTA #}
-            {% if pclass.publish %}
-                {% if lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                    {{ issue_confirmations(config, issue_form) }}
-                {% elif lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                    {{ waiting_confirmations(config, issue_form, approval_data) }}
-                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                    {{ golive(config, golive_form, approval_data) }}
-                {% elif lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    {{ selection_open(config, change_form, convenor_data, current_time) }}
-                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                    {{ selection_closed(config, rollover_in_progress, convenor_data) }}
-                {% else %}
-                    <div class="card border-danger mt-3 mb-3">
-                        <div class="card-header bg-danger text-white">Error</div>
-                        <div class="card-body">
-                            <strong>Error:</strong>
-                            Unknown project lifecycle state {{ lifecycle }}
+            {# [T] UPCOMING TASKS — quick-access panel #}
+            {% if num_to_dos > 0 %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-semibold text-body-secondary small">
+                            <i class="fas fa-tasks fa-fw"></i> Upcoming tasks
+                        </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary rounded-pill">{{ num_to_dos }}</span>
+                            <a href="{{ url_for('convenor.todo_list', id=pclass.id) }}"
+                               class="btn btn-xs btn-outline-secondary">
+                                View all <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
                         </div>
                     </div>
-                {% endif %}
-            {% else %}
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                <tr>
+                                    <th width="38%">Task</th>
+                                    <th width="15%">Student</th>
+                                    <th width="14%">Defer date</th>
+                                    <th width="14%">Due date</th>
+                                    <th width="10%">Status</th>
+                                    <th width="7%"></th>
+                                </tr>
+                                </thead>
+                                <tbody class="table-group-divider">
+                                {% for tk in top_to_dos %}
+                                    {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
+                                    {% set obj = tk.parent %}
+                                    {% if  tk_type == 1 or tk_type == 2 %}
+                                        {% set tk_config = obj.config %}
+                                    {% else %}
+                                        {% set tk_config = obj %}
+                                    {% endif %}
+                                    {% set tk_pclass = tk_config.project_class %}
+                                    {% set tk_status_class = none %}
+                                    {% if tk.dropped %}
+                                        {% set tk_status_class = 'table-light' %}
+                                    {% elif tk.complete %}
+                                        {% set tk_status_class = 'table-success' %}
+                                    {% elif tk.is_overdue %}
+                                        {% set tk_status_class = 'table-danger' %}
+                                    {% elif tk.is_available %}
+                                        {% set tk_status_class = 'table-light' %}
+                                    {% endif %}
+                                    <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
+                                        <td>
+                                            {% if tk_type == 1 or tk_type == 2 %}
+                                                <a class="text-decoration-none link-primary"
+                                                   href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                            {% elif tk_type == 3 %}
+                                                <a class="text-decoration-none link-primary"
+                                                   href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                            {% else %}
+                                                {{ tk.description|truncate(40) }}
+                                            {% endif %}
+                                            {% if tk.notes and tk.notes|length > 0 %}
+                                                <span class="ms-1 text-body-secondary" tabindex="0" data-bs-toggle="popover"
+                                                      title="Task notes" data-bs-container="body" data-bs-trigger="focus"
+                                                      data-bs-content="{{ tk.notes|truncate(600) }}">Notes <i
+                                                        class="ms-1 fas fa-chevron-right"></i></span>
+                                            {% endif %}
+                                            {% if tk.blocking %}
+                                                <span class="badge bg-warning text-dark ms-1"><i
+                                                        class="fas fa-hand-paper"></i> Blocking</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if tk_type == 1 or tk_type == 2 %}
+                                                <i class="fas fa-user-circle"></i>
+                                                <a class="text-decoration-none link-dark"
+                                                   href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
+                                                    {{ obj.student.user.name }}
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if tk.defer_date is not none %}
+                                                {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if tk.due_date is not none %}
+                                                {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if tk.dropped %}
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
+                                            {% elif tk.complete %}
+                                                <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
+                                            {% elif tk.is_overdue %}
+                                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
+                                            {% elif tk.is_available %}
+                                                <span class="badge bg-info"><i
+                                                        class="fas fa-thumbs-up"></i> Available</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-outline-secondary btn-xs full-width-button dropdown-toggle"
+                                                        type="button" data-bs-toggle="dropdown">
+                                                    Actions
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
+                                                    {% if tk_type == 1 or tk_type == 2 %}
+                                                        <a class="dropdown-item d-flex gap-2 small"
+                                                           href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                        </a>
+                                                    {% elif tk_type == 3 %}
+                                                        <a class="dropdown-item d-flex gap-2 small"
+                                                           href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                        </a>
+                                                    {% endif %}
+                                                    <a class="dropdown-item d-flex gap-2 small"
+                                                       href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
+                                                        <i class="fas fa-check fa-fw"></i> Complete
+                                                    </a>
+                                                    <a class="dropdown-item d-flex gap-2 small"
+                                                       href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
+                                                        <i class="fas fa-ban fa-fw"></i> Drop
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Unpublished class warning #}
+            {% if not pclass.publish %}
                 <div class="alert alert-danger mt-1 mb-2">
                     {% call icon_block("exclamation-triangle") %}
                         <strong>This project class is not published, so its administration options are limited.</strong>
@@ -181,10 +301,6 @@
                                     </div>
                                     <div class="d-flex gap-1 align-items-center flex-shrink-0 ms-2">
                                         {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.has_active_marking_event or p.closed)) }}
-                                        <a class="btn btn-xs btn-outline-secondary"
-                                           href="{{ url_for('convenor.status', id=pclass.id) }}">
-                                            Full detail <i class="fas fa-arrow-right ms-1"></i>
-                                        </a>
                                     </div>
                                 </div>
 
@@ -509,6 +625,292 @@
                                     </p>
                                 {% endif %}
 
+                                {# --- STATE-SPECIFIC CTA (inlined from lifecycle macros) --- #}
+                                {% if lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        <p class="small text-body-secondary">Confirmation requests have not yet been issued to faculty.</p>
+                                        <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}" method="POST" name="issue-form">
+                                            {{ issue_form.hidden_tag() }}
+                                            {{ date_field(issue_form.request_deadline, 'issue_datetimepicker') }}
+                                            {{ wtf.render_field(issue_form.confirm_template) }}
+                                            <div class="d-flex justify-content-end gap-2">
+                                                {% if issue_form.skip_button is defined %}
+                                                    {{ wtf.render_field(issue_form.skip_button, button_map={'skip_button': 'outline-secondary'}, button_size='sm') }}
+                                                {% endif %}
+                                                {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-primary'}, button_size='sm') }}
+                                            </div>
+                                        </form>
+                                    </div>
+                                {% elif lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        <div class="alert alert-warning">
+                                            {% call icon_block("exclamation-circle") %}
+                                                <div class="d-flex w-100 justify-content-between align-items-end">
+                                                    <div>
+                                                        <div><strong>Confirmations are outstanding from
+                                                            <strong>{{ config.confirm_outstanding_count }} faculty</strong>.</strong></div>
+                                                        <div><a class="text-decoration-none"
+                                                                href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...</a></div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
+                                                           class="btn btn-sm btn-outline-danger text-nowrap">Force confirm all</a>
+                                                    </div>
+                                                </div>
+                                            {% endcall %}
+                                        </div>
+                                        {{ approvals_state(approval_data) }}
+                                        <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}" method="POST" name="issue-form">
+                                            {{ issue_form.hidden_tag() }}
+                                            {{ date_field(issue_form.request_deadline, 'confirm_datetimepicker') }}
+                                            <div class="d-flex justify-content-end gap-2 mt-1">
+                                                <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}"
+                                                   class="btn btn-sm btn-outline-secondary">Send reminders</a>
+                                                {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-secondary'}, button_size='sm') }}
+                                            </div>
+                                        </form>
+                                    </div>
+                                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        {% set total_projects = approval_data['projects'] %}
+                                        {% set pending = approval_data['pending'] %}
+                                        {% set queued = approval_data['queued'] %}
+                                        {% set approved = approval_data['approved'] %}
+                                        {% set rejected = approval_data['rejected'] %}
+                                        <div class="alert alert-info">
+                                            {% call icon_block("check-circle") %}
+                                                <strong>{{ total_projects }}</strong> projects are currently available to Go Live.
+                                            {% endcall %}
+                                            {% if rejected > 0 %}
+                                                {% call icon_block("exclamation-circle", extra_classes="mt-2") %}
+                                                    <strong>{{ rejected }} projects have been rejected and require revision.</strong>
+                                                {% endcall %}
+                                            {% elif pending > 0 %}
+                                                {% call icon_block("info-circle", extra_classes="mt-2") %}
+                                                    <strong>{{ pending }}</strong> projects are still to be confirmed.
+                                                {% endcall %}
+                                            {% elif queued > 0 %}
+                                                {% call icon_block("info-circle", extra_classes="mt-2") %}
+                                                    <strong>{{ queued }}</strong> projects are waiting for approval.
+                                                {% endcall %}
+                                            {% else %}
+                                                {% call icon_block("check-circle") %}
+                                                    All projects have passed approvals.
+                                                {% endcall %}
+                                            {% endif %}
+                                        </div>
+                                        {{ approvals_state(approval_data) }}
+                                        {% if total_projects > 0 %}
+                                            <hr class="intro-divider">
+                                            <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
+                                                {{ golive_form.hidden_tag() }}
+                                                {{ date_field(golive_form.live_deadline, 'golive_datetimepicker') }}
+                                                {{ wtf.render_field(golive_form.accommodate_matching) }}
+                                                {{ wtf.render_field(golive_form.full_CATS) }}
+                                                {{ wtf.render_field(golive_form.notify_faculty) }}
+                                                {{ wtf.render_field(golive_form.notify_selectors) }}
+                                                <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Faculty notification email</p>
+                                                {{ wtf.render_field(golive_form.faculty_template) }}
+                                                <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Selector notification email</p>
+                                                {{ wtf.render_field(golive_form.selector_template) }}
+                                                <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Convenor summary email</p>
+                                                {{ wtf.render_field(golive_form.convenor_template) }}
+                                                {{ blocking_task_list(config.get_blocking_tasks[0]) }}
+                                                <div class="d-flex flex-row justify-content-end align-items-start gap-2">
+                                                    {% if golive_form.live_and_close is defined %}
+                                                        {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
+                                                    {% endif %}
+                                                    {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}, button_size='sm') }}
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% elif lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        {% set selector_data = config.selector_data %}
+                                        {% set submitted = selector_data['have_submitted'] %}
+                                        {% set bookmarks = selector_data['have_bookmarks'] %}
+                                        {% set missing = selector_data['missing'] %}
+                                        {% set total = selector_data['total'] %}
+                                        <div class="mb-2">
+                                            {% if submitted == total %}
+                                                <div class="alert alert-success mb-2">
+                                                    {% call icon_block("info-circle") %}
+                                                        <div><strong>All selectors have submitted validated choices.</strong></div>
+                                                        <div>
+                                                            It is safe to close selections.
+                                                            {% if total == 0 %}
+                                                                <a class="btn btn-sm btn-outline-danger"
+                                                                   href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}"
+                                                                   style="margin-left: 10px;">Reverse Go Live to add more selectors</a>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endcall %}
+                                                </div>
+                                            {% elif missing == 0 %}
+                                                <div class="alert alert-info mb-2">
+                                                    {% call icon_block("info-circle") %}
+                                                        <div><strong>Some selectors have not yet made a validated submission.</strong></div>
+                                                        {% if config.selection_open_to_all %}
+                                                            <div class="mt-2">
+                                                                <ul>
+                                                                    <li>Selection for this project is available to all eligible students on an opt-in basis.</li>
+                                                                    <li>If selections are closed now, selectors who have not made a validated submission will be assumed not to have opted-in and will be ignored when performing automatic matching.</li>
+                                                                </ul>
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="mt-2">
+                                                                <ul>
+                                                                    <li>If selections are closed now, bookmark data can be used to perform automated matching.</li>
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endcall %}
+                                                </div>
+                                            {% else %}
+                                                <div class="alert alert-warning mb-2">
+                                                    {% call icon_block("exclamation-circle") %}
+                                                        <div><strong>Some selectors are missing both a validated submission and bookmark data.</strong></div>
+                                                        {% if config.selection_open_to_all %}
+                                                            <div class="mt-2">
+                                                                <ul>
+                                                                    <li>Selection for this project is available to all eligible students on an opt-in basis.</li>
+                                                                    <li>If selections are closed now, selectors who have not made a validated submission will be assumed not to have opted-in and will be ignored when performing automatic matching.</li>
+                                                                </ul>
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="mt-2">
+                                                                <ul>
+                                                                    <li>If selections are closed now, bookmark data (where it exists) can be used to perform automated matching</li>
+                                                                    <li>Optionally, selectors with missing submission data may be allocated a random project during automated matching.</li>
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endcall %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        {% set hint_list = config.pending_custom_offer_hints %}
+                                        {% if hint_list %}
+                                            <div class="row mb-3">
+                                                <div class="col">
+                                                    {% call(blk) dashboard_tile("Previous supervision hints", title_icon="lightbulb", icon_state=none, user_block_classes="w-100") %}
+                                                        {% if blk == 'body' %}
+                                                            <table class="table table-sm table-striped">
+                                                                <thead>
+                                                                <tr>
+                                                                    <th class="small" width="20%">Student</th>
+                                                                    <th class="small" width="15%">Prev. year</th>
+                                                                    <th class="small" width="30%">Previous project</th>
+                                                                    <th class="small" width="20%">Supervisor</th>
+                                                                    <th class="small" width="15%">Actions</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody class="table-group-divider">
+                                                                {% for hint in hint_list %}
+                                                                    {% set record = hint.submission_record %}
+                                                                    {% set prev_proj = record.project if record else none %}
+                                                                    {% set prev_sub_config = record.owner.config if record and record.owner else none %}
+                                                                    <tr>
+                                                                        <td class="small">{{ hint.selector.student.user.name }}</td>
+                                                                        <td class="small">
+                                                                            {% if prev_sub_config %}
+                                                                                <div>{{ prev_sub_config.submit_year_a }}&ndash;{{ prev_sub_config.submit_year_b }}</div>
+                                                                                <div class="text-body-secondary">{{ prev_sub_config.abbreviation }}</div>
+                                                                            {% else %}
+                                                                                <span class="text-body-secondary">Unknown</span>
+                                                                            {% endif %}
+                                                                        </td>
+                                                                        <td class="small">
+                                                                            {% if prev_proj %}{{ prev_proj.name }}
+                                                                            {% else %}<span class="text-body-secondary">Unknown</span>{% endif %}
+                                                                        </td>
+                                                                        <td class="small">
+                                                                            {% if hint.faculty and hint.faculty.user %}
+                                                                                {{ hint.faculty.user.name }}
+                                                                            {% else %}<span class="text-body-secondary">Unknown</span>{% endif %}
+                                                                        </td>
+                                                                        <td>
+                                                                            <div class="d-flex flex-row gap-1">
+                                                                                <a href="{{ url_for('convenor.accept_custom_offer_hint', hint_id=hint.id) }}"
+                                                                                   class="btn btn-sm btn-outline-success"
+                                                                                   title="Create custom offers for all current projects by this supervisor">Accept</a>
+                                                                                <a href="{{ url_for('convenor.reject_custom_offer_hint', hint_id=hint.id) }}"
+                                                                                   class="btn btn-sm btn-outline-danger"
+                                                                                   title="Delete this hint">Reject</a>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        {% elif blk == 'footer' %}
+                                                            <div class="small text-body-secondary mt-2">
+                                                                Hints are based on previous supervision history. Accepting creates custom offers for all current projects by the supervisor.
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endcall %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
+                                                {{ change_form.hidden_tag() }}
+                                                {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
+                                                {{ wtf.render_field(change_form.notify_convenor) }}
+                                                <div class="d-flex flex-row justify-content-end align-items-end gap-2">
+                                                    {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        {% set selector_data = config.selector_data %}
+                                        {% set submitted = selector_data['have_submitted'] %}
+                                        {% set missing = selector_data['missing'] %}
+                                        {% set total = selector_data['total'] %}
+                                        {% if submitted == total %}
+                                            <div class="alert alert-success">
+                                                {% call icon_block("check-circle") %}
+                                                    <div><strong>All students submitted validated choices before selection closed.</strong></div>
+                                                {% endcall %}
+                                            </div>
+                                        {% else %}
+                                            {% if missing == 0 %}
+                                                <div class="alert alert-success">
+                                                    {% call icon_block("check-circle") %}
+                                                        <div><strong>Some students did not submit validated choices, but all students have bookmark data.</strong></div>
+                                                    {% endcall %}
+                                                </div>
+                                            {% else %}
+                                                <div class="alert alert-warning">
+                                                    {% call icon_block("exclamation-circle") %}
+                                                        <div><strong>Some selectors did not submit validated choice and do not have valid bookmark lists.</strong></div>
+                                                        {% if config.selection_open_to_all %}
+                                                            <div class="mt-2">
+                                                                <ul>
+                                                                    <li>Selection for this project was available to all eligible students on an opt-in basis.</li>
+                                                                    <li>Selectors who did not make a validated submission will be assumed <span class="fw-semibold">not to have opted-in</span> and will be ignored when performing automated matching.</li>
+                                                                </ul>
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="mt-2">
+                                                                <ul>
+                                                                    <li><span class="fw-semibold">Where selectors did not make a validated submission, their bookmark lists (if valid) have been converted into submission data.</span></li>
+                                                                    <li>Invalid bookmark lists can be inspected using the <a class="text-decoration-none link-primary" href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">selector grid</a> and converted into submission data.</li>
+                                                                    <li>Optionally, converted bookmark lists may be down-weighted during matching in order to prioritize rankings from selectors who submitted a correct list of choices.</li>
+                                                                    <li>Optionally, selectors with missing submission data may be allocated a random project during automated matching.</li>
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endcall %}
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
                                 {# Action buttons #}
                                 <div class="d-flex gap-1 flex-wrap mt-2">
                                     <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
@@ -722,135 +1124,6 @@
                 {% endif %}
             {% endif %}
 
-            {% if top_to_dos is defined and top_to_dos is not none and top_to_dos|length > 0 %}
-                <div class="card border-secondary mt-3 mb-3">
-                    {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
-                    <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }}
-                        available)
-                    </div>
-                    <div class="card-body small">
-                        <table class="table table-sm table-striped">
-                            <thead>
-                            <tr>
-                                <th width="38%">Task</th>
-                                <th width="15%">Student</th>
-                                <th width="14%">Defer date</th>
-                                <th width="14%">Due date</th>
-                                <th width="10%">Status</th>
-                                <th width="7%"></th>
-                            </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                            {% for tk in top_to_dos %}
-                                {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
-                                {% set obj = tk.parent %}
-                                {% if  tk_type == 1 or tk_type == 2 %}
-                                    {% set tk_config = obj.config %}
-                                {% else %}
-                                    {% set tk_config = obj %}
-                                {% endif %}
-                                {% set tk_pclass = tk_config.project_class %}
-                                {% set tk_status_class = none %}
-                                {% if tk.dropped %}
-                                    {% set tk_status_class = 'table-light' %}
-                                {% elif tk.complete %}
-                                    {% set tk_status_class = 'table-success' %}
-                                {% elif tk.is_overdue %}
-                                    {% set tk_status_class = 'table-danger' %}
-                                {% elif tk.is_available %}
-                                    {% set tk_status_class = 'table-light' %}
-                                {% endif %}
-                                <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
-                                    <td>
-                                        {% if tk_type == 1 or tk_type == 2 %}
-                                            <a class="text-decoration-none link-primary"
-                                               href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
-                                        {% elif tk_type == 3 %}
-                                            <a class="text-decoration-none link-primary"
-                                               href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
-                                        {% else %}
-                                            {{ tk.description|truncate(40) }}
-                                        {% endif %}
-                                        {% if tk.notes and tk.notes|length > 0 %}
-                                            <span class="ms-1 text-body-secondary" tabindex="0" data-bs-toggle="popover"
-                                                  title="Task notes" data-bs-container="body" data-bs-trigger="focus"
-                                                  data-bs-content="{{ tk.notes|truncate(600) }}">Notes <i
-                                                    class="ms-1 fas fa-chevron-right"></i></span>
-                                        {% endif %}
-                                        {% if tk.blocking %}
-                                            <span class="badge bg-warning text-dark ms-1"><i
-                                                    class="fas fa-hand-paper"></i> Blocking</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if tk_type == 1 or tk_type == 2 %}
-                                            <i class="fas fa-user-circle"></i>
-                                            <a class="text-decoration-none link-dark"
-                                               href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
-                                                {{ obj.student.user.name }}
-                                            </a>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if tk.defer_date is not none %}
-                                            {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if tk.due_date is not none %}
-                                            {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if tk.dropped %}
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
-                                        {% elif tk.complete %}
-                                            <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
-                                        {% elif tk.is_overdue %}
-                                            <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
-                                        {% elif tk.is_available %}
-                                            <span class="badge bg-info"><i
-                                                    class="fas fa-thumbs-up"></i> Available</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <button class="btn btn-outline-secondary btn-xs full-width-button dropdown-toggle"
-                                                    type="button" data-bs-toggle="dropdown">
-                                                Actions
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
-                                                {% if tk_type == 1 or tk_type == 2 %}
-                                                    <a class="dropdown-item d-flex gap-2 small"
-                                                       href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                                        <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                    </a>
-                                                {% elif tk_type == 3 %}
-                                                    <a class="dropdown-item d-flex gap-2 small"
-                                                       href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                                        <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                    </a>
-                                                {% endif %}
-                                                <a class="dropdown-item d-flex gap-2 small"
-                                                   href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
-                                                    <i class="fas fa-check fa-fw"></i> Complete
-                                                </a>
-                                                <a class="dropdown-item d-flex gap-2 small"
-                                                   href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
-                                                    <i class="fas fa-ban fa-fw"></i> Drop
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            {% endif %}
 
         </div>
         <div class="col-1"></div>

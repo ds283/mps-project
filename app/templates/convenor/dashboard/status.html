@@ -747,25 +747,47 @@
                                                     bookmarks</span></span>
                                             {% endif %}
                                         </div>
-                                        <div class="mt-2">
-                                            {# Change deadline form #}
+                                        <div class="mt-2 pt-2 border-top">
                                             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
                                                   method="POST" name="adjust_selection_deadline">
                                                 {{ change_form.hidden_tag() }}
-                                                {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
-                                                {{ wtf.render_field(change_form.notify_convenor) }}
-                                                <div class="d-flex flex-row justify-content-end align-items-end gap-2 flex-wrap">
-                                                    {{ wtf.render_field(change_form.change,
-                                                       button_map={'change': 'outline-secondary'}, button_size='sm') }}
+
+                                                {# Date input — compact #}
+                                                <div class="mb-1">
+                                                    <label for="live_datetimepicker" class="form-label small mb-1">
+                                                        {{ change_form.live_deadline.label.text }}
+                                                    </label>
+                                                    <div class="input-group input-group-sm" id="live_datetimepicker">
+                                                        {{ change_form.live_deadline(class="form-control form-control-sm",
+                                                                                     placeholder="DD/MM/YYYY") }}
+                                                        <span class="input-group-text">
+                                                            <i class="fas fa-calendar fa-fw"></i>
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </form>
-                                            {# Close selections — separate form, immediately adjacent #}
-                                            <form action="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
-                                                  method="POST" class="mt-1 d-flex justify-content-end">
-                                                {{ change_form.hidden_tag() }}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                    <i class="fas fa-lock fa-fw"></i> Close selections
-                                                </button>
+
+                                                {# Notify convenor checkbox — compact #}
+                                                <div class="form-check mb-2">
+                                                    {{ change_form.notify_convenor(class="form-check-input") }}
+                                                    <label class="form-check-label small"
+                                                           for="{{ change_form.notify_convenor.id }}">
+                                                        {{ change_form.notify_convenor.label.text }}
+                                                    </label>
+                                                </div>
+
+                                                {# Both action buttons on a single row #}
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    <button type="submit"
+                                                            formaction="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
+                                                            class="btn btn-xs btn-outline-secondary">
+                                                        <i class="fas fa-clock fa-fw"></i> Change deadline
+                                                    </button>
+                                                    <button type="submit"
+                                                            formaction="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
+                                                            class="btn btn-xs btn-outline-danger">
+                                                        <i class="fas fa-lock fa-fw"></i> Close selections
+                                                    </button>
+                                                </div>
                                             </form>
                                         </div>
                                     </div>

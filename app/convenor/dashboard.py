@@ -49,7 +49,6 @@ from ..models import (
     User,
 )
 from ..shared.context.convenor_dashboard import (
-    get_capacity_data,
     get_convenor_action_items,
     get_convenor_approval_data,
     get_convenor_dashboard_data,
@@ -216,7 +215,6 @@ def status(id):
     return render_template_context(
         "convenor/dashboard/status.html",
         pane="overview",
-        subpane="status",
         golive_form=golive_form,
         change_form=change_form,
         issue_form=issue_form,
@@ -354,49 +352,6 @@ def comms(id):
     )
 
 
-
-@convenor.route("/capacity/<int:id>")
-@roles_accepted("faculty", "admin", "root")
-def capacity(id):
-    # get details for project class
-    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(redirect_url())
-
-    # get current configuration record for this project class
-    config: ProjectClassConfig = pclass.most_recent_config
-    if config is None:
-        flash(
-            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    # get record for current submission period
-    period = config.periods.filter_by(
-        submission_period=config.submission_period
-    ).first()
-    if period is None and config.number_submissions > 0:
-        flash(
-            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    data = get_convenor_dashboard_data(pclass, config)
-    capacity_data = get_capacity_data(pclass)
-
-    return render_template_context(
-        "convenor/dashboard/capacity.html",
-        pane="overview",
-        subpane="capacity",
-        pclass=pclass,
-        config=config,
-        convenor_data=data,
-        capacity_data=capacity_data,
-    )
 
 
 @convenor.route("/configure/<int:id>")

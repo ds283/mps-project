@@ -1,6 +1,7 @@
 {% extends "convenor/dashboard/nav.html" %}
 
 {% block pillblock %}
+    {{ super() }}
     <div class="container-fluid px-3 py-2 border-bottom" style="background: var(--bs-tertiary-bg)">
         <div class="d-flex align-items-center flex-wrap gap-2">
 
@@ -113,6 +114,4 @@
 
         </div>
     </div>
-    {# Pills row + tabblock from nav.html #}
-    {{ super() }}
 {% endblock %}

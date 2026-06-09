@@ -354,48 +354,6 @@ def comms(id):
     )
 
 
-@convenor.route("/periods/<int:id>", methods=["GET", "POST"])
-@roles_accepted("faculty", "admin", "root")
-def periods(id):
-    # get details for project class
-    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(redirect_url())
-
-    # get current configuration record for this project class
-    config: ProjectClassConfig = pclass.most_recent_config
-    if config is None:
-        flash(
-            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(
-        submission_period=config.submission_period
-    ).first()
-    if period is None and config.number_submissions > 0:
-        flash(
-            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    data = get_convenor_dashboard_data(pclass, config)
-
-    return render_template_context(
-        "convenor/dashboard/periods.html",
-        pane="overview",
-        subpane="periods",
-        pclass=pclass,
-        config=config,
-        convenor_data=data,
-        today=date.today(),
-    )
-
 
 @convenor.route("/capacity/<int:id>")
 @roles_accepted("faculty", "admin", "root")

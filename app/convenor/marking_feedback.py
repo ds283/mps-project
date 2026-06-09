@@ -560,7 +560,7 @@ def edit_period_record(pid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for("convenor.periods", id=config.project_class.id))
+        return redirect(url_for("convenor.status", id=config.project_class.id))
 
     pclass = config.project_class
     convenor_data = get_convenor_dashboard_data(pclass, config)
@@ -612,7 +612,7 @@ def edit_period_presentation(pid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for("convenor.periods", id=config.project_class.id))
+        return redirect(url_for("convenor.status", id=config.project_class.id))
 
     pclass = config.project_class
     convenor_data = get_convenor_dashboard_data(pclass, config)

@@ -40,7 +40,7 @@
             {% else %}
                 {{ project_activity_banner(period, today) }}
             {% endif %}
-            {{ period_settings(config, period, return_url=url_for('convenor.periods', id=config.pclass_id), return_text='convenor dashboard') }}
+            {{ period_settings(config, period, return_url=url_for('convenor.status', id=config.pclass_id), return_text='convenor dashboard') }}
         {% endif %}
         {{ marking_event_summary(period, config) }}
     {% else %}

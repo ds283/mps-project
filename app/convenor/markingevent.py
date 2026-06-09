@@ -3327,7 +3327,7 @@ def period_marking_events_inspector(period_id):
     ):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.periods", id=pclass.id))
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
     text = request.args.get("text", "Submission periods")
 
     can_delete = _can_delete_marking_event(pclass)
@@ -3358,7 +3358,7 @@ def period_marking_events_ajax(period_id):
     ):
         return jsonify({"error": "Access denied"}), 403
 
-    url = request.args.get("url", url_for("convenor.periods", id=pclass.id))
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
     text = request.args.get("text", "Submission periods")
     can_delete = _can_delete_marking_event(pclass)
 

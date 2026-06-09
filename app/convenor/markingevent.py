@@ -433,9 +433,14 @@ def generate_marking_event_feedback(event_id):
             url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
         )
 
+    convenor_data = {}  # TODO Phase 5b Group D: replace stub with real convenor_data
+
     return render_template_context(
         "convenor/feedback/generate_feedback_form.html",
         event=event,
+        pclass=pclass,
+        config=None,
+        convenor_data=convenor_data,
         form=form,
         url=url,
         text=text,
@@ -604,10 +609,15 @@ def marking_event_conflation_reports(event_id):
         )
     # ── End grade-push logic ──────────────────────────────────────────────────
 
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/conflation_reports_inspector.html",
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
         feedback_jobs=feedback_jobs,
@@ -986,9 +996,14 @@ def regenerate_conflation_report_feedback(cr_id):
         )
         return redirect(url)
 
+    convenor_data = {}  # TODO Phase 5b Group D: replace stub with real convenor_data
+
     return render_template_context(
         "convenor/feedback/generate_feedback_form.html",
         event=event,
+        pclass=pclass,
+        config=None,
+        convenor_data=convenor_data,
         form=form,
         url=url,
         text=text,
@@ -1025,11 +1040,16 @@ def view_conflation_report_emails(cr_id):
     emails = cr.feedback_emails.all()
     student_name = cr.submission_record.owner.student.user.name
 
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/conflation_report_emails.html",
         cr=cr,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         emails=emails,
         student_name=student_name,
         url=url,
@@ -1169,10 +1189,15 @@ def push_single_cr_feedback(cr_id):
         )
         return redirect(url)
 
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/push_feedback_form.html",
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         form=form,
         url=url,
         text=text,
@@ -1198,6 +1223,9 @@ def push_cr_to_canvas(cr_id):
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
+
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     url = request.args.get(
         "url",
@@ -1253,6 +1281,8 @@ def push_cr_to_canvas(cr_id):
                 cr=cr,
                 event=event,
                 pclass=pclass,
+                config=config,
+                convenor_data=convenor_data,
                 form=form,
                 grade_dict=grade_dict,
                 locked_target=locked_target,
@@ -1294,6 +1324,8 @@ def push_cr_to_canvas(cr_id):
         cr=cr,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         form=form,
         grade_dict=grade_dict,
         locked_target=locked_target,
@@ -1319,6 +1351,9 @@ def push_cr_feedback_to_canvas(cr_id):
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
+
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     url = request.args.get(
         "url",
@@ -1371,6 +1406,8 @@ def push_cr_feedback_to_canvas(cr_id):
         cr=cr,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         form=form,
         url=url,
         text=text,
@@ -1391,6 +1428,9 @@ def push_marking_event_feedback(event_id):
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
+
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if event.workflow_state != MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
         flash(
@@ -1468,6 +1508,8 @@ def push_marking_event_feedback(event_id):
         "convenor/feedback/push_feedback_form.html",
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         form=form,
         url=url,
         text=text,
@@ -1615,9 +1657,14 @@ def regenerate_all_conflation_report_feedback(event_id):
         )
         return redirect(url)
 
+    convenor_data = {}  # TODO Phase 5b Group D: replace stub with real convenor_data
+
     return render_template_context(
         "convenor/feedback/generate_feedback_form.html",
         event=event,
+        pclass=pclass,
+        config=None,
+        convenor_data=convenor_data,
         form=form,
         url=url,
         text=text,
@@ -1638,7 +1685,9 @@ def submitter_reports_inspector(workflow_id):
     """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
-    pclass: ProjectClass = event.period.config.project_class
+    config = event.period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     # validate that the user has convenor access privileges
     if not validate_is_convenor(
@@ -2164,6 +2213,8 @@ def submitter_reports_inspector(workflow_id):
         workflow=workflow,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
         can_edit=can_edit,
@@ -2375,7 +2426,9 @@ def resolve_risk_factors(record_id):
     """
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
     period: SubmissionPeriodRecord = record.period
-    pclass: ProjectClass = period.config.project_class
+    config = period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
@@ -2470,6 +2523,8 @@ def resolve_risk_factors(record_id):
         record=record,
         period=period,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         display_items=display_items,
         is_retired=is_retired,
         url=url,
@@ -2526,7 +2581,9 @@ def enter_turnitin_score(record_id):
     """Manually enter a Turnitin similarity score for a SubmissionRecord."""
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
     period: SubmissionPeriodRecord = record.period
-    pclass: ProjectClass = period.config.project_class
+    config = period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
@@ -2637,6 +2694,8 @@ def enter_turnitin_score(record_id):
         record=record,
         period=period,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
     )
@@ -2652,7 +2711,9 @@ def marking_reports_inspector(workflow_id):
     """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
-    pclass: ProjectClass = event.period.config.project_class
+    config = event.period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     # validate that the user has convenor access privileges
     if not validate_is_convenor(
@@ -2878,6 +2939,8 @@ def marking_reports_inspector(workflow_id):
         workflow=workflow,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
         total_reports=total_reports,
@@ -3094,6 +3157,12 @@ def add_marking_scheme(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Could not find a current configuration for this project class.", "error")
+        return redirect(url_for("convenor.overview"))
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     url = request.args.get(
         "url", url_for("convenor.inspect_marking_schemes", pclass_id=pclass_id)
     )
@@ -3141,6 +3210,8 @@ def add_marking_scheme(pclass_id):
         form=form,
         scheme=None,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Add new marking scheme",
         formtitle=f"Add new marking scheme for <strong>{pclass.name}</strong>",
         url=url,
@@ -3242,7 +3313,9 @@ def period_marking_events_inspector(period_id):
     Unlike the archive view, this is not restricted to closed periods.
     """
     period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
-    pclass: ProjectClass = period.config.project_class
+    config = period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(
         pclass, allow_roles=["office", "external_examiner", "exam_board"]
@@ -3258,6 +3331,8 @@ def period_marking_events_inspector(period_id):
         "convenor/markingevent/period_marking_events_inspector.html",
         period=period,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
         can_delete=can_delete,
@@ -3304,7 +3379,9 @@ def export_period_to_box(period_id):
     then dispatch a Celery task to upload reports and a marking summary spreadsheet.
     """
     period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
-    pclass: ProjectClass = period.config.project_class
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -3314,8 +3391,6 @@ def export_period_to_box(period_id):
         url_for("convenor.period_marking_events_inspector", period_id=period_id),
     )
     text = request.args.get("text", "Marking events")
-
-    config: ProjectClassConfig = period.config
 
     # Collect all convenors (current + co-convenors) who have linked their Box account.
     seen_ids = set()
@@ -3357,6 +3432,8 @@ def export_period_to_box(period_id):
             "convenor/markingevent/export_period_to_box.html",
             period=period,
             pclass=pclass,
+            config=config,
+            convenor_data=convenor_data,
             banners=banners,
             form=None,
             url=url,
@@ -3375,7 +3452,6 @@ def export_period_to_box(period_id):
             "app.tasks.box_export_period_marking.box_export_period_marking"
         ]
 
-        config = period.config
         abbr = getattr(config, "abbreviation", None) or "period"
         tk_name = f'Export "{abbr}: {period.display_name}" to Box'
         task_id = register_task(
@@ -3406,6 +3482,8 @@ def export_period_to_box(period_id):
         "convenor/markingevent/export_period_to_box.html",
         period=period,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         banners=None,
         form=form,
         url=url,
@@ -3725,6 +3803,8 @@ def event_marking_workflows_inspector(event_id):
     """
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(
         pclass, allow_roles=["office", "external_examiner", "exam_board"]
@@ -3998,6 +4078,8 @@ def event_marking_workflows_inspector(event_id):
         "convenor/markingevent/event_marking_workflows_inspector.html",
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
         can_edit=can_edit,
@@ -4047,6 +4129,8 @@ def add_marking_workflow(event_id):
     """Create a new MarkingWorkflow for a given MarkingEvent"""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -4147,6 +4231,8 @@ def add_marking_workflow(event_id):
         workflow=None,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Add marking workflow",
         formtitle=f"Add marking workflow to event <strong>{event.name}</strong>",
         url=url,
@@ -4162,6 +4248,8 @@ def edit_marking_workflow(workflow_id):
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -4287,6 +4375,8 @@ def edit_marking_workflow(workflow_id):
         workflow=workflow,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Edit marking workflow",
         formtitle=f"Edit marking workflow in event <strong>{event.name}</strong>",
         url=url,
@@ -4389,6 +4479,8 @@ def add_workflow_attachment(workflow_id):
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -4413,6 +4505,8 @@ def add_workflow_attachment(workflow_id):
         workflow=workflow,
         event=event,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         available=available,
         url=url,
         text=text,
@@ -5447,6 +5541,8 @@ def marking_report_properties(report_id):
     workflow: MarkingWorkflow = report.submitter_report.workflow
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -5488,6 +5584,8 @@ def marking_report_properties(report_id):
         report=report,
         workflow=workflow,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
     )
 
@@ -5504,6 +5602,8 @@ def reassign_marking_report(report_id):
     workflow: MarkingWorkflow = sr.workflow
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
     record = sr.record
 
     if not validate_is_convenor(pclass):
@@ -5601,6 +5701,8 @@ def reassign_marking_report(report_id):
         report=report,
         workflow=workflow,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         other_roles=other_roles,
         url=url,
     )
@@ -5620,6 +5722,8 @@ def assign_moderator(submitter_report_id):
     workflow = sr.workflow
     event = workflow.event
     pclass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -5670,6 +5774,8 @@ def assign_moderator(submitter_report_id):
         sr=sr,
         workflow=workflow,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         url=url,
     )
 
@@ -5782,7 +5888,9 @@ def complete_all_submitter_reports(workflow_id):
     """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
-    pclass: ProjectClass = event.period.config.project_class
+    config = event.period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -5818,6 +5926,8 @@ def complete_all_submitter_reports(workflow_id):
             workflow=workflow,
             event=event,
             pclass=pclass,
+            config=config,
+            convenor_data=convenor_data,
             url=url,
             text=text,
             ready_reports=ready_reports,
@@ -6035,7 +6145,9 @@ def return_all_submitter_reports(workflow_id):
     """
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     event: MarkingEvent = workflow.event
-    pclass: ProjectClass = event.period.config.project_class
+    config = event.period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass, allow_roles=["admin", "root"]):
         return redirect(redirect_url())
@@ -6067,6 +6179,8 @@ def return_all_submitter_reports(workflow_id):
             workflow=workflow,
             event=event,
             pclass=pclass,
+            config=config,
+            convenor_data=convenor_data,
             url=url,
             text=text,
             completed_reports=returnable_reports,
@@ -6144,7 +6258,9 @@ def calculate_conflation(event_id):
     Discards any existing ConflationReport instances for this event and generates a fresh set.
     """
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
-    pclass: ProjectClass = event.period.config.project_class
+    config = event.period.config
+    pclass: ProjectClass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -6190,6 +6306,8 @@ def calculate_conflation(event_id):
             "convenor/markingevent/confirm_calculate_conflation.html",
             event=event,
             pclass=pclass,
+            config=config,
+            convenor_data=convenor_data,
             submission_count=submission_count,
             existing_reports=existing_reports,
             any_stale=any_stale,
@@ -6563,6 +6681,8 @@ def push_event_to_canvas(event_id):
     """
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -6600,6 +6720,8 @@ def push_event_to_canvas(event_id):
             "convenor/markingevent/confirm_push_event_to_canvas.html",
             event=event,
             pclass=pclass,
+            config=config,
+            convenor_data=convenor_data,
             form=form,
             locked_target=locked_target,
             target_keys=target_keys,

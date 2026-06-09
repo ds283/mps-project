@@ -38,6 +38,7 @@ from ..models import (
 )
 from ..models.model_mixins import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.sqlalchemy import get_count
@@ -294,6 +295,9 @@ def submission_period_documents(pid):
         not record.closed
         and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
     )
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/documents/period_manager.html",
         record=record,
@@ -301,6 +305,8 @@ def submission_period_documents(pid):
         text=text,
         state=state,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         deletable=deletable,
         form=ReorderForm(),
     )

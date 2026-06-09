@@ -17,6 +17,7 @@ from app.convenor import convenor
 
 from ..database import db
 from ..models import GradingRubric, ProjectClass, RubricBand, RubricCriterion
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
@@ -57,6 +58,11 @@ def grading_rubric(pclass_id):
         return redirect(redirect_url())
 
     config = pclass.most_recent_config
+    if config is None:
+        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        return redirect(redirect_url())
+
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
@@ -85,7 +91,9 @@ def grading_rubric(pclass_id):
     return render_template_context(
         "convenor/language_analysis/rubric_manager.html",
         pclass=pclass,
+        config=config,
         pclass_config=config,
+        convenor_data=convenor_data,
         grading_rubric=rubric,
         all_rubrics=all_rubrics,
         url=url,
@@ -398,6 +406,13 @@ def clone_grading_rubric(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        return redirect(redirect_url())
+
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     # Collect all rubrics that belong to other project classes
     candidate_rubrics = (
         db.session.query(GradingRubric)
@@ -446,6 +461,8 @@ def clone_grading_rubric(pclass_id):
     return render_template_context(
         "convenor/language_analysis/clone_rubric.html",
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         form=form,
         candidate_rubrics=candidate_rubrics,
     )

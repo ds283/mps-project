@@ -30,6 +30,7 @@ from ..models import (
 )
 from ..models.assets import ThumbnailAsset
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.wtf_validators import (
     make_unique_feedback_asset_label_in_pclass,
@@ -709,10 +710,18 @@ def add_recipe_asset(recipe_id):
         a for a in pclass.feedback_assets.all() if a.id not in already_attached_ids
     ]
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/add_recipe_asset.html",
         recipe=recipe,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         available=available,
         url=url,
         text=text,

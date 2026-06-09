@@ -137,7 +137,14 @@ def audit_matches(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    return render_template_context("convenor/matching/audit.html", pclass=pclass)
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        return redirect(url_for("convenor.overview"))
+
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context("convenor/matching/audit.html", pclass=pclass, config=config, convenor_data=convenor_data)
 
 
 @convenor.route("/audit_matches_ajax/<int:pclass_id>")
@@ -180,8 +187,19 @@ def audit_schedules(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        return redirect(url_for("convenor.overview"))
+
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/presentations/audit.html", pclass_id=pclass_id
+        "convenor/presentations/audit.html",
+        pclass=pclass,
+        pclass_id=pclass_id,
+        config=config,
+        convenor_data=convenor_data,
     )
 
 
@@ -544,11 +562,16 @@ def edit_period_record(pid):
 
         return redirect(url_for("convenor.periods", id=config.project_class.id))
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/dashboard/edit_period_record.html",
         form=edit_form,
         record=record,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
     )
 
 
@@ -591,10 +614,16 @@ def edit_period_presentation(pid):
 
         return redirect(url_for("convenor.periods", id=config.project_class.id))
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/dashboard/edit_period_presentation.html",
         form=edit_form,
         record=record,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
     )
 
 
@@ -798,6 +827,9 @@ def populate_markers(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     scoped = _get_scoped_configs(config, current_user)
     PopulateMarkersForm = PopulateMarkersFormFactory(scoped)
     form = PopulateMarkersForm(request.form)
@@ -827,7 +859,8 @@ def populate_markers(configid):
                     "convenor/marking/populate_markers.html",
                     form=form,
                     config=config,
-                    pclass=config.project_class,
+                    pclass=pclass,
+                    convenor_data=convenor_data,
                 )
             file_ext = Path(uploaded_file.filename).suffix.lower() or ".csv"
             now = datetime.now()
@@ -894,7 +927,8 @@ def populate_markers(configid):
         "convenor/marking/populate_markers.html",
         form=form,
         config=config,
-        pclass=config.project_class,
+        pclass=pclass,
+        convenor_data=convenor_data,
     )
 
 
@@ -907,6 +941,9 @@ def remove_markers(configid):
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
+
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
 
     scoped = _get_scoped_configs(config, current_user)
     RemoveMarkersForm = RemoveMarkersFormFactory(scoped)
@@ -951,7 +988,8 @@ def remove_markers(configid):
         "convenor/marking/remove_markers.html",
         form=form,
         config=config,
-        pclass=config.project_class,
+        pclass=pclass,
+        convenor_data=convenor_data,
     )
 
 
@@ -2146,10 +2184,15 @@ def inspect_period_units(period_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/inspect_period_units.html",
         period=period,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         url=url,
         text=text,
     )
@@ -2242,10 +2285,16 @@ def add_period_unit(period_id):
 
         return redirect(url)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/edit_period_unit.html",
         form=form,
         period=period,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         title="Add submission period unit",
         formtitle=f"Add unit to submission period <strong>{period.display_name}</strong>",
         url=url,
@@ -2295,10 +2344,16 @@ def edit_period_unit(unit_id):
 
         return redirect(url)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/edit_period_unit.html",
         form=form,
         unit=unit,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         title="Edit submission period unit",
         formtitle=f"Edit submission period unit <strong>{unit.name}</strong>",
         url=url,
@@ -2350,11 +2405,16 @@ def inspect_unit_event_templates(unit_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/inspect_unit_event_templates.html",
         unit=unit,
         period=period,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         url=url,
         text=text,
     )
@@ -2436,10 +2496,16 @@ def add_unit_event_template(unit_id):
 
         return redirect(url)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/edit_unit_event_template.html",
         form=form,
         unit=unit,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         title="Add supervision event template",
         formtitle=f"Add event template to unit <strong>{unit.name}</strong>",
         url=url,
@@ -2493,11 +2559,17 @@ def edit_unit_event_template(template_id):
 
         return redirect(url)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/edit_unit_event_template.html",
         form=form,
         event_template=template,
         unit=unit,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         title="Edit supervision event template",
         formtitle=f"Edit supervision event template <strong>{template.name}</strong> in unit <strong>{unit.name}</strong>",
         url=url,
@@ -2555,12 +2627,17 @@ def inspect_template_events(template_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/supervision_events/inspect_template_events.html",
         event_template=template,
         unit=unit,
         period=period,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         url=url,
         text=text,
     )

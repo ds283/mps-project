@@ -40,6 +40,7 @@ from ..models import (
     SelectionRecord,
     TransferableSkill,
 )
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.journal import create_auto_journal_entry
@@ -77,8 +78,18 @@ def selector_bookmarks(id):
         )
         return redirect(redirect_url())
 
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/selector/selector_bookmarks.html", sel=sel, now=datetime.now(), form=ReorderForm()
+        "convenor/selector/selector_bookmarks.html",
+        sel=sel,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        now=datetime.now(),
+        form=ReorderForm(),
     )
 
 
@@ -100,9 +111,16 @@ def project_bookmarks(id):
         )
         return redirect(redirect_url())
 
+    config = proj.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/project_bookmarks.html",
         project=proj,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         student_emails=[p.owner_email for p in proj.bookmarks],
     )
 
@@ -275,7 +293,17 @@ def add_student_bookmark(sid):
         )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/add_bookmark.html", sel=sel)
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/selector/add_bookmark.html",
+        sel=sel,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+    )
 
 
 @convenor.route("/add_student_bookmark_ajax/<int:sid>")
@@ -396,8 +424,19 @@ def selector_choices(id):
         )
         return redirect(redirect_url())
 
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/selector/selector_choices.html", sel=sel, text=text, url=url, form=ReorderForm()
+        "convenor/selector/selector_choices.html",
+        sel=sel,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        text=text,
+        url=url,
+        form=ReorderForm(),
     )
 
 
@@ -419,9 +458,16 @@ def project_choices(id):
         )
         return redirect(redirect_url())
 
+    config = proj.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/project_choices.html",
         project=proj,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         student_emails=[p.owner_email for p in proj.selections],
     )
 
@@ -602,7 +648,17 @@ def add_student_ranking(sid):
         )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/add_ranking.html", sel=sel)
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/selector/add_ranking.html",
+        sel=sel,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+    )
 
 
 @convenor.route("/add_student_ranking_ajax/<int:sid>")
@@ -717,8 +773,17 @@ def selector_confirmations(id):
         )
         return redirect(redirect_url())
 
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/selector/selector_confirmations.html", sel=sel, now=datetime.now()
+        "convenor/selector/selector_confirmations.html",
+        sel=sel,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        now=datetime.now(),
     )
 
 
@@ -740,10 +805,17 @@ def project_custom_offers(proj_id):
         )
         return redirect(redirect_url())
 
+    config = proj.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/project_custom_offers.html",
         project=proj,
-        pclass_id=proj.config.project_class.id,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        pclass_id=pclass.id,
     )
 
 
@@ -782,10 +854,17 @@ def selector_custom_offers(sel_id):
         )
         return redirect(redirect_url())
 
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/selector_custom_offers.html",
         sel=sel,
-        pclass_id=sel.config.project_class.id,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        pclass_id=pclass.id,
     )
 
 
@@ -824,10 +903,17 @@ def new_selector_offer(sel_id):
         )
         return redirect(redirect_url())
 
+    config = sel.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/selector_new_offer.html",
         sel=sel,
-        pclass_id=sel.config.project_class.id,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        pclass_id=pclass.id,
     )
 
 
@@ -872,10 +958,17 @@ def new_project_offer(proj_id):
         )
         return redirect(redirect_url())
 
+    config = proj.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/project_new_offer.html",
         project=proj,
-        pclass_id=proj.config.project_class.id,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        pclass_id=pclass.id,
     )
 
 
@@ -1414,8 +1507,17 @@ def project_confirmations(id):
     if not validate_is_convenor(proj.config.project_class):
         return home_dashboard()
 
+    config = proj.config
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/selector/project_confirmations.html", project=proj, now=datetime.now()
+        "convenor/selector/project_confirmations.html",
+        project=proj,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        now=datetime.now(),
     )
 
 
@@ -1651,6 +1753,12 @@ def hints_list(id):
         .all()
     )
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/dashboard/hints_list.html", pclass=pclass, hints=hints
+        "convenor/dashboard/hints_list.html",
+        pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
+        hints=hints,
     )

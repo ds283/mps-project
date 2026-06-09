@@ -979,11 +979,14 @@ def edit_roles(sub_id):
         url = url_for("convenor.submitters", id=pclass.id)
         text = "convenor submitters view"
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/submitter/edit_roles.html",
         form=form,
         pclass=pclass,
         config=config,
+        convenor_data=convenor_data,
         record=record,
         sub=sub,
         student=student,
@@ -1461,12 +1464,17 @@ def add_role(record_id):
         else:
             form.role.data = SubmissionRole.ROLE_MARKER
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/submitter/add_role.html",
         form=form,
         record=record,
         period=period,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         sub=sub,
         url=url,
     )
@@ -1515,6 +1523,9 @@ def edit_role(role_id):
 
         return redirect(url)
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/submitter/edit_role.html",
         form=form,
@@ -1522,6 +1533,8 @@ def edit_role(role_id):
         record=record,
         period=period,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         sub=sub,
         url=url,
     )

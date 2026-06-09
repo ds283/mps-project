@@ -3275,11 +3275,16 @@ def edit_marking_scheme(scheme_id):
             url_for("convenor.inspect_marking_schemes", pclass_id=pclass.id)
         )
 
+    config = pclass.most_recent_config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/edit_marking_scheme.html",
         form=form,
         scheme=scheme,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Edit marking scheme",
         formtitle=f"Edit marking scheme for <strong>{pclass.name}</strong>",
         url=url,
@@ -3540,12 +3545,17 @@ def add_marking_event(period_id):
             url_for("convenor.period_marking_events_inspector", period_id=period_id)
         )
 
+    config = period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/edit_marking_event.html",
         form=form,
         event=None,
         period=period,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Add marking event",
         formtitle=f"Add marking event for <strong>{period.display_name}</strong>",
         url=url,
@@ -3609,12 +3619,17 @@ def edit_marking_event(event_id):
             url_for("convenor.period_marking_events_inspector", period_id=period.id)
         )
 
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/edit_marking_event.html",
         form=form,
         event=event,
         period=period,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Edit marking event",
         formtitle=f"Edit marking event for <strong>{period.display_name}</strong>",
         url=url,
@@ -5241,11 +5256,17 @@ def test_marking_event(event_id):
 
         return redirect(url)
 
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/test_marking_event.html",
         event=event,
         form=form,
         url=url,
+        pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title=f'Test notifications for "{event.name}"',
         formtitle=f"Send test notifications for marking event <strong>{event.name}</strong>",
     )
@@ -5442,12 +5463,18 @@ def test_send_reminder_for_workflow(workflow_id):
 
         return redirect(url)
 
+    config = workflow.event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/markingevent/test_send_reminder_for_workflow.html",
         workflow=workflow,
         event=event,
         form=form,
         url=url,
+        pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title=f'Test reminders for "{workflow.name}"',
         formtitle=f"Send test reminders for workflow <strong>{workflow.name}</strong>",
     )

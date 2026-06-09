@@ -630,10 +630,15 @@ def upload_period_attachment(pid):
         if request.method == "GET":
             form.license.data = current_user.default_license
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/documents/upload_period_attachment.html",
         record=record,
         form=form,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         url=url,
         text=text,
     )
@@ -712,12 +717,17 @@ def edit_period_attachment(aid):
             form.license.data = asset.license if asset is not None else None
             form.roles.data = list(record.role_set)
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/documents/edit_period_attachment.html",
         attachment=record,
         record=period,
         asset=asset,
         form=form,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         url=url,
         text=text,
     )

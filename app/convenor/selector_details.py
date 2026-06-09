@@ -1113,12 +1113,16 @@ def create_custom_offer(sel_id, proj_id):
 
         return redirect(url)
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/selector/create_custom_offer.html",
         form=form,
         sel=sel,
         proj=proj,
         config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
         url=url,
     )
 
@@ -1174,8 +1178,16 @@ def edit_custom_offer(offer_id):
 
         return redirect(url)
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
-        "convenor/selector/edit_custom_offer.html", form=form, offer=offer, url=url
+        "convenor/selector/edit_custom_offer.html",
+        form=form,
+        offer=offer,
+        config=config,
+        pclass=pclass,
+        convenor_data=convenor_data,
+        url=url,
     )
 
 

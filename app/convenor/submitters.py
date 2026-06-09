@@ -1142,6 +1142,9 @@ def delete_role(role_id):
 
     submit_label = "Delete role"
 
+    pclass = config.project_class
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     form = ConfirmActionForm()
     return render_template_context(
         "admin/danger_confirm.html",
@@ -1151,6 +1154,9 @@ def delete_role(role_id):
         message=message,
         submit_label=submit_label,
         form=form,
+        pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
     )
 
 

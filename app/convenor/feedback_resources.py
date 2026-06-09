@@ -222,10 +222,18 @@ def add_feedback_asset(pclass_id):
             )
             return redirect(url)
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Cannot display convenor dashboard: no current configuration exists for this project class.", "warning")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/add_feedback_asset.html",
         form=form,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Add feedback asset",
         url=url,
         text=text,
@@ -279,11 +287,19 @@ def edit_feedback_asset(asset_id):
     elif request.method == "GET":
         form.license.data = feedback_asset.asset.license
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Cannot display convenor dashboard: no current configuration exists for this project class.", "warning")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/edit_feedback_asset.html",
         form=form,
         feedback_asset=feedback_asset,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Edit feedback asset",
         url=url,
         text=text,
@@ -419,11 +435,19 @@ def add_feedback_template(pclass_id):
 
         return redirect(url)
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Cannot display convenor dashboard: no current configuration exists for this project class.", "warning")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/feedback_template.html",
         form=form,
         fb_template=None,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Add feedback template",
         url=url,
         text=text,
@@ -482,11 +506,19 @@ def edit_feedback_template(template_id):
 
         return redirect(url)
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Cannot display convenor dashboard: no current configuration exists for this project class.", "warning")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/feedback_template.html",
         form=form,
         fb_template=fb_template,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Edit feedback template",
         url=url,
         text=text,
@@ -589,11 +621,19 @@ def add_feedback_recipe(pclass_id):
 
         return redirect(url)
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Cannot display convenor dashboard: no current configuration exists for this project class.", "warning")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/feedback_recipe.html",
         form=form,
         recipe=None,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         title="Add feedback recipe",
         url=url,
         text=text,
@@ -647,11 +687,19 @@ def edit_feedback_recipe(recipe_id):
 
     asset_list = list(recipe.asset_list.all())
 
+    config = pclass.most_recent_config
+    if config is None:
+        flash("Cannot display convenor dashboard: no current configuration exists for this project class.", "warning")
+        return redirect(redirect_url())
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     return render_template_context(
         "convenor/feedback/feedback_recipe.html",
         form=form,
         recipe=recipe,
         pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
         asset_list=asset_list,
         title="Edit feedback recipe",
         url=url,

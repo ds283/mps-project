@@ -375,100 +375,71 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
     )
 
 
-def PeriodRecordMixinFactory(enable_canvas=True):
-    class PeriodRecordMixin:
-        name = StringField(
-            "Name",
-            description="Optional. Enter a textual name for this submission "
-            'period, such as "Autumn Term". Leave blank to use the default name.',
-            validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
-        )
-
-        number_markers = IntegerField(
-            "Number of markers",
-            default=DEFAULT_ASSIGNED_MARKERS,
-            description="Number of markers that should be assigned to each project. "
-                        "If set to zero, no markers are assigned and the report grade will not be tracked.",
-            validators=[
-                InputRequired("Please enter the required number of markers"),
-                NumberRange(
-                    min=0,
-                    message="The required number of markers should not be negative",
-                ),
-            ],
-        )
-
-        uses_supervision_grade = BooleanField(
-            "Track a supervision grade for this period",
-            description="Enable if a separate supervision mark will be recorded for this period "
-                        "and copied into submission records via the marking workflow. If disabled, "
-                        "the supervision grade column is suppressed in the student inspector and exports.",
-        )
-
-        @staticmethod
-        def validate_number_markers(form, field):
-            if form._config.uses_marker and field.data == 0:
-                raise ValidationError(
-                    "This project class uses markers. The number of markers should be 1 or greater."
-                )
-
-        start_date = DateTimeField(
-            "Period start date",
-            format="%d/%m/%Y",
-            validators=[Optional()],
-            description="Enter an optional start date for this submission period.",
-        )
-
-        hand_in_date = DateTimeField(
-            "Hand-in date",
-            format="%d/%m/%Y",
-            validators=[Optional()],
-            description="Enter an optional hand-in date for this submission period. If present, "
-            "this is used to show students how much time remains.",
-        )
-
-        if enable_canvas:
-            canvas_module_id = IntegerField(
-                "Canvas module identifier",
-                validators=[Optional()],
-                description="To enable Canvas integration for this submission period, "
-                "enter the numeric identifier for the corresponding Canvas "
-                "module. This does not need to be the same module used for "
-                "synchronizing the submitter list.",
-            )
-
-            canvas_assignment_id = IntegerField(
-                "Canvas assignment identifier",
-                validators=[Optional()],
-                description="Enter the numeric identifier for the corresponding Canvas "
-                "assignment. Both the assignment id and module id need "
-                "to be specified.",
-            )
-
-    return PeriodRecordMixin
-
-
-def EditPeriodRecordFormFactory(config: ProjectClassConfig):
-    canvas_enabled = config.main_config.enable_canvas_sync
-    mixin = PeriodRecordMixinFactory(enable_canvas=canvas_enabled)
-
-    class EditPeriodRecordForm(Form, mixin, SaveChangesMixin):
-        _config = config
-
-    return EditPeriodRecordForm
-
-
 class EditSubmissionPeriodRecordPresentationsForm(
     Form, PeriodPresentationsMixin, SaveChangesMixin
 ):
     pass
 
 
-def EditProjectConfigFormFactory(config: ProjectClassConfig):
-    canvas_enabled = config.main_config.enable_canvas_sync
-    _pclass_rubrics = config.project_class.grading_rubrics.order_by(GradingRubric.label).all()
+class EditConfigRolesForm(Form, SaveChangesMixin):
+    uses_supervisor = BooleanField(
+        "Uses supervisor roles",
+        description="Select if the project is actively supervised by one or more members of staff",
+    )
 
-    class EditProjectConfigForm(Form, SaveChangesMixin):
+    uses_marker = BooleanField(
+        "Uses marker roles",
+        description="Select if the submissions are assessed by one or more members of staff",
+    )
+
+    uses_moderator = BooleanField(
+        "Uses moderator roles",
+        default=False,
+        description="Select if submissions are moderated by one or more members of staff",
+    )
+
+    uses_presentations = BooleanField(
+        "Includes one or more assessed presentations",
+        description="Select if submissions are moderated by one or more members of staff",
+    )
+
+    display_marker = BooleanField("Display assessor information")
+
+    display_presentations = BooleanField("Display presentation assessment information")
+
+
+def EditConfigCATSFormFactory(config: ProjectClassConfig):
+    v_sup = [InputRequired()] if config.uses_supervisor else [Optional()]
+    v_mark = [InputRequired()] if config.uses_marker else [Optional()]
+    v_mod = [InputRequired()] if config.uses_moderator else [Optional()]
+    v_pres = [InputRequired()] if config.uses_presentations else [Optional()]
+
+    class EditConfigCATSForm(Form, SaveChangesMixin):
+        CATS_supervision = IntegerField(
+            "CATS awarded for project supervision",
+            validators=v_sup + [NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        CATS_marking = IntegerField(
+            "CATS awarded for marking submissions",
+            validators=v_mark + [NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        CATS_moderation = IntegerField(
+            "CATS awarded for moderating submissions",
+            validators=v_mod + [NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        CATS_presentation = IntegerField(
+            "CATS awarded for assessing presentations",
+            validators=v_pres + [NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+    return EditConfigCATSForm
+
+
+def EditConfigSelectionFormFactory(config: ProjectClassConfig):
+    class EditConfigSelectionForm(Form, SaveChangesMixin):
         skip_matching = BooleanField(
             "Skip matching",
             description="Opt out of automated matching for this academic year",
@@ -477,33 +448,6 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
         requests_skipped = BooleanField(
             "Skip confirmation requests",
             description="Disable confirmation of project descriptions for this academic year",
-        )
-
-        uses_supervisor = BooleanField(
-            "Uses supervisor roles",
-            description="Select if the project is actively supervised by one or more members of staff",
-        )
-
-        uses_marker = BooleanField(
-            "Uses marker roles",
-            description="Select if the submissions are assessed by one or more members of staff",
-        )
-
-        uses_moderator = BooleanField(
-            "Uses moderator roles",
-            default=False,
-            description="Select if submissions are moderated by one or more members of staff",
-        )
-
-        uses_presentations = BooleanField(
-            "Includes one or more assessed presentations",
-            description="Select if submissions are moderated by one or more members of staff",
-        )
-
-        display_marker = BooleanField("Display assessor information")
-
-        display_presentations = BooleanField(
-            "Display presentation assessment information"
         )
 
         full_CATS = IntegerField(
@@ -515,53 +459,50 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
             "matching.",
             validators=[
                 Optional(),
-                NumberRange(
-                    min=0, message="The specified number of CATS should not be negative"
-                ),
+                NumberRange(min=0, message="The specified number of CATS should not be negative"),
             ],
         )
 
-        CATS_supervision = IntegerField(
-            "CATS awarded for project supervision",
-            validators=[
-                NotOptionalIf("uses_supervisor"),
-                NumberRange(
-                    min=0, message="The specified number of CATS should not be negative"
-                ),
-            ],
+    return EditConfigSelectionForm
+
+
+def EditConfigCanvasFormFactory(config: ProjectClassConfig):
+    class EditConfigCanvasForm(Form, SaveChangesMixin):
+        canvas_module_id = IntegerField(
+            "Canvas module identifier",
+            validators=[Optional()],
+            description="To enable Canvas integration for this cycle, enter the numeric identifier for the corresponding Canvas module",
         )
 
-        CATS_marking = IntegerField(
-            "CATS awarded for marking submissions",
-            validators=[
-                NotOptionalIf("uses_marker"),
-                NumberRange(
-                    min=0, message="The specified number of CATS should not be negative"
-                ),
-            ],
+        canvas_login = QuerySelectField(
+            "Canvas login account",
+            query_factory=partial(GetCanvasEnabledConvenors, config),
+            allow_blank=True,
+            get_label=BuildCanvasLoginUserName,
         )
 
-        CATS_moderation = IntegerField(
-            "CATS awarded for moderating submissions",
-            validators=[
-                NotOptionalIf("uses_moderator"),
-                NumberRange(
-                    min=0, message="The specified number of CATS should not be negative"
-                ),
-            ],
+    return EditConfigCanvasForm
+
+
+def EditConfigAIRubricFormFactory(config: ProjectClassConfig):
+    _pclass_rubrics = config.project_class.grading_rubrics.order_by(GradingRubric.label).all()
+
+    class EditConfigAIRubricForm(Form, SaveChangesMixin):
+        grading_rubric = QuerySelectField(
+            "AI grading rubric",
+            query_factory=lambda: _pclass_rubrics,
+            allow_blank=True,
+            blank_text="— None (opt out of AI grading for this cycle) —",
+            get_label="label",
+            description="Select the grading rubric to use for AI-assisted assessment. "
+            "Choose 'None' to disable AI grading for this academic year.",
         )
 
-        CATS_presentation = IntegerField(
-            "CATS awarded for assessing presentations",
-            validators=[
-                NotOptionalIf("uses_presentations"),
-                NumberRange(
-                    min=0, message="The specified number of CATS should not be negative"
-                ),
-            ],
-        )
+    return EditConfigAIRubricForm
 
-        # Document limit overrides (None = inherit from ProjectClass defaults)
+
+def EditConfigDocLimitsFormFactory(config: ProjectClassConfig):
+    class EditConfigDocLimitsForm(Form, SaveChangesMixin):
         word_limit_enabled = BooleanField(
             "Override word limit setting",
             description="If selected, the word limit setting below overrides the project class default for this cycle.",
@@ -599,33 +540,93 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
             description="Override the word count discrepancy tolerance for this cycle. Leave blank to inherit the project class default.",
         )
 
-        # AI grading rubric — choose which rubric applies this cycle, or None to opt out
-        grading_rubric = QuerySelectField(
-            "AI grading rubric",
-            query_factory=lambda: _pclass_rubrics,
-            allow_blank=True,
-            blank_text="— None (opt out of AI grading for this cycle) —",
-            get_label="label",
-            description="Select the grading rubric to use for AI-assisted assessment. "
-            "Choose 'None' to disable AI grading for this academic year.",
+    return EditConfigDocLimitsForm
+
+
+def EditPeriodDatesFormFactory(config: ProjectClassConfig):
+    class EditPeriodDatesForm(Form, SaveChangesMixin):
+        _config = config
+
+        name = StringField(
+            "Name",
+            description="Optional. Enter a textual name for this submission "
+            'period, such as "Autumn Term". Leave blank to use the default name.',
+            validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
         )
 
-        # only include Canvas-related fields if Canvas integration is actually switched on
-        if canvas_enabled:
-            canvas_module_id = IntegerField(
-                "Canvas module identifier",
-                validators=[Optional()],
-                description="To enable Canvas integration for this cycle, enter the numeric identifier for the corresponding Canvas module",
-            )
+        start_date = DateTimeField(
+            "Period start date",
+            format="%d/%m/%Y",
+            validators=[Optional()],
+            description="Enter an optional start date for this submission period.",
+        )
 
-            canvas_login = QuerySelectField(
-                "Canvas login account",
-                query_factory=partial(GetCanvasEnabledConvenors, config),
-                allow_blank=True,
-                get_label=BuildCanvasLoginUserName,
-            )
+        hand_in_date = DateTimeField(
+            "Hand-in date",
+            format="%d/%m/%Y",
+            validators=[Optional()],
+            description="Enter an optional hand-in date for this submission period. If present, "
+            "this is used to show students how much time remains.",
+        )
 
-    return EditProjectConfigForm
+    return EditPeriodDatesForm
+
+
+def EditPeriodMarkersFormFactory(config: ProjectClassConfig):
+    class EditPeriodMarkersForm(Form, SaveChangesMixin):
+        _config = config
+
+        number_markers = IntegerField(
+            "Number of markers",
+            default=DEFAULT_ASSIGNED_MARKERS,
+            description="Number of markers that should be assigned to each project. "
+                        "If set to zero, no markers are assigned and the report grade will not be tracked.",
+            validators=[
+                InputRequired("Please enter the required number of markers"),
+                NumberRange(
+                    min=0,
+                    message="The required number of markers should not be negative",
+                ),
+            ],
+        )
+
+        uses_supervision_grade = BooleanField(
+            "Track a supervision grade for this period",
+            description="Enable if a separate supervision mark will be recorded for this period "
+                        "and copied into submission records via the marking workflow. If disabled, "
+                        "the supervision grade column is suppressed in the student inspector and exports.",
+        )
+
+        @staticmethod
+        def validate_number_markers(form, field):
+            if form._config.uses_marker and field.data == 0:
+                raise ValidationError(
+                    "This project class uses markers. The number of markers should be 1 or greater."
+                )
+
+    return EditPeriodMarkersForm
+
+
+def EditPeriodCanvasFormFactory(config: ProjectClassConfig):
+    class EditPeriodCanvasForm(Form, SaveChangesMixin):
+        canvas_module_id = IntegerField(
+            "Canvas module identifier",
+            validators=[Optional()],
+            description="To enable Canvas integration for this submission period, "
+            "enter the numeric identifier for the corresponding Canvas "
+            "module. This does not need to be the same module used for "
+            "synchronizing the submitter list.",
+        )
+
+        canvas_assignment_id = IntegerField(
+            "Canvas assignment identifier",
+            validators=[Optional()],
+            description="Enter the numeric identifier for the corresponding Canvas "
+            "assignment. Both the assignment id and module id need "
+            "to be specified.",
+        )
+
+    return EditPeriodCanvasForm
 
 
 def ManualAssignFormFactory(config: ProjectClassConfig, is_admin: bool):

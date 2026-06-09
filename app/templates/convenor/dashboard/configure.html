@@ -3,14 +3,6 @@
 {% block tabblock %}
     <div class="mt-3 mb-3 px-1">
 
-        {# Escape hatch #}
-        <div class="d-flex justify-content-end mb-3">
-            <a class="btn btn-outline-secondary btn-sm"
-               href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">
-                <i class="fas fa-list fa-fw"></i> Edit all cycle settings
-            </a>
-        </div>
-
         {# ──────────────────────────────────────────────────────
        SECTION A — Cycle-level settings
     ────────────────────────────────────────────────────── #}
@@ -48,7 +40,7 @@
                                 <span class="text-body-secondary">&mdash;</span>
                             {% endif %}
                         </p>
-                        <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#supervision"
+                        <a href="{{ url_for('convenor.edit_config_roles', pid=config.id) }}"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
                 </div>
@@ -76,7 +68,7 @@
                                 <span class="text-body-secondary">&mdash;</span>
                             {% endif %}
                         </p>
-                        <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#cats"
+                        <a href="{{ url_for('convenor.edit_config_cats', pid=config.id) }}"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
                 </div>
@@ -101,7 +93,7 @@
                                 &middot; Matching skipped
                             {% endif %}
                         </p>
-                        <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#selection"
+                        <a href="{{ url_for('convenor.edit_config_selection', pid=config.id) }}"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
                 </div>
@@ -124,7 +116,7 @@
                                 Not configured
                             {% endif %}
                         </p>
-                        <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#canvas"
+                        <a href="{{ url_for('convenor.edit_config_canvas', pid=config.id) }}"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
                 </div>
@@ -145,7 +137,7 @@
                                 None (disabled)
                             {% endif %}
                         </p>
-                        <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#ai"
+                        <a href="{{ url_for('convenor.edit_config_ai_rubric', pid=config.id) }}"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
                 </div>
@@ -171,7 +163,7 @@
                                 No limits configured
                             {% endif %}
                         </p>
-                        <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#limits"
+                        <a href="{{ url_for('convenor.edit_config_doc_limits', pid=config.id) }}"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
                 </div>
@@ -291,7 +283,7 @@
                                     Not set
                                 {% endif %}
                             </p>
-                            <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#dates"
+                            <a href="{{ url_for('convenor.edit_period_dates', pid=period.id) }}"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                         </div>
                     </div>
@@ -311,7 +303,7 @@
                                 Supervision grade:
                                 {% if period.uses_supervision_grade %}enabled{% else %}disabled{% endif %}
                             </p>
-                            <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#markers"
+                            <a href="{{ url_for('convenor.edit_period_markers', pid=period.id) }}"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                         </div>
                     </div>
@@ -336,7 +328,7 @@
                                     Not configured
                                 {% endif %}
                             </p>
-                            <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#presentation"
+                            <a href="{{ url_for('convenor.edit_period_presentation', pid=period.id) }}"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                         </div>
                     </div>
@@ -359,7 +351,7 @@
                                     Not set
                                 {% endif %}
                             </p>
-                            <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#canvas"
+                            <a href="{{ url_for('convenor.edit_period_canvas', pid=period.id) }}"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                         </div>
                     </div>

@@ -1,0 +1,35 @@
+{% extends "convenor/dashboard/pclass_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Edit roles &amp; assessment
+{% endblock %}
+
+{% block formtitle %}
+    Edit roles &amp; assessment for <strong>{{ config.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_config_roles', pid=config.id) }}" method="POST" name="edit_form">
+
+        {{ form.hidden_tag() }}
+
+        <p class="form-group-heading">Assessment roles</p>
+        {{ wtf.render_field(form.uses_supervisor) }}
+        {{ wtf.render_field(form.uses_marker) }}
+        {{ wtf.render_field(form.uses_moderator) }}
+        {{ wtf.render_field(form.uses_presentations) }}
+
+        <hr class="intro-divider">
+
+        <p class="form-group-heading">Faculty dashboard visibility</p>
+        {{ wtf.render_field(form.display_marker) }}
+        {{ wtf.render_field(form.display_presentations) }}
+
+        <div class="mt-4">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+
+    </form>
+{% endblock %}

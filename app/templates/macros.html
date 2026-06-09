@@ -389,7 +389,7 @@
     <div class="btn-group {%- if dropup %} dropup{% endif -%}{%- if margin %} me-2{% endif %}" role="group">
         <a role="button"
            class="btn {% if small %}btn-sm{% endif %} {% if disable %}disabled {% endif %} btn-outline-secondary"
-           {% if not disable %}href="{{ url_for('convenor.edit_period_record', pid=period.id) }}"{% endif %}>Configure...
+           {% if not disable %}href="{{ url_for('convenor.edit_period_dates', pid=period.id) }}"{% endif %}>Configure...
         </a>
         <button type="button"
                 class="btn {% if small %}btn-sm{% endif %} btn-secondary dropdown-toggle dropdown-toggle-split"
@@ -399,7 +399,7 @@
         {% if not disable %}
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                 <a class="dropdown-item d-flex gap-2"
-                   href="{{ url_for('convenor.edit_period_record', pid=period.id) }}">
+                   href="{{ url_for('convenor.edit_period_dates', pid=period.id) }}">
                     Settings...
                 </a>
                 <a class="dropdown-item d-flex gap-2"

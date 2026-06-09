@@ -1,0 +1,41 @@
+{% extends "convenor/dashboard/pclass_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import show_default_field %}
+
+{% block title %}
+    Edit workload &amp; CATS
+{% endblock %}
+
+{% block formtitle %}
+    Edit workload &amp; CATS for <strong>{{ config.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_config_cats', pid=config.id) }}" method="POST" name="edit_form">
+
+        {{ form.hidden_tag() }}
+
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
+            </div>
+            <div class="col-6">
+                {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ show_default_field(form.CATS_moderation, config.project_class.CATS_moderation) }}
+            </div>
+            <div class="col-6">
+                {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
+            </div>
+        </div>
+
+        <div class="mt-4">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+
+    </form>
+{% endblock %}

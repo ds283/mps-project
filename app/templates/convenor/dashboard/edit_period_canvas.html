@@ -1,0 +1,26 @@
+{% extends "convenor/dashboard/pclass_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Edit Canvas assignment
+{% endblock %}
+
+{% block formtitle %}
+    Edit Canvas assignment for <strong>{{ record.display_name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_period_canvas', pid=record.id) }}" method="POST" name="edit_form">
+
+        {{ form.hidden_tag() }}
+
+        {{ wtf.render_field(form.canvas_module_id) }}
+        {{ wtf.render_field(form.canvas_assignment_id) }}
+
+        <div class="mt-4">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+
+    </form>
+{% endblock %}

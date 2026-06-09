@@ -80,8 +80,15 @@ from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
 from .forms import (
     AddSubmissionPeriodUnitFormFactory,
     AddSupervisionEventTemplateFormFactory,
-    EditPeriodRecordFormFactory,
-    EditProjectConfigFormFactory,
+    EditConfigAIRubricFormFactory,
+    EditConfigCATSFormFactory,
+    EditConfigCanvasFormFactory,
+    EditConfigDocLimitsFormFactory,
+    EditConfigRolesForm,
+    EditConfigSelectionFormFactory,
+    EditPeriodCanvasFormFactory,
+    EditPeriodDatesFormFactory,
+    EditPeriodMarkersFormFactory,
     EditSubmissionPeriodRecordPresentationsForm,
     EditSubmissionPeriodUnitFormFactory,
     EditSupervisionEventTemplateFormFactory,
@@ -371,105 +378,6 @@ def do_close_period(id):
     return redirect(url)
 
 
-@convenor.route("/edit_project_config/<int:pid>", methods=["GET", "POST"])
-@roles_accepted("faculty", "admin", "root")
-def edit_project_config(pid):
-    # pid is a ProjectClassConfig
-    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
-
-    # reject is user is not a convenor for the associated project class
-    if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
-
-    # check configuration is still current
-    if config.project_class.most_recent_config.id != config.id:
-        flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
-                yra=config.submit_year_a, yrb=config.submit_year_b
-            ),
-            "info",
-        )
-        return redirect(redirect_url())
-
-    EditProjectConfigForm = EditProjectConfigFormFactory(config)
-    form = EditProjectConfigForm(obj=config)
-
-    if request.method == "GET":
-        # word_count_tolerance is stored as a fraction (e.g. 0.15) but displayed as a percentage.
-        # The effective value (inherited from ProjectClass when None) is shown as the placeholder/default.
-        stored_tolerance = config.word_count_tolerance
-        if stored_tolerance is not None:
-            form.word_count_tolerance.data = float(stored_tolerance) * 100.0
-        else:
-            form.word_count_tolerance.data = None  # show placeholder; effective value from pclass
-
-    if form.validate_on_submit():
-        now = datetime.now()
-
-        if form.skip_matching.data != config.skip_matching:
-            config.skip_matching = form.skip_matching.data
-
-        if form.requests_skipped.data != config.requests_skipped:
-            config.requests_skipped = form.requests_skipped.data
-
-            if config.requests_skipped:
-                config.requests_skipped_id = current_user.id
-                config.requests_skipped_timestamp = now
-            else:
-                config.requests_skipped_by = None
-                config.requests_skipped_timestamp = None
-
-        if form.full_CATS.data != config.full_CATS:
-            config.full_CATS = form.full_CATS.data
-
-        config.uses_supervisor = form.uses_supervisor.data
-        config.uses_marker = form.uses_marker.data
-        config.uses_moderator = form.uses_moderator.data
-        config.uses_presentations = form.uses_presentations.data
-        config.display_marker = form.display_marker.data
-        config.display_presentations = form.display_presentations.data
-
-        config.CATS_supervision = form.CATS_supervision.data
-        config.CATS_marking = form.CATS_marking.data
-        config.CATS_moderation = form.CATS_moderation.data
-        config.CATS_presentation = form.CATS_presentation.data
-
-        # Document limit overrides: store None when not overriding (inherit from ProjectClass)
-        config.word_limit_enabled = form.word_limit_enabled.data if form.word_limit_enabled.data else None
-        config.word_limit = form.word_limit.data
-        config.page_limit_enabled = form.page_limit_enabled.data if form.page_limit_enabled.data else None
-        config.page_limit = form.page_limit.data
-        config.word_count_tolerance = (form.word_count_tolerance.data / 100.0) if form.word_count_tolerance.data is not None else None
-
-        config.grading_rubric = form.grading_rubric.data
-
-        if hasattr(form, "canvas_module_id"):
-            config.canvas_module_id = form.canvas_module_id.data
-        if hasattr(form, "canvas_login"):
-            config.canvas_login = form.canvas_login.data
-
-        try:
-            log_db_commit(
-                f'Saved project configuration for "{config.name}"',
-                user=current_user,
-                project_classes=config.project_class,
-            )
-        except SQLAlchemyError as e:
-            flash(
-                "Could not save project configuration because of a database error. Please contact a system administrator.",
-                "error",
-            )
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        return redirect(url_for("convenor.status", id=config.project_class.id))
-
-    return render_template_context(
-        "convenor/dashboard/edit_project_config.html", form=form, config=config
-    )
-
-
 def _validate_submission_period(
     record: SubmissionPeriodRecord, config: ProjectClassConfig
 ):
@@ -521,60 +429,6 @@ def _validate_submission_period(
     return True
 
 
-@convenor.route("/edit_period_record/<int:pid>", methods=["GET", "POST"])
-@roles_accepted("faculty", "admin", "root")
-def edit_period_record(pid):
-    # pid is a SubmissionPeriodRecord
-    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
-    config: ProjectClassConfig = record.config
-
-    if not _validate_submission_period(record, config):
-        return redirect(redirect_url())
-
-    FormClass = EditPeriodRecordFormFactory(config)
-    edit_form = FormClass(obj=record)
-
-    if edit_form.validate_on_submit():
-        record.name = edit_form.name.data
-        record.number_markers = edit_form.number_markers.data
-        record.uses_supervision_grade = edit_form.uses_supervision_grade.data
-        record.start_date = edit_form.start_date.data
-        record.hand_in_date = edit_form.hand_in_date.data
-
-        if hasattr(edit_form, "canvas_module_id"):
-            record.canvas_module_id = edit_form.canvas_module_id.data
-        if hasattr(edit_form, "canvas_assignment_id"):
-            record.canvas_assignment_id = edit_form.canvas_assignment_id.data
-
-        try:
-            log_db_commit(
-                f'Saved submission period configuration for "{record.display_name}" in "{config.name}"',
-                user=current_user,
-                project_classes=config.project_class,
-            )
-        except SQLAlchemyError as e:
-            flash(
-                "Could not save submission period configuration because of a database error. Please contact a system administrator.",
-                "error",
-            )
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        return redirect(url_for("convenor.status", id=config.project_class.id))
-
-    pclass = config.project_class
-    convenor_data = get_convenor_dashboard_data(pclass, config)
-
-    return render_template_context(
-        "convenor/dashboard/edit_period_record.html",
-        form=edit_form,
-        record=record,
-        config=config,
-        pclass=pclass,
-        convenor_data=convenor_data,
-    )
-
-
 @convenor.route("/edit_period_presentation/<int:pid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_period_presentation(pid):
@@ -623,6 +477,560 @@ def edit_period_presentation(pid):
         record=record,
         config=config,
         pclass=pclass,
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_config_roles/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_config_roles(pid):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if pclass.most_recent_config.id != config.id:
+        flash(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
+            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = EditConfigRolesForm(obj=None)
+
+    if form.validate_on_submit():
+        config.uses_supervisor = form.uses_supervisor.data
+        config.uses_marker = form.uses_marker.data
+        config.uses_moderator = form.uses_moderator.data
+        config.uses_presentations = form.uses_presentations.data
+        config.display_marker = form.display_marker.data
+        config.display_presentations = form.display_presentations.data
+
+        try:
+            log_db_commit(
+                f'Saved roles & assessment configuration for "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save roles & assessment configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.uses_supervisor.data = config.uses_supervisor
+    form.uses_marker.data = config.uses_marker
+    form.uses_moderator.data = config.uses_moderator
+    form.uses_presentations.data = config.uses_presentations
+    form.display_marker.data = config.display_marker
+    form.display_presentations.data = config.display_presentations
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_config_roles.html",
+        form=form,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit roles & assessment",
+        form_title=f"Edit roles & assessment for <strong>{config.name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_config_cats/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_config_cats(pid):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if pclass.most_recent_config.id != config.id:
+        flash(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
+            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = EditConfigCATSFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        config.CATS_supervision = form.CATS_supervision.data
+        config.CATS_marking = form.CATS_marking.data
+        config.CATS_moderation = form.CATS_moderation.data
+        config.CATS_presentation = form.CATS_presentation.data
+
+        try:
+            log_db_commit(
+                f'Saved workload & CATS configuration for "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save workload & CATS configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.CATS_supervision.data = config.CATS_supervision
+    form.CATS_marking.data = config.CATS_marking
+    form.CATS_moderation.data = config.CATS_moderation
+    form.CATS_presentation.data = config.CATS_presentation
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_config_cats.html",
+        form=form,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit workload & CATS",
+        form_title=f"Edit workload & CATS for <strong>{config.name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_config_selection/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_config_selection(pid):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if pclass.most_recent_config.id != config.id:
+        flash(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
+            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = EditConfigSelectionFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        now = datetime.now()
+
+        config.skip_matching = form.skip_matching.data
+        config.full_CATS = form.full_CATS.data
+
+        if form.requests_skipped.data != config.requests_skipped:
+            config.requests_skipped = form.requests_skipped.data
+
+            if config.requests_skipped:
+                config.requests_skipped_id = current_user.id
+                config.requests_skipped_timestamp = now
+            else:
+                config.requests_skipped_by = None
+                config.requests_skipped_timestamp = None
+
+        try:
+            log_db_commit(
+                f'Saved project selection configuration for "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save project selection configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.skip_matching.data = config.skip_matching
+    form.requests_skipped.data = config.requests_skipped
+    form.full_CATS.data = config.full_CATS
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_config_selection.html",
+        form=form,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit project selection",
+        form_title=f"Edit project selection for <strong>{config.name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_config_canvas/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_config_canvas(pid):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if pclass.most_recent_config.id != config.id:
+        flash(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
+            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    if not config.main_config.enable_canvas_sync:
+        flash("Canvas sync is not enabled for this site.", "info")
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form = EditConfigCanvasFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        config.canvas_module_id = form.canvas_module_id.data
+        config.canvas_login = form.canvas_login.data
+
+        try:
+            log_db_commit(
+                f'Saved Canvas integration settings for "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save Canvas integration settings because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.canvas_module_id.data = config.canvas_module_id
+    form.canvas_login.data = config.canvas_login
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_config_canvas.html",
+        form=form,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit Canvas integration",
+        form_title=f"Edit Canvas integration for <strong>{config.name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_config_ai_rubric/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_config_ai_rubric(pid):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if pclass.most_recent_config.id != config.id:
+        flash(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
+            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = EditConfigAIRubricFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        config.grading_rubric = form.grading_rubric.data
+
+        try:
+            log_db_commit(
+                f'Saved AI grading rubric configuration for "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save AI grading rubric configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.grading_rubric.data = config.grading_rubric
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_config_ai_rubric.html",
+        form=form,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit AI grading rubric",
+        form_title=f"Edit AI grading rubric for <strong>{config.name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_config_doc_limits/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_config_doc_limits(pid):
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if pclass.most_recent_config.id != config.id:
+        flash(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
+            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = EditConfigDocLimitsFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        config.word_limit_enabled = form.word_limit_enabled.data
+        config.word_limit = form.word_limit.data
+        config.page_limit_enabled = form.page_limit_enabled.data
+        config.page_limit = form.page_limit.data
+        tol = form.word_count_tolerance.data
+        config.word_count_tolerance = round(float(tol) / 100, 4) if tol is not None else None
+
+        try:
+            log_db_commit(
+                f'Saved document limits configuration for "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save document limits configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.word_limit_enabled.data = config.word_limit_enabled
+    form.word_limit.data = config.word_limit
+    form.page_limit_enabled.data = config.page_limit_enabled
+    form.page_limit.data = config.page_limit
+    tolerance = config.word_count_tolerance
+    form.word_count_tolerance.data = round(float(tolerance) * 100, 1) if tolerance is not None else None
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_config_doc_limits.html",
+        form=form,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit document limits",
+        form_title=f"Edit document limits for <strong>{config.name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_period_dates/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_period_dates(pid):
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+    pclass = config.project_class
+
+    if not _validate_submission_period(record, config):
+        return redirect(redirect_url())
+
+    form = EditPeriodDatesFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        record.name = form.name.data
+        record.start_date = form.start_date.data
+        record.hand_in_date = form.hand_in_date.data
+
+        try:
+            log_db_commit(
+                f'Saved dates & deadlines for "{record.display_name}" in "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save dates & deadlines because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.name.data = record.name
+    form.start_date.data = record.start_date
+    form.hand_in_date.data = record.hand_in_date
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_period_dates.html",
+        form=form,
+        record=record,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit dates & deadlines",
+        form_title=f"Edit dates & deadlines for <strong>{record.display_name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_period_markers/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_period_markers(pid):
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+    pclass = config.project_class
+
+    if not _validate_submission_period(record, config):
+        return redirect(redirect_url())
+
+    form = EditPeriodMarkersFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        record.number_markers = form.number_markers.data
+        record.uses_supervision_grade = form.uses_supervision_grade.data
+
+        try:
+            log_db_commit(
+                f'Saved markers configuration for "{record.display_name}" in "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save markers configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.number_markers.data = record.number_markers
+    form.uses_supervision_grade.data = record.uses_supervision_grade
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_period_markers.html",
+        form=form,
+        record=record,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit markers per submission",
+        form_title=f"Edit markers per submission for <strong>{record.display_name}</strong>",
+        convenor_data=convenor_data,
+    )
+
+
+@convenor.route("/edit_period_canvas/<int:pid>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_period_canvas(pid):
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+    pclass = config.project_class
+
+    if not _validate_submission_period(record, config):
+        return redirect(redirect_url())
+
+    if not config.main_config.enable_canvas_sync:
+        flash("Canvas sync is not enabled for this site.", "info")
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form = EditPeriodCanvasFormFactory(config)(obj=None)
+
+    if form.validate_on_submit():
+        record.canvas_module_id = form.canvas_module_id.data
+        record.canvas_assignment_id = form.canvas_assignment_id.data
+
+        try:
+            log_db_commit(
+                f'Saved Canvas assignment settings for "{record.display_name}" in "{config.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            flash(
+                "Could not save Canvas assignment settings because of a database error. Please contact a system administrator.",
+                "error",
+            )
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("convenor.status", id=pclass.id))
+
+    form.canvas_module_id.data = record.canvas_module_id
+    form.canvas_assignment_id.data = record.canvas_assignment_id
+
+    url = request.args.get("url", url_for("convenor.status", id=pclass.id))
+    text = request.args.get("text", "Configure")
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/edit_period_canvas.html",
+        form=form,
+        record=record,
+        config=config,
+        pclass=pclass,
+        url=url,
+        text=text,
+        title="Edit Canvas assignment",
+        form_title=f"Edit Canvas assignment for <strong>{record.display_name}</strong>",
         convenor_data=convenor_data,
     )
 

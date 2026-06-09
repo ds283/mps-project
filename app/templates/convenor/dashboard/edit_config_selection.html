@@ -1,0 +1,35 @@
+{% extends "convenor/dashboard/pclass_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Edit project selection
+{% endblock %}
+
+{% block formtitle %}
+    Edit project selection for <strong>{{ config.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_config_selection', pid=config.id) }}" method="POST" name="edit_form">
+
+        {{ form.hidden_tag() }}
+
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.skip_matching) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.requests_skipped) }}
+            </div>
+        </div>
+        <div class="mt-3">
+            {{ wtf.render_field(form.full_CATS) }}
+        </div>
+
+        <div class="mt-4">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+
+    </form>
+{% endblock %}

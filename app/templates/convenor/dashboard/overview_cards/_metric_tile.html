@@ -1,0 +1,32 @@
+{% macro metric_tile(value, label, variant='secondary', denominator=none,
+                     zero_variant=none, nonzero_variant=none, value_ok=none) %}
+    {# resolve effective variant #}
+    {% if value_ok is not none %}
+        {% set resolved = zero_variant if value_ok else nonzero_variant %}
+    {% elif zero_variant is not none and nonzero_variant is not none %}
+        {% set resolved = zero_variant if value == 0 else nonzero_variant %}
+    {% else %}
+        {% set resolved = variant %}
+    {% endif %}
+    {# map secondary to its non-subtle tokens #}
+    {% if resolved == 'secondary' %}
+        {% set bg_token = 'var(--bs-secondary-bg)' %}
+        {% set border_token = 'var(--bs-border-color)' %}
+    {% else %}
+        {% set bg_token = 'var(--bs-' ~ resolved ~ '-bg-subtle)' %}
+        {% set border_token = 'var(--bs-' ~ resolved ~ '-border-subtle)' %}
+    {% endif %}
+    <div class="rounded p-1 text-center"
+         style="background: {{ bg_token }}; border: 1px solid {{ border_token }}">
+        {% if resolved == 'secondary' %}
+            <div class="small fw-bold text-body-secondary">
+                {{ value }}{% if denominator is not none %}<small class="fw-normal text-body-secondary">/{{ denominator }}</small>{% endif %}
+            </div>
+        {% else %}
+            <div class="small fw-bold" style="color: var(--bs-{{ resolved }}-text-emphasis)">
+                {{ value }}{% if denominator is not none %}<small class="fw-normal text-body-secondary">/{{ denominator }}</small>{% endif %}
+            </div>
+        {% endif %}
+        <div class="text-body-secondary" style="font-size:10px">{{ label }}</div>
+    </div>
+{% endmacro %}

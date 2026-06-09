@@ -14,6 +14,7 @@
 
 {% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
 {% from "convenor/dashboard/overview_cards/_action_panel.html" import action_panel %}
+{% from "convenor/dashboard/overview_cards/_metric_tile.html" import metric_tile %}
 
 {% set rollover_in_progress = config.year < current_year %}
 
@@ -262,43 +263,18 @@
                                                 {# 4-cell aggregate workflow status grid #}
                                                 <div class="row g-1 mb-2">
                                                     <div class="col-6 col-sm-3">
-                                                        <div class="rounded p-1 text-center"
-                                                             style="background: var(--bs-success-bg-subtle); border: 1px solid var(--bs-success-border-subtle)">
-                                                            <div class="small fw-bold"
-                                                                 style="color: var(--bs-success-text-emphasis)">{{ ns.complete }}</div>
-                                                            <div class="text-body-secondary" style="font-size:10px">
-                                                                Complete
-                                                            </div>
-                                                        </div>
+                                                        {{ metric_tile(ns.complete, 'Complete', variant='success') }}
                                                     </div>
                                                     <div class="col-6 col-sm-3">
-                                                        <div class="rounded p-1 text-center"
-                                                             style="background: var(--bs-warning-bg-subtle); border: 1px solid var(--bs-warning-border-subtle)">
-                                                            <div class="small fw-bold"
-                                                                 style="color: var(--bs-warning-text-emphasis)">{{ ns.pending_upload }}</div>
-                                                            <div class="text-body-secondary" style="font-size:10px">
-                                                                Pending upload
-                                                            </div>
-                                                        </div>
+                                                        {{ metric_tile(ns.pending_upload, 'Pending upload',
+                                                                       zero_variant='secondary', nonzero_variant='warning') }}
                                                     </div>
                                                     <div class="col-6 col-sm-3">
-                                                        <div class="rounded p-1 text-center"
-                                                             style="background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color)">
-                                                            <div class="small fw-bold text-body-secondary">{{ ns.in_progress }}</div>
-                                                            <div class="text-body-secondary" style="font-size:10px">In
-                                                                progress
-                                                            </div>
-                                                        </div>
+                                                        {{ metric_tile(ns.in_progress, 'In progress', variant='secondary') }}
                                                     </div>
                                                     <div class="col-6 col-sm-3">
-                                                        <div class="rounded p-1 text-center"
-                                                             style="background: var(--bs-danger-bg-subtle); border: 1px solid var(--bs-danger-border-subtle)">
-                                                            <div class="small fw-bold"
-                                                                 style="color: var(--bs-danger-text-emphasis)">{{ ns.risk_flags }}</div>
-                                                            <div class="text-body-secondary" style="font-size:10px">Risk
-                                                                flags
-                                                            </div>
-                                                        </div>
+                                                        {{ metric_tile(ns.risk_flags, 'Risk flags',
+                                                                       zero_variant='secondary', nonzero_variant='danger') }}
                                                     </div>
                                                 </div>
 
@@ -391,20 +367,11 @@
                             {% set n_uploaded = n_total - n_missing %}
                             <div class="row g-1 mb-2">
                                 <div class="col-6">
-                                    <div class="rounded p-1 text-center"
-                                         style="background: var(--bs-success-bg-subtle); border: 1px solid var(--bs-success-border-subtle)">
-                                        <div class="small fw-bold"
-                                             style="color: var(--bs-success-text-emphasis)">{{ n_uploaded }}</div>
-                                        <div class="text-body-secondary" style="font-size:10px">Uploaded</div>
-                                    </div>
+                                    {{ metric_tile(n_uploaded, 'Uploaded', variant='success') }}
                                 </div>
                                 <div class="col-6">
-                                    <div class="rounded p-1 text-center"
-                                         style="background: {% if n_missing > 0 %}var(--bs-warning-bg-subtle){% else %}var(--bs-secondary-bg){% endif %}; border: 1px solid {% if n_missing > 0 %}var(--bs-warning-border-subtle){% else %}var(--bs-border-color){% endif %}">
-                                        <div class="small fw-bold"
-                                             style="color: {% if n_missing > 0 %}var(--bs-warning-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">{{ n_missing }}</div>
-                                        <div class="text-body-secondary" style="font-size:10px">Missing</div>
-                                    </div>
+                                    {{ metric_tile(n_missing, 'Missing',
+                                                   zero_variant='secondary', nonzero_variant='warning') }}
                                 </div>
                             </div>
                             <div class="d-flex gap-1 flex-wrap">
@@ -583,37 +550,17 @@
                         <div class="card-body p-2">
                             <div class="row g-1 mb-1">
                                 <div class="col-4">
-                                    {% set submitted_ok = sel_submitted == sel_total %}
-                                    <div class="rounded p-1 text-center"
-                                         style="background: var(--bs-{% if submitted_ok %}success{% else %}danger{% endif %}-bg-subtle); border: 1px solid var(--bs-{% if submitted_ok %}success{% else %}danger{% endif %}-border-subtle)">
-                                        <div class="small fw-bold"
-                                             style="color: var(--bs-{% if submitted_ok %}success{% else %}danger{% endif %}-text-emphasis)">
-                                            {{ sel_submitted }}<span
-                                                class="fw-normal text-body-secondary">/{{ sel_total }}</span>
-                                        </div>
-                                        <div class="text-body-secondary" style="font-size:10px">Submitted</div>
-                                    </div>
+                                    {{ metric_tile(sel_submitted, 'Submitted', denominator=sel_total,
+                                                   zero_variant='success', nonzero_variant='danger',
+                                                   value_ok=(sel_submitted == sel_total)) }}
                                 </div>
                                 <div class="col-4">
-                                    <div class="rounded p-1 text-center"
-                                         style="background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color)">
-                                        <div class="small fw-bold text-body-secondary">
-                                            {{ sel_bookmarks }}<span class="fw-normal">/{{ sel_total }}</span>
-                                        </div>
-                                        <div class="text-body-secondary" style="font-size:10px">Bookmarked</div>
-                                    </div>
+                                    {{ metric_tile(sel_bookmarks, 'Bookmarked', denominator=sel_total,
+                                                   variant='secondary') }}
                                 </div>
                                 <div class="col-4">
-                                    {% set confirms_ok = sel_outstanding_confirm == 0 %}
-                                    <div class="rounded p-1 text-center"
-                                         style="background: var(--bs-{% if confirms_ok %}success{% else %}danger{% endif %}-bg-subtle); border: 1px solid var(--bs-{% if confirms_ok %}success{% else %}danger{% endif %}-border-subtle)">
-                                        <div class="small fw-bold"
-                                             style="color: var(--bs-{% if confirms_ok %}success{% else %}danger{% endif %}-text-emphasis)">
-                                            {{ sel_outstanding_confirm }}
-                                        </div>
-                                        <div class="text-body-secondary" style="font-size:10px">Confirms outstanding
-                                        </div>
-                                    </div>
+                                    {{ metric_tile(sel_outstanding_confirm, 'Confirms outstanding',
+                                                   zero_variant='success', nonzero_variant='danger') }}
                                 </div>
                             </div>
                             <p class="small text-body-secondary mb-0">No bookmarks: {{ sel_missing }}</p>

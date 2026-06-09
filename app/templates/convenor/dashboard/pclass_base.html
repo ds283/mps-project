@@ -95,12 +95,7 @@
 
             {# Action buttons — right-aligned #}
             <div class="ms-auto d-flex align-items-center gap-1">
-                <a href="{{ url_for('convenor.resources', pclass_id=pclass.id) }}"
-                   class="btn btn-sm btn-outline-secondary"
-                   style="font-size:12px; padding:3px 10px">
-                    <i class="fas fa-toolbox fa-fw"></i> Resources
-                </a>
-                <a href="{{ url_for('convenor.configure', id=pclass.id) }}"
+<a href="{{ url_for('convenor.configure', id=pclass.id) }}"
                    class="btn btn-sm btn-outline-secondary"
                    style="font-size:12px; padding:3px 10px">
                     <i class="fas fa-cog fa-fw"></i> Configure

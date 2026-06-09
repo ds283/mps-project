@@ -17,7 +17,7 @@
         <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
             <span class="fw-semibold fs-5">Cycle-level settings</span>
             <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">
-            ProjectClassConfig &middot; applies to the whole {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} cycle
+            applies to the whole {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} cycle
         </span>
         </div>
 
@@ -51,9 +51,6 @@
                         <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#supervision"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -82,9 +79,6 @@
                         <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#cats"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -110,9 +104,6 @@
                         <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#selection"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -136,9 +127,6 @@
                         <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#canvas"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -159,9 +147,6 @@
                         </p>
                         <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#ai"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
-                    </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
                     </div>
                 </div>
             </div>
@@ -189,9 +174,6 @@
                         <a href="{{ url_for('convenor.edit_project_config', pid=config.id) }}#limits"
                            class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -214,9 +196,6 @@
                         <a href="{{ url_for('convenor.email_templates', pclass_id=pclass.id) }}"
                            class="btn btn-sm btn-outline-secondary">Manage &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -237,9 +216,6 @@
                         </p>
                         <a href="{{ url_for('convenor.inspect_marking_schemes', pclass_id=pclass.id) }}"
                            class="btn btn-sm btn-outline-secondary">Manage &rarr;</a>
-                    </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
                     </div>
                 </div>
             </div>
@@ -262,9 +238,6 @@
                         <a href="{{ url_for('convenor.feedback_resources', pclass_id=pclass.id) }}"
                            class="btn btn-sm btn-outline-secondary">Manage &rarr;</a>
                     </div>
-                    <div class="card-footer py-1">
-                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">Cycle setting</span>
-                    </div>
                 </div>
             </div>
 
@@ -276,7 +249,7 @@
         <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
             <span class="fw-semibold fs-5">Per-period settings</span>
             <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">
-            SubmissionPeriodRecord &middot; each period is configured independently
+            each period is configured independently
         </span>
         </div>
 
@@ -321,9 +294,6 @@
                             <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#dates"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                         </div>
-                        <div class="card-footer py-1">
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">Period setting</span>
-                        </div>
                     </div>
                 </div>
 
@@ -343,9 +313,6 @@
                             </p>
                             <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#markers"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
-                        </div>
-                        <div class="card-footer py-1">
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">Period setting</span>
                         </div>
                     </div>
                 </div>
@@ -372,9 +339,6 @@
                             <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#presentation"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
                         </div>
-                        <div class="card-footer py-1">
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">Period setting</span>
-                        </div>
                     </div>
                 </div>
 
@@ -397,9 +361,6 @@
                             </p>
                             <a href="{{ url_for('convenor.edit_period_record', pid=period.id) }}#canvas"
                                class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
-                        </div>
-                        <div class="card-footer py-1">
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">Period setting</span>
                         </div>
                     </div>
                 </div>

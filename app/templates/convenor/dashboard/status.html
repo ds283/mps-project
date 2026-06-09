@@ -816,14 +816,6 @@
                                     </div>
                                 {% endif %}
 
-                                {# Action buttons #}
-                                <div class="d-flex gap-1 flex-wrap mt-2">
-                                    <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                                       class="btn btn-xs btn-outline-secondary">
-                                        <i class="fas fa-sync fa-fw"></i> Reset popularity
-                                    </a>
-                                    {# Close selections has moved into the SELECTIONS_OPEN branch above #}
-                                </div>
 
                             </div>
                         </div>
@@ -938,10 +930,14 @@
                     {# C. Popular projects card #}
                     {% if pclass.publish %}
                         <div class="card border-secondary mb-2">
-                            <div class="card-header py-2">
+                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
                                 <span class="fw-semibold text-secondary small">
                                     <i class="fas fa-fire fa-fw"></i> Popular projects
                                 </span>
+                                <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
+                                   class="btn btn-xs btn-outline-secondary">
+                                    <i class="fas fa-sync fa-fw"></i> Reset popularity
+                                </a>
                             </div>
                             <div class="card-body p-2">
                                 <table class="table table-sm table-hover mb-1">

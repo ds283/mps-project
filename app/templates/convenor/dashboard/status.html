@@ -6,14 +6,12 @@
 {% from "datepicker.html" import import_datepicker %}
 {% from "select2.html" import import_select2 %}
 
-{% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card, rollover_not_yet_card %}
+{% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card %}
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 {% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 {% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
 {% from "convenor/dashboard/overview_cards/_action_panel.html" import action_panel %}
 {% from "convenor/dashboard/overview_cards/_metric_tile.html" import metric_tile %}
-
-{% set rollover_in_progress = config.year < current_year %}
 
 {% block scripts %}
     {{ super() }}
@@ -93,144 +91,69 @@
             {# [A] ALERT BANNERS — centralised action panel #}
             {{ action_panel(action_items) }}
 
-            {# [T] UPCOMING TASKS — quick-access panel #}
-            {% if num_to_dos > 0 %}
-                <div class="card mb-3">
+            {# [T] UPCOMING TASKS — compact summary widget #}
+            {% if top_to_dos is defined and top_to_dos is not none and top_to_dos|length > 0 %}
+                <div class="card border-secondary mt-2 mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center py-2">
-                        <span class="fw-semibold text-body-secondary small">
+                        <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
                             <i class="fas fa-tasks fa-fw"></i> Upcoming tasks
                         </span>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-secondary rounded-pill">{{ num_to_dos }}</span>
-                            <a href="{{ url_for('convenor.todo_list', id=pclass.id) }}"
-                               class="btn btn-xs btn-outline-secondary">
-                                View all <i class="fas fa-arrow-right ms-1"></i>
-                            </a>
-                        </div>
+                        <a href="{{ url_for('convenor.todo_list', id=pclass.id) }}"
+                           class="btn btn-outline-secondary btn-xs">
+                            View all in Tasks tab <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-striped mb-0">
-                                <thead>
-                                <tr>
-                                    <th width="38%">Task</th>
-                                    <th width="15%">Student</th>
-                                    <th width="14%">Defer date</th>
-                                    <th width="14%">Due date</th>
-                                    <th width="10%">Status</th>
-                                    <th width="7%"></th>
-                                </tr>
-                                </thead>
-                                <tbody class="table-group-divider">
-                                {% for tk in top_to_dos %}
-                                    {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
-                                    {% set obj = tk.parent %}
-                                    {% if  tk_type == 1 or tk_type == 2 %}
-                                        {% set tk_config = obj.config %}
-                                    {% else %}
-                                        {% set tk_config = obj %}
-                                    {% endif %}
-                                    {% set tk_pclass = tk_config.project_class %}
-                                    {% set tk_status_class = none %}
-                                    {% if tk.dropped %}
-                                        {% set tk_status_class = 'table-light' %}
-                                    {% elif tk.complete %}
-                                        {% set tk_status_class = 'table-success' %}
-                                    {% elif tk.is_overdue %}
-                                        {% set tk_status_class = 'table-danger' %}
-                                    {% elif tk.is_available %}
-                                        {% set tk_status_class = 'table-light' %}
-                                    {% endif %}
-                                    <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
-                                        <td>
-                                            {% if tk_type == 1 or tk_type == 2 %}
-                                                <a class="text-decoration-none link-primary"
-                                                   href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
-                                            {% elif tk_type == 3 %}
-                                                <a class="text-decoration-none link-primary"
-                                                   href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
-                                            {% else %}
-                                                {{ tk.description|truncate(40) }}
-                                            {% endif %}
-                                            {% if tk.notes and tk.notes|length > 0 %}
-                                                <span class="ms-1 text-body-secondary" tabindex="0" data-bs-toggle="popover"
-                                                      title="Task notes" data-bs-container="body" data-bs-trigger="focus"
-                                                      data-bs-content="{{ tk.notes|truncate(600) }}">Notes <i
-                                                        class="ms-1 fas fa-chevron-right"></i></span>
-                                            {% endif %}
-                                            {% if tk.blocking %}
-                                                <span class="badge bg-warning text-dark ms-1"><i
-                                                        class="fas fa-hand-paper"></i> Blocking</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk_type == 1 or tk_type == 2 %}
-                                                <i class="fas fa-user-circle"></i>
-                                                <a class="text-decoration-none link-dark"
-                                                   href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
-                                                    {{ obj.student.user.name }}
-                                                </a>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk.defer_date is not none %}
-                                                {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk.due_date is not none %}
-                                                {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk.dropped %}
-                                                <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
-                                            {% elif tk.complete %}
-                                                <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
-                                            {% elif tk.is_overdue %}
-                                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
-                                            {% elif tk.is_available %}
-                                                <span class="badge bg-info"><i
-                                                        class="fas fa-thumbs-up"></i> Available</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <div class="dropdown">
-                                                <button class="btn btn-outline-secondary btn-xs full-width-button dropdown-toggle"
-                                                        type="button" data-bs-toggle="dropdown">
-                                                    Actions
-                                                </button>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
-                                                    {% if tk_type == 1 or tk_type == 2 %}
-                                                        <a class="dropdown-item d-flex gap-2 small"
-                                                           href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                        </a>
-                                                    {% elif tk_type == 3 %}
-                                                        <a class="dropdown-item d-flex gap-2 small"
-                                                           href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                        </a>
-                                                    {% endif %}
-                                                    <a class="dropdown-item d-flex gap-2 small"
-                                                       href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
-                                                        <i class="fas fa-check fa-fw"></i> Complete
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2 small"
-                                                       href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
-                                                        <i class="fas fa-ban fa-fw"></i> Drop
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
+                    {% for tk in top_to_dos %}
+                        {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
+                        {% set obj = tk.parent %}
+                        {% if tk.is_overdue %}
+                            {% set row_bg = 'background: var(--bs-danger-bg-subtle)' %}
+                        {% elif tk.complete %}
+                            {% set row_bg = 'background: var(--bs-success-bg-subtle)' %}
+                        {% else %}
+                            {% set row_bg = '' %}
+                        {% endif %}
+                        <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom"
+                             style="{{ row_bg }}; font-size: var(--cd-text-cta-desc)">
+                            {% if tk.is_overdue %}
+                                <i class="fas fa-exclamation-triangle text-danger flex-shrink-0"></i>
+                            {% elif tk.complete %}
+                                <i class="fas fa-check text-success flex-shrink-0"></i>
+                            {% else %}
+                                <i class="fas fa-circle text-body-secondary flex-shrink-0" style="font-size: 0.5em"></i>
+                            {% endif %}
+                            <span class="flex-grow-1 fw-medium">
+                                {% if tk_type == 1 or tk_type == 2 %}
+                                    <a class="text-decoration-none"
+                                       href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                        {{ tk.description|truncate(60) }}
+                                    </a>
+                                {% elif tk_type == 3 %}
+                                    <a class="text-decoration-none"
+                                       href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                        {{ tk.description|truncate(60) }}
+                                    </a>
+                                {% else %}
+                                    {{ tk.description|truncate(60) }}
+                                {% endif %}
+                            </span>
+                            {% if tk.due_date %}
+                                <span class="text-body-secondary flex-shrink-0">
+                                    Due: {{ tk.due_date.strftime("%d %b %Y") }}
+                                </span>
+                            {% endif %}
+                            {% if tk.is_overdue %}
+                                <span class="badge bg-danger-subtle text-danger-emphasis"
+                                      style="font-size: var(--cd-text-micro)">Overdue</span>
+                            {% elif tk.complete %}
+                                <span class="badge bg-success-subtle text-success-emphasis"
+                                      style="font-size: var(--cd-text-micro)">Complete</span>
+                            {% elif tk.is_available %}
+                                <span class="badge bg-info-subtle text-info-emphasis"
+                                      style="font-size: var(--cd-text-micro)">Available</span>
+                            {% endif %}
                         </div>
-                    </div>
+                    {% endfor %}
                 </div>
             {% endif %}
 
@@ -240,6 +163,60 @@
                     {% call icon_block("exclamation-triangle") %}
                         <strong>This project class is not published, so its administration options are limited.</strong>
                     {% endcall %}
+                </div>
+            {% endif %}
+
+            {# Go-live full-width card — only at READY_GOLIVE state #}
+            {% if lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE and pclass.publish and approval_data is defined %}
+                <div class="card border-secondary mt-2 mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-semibold" style="font-size: var(--cd-text-secondary)">
+                            <i class="fas fa-rocket fa-fw text-primary"></i>
+                            Go live &mdash; set deadline and launch selections
+                        </span>
+                        <div class="d-flex gap-2">
+                            {% if golive_form.live_and_close is defined %}
+                                {{ wtf.render_field(golive_form.live_and_close,
+                                   button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
+                            {% endif %}
+                            {{ wtf.render_field(golive_form.live,
+                               button_map={'live': 'outline-primary'}, button_size='sm') }}
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <form action="{{ url_for('convenor.go_live', id=config.id) }}"
+                                      method="POST" name="golive-form">
+                                    {{ golive_form.hidden_tag() }}
+                                    {{ date_field(golive_form.live_deadline, 'golive_datetimepicker') }}
+                                    {{ wtf.render_field(golive_form.accommodate_matching) }}
+                                    {{ wtf.render_field(golive_form.full_CATS) }}
+                                    {{ wtf.render_field(golive_form.notify_faculty) }}
+                                    {{ wtf.render_field(golive_form.notify_selectors) }}
+                                    {{ approvals_state(approval_data) }}
+                                    {{ blocking_task_list(config.get_blocking_tasks[0]) }}
+                                </form>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="fw-semibold text-secondary mb-1"
+                                   style="font-size: var(--cd-text-form-label)">
+                                    Faculty notification email
+                                </p>
+                                {{ wtf.render_field(golive_form.faculty_template) }}
+                                <p class="fw-semibold text-secondary mb-1 mt-2"
+                                   style="font-size: var(--cd-text-form-label)">
+                                    Selector notification email
+                                </p>
+                                {{ wtf.render_field(golive_form.selector_template) }}
+                                <p class="fw-semibold text-secondary mb-1 mt-2"
+                                   style="font-size: var(--cd-text-form-label)">
+                                    Convenor summary email
+                                </p>
+                                {{ wtf.render_field(golive_form.convenor_template) }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             {% endif %}
 
@@ -265,7 +242,7 @@
                                      style="background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color)">
                                     <div class="d-flex flex-wrap align-items-center gap-1">
                                         <button class="btn btn-link p-0 text-start text-decoration-none fw-semibold"
-                                                style="font-size:14px; color: var(--bs-primary)"
+                                                style="font-size: var(--cd-text-secondary); color: var(--bs-primary)"
                                                 type="button"
                                                 data-bs-toggle="collapse"
                                                 data-bs-target="#{{ collapse_id }}"
@@ -322,13 +299,20 @@
                                         {# Marking events sub-section #}
                                         <div class="mb-2">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <span class="small fw-semibold text-secondary">
+                                                <span class="fw-semibold text-secondary"
+                                                      style="font-size: var(--cd-text-subsection)">
                                                     <i class="fas fa-calendar-check fa-fw"></i> Marking events
                                                 </span>
-                                                <a href="{{ url_for('convenor.add_marking_event', period_id=p.id) }}"
-                                                   class="btn btn-xs btn-outline-secondary">
-                                                    <i class="fas fa-plus"></i> Add event
-                                                </a>
+                                                <div class="d-flex gap-1">
+                                                    <a href="{{ url_for('convenor.add_marking_event', period_id=p.id) }}"
+                                                       class="btn btn-outline-secondary btn-xs">
+                                                        <i class="fas fa-plus fa-fw"></i> Add event
+                                                    </a>
+                                                    <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=p.id) }}"
+                                                       class="btn btn-outline-secondary btn-xs">
+                                                        View all events <i class="fas fa-arrow-right ms-1"></i>
+                                                    </a>
+                                                </div>
                                             </div>
                                             {% set events = p.marking_events.all() %}
                                             {% if events %}
@@ -344,8 +328,9 @@
                                                         <div class="list-group-item px-2 py-1
                                                             {% if event.workflow_state >= MarkingEventWorkflowStates.OPEN and event.workflow_state < MarkingEventWorkflowStates.CLOSED %}border-start border-3 border-info{% endif %}">
                                                             <div class="d-flex justify-content-between align-items-center gap-2">
-                                                                <div class="small">
-                                                                    <span class="fw-semibold">{{ event.name }}</span>
+                                                                <div>
+                                                                    <span class="fw-semibold"
+                                                                          style="font-size: var(--cd-text-event-name)">{{ event.name }}</span>
                                                                     {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
                                                                         <span class="badge bg-secondary ms-1">Closed</span>
                                                                     {% elif event.workflow_state >= MarkingEventWorkflowStates.OPEN %}
@@ -355,29 +340,37 @@
                                                                     {% endif %}
                                                                     {% set wf_count = event.workflows.count() %}
                                                                     {% if wf_count > 0 %}
-                                                                        <span class="text-body-secondary ms-1">{{ wf_count }} workflow{{ 's' if wf_count != 1 }}</span>
+                                                                        <span class="text-body-secondary ms-1"
+                                                                              style="font-size: var(--cd-text-micro)">{{ wf_count }} workflow{{ 's' if wf_count != 1 }}</span>
                                                                     {% endif %}
                                                                 </div>
-                                                                {% if event.workflow_state == MarkingEventWorkflowStates.CLOSED %}
+                                                                <div class="d-flex gap-1 flex-shrink-0">
+                                                                    {% if event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
+                                                                        <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
+                                                                           class="btn btn-outline-secondary btn-xs">
+                                                                            <i class="fas fa-file-export fa-fw"></i>
+                                                                            Generate feedback
+                                                                        </a>
+                                                                        <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=event.id) }}"
+                                                                           class="btn btn-outline-secondary btn-xs">
+                                                                            <i class="fas fa-compress-arrows-alt fa-fw"></i>
+                                                                            Conflation reports
+                                                                        </a>
+                                                                    {% endif %}
                                                                     <a href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id) }}"
-                                                                       class="btn btn-xs btn-outline-secondary flex-shrink-0">
+                                                                       class="btn btn-outline-secondary btn-xs">
                                                                         <i class="fas fa-search fa-fw"></i> Workflows
                                                                     </a>
-                                                                {% else %}
-                                                                    <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=p.id) }}"
-                                                                       class="btn btn-xs btn-primary flex-shrink-0">
-                                                                        <i class="fas fa-search fa-fw"></i> Inspect
-                                                                    </a>
-                                                                {% endif %}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     {% endfor %}
                                                 </div>
 
                                                 {# 4-cell aggregate workflow status grid #}
-                                                <div class="row g-1 mb-2">
+                                                <div class="row g-1 mb-1">
                                                     <div class="col-6 col-sm-3">
-                                                        {{ metric_tile(ns.complete, 'Complete', variant='success') }}
+                                                        {{ metric_tile(ns.complete, 'Complete marking reports', variant='success') }}
                                                     </div>
                                                     <div class="col-6 col-sm-3">
                                                         {{ metric_tile(ns.pending_upload, 'Pending upload',
@@ -391,56 +384,46 @@
                                                                        zero_variant='secondary', nonzero_variant='danger') }}
                                                     </div>
                                                 </div>
-
-                                                {# Per-event action buttons for non-closed events #}
-                                                {% set has_open_event = events | rejectattr('workflow_state', 'equalto', MarkingEventWorkflowStates.CLOSED) | list | length > 0 %}
-                                                {% if has_open_event %}
-                                                    <div class="d-flex gap-1 flex-wrap">
-                                                        {% for event in events %}
-                                                            {% if event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
-                                                                <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id) }}"
-                                                                   class="btn btn-xs btn-outline-secondary">
-                                                                    <i class="fas fa-file-export fa-fw"></i> Generate
-                                                                    feedback
-                                                                </a>
-                                                                <a href="{{ url_for('convenor.marking_event_conflation_reports', event_id=event.id) }}"
-                                                                   class="btn btn-xs btn-outline-secondary">
-                                                                    <i class="fas fa-compress-arrows-alt fa-fw"></i>
-                                                                    Conflation reports
-                                                                </a>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </div>
-                                                {% endif %}
+                                                <p class="text-body-secondary mb-1"
+                                                   style="font-size: var(--cd-text-micro)">
+                                                    <i class="fas fa-info-circle fa-fw"></i>
+                                                    Totals across all events in this period
+                                                </p>
                                             {% else %}
                                                 <p class="small text-body-secondary mb-1">No marking events defined for
                                                     this period.</p>
                                             {% endif %}
                                         </div>
 
-                                        {# Supervision units summary line #}
+                                        {# Supervision sub-section #}
                                         {% if p.has_units %}
-                                            <div class="d-flex justify-content-between align-items-center small text-body-secondary mb-2">
-                                                <span>
-                                                    {{ p.number_units }} supervision unit{{ 's' if p.number_units != 1 }}
-                                                    {% set first_unit = p.ordered_units.first() %}
-                                                    {% set all_units = p.ordered_units.all() %}
-                                                    {% if first_unit and all_units %}
-                                                        &middot;
-                                                        {% if first_unit.start_date %}wk
-                                                            {{ first_unit.start_date.strftime("%d %b") }}{% endif %}
-                                                        &ndash;
-                                                        {% if all_units[-1].end_date %}wk
-                                                            {{ all_units[-1].end_date.strftime("%d %b") }}{% endif %}
-                                                    {% endif %}
+                                            <hr style="border: none; border-top: 1px solid var(--bs-border-color); margin: 8px 0">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-semibold text-secondary"
+                                                      style="font-size: var(--cd-text-subsection)">
+                                                    <i class="fas fa-chalkboard-teacher fa-fw"></i> Supervision
                                                 </span>
                                                 <div class="d-flex gap-1">
                                                     <a href="{{ url_for('convenor.inspect_period_units', period_id=p.id) }}"
-                                                       class="btn btn-xs btn-outline-secondary">Inspect units</a>
+                                                       class="btn btn-outline-secondary btn-xs">Inspect units</a>
                                                     <a href="{{ url_for('convenor.populate_supervision_events', period_id=p.id) }}"
-                                                       class="btn btn-xs btn-outline-secondary">Populate events</a>
+                                                       class="btn btn-outline-secondary btn-xs">Populate events</a>
                                                 </div>
                                             </div>
+                                            <p class="text-body-secondary mb-1"
+                                               style="font-size: var(--cd-text-secondary)">
+                                                {{ p.number_units }} supervision unit{{ 's' if p.number_units != 1 }}
+                                                {% set first_unit = p.ordered_units.first() %}
+                                                {% set all_units = p.ordered_units.all() %}
+                                                {% if first_unit and all_units %}
+                                                    &middot;
+                                                    {% if first_unit.start_date %}wk
+                                                        {{ first_unit.start_date.strftime("%d %b") }}{% endif %}
+                                                    &ndash;
+                                                    {% if all_units[-1].end_date %}wk
+                                                        {{ all_units[-1].end_date.strftime("%d %b") }}{% endif %}
+                                                {% endif %}
+                                            </p>
                                         {% endif %}
 
                                         {# Period closure notice #}
@@ -511,7 +494,7 @@
                     </p>
 
                     {# A. Cycle lifecycle card — stepper moved here from [C] #}
-                    {% if pclass.publish %}
+                    {% if pclass.publish and lifecycle != config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                         <div class="card border-secondary mb-2">
                             <div class="card-header py-2">
                                 <span class="fw-semibold text-secondary small">
@@ -543,7 +526,7 @@
                                            {% if s1_done %}fa-check-circle text-success
                                            {% elif s1_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size:10px;
+                                        <span class="text-center" style="font-size: var(--cd-text-micro);
                                                 {% if s1_active %}font-weight:600; color:var(--bs-primary){% elif s1_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
                                             Issue<br>Confirms
                                         </span>
@@ -559,7 +542,7 @@
                                            {% if s2_done %}fa-check-circle text-success
                                            {% elif s2_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size:10px;
+                                        <span class="text-center" style="font-size: var(--cd-text-micro);
                                                 {% if s2_active %}font-weight:600; color:var(--bs-primary){% elif s2_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
                                             Await<br>Confirms
                                         </span>
@@ -575,7 +558,7 @@
                                            {% if s3_done %}fa-check-circle text-success
                                            {% elif s3_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size:10px;
+                                        <span class="text-center" style="font-size: var(--cd-text-micro);
                                                 {% if s3_active %}font-weight:600; color:var(--bs-primary){% elif s3_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
                                             Go Live
                                         </span>
@@ -591,7 +574,7 @@
                                            {% if s4_done %}fa-check-circle text-success
                                            {% elif s4_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size:10px;
+                                        <span class="text-center" style="font-size: var(--cd-text-micro);
                                                 {% if s4_active %}font-weight:600; color:var(--bs-primary){% elif s4_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
                                             Selections<br>Open
                                         </span>
@@ -607,7 +590,7 @@
                                            {% if s5_done %}fa-check-circle text-success
                                            {% elif s5_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size:10px;
+                                        <span class="text-center" style="font-size: var(--cd-text-micro);
                                                 {% if s5_active %}font-weight:600; color:var(--bs-primary){% elif s5_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
                                             Closed /<br>Matching
                                         </span>
@@ -623,15 +606,28 @@
                                     </p>
                                 {% endif %}
 
-                                {# --- STATE-SPECIFIC CTA (inlined from lifecycle macros) --- #}
+                                {# --- STATE-SPECIFIC CTA --- #}
                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                                    <div class="mt-2 pt-2 border-top">
-                                        <p class="small text-body-secondary">Confirmation requests have not yet been issued to faculty.</p>
+                                    <div class="border rounded p-2 mb-2 mt-2" style="background: var(--bs-tertiary-bg)">
+                                        <p class="fw-semibold text-secondary mb-2"
+                                           style="font-size: var(--cd-text-subsection)">
+                                            <i class="fas fa-paper-plane fa-fw"></i> Issue confirmation requests
+                                        </p>
                                         <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}" method="POST" name="issue-form">
                                             {{ issue_form.hidden_tag() }}
-                                            {{ date_field(issue_form.request_deadline, 'issue_datetimepicker') }}
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <label class="text-secondary mb-0"
+                                                       style="font-size: var(--cd-text-form-label); min-width: 90px">
+                                                    Request deadline
+                                                </label>
+                                                {{ date_field(issue_form.request_deadline, 'issue_datetimepicker') }}
+                                            </div>
+                                            <div class="mb-2"
+                                                 style="font-size: var(--cd-text-form-label); color: var(--bs-secondary-color)">
+                                                {{ issue_form.confirm_template.label.text }}
+                                            </div>
                                             {{ wtf.render_field(issue_form.confirm_template) }}
-                                            <div class="d-flex justify-content-end gap-2">
+                                            <div class="d-flex justify-content-end gap-2 mt-2">
                                                 {% if issue_form.skip_button is defined %}
                                                     {{ wtf.render_field(issue_form.skip_button, button_map={'skip_button': 'outline-secondary'}, button_size='sm') }}
                                                 {% endif %}
@@ -640,254 +636,172 @@
                                         </form>
                                     </div>
                                 {% elif lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                                    <div class="mt-2 pt-2 border-top">
-                                        <div class="alert alert-warning">
-                                            {% call icon_block("exclamation-circle") %}
-                                                <div class="d-flex w-100 justify-content-between align-items-end">
-                                                    <div>
-                                                        <div><strong>Confirmations are outstanding from
-                                                            <strong>{{ config.confirm_outstanding_count }} faculty</strong>.</strong></div>
-                                                        <div><a class="text-decoration-none"
-                                                                href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...</a></div>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
-                                                           class="btn btn-sm btn-outline-danger text-nowrap">Force confirm all</a>
-                                                    </div>
-                                                </div>
-                                            {% endcall %}
+                                    <div class="border rounded p-2 mb-2 mt-2" style="background: var(--bs-tertiary-bg)">
+                                        <p class="fw-semibold text-secondary mb-2"
+                                           style="font-size: var(--cd-text-subsection)">
+                                            <i class="fas fa-hourglass-half fa-fw"></i> Awaiting faculty confirmations
+                                        </p>
+                                        <div class="alert alert-warning py-2 px-2 mb-2"
+                                             style="font-size: var(--cd-text-cta-desc)">
+                                            <strong>{{ config.confirm_outstanding_count }} faculty</strong>
+                                            have outstanding confirmation requests.
+                                            <a class="alert-link ms-1"
+                                               href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">
+                                                View outstanding&hellip;
+                                            </a>
+                                            <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
+                                               class="btn btn-outline-danger btn-xs float-end">
+                                                Force confirm all
+                                            </a>
                                         </div>
                                         {{ approvals_state(approval_data) }}
                                         <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}" method="POST" name="issue-form">
                                             {{ issue_form.hidden_tag() }}
-                                            {{ date_field(issue_form.request_deadline, 'confirm_datetimepicker') }}
-                                            <div class="d-flex justify-content-end gap-2 mt-1">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <label class="text-secondary mb-0"
+                                                       style="font-size: var(--cd-text-form-label); min-width: 90px">
+                                                    Request deadline
+                                                </label>
+                                                {{ date_field(issue_form.request_deadline, 'confirm_datetimepicker') }}
+                                            </div>
+                                            <div class="d-flex justify-content-end gap-2 mt-2">
                                                 <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}"
                                                    class="btn btn-sm btn-outline-secondary">Send reminders</a>
                                                 {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-secondary'}, button_size='sm') }}
                                             </div>
                                         </form>
                                     </div>
-                                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                                    <div class="mt-2 pt-2 border-top">
-                                        {% set total_projects = approval_data['projects'] %}
-                                        {% set pending = approval_data['pending'] %}
-                                        {% set queued = approval_data['queued'] %}
-                                        {% set approved = approval_data['approved'] %}
-                                        {% set rejected = approval_data['rejected'] %}
-                                        <div class="alert alert-info">
-                                            {% call icon_block("check-circle") %}
-                                                <strong>{{ total_projects }}</strong> projects are currently available to Go Live.
-                                            {% endcall %}
-                                            {% if rejected > 0 %}
-                                                {% call icon_block("exclamation-circle", extra_classes="mt-2") %}
-                                                    <strong>{{ rejected }} projects have been rejected and require revision.</strong>
-                                                {% endcall %}
-                                            {% elif pending > 0 %}
-                                                {% call icon_block("info-circle", extra_classes="mt-2") %}
-                                                    <strong>{{ pending }}</strong> projects are still to be confirmed.
-                                                {% endcall %}
-                                            {% elif queued > 0 %}
-                                                {% call icon_block("info-circle", extra_classes="mt-2") %}
-                                                    <strong>{{ queued }}</strong> projects are waiting for approval.
-                                                {% endcall %}
-                                            {% else %}
-                                                {% call icon_block("check-circle") %}
-                                                    All projects have passed approvals.
-                                                {% endcall %}
-                                            {% endif %}
-                                        </div>
-                                        {{ approvals_state(approval_data) }}
-                                        {% if total_projects > 0 %}
-                                            <hr class="intro-divider">
-                                            <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
-                                                {{ golive_form.hidden_tag() }}
-                                                {{ date_field(golive_form.live_deadline, 'golive_datetimepicker') }}
-                                                {{ wtf.render_field(golive_form.accommodate_matching) }}
-                                                {{ wtf.render_field(golive_form.full_CATS) }}
-                                                {{ wtf.render_field(golive_form.notify_faculty) }}
-                                                {{ wtf.render_field(golive_form.notify_selectors) }}
-                                                <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Faculty notification email</p>
-                                                {{ wtf.render_field(golive_form.faculty_template) }}
-                                                <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Selector notification email</p>
-                                                {{ wtf.render_field(golive_form.selector_template) }}
-                                                <p class="form-text text-body-secondary fw-semibold mt-2 mb-1">Convenor summary email</p>
-                                                {{ wtf.render_field(golive_form.convenor_template) }}
-                                                {{ blocking_task_list(config.get_blocking_tasks[0]) }}
-                                                <div class="d-flex flex-row justify-content-end align-items-start gap-2">
-                                                    {% if golive_form.live_and_close is defined %}
-                                                        {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
-                                                    {% endif %}
-                                                    {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}, button_size='sm') }}
-                                                </div>
-                                            </form>
-                                        {% endif %}
-                                    </div>
                                 {% elif lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                    <div class="mt-2 pt-2 border-top">
-                                        {% set selector_data = config.selector_data %}
-                                        {% set submitted = selector_data['have_submitted'] %}
-                                        {% set bookmarks = selector_data['have_bookmarks'] %}
-                                        {% set missing = selector_data['missing'] %}
-                                        {% set total = selector_data['total'] %}
-                                        {# Compact selector readiness indicator — reuses selector_data already set above #}
-                                        <div class="d-flex align-items-center gap-2 small mb-2 pt-2 border-top">
-                                            {% if submitted == total %}
-                                                <i class="fas fa-check-circle text-success fa-fw"></i>
-                                                <span class="text-success fw-semibold">All {{ total }} selectors have
-                                                    submitted.</span>
-                                            {% elif missing == 0 %}
-                                                <i class="fas fa-info-circle text-info fa-fw"></i>
-                                                <span class="text-body-secondary">{{ submitted }}/{{ total }} submitted
-                                                    &middot; all have bookmarks</span>
-                                            {% else %}
-                                                <i class="fas fa-exclamation-circle text-warning fa-fw"></i>
-                                                <span class="text-body-secondary">{{ submitted }}/{{ total }} submitted
-                                                    &middot; <span class="text-warning fw-semibold">{{ missing }} missing
-                                                    bookmarks</span></span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="mt-2 pt-2 border-top">
-                                            <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
-                                                  method="POST" name="adjust_selection_deadline">
-                                                {{ change_form.hidden_tag() }}
-
-                                                {# Date input — compact #}
-                                                <div class="mb-1">
-                                                    <label for="live_datetimepicker" class="form-label small mb-1">
-                                                        {{ change_form.live_deadline.label.text }}
-                                                    </label>
-                                                    <div class="input-group input-group-sm" id="live_datetimepicker">
-                                                        {{ change_form.live_deadline(class="form-control form-control-sm",
-                                                                                     placeholder="DD/MM/YYYY") }}
-                                                        <span class="input-group-text">
-                                                            <i class="fas fa-calendar fa-fw"></i>
+                                    {% set selector_data = config.selector_data %}
+                                    {% set submitted = selector_data['have_submitted'] %}
+                                    {% set missing = selector_data['missing'] %}
+                                    {% set total = selector_data['total'] %}
+                                    <div class="border rounded p-2 mb-2 mt-2" style="background: var(--bs-tertiary-bg)">
+                                        <p class="fw-semibold text-secondary mb-2"
+                                           style="font-size: var(--cd-text-subsection)">
+                                            <i class="fas fa-check fa-fw text-success"></i> Selections are live
+                                        </p>
+                                        {% if submitted == total %}
+                                            <div class="alert alert-success py-2 px-2 mb-2"
+                                                 style="font-size: var(--cd-text-cta-desc)">
+                                                <strong>All selectors have submitted validated choices.</strong>
+                                                It is safe to close selections.
+                                            </div>
+                                        {% elif missing == 0 %}
+                                            <div class="alert alert-info py-2 px-2 mb-2"
+                                                 style="font-size: var(--cd-text-cta-desc)">
+                                                <strong>Some selectors have not yet made a validated
+                                                    submission.</strong>
+                                                Bookmark data can be used if selections close now.
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning py-2 px-2 mb-2"
+                                                 style="font-size: var(--cd-text-cta-desc)">
+                                                <strong>Some selectors are missing both a validated submission and
+                                                    bookmark data.</strong>
+                                                {% if not config.selection_open_to_all %}
+                                                    Bookmark data (where it exists) can be used for matching.
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        {# Supervision hints — merged in from separate card #}
+                                        {% set hint_list = config.pending_custom_offer_hints %}
+                                        {% if hint_list %}
+                                            <div class="border rounded mb-2" style="overflow: hidden">
+                                                <div class="px-2 py-1 fw-semibold text-secondary"
+                                                     style="background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); font-size: var(--cd-text-form-label)">
+                                                    <i class="fas fa-lightbulb fa-fw"></i>
+                                                    {{ hint_list|length }} previous supervision
+                                                    hint{{ 's' if hint_list|length != 1 }}
+                                                </div>
+                                                {% for hint in hint_list %}
+                                                    <div class="d-flex justify-content-between align-items-center px-2 py-1 {% if not loop.last %}border-bottom{% endif %}"
+                                                         style="font-size: var(--cd-text-cta-desc)">
+                                                        <span class="text-body-secondary text-truncate me-2">
+                                                            {{ hint.selector.student.user.name }} &middot;
+                                                            {{ hint.faculty.user.name if hint.faculty }}
                                                         </span>
+                                                        <div class="d-flex gap-1 flex-shrink-0">
+                                                            <a href="{{ url_for('convenor.accept_custom_offer_hint', hint_id=hint.id) }}"
+                                                               class="btn btn-outline-success btn-xs">Accept</a>
+                                                            <a href="{{ url_for('convenor.reject_custom_offer_hint', hint_id=hint.id) }}"
+                                                               class="btn btn-outline-danger btn-xs">Reject</a>
+                                                        </div>
                                                     </div>
-                                                </div>
-
-                                                {# Notify convenor checkbox — compact #}
-                                                <div class="form-check mb-2">
-                                                    {{ change_form.notify_convenor(class="form-check-input") }}
-                                                    <label class="form-check-label small"
-                                                           for="{{ change_form.notify_convenor.id }}">
-                                                        {{ change_form.notify_convenor.label.text }}
-                                                    </label>
-                                                </div>
-
-                                                {# Both action buttons on a single row #}
-                                                <div class="d-flex gap-1 justify-content-end">
-                                                    <button type="submit"
-                                                            formaction="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
-                                                            class="btn btn-xs btn-outline-secondary">
-                                                        <i class="fas fa-clock fa-fw"></i> Change deadline
-                                                    </button>
-                                                    <button type="submit"
-                                                            formaction="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
-                                                            class="btn btn-xs btn-outline-danger">
-                                                        <i class="fas fa-lock fa-fw"></i> Close selections
-                                                    </button>
-                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {# Change-deadline form #}
+                                        <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
+                                              method="POST" name="adjust_selection_deadline">
+                                            {{ change_form.hidden_tag() }}
+                                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                                <label class="text-secondary mb-0"
+                                                       style="font-size: var(--cd-text-form-label); min-width: 60px">
+                                                    Deadline
+                                                </label>
+                                                {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
+                                                {{ wtf.render_field(change_form.notify_convenor) }}
+                                            </div>
+                                            <div class="d-flex justify-content-end gap-2 mt-2">
+                                                {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
+                                            </div>
+                                        </form>
+                                        {# Close selections #}
+                                        <div class="mt-2">
+                                            <form action="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
+                                                  method="POST" class="d-inline">
+                                                {{ change_form.hidden_tag() }}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                                    <i class="fas fa-lock fa-fw"></i> Close selections
+                                                </button>
                                             </form>
                                         </div>
                                     </div>
                                 {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                                    <div class="mt-2 pt-2 border-top">
-                                        {% set selector_data = config.selector_data %}
-                                        {% set submitted = selector_data['have_submitted'] %}
-                                        {% set missing = selector_data['missing'] %}
-                                        {% set total = selector_data['total'] %}
-                                        <div class="d-flex align-items-center gap-2 small mb-2 pt-2 border-top">
-                                            {% if submitted == total %}
-                                                <i class="fas fa-check-circle text-success fa-fw"></i>
-                                                <span class="text-success fw-semibold">All {{ total }} selectors submitted
-                                                    validated choices.</span>
-                                            {% elif missing == 0 %}
-                                                <i class="fas fa-check-circle text-success fa-fw"></i>
-                                                <span class="text-body-secondary">{{ submitted }}/{{ total }} submitted
-                                                    &middot; remainder have bookmark data</span>
-                                            {% else %}
-                                                <i class="fas fa-exclamation-circle text-warning fa-fw"></i>
-                                                <span class="text-body-secondary">{{ submitted }}/{{ total }} submitted
-                                                    &middot; <span class="text-warning fw-semibold">{{ missing }} have no
-                                                    bookmark data</span></span>
-                                            {% endif %}
-                                        </div>
+                                    {% set selector_data = config.selector_data %}
+                                    {% set submitted = selector_data['have_submitted'] %}
+                                    {% set missing = selector_data['missing'] %}
+                                    {% set total = selector_data['total'] %}
+                                    <div class="border rounded p-2 mb-2 mt-2" style="background: var(--bs-tertiary-bg)">
+                                        <p class="fw-semibold text-secondary mb-2"
+                                           style="font-size: var(--cd-text-subsection)">
+                                            <i class="fas fa-lock fa-fw"></i> Selections closed
+                                        </p>
+                                        {% if submitted == total %}
+                                            <div class="alert alert-success py-2 px-2 mb-0"
+                                                 style="font-size: var(--cd-text-cta-desc)">
+                                                <strong>All students submitted validated choices before selection
+                                                    closed.</strong>
+                                            </div>
+                                        {% elif missing == 0 %}
+                                            <div class="alert alert-success py-2 px-2 mb-0"
+                                                 style="font-size: var(--cd-text-cta-desc)">
+                                                <strong>Some students did not submit validated choices, but all students
+                                                    have bookmark data.</strong>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning py-2 px-2 mb-0"
+                                                 style="font-size: var(--cd-text-cta-desc)">
+                                                <strong>Some selectors are missing both a validated submission and
+                                                    bookmark data.</strong>
+                                                {% if not config.selection_open_to_all %}
+                                                    <ul class="mb-0 mt-1">
+                                                        <li>Bookmark data (where it exists) can be used for automated
+                                                            matching.
+                                                        </li>
+                                                        <li>Selectors with missing data may receive a random project
+                                                            allocation.
+                                                        </li>
+                                                    </ul>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 {% endif %}
 
-
                             </div>
                         </div>
-                    {% endif %}
-
-                    {# Supervision hints card — only during selections-open when hints exist #}
-                    {% if pclass.publish and lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        {% set hint_list = config.pending_custom_offer_hints %}
-                        {% if hint_list %}
-                            <div class="card border-secondary mb-2">
-                                <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                                    <span class="fw-semibold text-secondary small">
-                                        <i class="fas fa-lightbulb fa-fw"></i> Supervision hints
-                                    </span>
-                                    <span class="badge bg-secondary rounded-pill">{{ hint_list | length }}</span>
-                                </div>
-                                <div class="card-body p-0">
-                                    <table class="table table-sm table-hover mb-0">
-                                        <thead class="table-light">
-                                        <tr>
-                                            <th class="small">Student</th>
-                                            <th class="small">Prev. year</th>
-                                            <th class="small">Previous project</th>
-                                            <th class="small">Supervisor</th>
-                                            <th class="small"></th>
-                                        </tr>
-                                        </thead>
-                                        <tbody class="table-group-divider">
-                                        {% for hint in hint_list %}
-                                            {% set record = hint.submission_record %}
-                                            {% set prev_proj = record.project if record else none %}
-                                            {% set prev_sub_config = record.owner.config if record and record.owner else none %}
-                                            <tr>
-                                                <td class="small">{{ hint.selector.student.user.name }}</td>
-                                                <td class="small">
-                                                    {% if prev_sub_config %}
-                                                        <div>{{ prev_sub_config.submit_year_a }}&ndash;{{ prev_sub_config.submit_year_b }}</div>
-                                                        <div class="text-body-secondary">{{ prev_sub_config.abbreviation }}</div>
-                                                    {% else %}
-                                                        <span class="text-body-secondary">Unknown</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="small">
-                                                    {% if prev_proj %}{{ prev_proj.name }}
-                                                    {% else %}<span class="text-body-secondary">Unknown</span>{% endif %}
-                                                </td>
-                                                <td class="small">
-                                                    {% if hint.faculty and hint.faculty.user %}
-                                                        {{ hint.faculty.user.name }}
-                                                    {% else %}<span class="text-body-secondary">Unknown</span>{% endif %}
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex flex-row gap-1">
-                                                        <a href="{{ url_for('convenor.accept_custom_offer_hint', hint_id=hint.id) }}"
-                                                           class="btn btn-xs btn-outline-success"
-                                                           title="Create custom offers for all current projects by this supervisor">Accept</a>
-                                                        <a href="{{ url_for('convenor.reject_custom_offer_hint', hint_id=hint.id) }}"
-                                                           class="btn btn-xs btn-outline-danger"
-                                                           title="Delete this hint">Reject</a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                        </tbody>
-                                    </table>
-                                    <div class="px-2 py-1 small text-body-secondary border-top">
-                                        Hints are based on previous supervision history. Accepting creates
-                                        custom offers for all current projects by the supervisor.
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
                     {% endif %}
 
                     {# B. Selection metrics card #}
@@ -1014,76 +928,31 @@
             {% if config.rollover_ready(current_year) %}
                 {{ rollover_card(current_year, pclass, config) }}
             {% elif config.year < current_year %}
-                {{ rollover_not_yet_card(current_year, pclass, config) }}
-            {% endif %}
-
-            {% if pclass.publish %}
-                {% if config.has_published_matches and not rollover_in_progress %}
-                    <div class="card mt-3 mb-3 border-danger">
-                        <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                {% call icon_block("question-circle") %}
-                                    <div><strong>An administrator has published one or more proposals for
-                                        selector/project matches.</strong></div>
-                                {% endcall %}
-                            </div>
-                            {% if config.select_in_previous_cycle %}
-                                <div class="alert alert-info">
-                                    {% call icon_block("info-circle") %}
-                                        <div><strong>Selections for this project type take place in the cycle prior to
-                                            submissions.</strong></div>
-                                        <div class="mt-1">
-                                            A project matching will be used to generate
-                                            submitter records during rollover of the academic year.
-                                        </div>
-                                        <div class="mt-1">
-                                            Once a matching has been selected,
-                                            no further convenor action is required.
-                                        </div>
-                                    {% endcall %}
-                                </div>
-                            {% else %}
-                                <div class="alert alert-info">
-                                    {% call icon_block("info-circle") %}
-                                        <div><strong>Selections for this project type take place in the same cycle as
-                                            submissions.</strong></div>
-                                        <div class="mt-1">
-                                            Once a matching has been selected, it may be used immediately
-                                            to generate submitter records for the current academic year.
-                                        </div>
-                                    {% endcall %}
-                                </div>
+                {# Rollover not yet available — inline warning-severity panel #}
+                <div class="rounded d-flex align-items-start gap-3 p-2 mt-3 mb-3"
+                     style="border: 1px solid var(--bs-border-color); border-left: 4px solid var(--bs-warning); background: var(--bs-warning-bg-subtle)">
+                    <i class="fas fa-sync-alt fa-fw flex-shrink-0 mt-1" style="color: var(--bs-warning)"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold"
+                             style="font-size: var(--cd-text-cta-title); color: var(--bs-warning-text-emphasis)">
+                            Rollover of academic year to {{ current_year }}&ndash;{{ current_year+1 }} is not yet
+                            available for this project class
+                        </div>
+                        {% set selector_lifecycle = config.selector_lifecycle %}
+                        {% set submitter_lifecycle = config.submitter_lifecycle %}
+                        <div style="font-size: var(--cd-text-cta-desc); color: var(--bs-secondary-color)">
+                            Rollover has been made available by an administrator, but outstanding activities must be
+                            completed first.
+                            {% if selector_lifecycle != config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                                <div>&mdash; Some selector activities are not yet complete</div>
                             {% endif %}
-                            <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
-                                <a class="text-decoration-none"
-                                   href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or
-                                    edit proposed matches...</a>
-                            </div>
+                            {% if submitter_lifecycle != config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                                <div>&mdash; Some submitter activities are not yet complete</div>
+                            {% endif %}
                         </div>
+                        {{ blocking_task_list(config.get_blocking_tasks[0]) }}
                     </div>
-                {% endif %}
-
-                {% if config.has_auditable_schedules %}
-                    <div class="card mt-3 mb-3 border-danger">
-                        <div class="card-header bg-danger text-white">Proposed assessment schedules are available to
-                            view
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                {% call icon_block("question-circle") %}
-                                    <div><strong>An administrator has published one or more proposed schedules for
-                                        presentation assessments.</strong></div>
-                                {% endcall %}
-                            </div>
-                            <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
-                                <a class="text-decoration-none"
-                                   href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or
-                                    edit proposed schedules...</a>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
+                </div>
             {% endif %}
 
 

@@ -1,48 +1,74 @@
 {% macro action_panel(action_items) %}
-{% if action_items %}
-<div class="card mb-3 border-warning">
-    <div class="card-header d-flex align-items-center justify-content-between py-2"
-         style="background: var(--bs-warning-bg-subtle)">
-        <span class="fw-semibold small" style="color: var(--bs-warning-text-emphasis)">
+    {% if action_items %}
+        <div class="card mb-3 border-secondary">
+            <div class="card-header d-flex align-items-center justify-content-between py-2"
+                 style="background: var(--bs-secondary-bg)">
+        <span class="fw-semibold" style="font-size: var(--cd-text-subsection); color: var(--bs-secondary-color)">
             <i class="fas fa-exclamation-triangle fa-fw"></i> Items requiring attention
         </span>
-        <span class="badge rounded-pill"
-              style="background: var(--bs-warning-text-emphasis); color: var(--bs-warning-bg-subtle)">
-            {{ action_items | length }}
-        </span>
-    </div>
-    <div class="card-body p-2">
-        {% for item in action_items %}
-            {% if item.severity == 'blocking' %}
-                {% set border_cls = 'border-danger' %}
-                {% set icon_cls = 'text-danger' %}
-                {% set btn_cls = 'btn-outline-danger' %}
-            {% elif item.severity == 'warning' %}
-                {% set border_cls = 'border-warning' %}
-                {% set icon_cls = 'text-warning-emphasis' %}
-                {% set btn_cls = 'btn-outline-warning' %}
-            {% else %}
-                {% set border_cls = '' %}
-                {% set icon_cls = 'text-body-secondary' %}
-                {% set btn_cls = 'btn-outline-secondary' %}
-            {% endif %}
-            <div class="card mb-2 {{ border_cls }}">
-                <div class="card-body p-2 d-flex align-items-start gap-3">
-                    <i class="{{ item.icon }} {{ icon_cls }} fa-fw flex-shrink-0 mt-1"></i>
-                    <div class="flex-grow-1">
-                        <div class="small">{{ item.message }}</div>
-                        {% if item.detail %}
-                            <div class="small text-body-secondary">{{ item.detail }}</div>
+                <span class="badge rounded-pill bg-secondary">{{ action_items | length }}</span>
+            </div>
+            <div class="card-body p-2 d-flex flex-column gap-2">
+                {% for item in action_items %}
+                    {% if item.severity == 'blocking' %}
+                        {% set accent_color = 'var(--bs-danger)' %}
+                        {% set row_bg = 'var(--bs-danger-bg-subtle)' %}
+                        {% set title_color = 'var(--bs-danger-text-emphasis)' %}
+                        {% set btn_cls = 'btn btn-sm btn-danger' %}
+                    {% elif item.severity == 'warning' %}
+                        {% set accent_color = 'var(--bs-warning)' %}
+                        {% set row_bg = 'var(--bs-warning-bg-subtle)' %}
+                        {% set title_color = 'var(--bs-warning-text-emphasis)' %}
+                        {% set btn_cls = 'btn btn-sm btn-warning' %}
+                    {% elif item.severity == 'success' %}
+                        {% set accent_color = 'var(--bs-success)' %}
+                        {% set row_bg = 'var(--bs-success-bg-subtle)' %}
+                        {% set title_color = 'var(--bs-success-text-emphasis)' %}
+                        {% set btn_cls = 'btn btn-sm btn-outline-secondary' %}
+                    {% else %}
+                        {% set accent_color = 'var(--bs-secondary)' %}
+                        {% set row_bg = 'var(--bs-body-bg)' %}
+                        {% set title_color = 'var(--bs-body-color)' %}
+                        {% set btn_cls = 'btn btn-sm btn-outline-secondary' %}
+                    {% endif %}
+                    <div class="rounded d-flex align-items-start gap-3 p-2"
+                         style="border: 1px solid var(--bs-border-color); border-left: 4px solid {{ accent_color }}; background: {{ row_bg }}">
+                        <i class="fas fa-{{ item.icon }} fa-fw flex-shrink-0 mt-1"
+                           style="color: {{ accent_color }}"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold"
+                                 style="font-size: var(--cd-text-cta-title); color: {{ title_color }}">
+                                {{ item.title }}
+                            </div>
+                            {% if item.description %}
+                                <div style="font-size: var(--cd-text-cta-desc); color: var(--bs-secondary-color)">
+                                    {{ item.description }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if item.buttons %}
+                            <div class="d-flex gap-1 flex-shrink-0">
+                                {% for btn in item.buttons %}
+                                    {% if btn.method == 'POST' %}
+                                        <form action="{{ btn.url }}" method="POST" class="d-inline">
+                                            {{ form.hidden_tag() if form is defined }}
+                                            <button type="submit" class="{{ btn_cls }}">
+                                                {% if btn.icon %}<i class="fas fa-{{ btn.icon }} fa-fw"></i> {% endif %}
+                                                {{ btn.label }}
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a href="{{ btn.url }}" class="{{ btn_cls }}">
+                                            {% if btn.icon %}<i class="fas fa-{{ btn.icon }} fa-fw"></i> {% endif %}
+                                            {{ btn.label }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         {% endif %}
                     </div>
-                    <a href="{{ item.action_url }}"
-                       class="btn btn-sm {{ btn_cls }} flex-shrink-0">
-                        {{ item.action_label }}
-                    </a>
-                </div>
+                {% endfor %}
             </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
+        </div>
+    {% endif %}
 {% endmacro %}

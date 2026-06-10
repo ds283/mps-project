@@ -4,8 +4,12 @@
 {% macro rollover_not_yet_card(current_year, pclass, config) %}
     {% set selector_lifecycle = config.selector_lifecycle %}
     {% set submitter_lifecycle = config.submitter_lifecycle %}
-    <div class="card border-danger mt-3 mb-3">
-        <div class="card-header bg-danger text-white"><strong>Rollover of academic year not yet available</strong></div>
+    <div class="card mt-3 mb-3" style="border: 2px solid var(--bs-warning-border-subtle)">
+        <div class="card-header d-flex align-items-center gap-2 py-2"
+             style="background: var(--bs-warning-bg-subtle); border-bottom: 1px solid var(--bs-warning-border-subtle)">
+            <i class="fas fa-exclamation-triangle fa-fw" style="color: var(--bs-warning-text-emphasis)"></i>
+            <strong style="color: var(--bs-warning-text-emphasis)">Rollover of academic year not yet available</strong>
+        </div>
         <div class="card-body">
             <div>
                 {% call icon_block("exclamation-circle", icon_classes="pt-1 text-danger") %}
@@ -32,8 +36,15 @@
 {% endmacro %}
 
 {% macro rollover_card(current_year, pclass, config) %}
-    <div id="rollover-panel" class="card border-danger mt-3 mb-3 collapse show" aria-expanded="true">
-        <div class="card-header bg-danger text-white"><strong>Rollover of academic year available</strong></div>
+    <div id="rollover-panel" class="card mt-3 mb-3 collapse show" aria-expanded="true"
+         style="border: 2px solid var(--bs-warning-border-subtle)">
+        <div class="card-header d-flex align-items-center gap-2 py-2"
+             style="background: var(--bs-warning-bg-subtle); border-bottom: 1px solid var(--bs-warning-border-subtle)">
+            <i class="fas fa-sync-alt fa-fw" style="color: var(--bs-warning-text-emphasis)"></i>
+            <strong style="color: var(--bs-warning-text-emphasis)">
+                Rollover of academic year to {{ current_year }}&ndash;{{ current_year+1 }} is available
+            </strong>
+        </div>
         <div class="card-body">
             <div>
                 {% call icon_block("check-circle", icon_classes="pt-1 text-success") %}

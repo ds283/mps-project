@@ -48,6 +48,7 @@ from ..models import (
     TransferableSkill,
     User,
 )
+from ..models.markingevent import ConvenorAction, ConvenorActionButton
 from ..shared.context.convenor_dashboard import (
     get_convenor_action_items,
     get_convenor_approval_data,
@@ -204,8 +205,63 @@ def status(id):
             EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=pclass
         )
 
+    rollover_in_progress = config.year < current_year
+
     data = get_convenor_dashboard_data(pclass, config)
     action_items = get_convenor_action_items(pclass, config, data)
+
+    # Proposed match available
+    if pclass.publish and config.has_published_matches and not rollover_in_progress:
+        match_url = url_for("convenor.audit_matches", pclass_id=config.pclass_id)
+        if config.select_in_previous_cycle:
+            desc = (
+                "An administrator has published a selector/project match. "
+                "Selections take place in the prior cycle — once accepted, "
+                "no further convenor action is required."
+            )
+        else:
+            desc = (
+                "An administrator has published a selector/project match. "
+                "Selections are in the same cycle as submissions — once accepted, "
+                "submitter records can be generated immediately."
+            )
+        action_items.append(
+            ConvenorAction(
+                severity="blocking",
+                icon="sitemap",
+                title="A proposed selector/project match is available for review",
+                description=desc,
+                buttons=[
+                    ConvenorActionButton(
+                        label="View proposed match",
+                        url=match_url,
+                        icon="arrow-right",
+                        outline=False,
+                    )
+                ],
+            )
+        )
+
+    # Proposed assessment schedule available
+    if pclass.publish and config.has_auditable_schedules:
+        sched_url = url_for("convenor.audit_schedules", pclass_id=config.pclass_id)
+        action_items.append(
+            ConvenorAction(
+                severity="blocking",
+                icon="calendar-alt",
+                title="Proposed assessment schedules are available for review",
+                description="An administrator has published one or more proposed presentation assessment schedules.",
+                buttons=[
+                    ConvenorActionButton(
+                        label="View proposed schedules",
+                        url=sched_url,
+                        icon="arrow-right",
+                        outline=False,
+                    )
+                ],
+            )
+        )
+
     todo = get_convenor_todo_data(config)
     approval_data = get_convenor_approval_data(pclass)
 
@@ -221,6 +277,7 @@ def status(id):
         pclass=pclass,
         config=config,
         current_year=current_year,
+        rollover_in_progress=rollover_in_progress,
         convenor_data=data,
         action_items=action_items,
         approval_data=approval_data,

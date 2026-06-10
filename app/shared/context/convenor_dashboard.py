@@ -38,6 +38,7 @@ from ...models import (
     User,
     WorkflowMixin,
 )
+from ...models.markingevent import ConvenorAction, ConvenorActionButton
 from ..convenor import (
     build_accepted_confirmations_query,
     build_accepted_custom_query,
@@ -222,14 +223,18 @@ def get_convenor_action_items(
     if outstanding > 0 and age_oldest is not None and age_oldest >= 14:
         pl = "s" if outstanding != 1 else ""
         blocking.append(
-            {
-                "severity": "blocking",
-                "icon": "fas fa-hand-paper",
-                "message": f"{outstanding} outstanding confirmation request{pl} — oldest waiting {int(age_oldest)} days",
-                "detail": None,
-                "action_label": "View confirmations",
-                "action_url": url_for("convenor.show_confirmations", id=pclass.id),
-            }
+            ConvenorAction(
+                severity="blocking",
+                icon="hand-paper",
+                title=f"{outstanding} outstanding confirmation request{pl} — oldest waiting {int(age_oldest)} days",
+                buttons=[
+                    ConvenorActionButton(
+                        label="View confirmations",
+                        url=url_for("convenor.show_confirmations", id=pclass.id),
+                        icon="arrow-right",
+                    )
+                ],
+            )
         )
 
     # --- BLOCKING: MarkingEvents with urgent_action_count > 0 ---
@@ -244,17 +249,21 @@ def get_convenor_action_items(
                 if n > 0:
                     wpl = "s" if n != 1 else ""
                     blocking.append(
-                        {
-                            "severity": "blocking",
-                            "icon": "fas fa-exclamation-circle",
-                            "message": f"{event.name} — {n} workflow{wpl} require convenor action",
-                            "detail": None,
-                            "action_label": "View workflows",
-                            "action_url": url_for(
-                                "convenor.period_marking_events_inspector",
-                                period_id=event.period_id,
-                            ),
-                        }
+                        ConvenorAction(
+                            severity="blocking",
+                            icon="exclamation-circle",
+                            title=f"{event.name} — {n} workflow{wpl} require convenor action",
+                            buttons=[
+                                ConvenorActionButton(
+                                    label="View workflows",
+                                    url=url_for(
+                                        "convenor.period_marking_events_inspector",
+                                        period_id=event.period_id,
+                                    ),
+                                    icon="arrow-right",
+                                )
+                            ],
+                        )
                     )
 
     # --- WARNING: open submission periods with submitters awaiting report upload ---
@@ -265,14 +274,18 @@ def get_convenor_action_items(
             if n > 0:
                 spl = "s" if n != 1 else ""
                 warnings.append(
-                    {
-                        "severity": "warning",
-                        "icon": "fas fa-file-upload",
-                        "message": f"{period.display_name} — {n} submitter{spl} awaiting report upload",
-                        "detail": None,
-                        "action_label": "View submitters",
-                        "action_url": url_for("convenor.submitters", id=pclass.id),
-                    }
+                    ConvenorAction(
+                        severity="warning",
+                        icon="file-upload",
+                        title=f"{period.display_name} — {n} submitter{spl} awaiting report upload",
+                        buttons=[
+                            ConvenorActionButton(
+                                label="View submitters",
+                                url=url_for("convenor.submitters", id=pclass.id),
+                                icon="arrow-right",
+                            )
+                        ],
+                    )
                 )
 
     # --- WARNING: Canvas integration enabled but students not enrolled ---
@@ -280,14 +293,18 @@ def get_convenor_action_items(
     if missing_canvas > 0:
         spl = "s" if missing_canvas != 1 else ""
         warnings.append(
-            {
-                "severity": "warning",
-                "icon": "fas fa-chalkboard",
-                "message": f"{missing_canvas} student{spl} not enrolled in the Canvas module",
-                "detail": None,
-                "action_label": "View missing students",
-                "action_url": url_for("convenor.submitters", id=pclass.id),
-            }
+            ConvenorAction(
+                severity="warning",
+                icon="chalkboard",
+                title=f"{missing_canvas} student{spl} not enrolled in the Canvas module",
+                buttons=[
+                    ConvenorActionButton(
+                        label="View missing students",
+                        url=url_for("convenor.submitters", id=pclass.id),
+                        icon="arrow-right",
+                    )
+                ],
+            )
         )
 
     # --- ADVISORY: selectors with no submission and no bookmarks ---
@@ -303,17 +320,21 @@ def get_convenor_action_items(
         spl = "s" if inactive != 1 else ""
         vpl = "have" if inactive != 1 else "has"
         advisory.append(
-            {
-                "severity": "advisory",
-                "icon": "fas fa-question-circle",
-                "message": (
+            ConvenorAction(
+                severity="info",
+                icon="question-circle",
+                title=(
                     f"{inactive} selector{spl} {vpl} neither submitted a selection "
                     f"nor bookmarked any projects — may receive a random allocation"
                 ),
-                "detail": None,
-                "action_label": "View selectors",
-                "action_url": url_for("convenor.selectors", id=pclass.id),
-            }
+                buttons=[
+                    ConvenorActionButton(
+                        label="View selectors",
+                        url=url_for("convenor.selectors", id=pclass.id),
+                        icon="arrow-right",
+                    )
+                ],
+            )
         )
 
     return blocking + warnings + advisory

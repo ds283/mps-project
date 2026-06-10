@@ -97,7 +97,7 @@ class PuLPMixin(PuLPStatusMixin):
     def lp_file_id(cls):
         return db.Column(
             db.Integer(),
-            db.ForeignKey("generated_assets.id"),
+            db.ForeignKey("generated_assets.id", ondelete="SET NULL"),
             nullable=True,
             default=None,
         )

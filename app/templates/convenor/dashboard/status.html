@@ -189,11 +189,15 @@
                                 <form action="{{ url_for('convenor.go_live', id=config.id) }}"
                                       method="POST" name="golive-form">
                                     {{ golive_form.hidden_tag() }}
-                                    {{ date_field(golive_form.live_deadline, 'golive_datetimepicker') }}
-                                    {{ wtf.render_field(golive_form.accommodate_matching) }}
-                                    {{ wtf.render_field(golive_form.full_CATS) }}
-                                    {{ wtf.render_field(golive_form.notify_faculty) }}
-                                    {{ wtf.render_field(golive_form.notify_selectors) }}
+                                    {{ date_field(golive_form.live_deadline, 'golive_datetimepicker', input_size='form-control-sm') }}
+                                    {{ wtf.render_field(golive_form.accommodate_matching, field_kwargs={'class': 'form-select-sm'}) }}
+                                    {{ wtf.render_field(golive_form.full_CATS, field_kwargs={'class': 'form-control-sm'}) }}
+                                    <div style="font-size: var(--cd-text-form-label)">
+                                        {{ wtf.render_field(golive_form.notify_faculty) }}
+                                    </div>
+                                    <div style="font-size: var(--cd-text-form-label)">
+                                        {{ wtf.render_field(golive_form.notify_selectors) }}
+                                    </div>
                                     {{ approvals_state(approval_data) }}
                                     {{ blocking_task_list(config.get_blocking_tasks[0]) }}
                                 </form>
@@ -203,17 +207,17 @@
                                    style="font-size: var(--cd-text-form-label)">
                                     Faculty notification email
                                 </p>
-                                {{ wtf.render_field(golive_form.faculty_template) }}
+                                {{ wtf.render_field(golive_form.faculty_template, field_kwargs={'class': 'form-select-sm'}) }}
                                 <p class="fw-semibold text-secondary mb-1 mt-2"
                                    style="font-size: var(--cd-text-form-label)">
                                     Selector notification email
                                 </p>
-                                {{ wtf.render_field(golive_form.selector_template) }}
+                                {{ wtf.render_field(golive_form.selector_template, field_kwargs={'class': 'form-select-sm'}) }}
                                 <p class="fw-semibold text-secondary mb-1 mt-2"
                                    style="font-size: var(--cd-text-form-label)">
                                     Convenor summary email
                                 </p>
-                                {{ wtf.render_field(golive_form.convenor_template) }}
+                                {{ wtf.render_field(golive_form.convenor_template, field_kwargs={'class': 'form-select-sm'}) }}
                             </div>
                         </div>
                     </div>
@@ -225,7 +229,7 @@
 
                 {# ── LEFT COLUMN (60%) — Submission management ── #}
                 <div class="col-12 col-lg-7">
-                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2">
+                    <p class="fw-semibold text-body-secondary text-uppercase mb-2" style="font-size: var(--cd-text-subsection)">
                         <i class="fas fa-file-alt fa-fw"></i> Submission management
                         <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill ms-1">Period #{{ config.submission_period }} active</span>
                     </p>
@@ -449,7 +453,7 @@
                     {# Submitters card #}
                     <div class="card border-secondary mt-2">
                         <div class="card-header d-flex justify-content-between align-items-center py-2">
-                            <span class="fw-semibold text-secondary small">
+                            <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
                                 <i class="fas fa-users fa-fw"></i> Submitters
                             </span>
                             <a href="{{ url_for('convenor.submitters', id=pclass.id) }}"
@@ -489,7 +493,7 @@
 
                 {# ── RIGHT COLUMN (40%) — Selection management ── #}
                 <div class="col-12 col-lg-5">
-                    <p class="small fw-semibold text-body-secondary text-uppercase mb-2">
+                    <p class="fw-semibold text-body-secondary text-uppercase mb-2" style="font-size: var(--cd-text-subsection)">
                         <i class="fas fa-calendar fa-fw"></i> Selection management
                     </p>
 
@@ -497,7 +501,7 @@
                     {% if pclass.publish and lifecycle != config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                         <div class="card border-secondary mb-2">
                             <div class="card-header py-2">
-                                <span class="fw-semibold text-secondary small">
+                                <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
                                     <i class="fas fa-map-signs fa-fw"></i> Selection lifecycle
                                 </span>
                             </div>
@@ -506,13 +510,21 @@
                                 {# Small blocking alert strip #}
                                 {% set blocking_items = action_items | selectattr('severity', 'equalto', 'blocking') | list %}
                                 {% if blocking_items %}
-                                    <div class="alert alert-danger py-1 px-2 mb-2 small d-flex align-items-center gap-2">
-                                        <i class="fas fa-exclamation-circle fa-fw flex-shrink-0"></i>
-                                        <span>
-                                            {{ blocking_items | length }} blocking item{{ 's' if blocking_items | length != 1 }} &mdash;
-                                            <a href="#" onclick="window.scrollTo(0,0); return false;"
-                                               class="alert-link">see actions panel above ↑</a>
-                                        </span>
+                                    <div class="d-flex align-items-start gap-2 px-2 py-1 rounded mb-2"
+                                         style="background: var(--bs-warning-bg-subtle); border: 1px solid var(--bs-warning-border-subtle)">
+                                        <i class="fas fa-exclamation-triangle fa-fw flex-shrink-0 mt-1"
+                                           style="font-size: var(--cd-text-form-label); color: var(--bs-warning-text-emphasis)"></i>
+                                        <div style="font-size: var(--cd-text-cta-desc); color: var(--bs-warning-text-emphasis)">
+                                            {% for item in blocking_items %}
+                                                <div>{{ item.description }}
+                                                    {% if item.buttons %}
+                                                        &mdash; <a href="{{ item.buttons[0].url }}"
+                                                                   style="color: var(--bs-warning-text-emphasis); font-weight: inherit"
+                                                                   class="text-decoration-underline">{{ item.buttons[0].label }}</a>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
                                     </div>
                                 {% endif %}
 
@@ -526,14 +538,14 @@
                                            {% if s1_done %}fa-check-circle text-success
                                            {% elif s1_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size: var(--cd-text-micro);
-                                                {% if s1_active %}font-weight:600; color:var(--bs-primary){% elif s1_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                        <span class="text-center {% if s1_active %}fw-semibold{% endif %}"
+                                              style="font-size: var(--cd-text-micro); {% if s1_active %}color: var(--bs-primary){% elif s1_done %}color: var(--bs-success-text-emphasis){% else %}color: var(--bs-secondary-color){% endif %}">
                                             Issue<br>Confirms
                                         </span>
                                     </div>
 
                                     <div class="flex-grow-1 border-top border-2 {% if s1_done %}border-success{% else %}border-secondary{% endif %}"
-                                         style="margin-top:0.6rem"></div>
+                                         style="margin-top: var(--cd-stepper-connector-offset)"></div>
 
                                     {% set s2_done   = lifecycle > config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                                     {% set s2_active = lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
@@ -542,14 +554,14 @@
                                            {% if s2_done %}fa-check-circle text-success
                                            {% elif s2_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size: var(--cd-text-micro);
-                                                {% if s2_active %}font-weight:600; color:var(--bs-primary){% elif s2_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                        <span class="text-center {% if s2_active %}fw-semibold{% endif %}"
+                                              style="font-size: var(--cd-text-micro); {% if s2_active %}color: var(--bs-primary){% elif s2_done %}color: var(--bs-success-text-emphasis){% else %}color: var(--bs-secondary-color){% endif %}">
                                             Await<br>Confirms
                                         </span>
                                     </div>
 
                                     <div class="flex-grow-1 border-top border-2 {% if s2_done %}border-success{% else %}border-secondary{% endif %}"
-                                         style="margin-top:0.6rem"></div>
+                                         style="margin-top: var(--cd-stepper-connector-offset)"></div>
 
                                     {% set s3_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                                     {% set s3_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
@@ -558,14 +570,14 @@
                                            {% if s3_done %}fa-check-circle text-success
                                            {% elif s3_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size: var(--cd-text-micro);
-                                                {% if s3_active %}font-weight:600; color:var(--bs-primary){% elif s3_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                        <span class="text-center {% if s3_active %}fw-semibold{% endif %}"
+                                              style="font-size: var(--cd-text-micro); {% if s3_active %}color: var(--bs-primary){% elif s3_done %}color: var(--bs-success-text-emphasis){% else %}color: var(--bs-secondary-color){% endif %}">
                                             Go Live
                                         </span>
                                     </div>
 
                                     <div class="flex-grow-1 border-top border-2 {% if s3_done %}border-success{% else %}border-secondary{% endif %}"
-                                         style="margin-top:0.6rem"></div>
+                                         style="margin-top: var(--cd-stepper-connector-offset)"></div>
 
                                     {% set s4_done   = lifecycle > config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                     {% set s4_active = lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
@@ -574,14 +586,14 @@
                                            {% if s4_done %}fa-check-circle text-success
                                            {% elif s4_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size: var(--cd-text-micro);
-                                                {% if s4_active %}font-weight:600; color:var(--bs-primary){% elif s4_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                        <span class="text-center {% if s4_active %}fw-semibold{% endif %}"
+                                              style="font-size: var(--cd-text-micro); {% if s4_active %}color: var(--bs-primary){% elif s4_done %}color: var(--bs-success-text-emphasis){% else %}color: var(--bs-secondary-color){% endif %}">
                                             Selections<br>Open
                                         </span>
                                     </div>
 
                                     <div class="flex-grow-1 border-top border-2 {% if s4_done %}border-success{% else %}border-secondary{% endif %}"
-                                         style="margin-top:0.6rem"></div>
+                                         style="margin-top: var(--cd-stepper-connector-offset)"></div>
 
                                     {% set s5_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
                                     {% set s5_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
@@ -590,8 +602,8 @@
                                            {% if s5_done %}fa-check-circle text-success
                                            {% elif s5_active %}fa-dot-circle text-primary
                                            {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
-                                        <span class="text-center" style="font-size: var(--cd-text-micro);
-                                                {% if s5_active %}font-weight:600; color:var(--bs-primary){% elif s5_done %}color:var(--bs-success-text-emphasis){% else %}color:var(--bs-secondary-color){% endif %}">
+                                        <span class="text-center {% if s5_active %}fw-semibold{% endif %}"
+                                              style="font-size: var(--cd-text-micro); {% if s5_active %}color: var(--bs-primary){% elif s5_done %}color: var(--bs-success-text-emphasis){% else %}color: var(--bs-secondary-color){% endif %}">
                                             Closed /<br>Matching
                                         </span>
                                     </div>
@@ -620,13 +632,13 @@
                                                        style="font-size: var(--cd-text-form-label); min-width: 90px">
                                                     Request deadline
                                                 </label>
-                                                {{ date_field(issue_form.request_deadline, 'issue_datetimepicker') }}
+                                                {{ date_field(issue_form.request_deadline, 'issue_datetimepicker', input_size='form-control-sm') }}
                                             </div>
                                             <div class="mb-2"
                                                  style="font-size: var(--cd-text-form-label); color: var(--bs-secondary-color)">
                                                 {{ issue_form.confirm_template.label.text }}
                                             </div>
-                                            {{ wtf.render_field(issue_form.confirm_template) }}
+                                            {{ wtf.render_field(issue_form.confirm_template, field_kwargs={'class': 'form-select-sm'}) }}
                                             <div class="d-flex justify-content-end gap-2 mt-2">
                                                 {% if issue_form.skip_button is defined %}
                                                     {{ wtf.render_field(issue_form.skip_button, button_map={'skip_button': 'outline-secondary'}, button_size='sm') }}
@@ -662,7 +674,7 @@
                                                        style="font-size: var(--cd-text-form-label); min-width: 90px">
                                                     Request deadline
                                                 </label>
-                                                {{ date_field(issue_form.request_deadline, 'confirm_datetimepicker') }}
+                                                {{ date_field(issue_form.request_deadline, 'confirm_datetimepicker', input_size='form-control-sm') }}
                                             </div>
                                             <div class="d-flex justify-content-end gap-2 mt-2">
                                                 <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}"
@@ -740,8 +752,10 @@
                                                        style="font-size: var(--cd-text-form-label); min-width: 60px">
                                                     Deadline
                                                 </label>
-                                                {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
-                                                {{ wtf.render_field(change_form.notify_convenor) }}
+                                                {{ date_field(change_form.live_deadline, 'live_datetimepicker', input_size='form-control-sm') }}
+                                                <div style="font-size: var(--cd-text-form-label)">
+                                                    {{ wtf.render_field(change_form.notify_convenor) }}
+                                                </div>
                                             </div>
                                             <div class="d-flex justify-content-end gap-2 mt-2">
                                                 {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
@@ -752,7 +766,7 @@
                                             <form action="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
                                                   method="POST" class="d-inline">
                                                 {{ change_form.hidden_tag() }}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
                                                     <i class="fas fa-lock fa-fw"></i> Close selections
                                                 </button>
                                             </form>
@@ -845,7 +859,7 @@
                     {% if pclass.publish %}
                         <div class="card border-secondary mb-2">
                             <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                                <span class="fw-semibold text-secondary small">
+                                <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
                                     <i class="fas fa-fire fa-fw"></i> Popular projects
                                 </span>
                                 <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
@@ -857,14 +871,17 @@
                                 <table class="table table-sm table-hover mb-1">
                                     <thead class="table-light">
                                     <tr>
-                                        <th class="small" style="width:55%">Project</th>
-                                        <th class="small" style="width:20%">Selections</th>
-                                        <th class="small" style="width:25%">Views</th>
+                                        <th style="width:40%; font-size: var(--cd-text-subsection)">Project</th>
+                                        <th style="width:18%; font-size: var(--cd-text-subsection)">Supervisor</th>
+                                        <th style="width:7%;  font-size: var(--cd-text-subsection)">#</th>
+                                        <th style="width:10%; font-size: var(--cd-text-subsection)">Sel.</th>
+                                        <th style="width:10%; font-size: var(--cd-text-subsection)">Bkm.</th>
+                                        <th style="width:15%; font-size: var(--cd-text-subsection)">Views</th>
                                     </tr>
                                     </thead>
                                     <tbody id="popular-projects-overview-tbody">
                                     <tr>
-                                        <td colspan="3" class="text-body-secondary small text-center">
+                                        <td colspan="6" class="text-body-secondary small text-center">
                                             <span class="spinner-border spinner-border-sm" role="status"></span>
                                             Loading&hellip;
                                         </td>

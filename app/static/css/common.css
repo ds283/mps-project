@@ -12,6 +12,9 @@
     --cd-text-cta-desc: 0.75rem;
     --cd-text-col-label: 0.6875rem;
 
+    /* Convenor dashboard stepper tokens */
+    --cd-stepper-connector-offset: 0.55rem;
+
     /* Dashboard blue (AI Risk) */
     --db-blue-50: #EAF2FB;
     --db-blue-100: #C3DBEF;

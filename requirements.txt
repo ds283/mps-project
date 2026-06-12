@@ -157,7 +157,7 @@ SQLAlchemy==2.0.48
 SQLAlchemy-Utils==0.42.1
 tinycss2==1.5.1
 tinyhtml5==2.1.0
-tornado==6.5.5
+tornado==6.5.6
 ty==0.0.22
 types-pytz==2026.1.1.20260304
 typing_extensions==4.15.0

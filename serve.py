@@ -20,6 +20,7 @@ from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
     ensure_box_token_schedule,
     ensure_config_rubrics,
+    ensure_historical_marking_events,
     ensure_roles,
     initial_populate_database,
     populate_CATS_limits,
@@ -75,6 +76,7 @@ with app.app_context():
 
     ensure_roles(app)
     ensure_box_token_schedule(app)
+    ensure_historical_marking_events(app)
     reconcile_background_tasks(app)
 
 

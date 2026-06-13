@@ -548,6 +548,93 @@ def ensure_config_rubrics(app) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Historical MarkingEvent state back-fill
+# ---------------------------------------------------------------------------
+
+
+def ensure_historical_marking_events(app) -> None:
+    """
+    Idempotently fix state flags on historical MarkingEvents (year < current year).
+
+    For every MarkingEvent whose parent ProjectClassConfig.year is strictly less
+    than the current academic year:
+
+    - MarkingReport.report_submitted  → True
+    - MarkingReport.feedback_submitted → True
+    - SubmitterReport.workflow_state  → FEEDBACK_AVAILABLE (DROPPED records untouched)
+    - MarkingWorkflow.completed       → True
+    - MarkingEvent.workflow_state     → CLOSED
+
+    Safe to call on every startup; skips records already in the correct state.
+    """
+    from app.models.markingevent import MarkingEventWorkflowStates, SubmitterReportWorkflowStates
+
+    with app.app_context():
+        current_year = get_current_year()
+
+        historical_events = (
+            db.session.query(MarkingEvent)
+            .join(MarkingEvent.period)
+            .join(SubmissionPeriodRecord.config)
+            .filter(ProjectClassConfig.year < current_year)
+            .all()
+        )
+
+        if not historical_events:
+            print("** ensure_historical_marking_events: no historical events found")
+            return
+
+        mr_report_updated = 0
+        mr_feedback_updated = 0
+        sr_updated = 0
+        wf_updated = 0
+        event_updated = 0
+
+        for event in historical_events:
+            for workflow in event.workflows.all():
+                for sr in workflow.submitter_reports.all():
+                    for mr in sr.marking_reports.all():
+                        if not mr.report_submitted:
+                            mr.report_submitted = True
+                            mr_report_updated += 1
+                        if not mr.feedback_submitted:
+                            mr.feedback_submitted = True
+                            mr_feedback_updated += 1
+
+                    if sr.workflow_state not in (
+                        SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+                        SubmitterReportWorkflowStates.DROPPED,
+                    ):
+                        sr.workflow_state = SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE
+                        sr_updated += 1
+
+                if not workflow.completed:
+                    workflow.completed = True
+                    wf_updated += 1
+
+            if event.workflow_state != MarkingEventWorkflowStates.CLOSED:
+                event.workflow_state = MarkingEventWorkflowStates.CLOSED
+                event_updated += 1
+
+        if any([mr_report_updated, mr_feedback_updated, sr_updated, wf_updated, event_updated]):
+            try:
+                db.session.commit()
+                print(
+                    f"** ensure_historical_marking_events: "
+                    f"fixed {mr_report_updated} MarkingReport.report_submitted, "
+                    f"{mr_feedback_updated} MarkingReport.feedback_submitted, "
+                    f"{sr_updated} SubmitterReport→FEEDBACK_AVAILABLE, "
+                    f"{wf_updated} MarkingWorkflow.completed, "
+                    f"{event_updated} MarkingEvent→CLOSED"
+                )
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                app.logger.exception("SQLAlchemyError in ensure_historical_marking_events", exc_info=e)
+        else:
+            print("** ensure_historical_marking_events: all historical events already in correct state")
+
+
+# ---------------------------------------------------------------------------
 # Box token maintenance beat schedule
 # ---------------------------------------------------------------------------
 

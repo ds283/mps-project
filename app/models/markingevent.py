@@ -796,7 +796,11 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         call self.event.refresh_completed() — after any change to a SubmitterReport's
         workflow_state within this workflow.
         """
-        _terminal = {SubmitterReportWorkflowStates.COMPLETED, SubmitterReportWorkflowStates.DROPPED}
+        _terminal = {
+            SubmitterReportWorkflowStates.COMPLETED,
+            SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
+            SubmitterReportWorkflowStates.DROPPED,
+        }
         srs = self.submitter_reports.all()
         self.completed = bool(srs) and all(sr.workflow_state in _terminal for sr in srs)
 

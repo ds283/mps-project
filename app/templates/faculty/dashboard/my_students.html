@@ -284,18 +284,24 @@
                         {# Top row: thumbnail + info + grade + actions #}
                         <div class="d-flex gap-3 align-items-start">
 
-                            {# Thumbnail #}
-                            {% if record.report and record.report.small_thumbnail and not record.report.small_thumbnail.lost %}
-                                <img src="{{ url_for('documents.serve_thumbnail', asset_type='submitted', asset_id=record.report_id, size='small') }}"
+                            {# Thumbnail — prefer processed report (GeneratedAsset), fall back to raw report (SubmittedAsset) #}
+                            {%- if record.processed_report and record.processed_report.small_thumbnail
+                                    and not record.processed_report.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=record.processed_report.id, size='small') }}"
                                      alt="Report thumbnail"
                                      width="64" height="64"
                                      style="object-fit: cover; border-radius: 6px; border: 0.5px solid var(--bs-border-color); flex-shrink: 0">
-                            {% else %}
+                            {%- elif record.report and record.report.small_thumbnail and not record.report.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type='SubmittedAsset', asset_id=record.report_id, size='small') }}"
+                                     alt="Report thumbnail"
+                                     width="64" height="64"
+                                     style="object-fit: cover; border-radius: 6px; border: 0.5px solid var(--bs-border-color); flex-shrink: 0">
+                            {%- else %}
                                 <div style="width:64px; height:64px; border-radius:6px; border:0.5px solid var(--bs-border-color);
                                             background:var(--bs-tertiary-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0">
                                     <i class="fas fa-file-alt fa-lg" style="color: var(--bs-secondary-color)"></i>
                                 </div>
-                            {% endif %}
+                            {%- endif %}
 
                             {# Student info column #}
                             <div class="flex-grow-1 min-width-0">
@@ -389,12 +395,17 @@
                                     <span class="ms-grade-chip">{{ record.report_grade | round(1) }}%</span>
                                 {% endif %}
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                    {% if record.report %}
+                                    {%- if record.processed_report %}
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report.id) }}">
+                                            <i class="fas fa-download fa-fw"></i> Report
+                                        </a>
+                                    {%- elif record.report %}
                                         <a class="btn btn-sm btn-outline-secondary"
                                            href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
                                             <i class="fas fa-download fa-fw"></i> Report
                                         </a>
-                                    {% endif %}
+                                    {%- endif %}
                                     {% if mr is not none %}
                                         <button class="btn btn-sm btn-outline-secondary"
                                                 type="button"

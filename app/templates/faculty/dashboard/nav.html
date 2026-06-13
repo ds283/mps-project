@@ -64,6 +64,16 @@
                 </a>
             </li>
         {% endif %}
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'my_students' %}active{% endif %}"
+               href="{{ url_for('faculty.my_students') }}">
+                <i class="fas fa-user-graduate fa-fw"></i>
+                My students
+                {% if my_students_pending_count is defined and my_students_pending_count > 0 %}
+                    <span class="badge rounded-pill {% if pane == 'my_students' %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ my_students_pending_count }}</span>
+                {% endif %}
+            </a>
+        </li>
         {% if enrolments and num_enrolments > 0 %}
             {%- set ns = namespace(alert_count=0) -%}
             {%- for item in enrolments -%}
@@ -85,15 +95,5 @@
                 </a>
             </li>
         {% endif %}
-        <li class="nav-item">
-            <a class="nav-link {% if pane == 'my_students' %}active{% endif %}"
-               href="{{ url_for('faculty.my_students') }}">
-                <i class="fas fa-user-graduate fa-fw"></i>
-                My students
-                {% if my_students_pending_count is defined and my_students_pending_count > 0 %}
-                    <span class="badge rounded-pill {% if pane == 'my_students' %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ my_students_pending_count }}</span>
-                {% endif %}
-            </a>
-        </li>
     </ul>
 {% endblock %}

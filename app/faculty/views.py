@@ -2140,9 +2140,19 @@ def my_students():
         )
 
     if year_order == "asc":
-        base_q = base_q.order_by(ProjectClassConfig.year.asc(), User.last_name.asc())
+        base_q = base_q.order_by(
+            ProjectClassConfig.year.asc(),
+            ProjectClass.name.asc(),
+            User.last_name.asc(),
+            User.first_name.asc(),
+        )
     else:
-        base_q = base_q.order_by(ProjectClassConfig.year.desc(), User.last_name.asc())
+        base_q = base_q.order_by(
+            ProjectClassConfig.year.desc(),
+            ProjectClass.name.asc(),
+            User.last_name.asc(),
+            User.first_name.asc(),
+        )
 
     total_records = base_q.count()
     records = base_q.offset((page - 1) * per_page).limit(per_page).all()
@@ -2214,6 +2224,12 @@ def my_students():
         if record.exemplar_consent_active and record.exemplar_supervisor_approved is None:
             group_pending_counts[key] = group_pending_counts.get(key, 0) + 1
 
+    pclass_colours = {}
+    for record in records:
+        pc = record.period.config.project_class
+        if pc.id not in pclass_colours:
+            pclass_colours[pc.id] = pc.colour  # already a CSS-ready #RRGGBB string
+
     language_analysis_data = {}
     for record in records:
         if record.language_analysis_complete:
@@ -2261,6 +2277,7 @@ def my_students():
         user_marking_reports=user_marking_reports,
         language_analysis_data=language_analysis_data,
         group_pending_counts=group_pending_counts,
+        pclass_colours=pclass_colours,
         page=page,
         per_page=per_page,
         total_records=total_records,

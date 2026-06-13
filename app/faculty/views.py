@@ -2198,23 +2198,37 @@ def my_students():
         if mr is not None:
             user_marking_reports[record.id] = mr
 
-    import json as _json
     language_analysis_data = {}
-    _la_keys = (
-        "page_count",
-        "declared_word_count",
-        "measured_word_count",
-        "estimated_reading_time_minutes",
-        "figure_count",
-        "table_count",
-    )
     for record in records:
-        if record.language_analysis_complete and record.language_analysis:
-            try:
-                blob = _json.loads(record.language_analysis)
-                language_analysis_data[record.id] = {k: blob.get(k) for k in _la_keys}
-            except (ValueError, TypeError):
-                pass
+        if record.language_analysis_complete:
+            la = record.language_analysis_data
+            metrics = la.get("metrics", {})
+            llm_result = la.get("llm_result", {})
+
+            measured_wc = metrics.get("word_count")
+            fig_count = metrics.get("figure_count")
+            tab_count = metrics.get("table_count")
+
+            stated_wc = None
+            if llm_result.get("stated_word_count_found"):
+                stated_wc = llm_result.get("stated_word_count")
+
+            reading_mins = None
+            if measured_wc is not None:
+                total_visuals = (fig_count or 0) + (tab_count or 0)
+                first_ten = min(total_visuals, 10)
+                remainder = max(0, total_visuals - 10)
+                secs = (int(measured_wc) / 120.0) * 60.0 + first_ten * 60.0 + remainder * 20.0
+                reading_mins = max(1, round(secs / 60.0))
+
+            language_analysis_data[record.id] = {
+                "page_count": la.get("_page_count"),
+                "declared_word_count": stated_wc,
+                "measured_word_count": measured_wc,
+                "estimated_reading_time_minutes": reading_mins,
+                "figure_count": fig_count,
+                "table_count": tab_count,
+            }
 
     return render_template_context(
         "faculty/dashboard/my_students.html",

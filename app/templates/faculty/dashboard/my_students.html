@@ -198,29 +198,14 @@
                                         </a>
                                     {% endif %}
                                     {% if mr is not none %}
-                                        <button class="btn btn-sm btn-outline-secondary"
-                                                type="button"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#feedback-panel-{{ record.id }}">
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ url_for('faculty.view_feedback', id=record.id) }}">
                                             <i class="fas fa-comment fa-fw"></i> My feedback
-                                        </button>
+                                        </a>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
-
-                        {# Feedback collapse panel #}
-                        {% if mr is not none %}
-                            <div class="collapse mt-2" id="feedback-panel-{{ record.id }}">
-                                <div class="card card-body bg-body-tertiary small">
-                                    <a href="{{ url_for('faculty.view_feedback', id=record.id) }}"
-                                       class="text-decoration-none">
-                                        <i class="fas fa-external-link-alt fa-fw"></i>
-                                        View full feedback for this submission
-                                    </a>
-                                </div>
-                            </div>
-                        {% endif %}
 
                         <hr class="my-2">
 

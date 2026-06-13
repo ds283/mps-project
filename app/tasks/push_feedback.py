@@ -34,7 +34,7 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
-from ..models import ConflationReport, MarkingEventWorkflowStates, TaskRecord
+from ..models import ConflationReport, MarkingWorkflow, SubmitterReport, SubmitterReportWorkflowStates, TaskRecord
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update
 from .shared.utils import report_info
@@ -232,9 +232,10 @@ def register_push_feedback_tasks(celery):
         Callback fired by the EmailWorkflowItem machinery after a student feedback email is
         successfully sent (email_log_id is prepended by the workflow processor).
 
-        Sets cr.feedback_sent, records the push user and timestamp, and links the EmailLog
-        record into cr.feedback_emails.  Also checks whether all ConflationReports for the
-        parent MarkingEvent now have feedback sent, and if so advances the event to CLOSED.
+        Sets cr.feedback_sent, records the push user and timestamp, links the EmailLog record
+        into cr.feedback_emails, and advances the student's SubmitterReport to FEEDBACK_AVAILABLE
+        so they can view their feedback on the web platform. The MarkingEvent itself is not
+        closed here; the convenor closes it explicitly via the inspector.
         """
         try:
             cr: ConflationReport = db.session.query(ConflationReport).filter_by(id=cr_id).first()
@@ -265,12 +266,18 @@ def register_push_feedback_tasks(celery):
                 if report.id not in existing_ids:
                     record.feedback_reports.append(report)
 
-        # Advance MarkingEvent to CLOSED if all CRs now have feedback sent (Task 4)
+        # Advance the SubmitterReport for this student to FEEDBACK_AVAILABLE so the student
+        # can view feedback on the web platform. The MarkingEvent itself remains open until
+        # the convenor explicitly closes it (Canvas push may still be pending).
         event: MarkingEvent = cr.marking_event
-        if event is not None and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
-            all_crs = event.conflation_reports.all()
-            if all_crs and all(c.feedback_sent for c in all_crs):
-                event.workflow_state = MarkingEventWorkflowStates.CLOSED
+        if event is not None and record is not None:
+            sr = (
+                record.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
+                .filter(MarkingWorkflow.event_id == event.id)
+                .first()
+            )
+            if sr is not None and sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED:
+                sr.workflow_state = SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE
 
         try:
             log_db_commit(

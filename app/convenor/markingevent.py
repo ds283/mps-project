@@ -81,6 +81,7 @@ from ..task_queue import register_task
 from .forms import (
     ActionForm,
     AddMarkingEventForm,
+    CloseMarkingEventForm,
     AddMarkingSchemeForm,
     AssignModeratorFormFactory,
     CanvasFeedbackPushEventForm,
@@ -3723,7 +3724,7 @@ def confirm_delete_marking_event(event_id):
 @convenor.route("/close_marking_event_confirm/<int:event_id>")
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def close_marking_event_confirm(event_id):
-    """Danger-confirm page before closing a MarkingEvent"""
+    """Advisory confirmation page before closing a MarkingEvent."""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
@@ -3740,21 +3741,21 @@ def close_marking_event_confirm(event_id):
     )
     text = request.args.get("text", "Marking events")
 
-    form = ConfirmActionForm()
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+    warnings = _compute_close_warnings(event)
+    form = CloseMarkingEventForm()
     return render_template_context(
-        "admin/danger_confirm.html",
-        title="Close marking event",
-        panel_title="Close marking event",
-        message=f"<p>Are you sure you want to close the marking event "
-        f'<strong>"{event.name}"</strong>?</p>'
-        f'<p class="text-danger">Closing a marking event is a one-time operation. '
-        f"Once closed, it cannot be reopened and no further changes can be made "
-        f"to its workflows or reports.</p>",
-        action_url=url_for(
-            "convenor.close_marking_event", event_id=event_id, url=url, text=text
-        ),
-        submit_label="Close marking event",
+        "convenor/markingevent/close_confirm.html",
+        event=event,
+        pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
+        action_url=url_for("convenor.close_marking_event", event_id=event_id, url=url, text=text),
+        url=url,
+        text=text,
         form=form,
+        **warnings,
     )
 
 
@@ -3762,8 +3763,9 @@ def close_marking_event_confirm(event_id):
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def close_marking_event(event_id):
     """
-    Close a MarkingEvent. Sets the closed flag. For now this is a stub;
-    in future it will dispatch a Celery workflow to finalise the event.
+    Close a MarkingEvent. If the form's make_feedback_available flag is set,
+    first advances any SubmitterReports that are not yet FEEDBACK_AVAILABLE or DROPPED
+    to FEEDBACK_AVAILABLE so students can view feedback on the web platform.
     """
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
@@ -3780,10 +3782,24 @@ def close_marking_event(event_id):
         flash("This marking event is already closed.", "info")
         return redirect(url)
 
+    form = CloseMarkingEventForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
     try:
+        now = datetime.now()
+
+        if form.make_feedback_available.data:
+            warnings = _compute_close_warnings(event)
+            _terminal = {SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE, SubmitterReportWorkflowStates.DROPPED}
+            for sr in warnings["feedback_unavailable_srs"]:
+                if sr.workflow_state not in _terminal:
+                    sr.workflow_state = SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE
+
         event.workflow_state = MarkingEventWorkflowStates.CLOSED
         event.last_edit_id = current_user.id
-        event.last_edit_timestamp = datetime.now()
+        event.last_edit_timestamp = now
 
         log_db_commit(
             f'Closed marking event "{event.name}" for period "{event.period.display_name}" '
@@ -6476,6 +6492,80 @@ def calculate_conflation(event_id):
         flash("Could not calculate conflation due to a database error.", "error")
 
     return redirect(url)
+
+
+# ---------------------------------------------------------------------------
+# CLOSE-EVENT WARNING HELPER
+# ---------------------------------------------------------------------------
+
+_CV_GRADE_KEYS = [
+    ("supervisor", "supervision_grade_available"),
+    ("report", "report_grade_available"),
+    ("presentation", "presentation_grade_available"),
+]
+
+
+def _compute_close_warnings(event: MarkingEvent) -> dict:
+    """
+    Compute advisory warnings to display on the close-event confirmation page.
+    All warnings are informational only — the convenor can proceed regardless.
+    """
+    all_crs = event.conflation_reports.all()
+    period = event.period
+    targets = event.targets_as_dict or {}
+
+    # (a) feedback PDFs not yet emailed
+    unsent_feedback = [cr for cr in all_crs if not cr.feedback_sent]
+
+    # (b) CV-target grades not written to SubmissionRecord (never pushed, or stale)
+    max_cr_generated = None
+    for cr in all_crs:
+        ts = getattr(cr, "generated_timestamp", None)
+        if ts and (max_cr_generated is None or ts > max_cr_generated):
+            max_cr_generated = ts
+    any_stale = any(cr.is_stale for cr in all_crs)
+
+    unpropagated_grades = {}
+    for cv_key, avail_attr in _CV_GRADE_KEYS:
+        if cv_key not in targets or not getattr(period, avail_attr, False):
+            continue
+        last_push = event.last_grade_push(cv_key)
+        if last_push is None:
+            needs_push = True
+        else:
+            pushed_at_str = last_push.get("pushed_at")
+            if pushed_at_str and max_cr_generated:
+                pushed_at = datetime.fromisoformat(pushed_at_str)
+                needs_push = max_cr_generated > pushed_at or any_stale
+            else:
+                needs_push = any_stale
+        if needs_push:
+            count = sum(1 for cr in all_crs if cr.conflation_report_as_dict.get(cv_key) is not None)
+            unpropagated_grades[cv_key] = {"last_push": last_push, "count": count}
+
+    # (c) Canvas push outstanding
+    canvas_enabled = period.canvas_enabled
+    canvas_unpushed = []
+    if canvas_enabled:
+        canvas_unpushed = [cr for cr in all_crs if not cr.canvas_grade_pushed or not cr.canvas_feedback_pushed]
+
+    # (d) SubmitterReports not yet FEEDBACK_AVAILABLE or DROPPED
+    _terminal = {SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE, SubmitterReportWorkflowStates.DROPPED}
+    all_srs = (
+        db.session.query(SubmitterReport)
+        .join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
+        .filter(MarkingWorkflow.event_id == event.id)
+        .all()
+    )
+    feedback_unavailable_srs = [sr for sr in all_srs if sr.workflow_state not in _terminal]
+
+    return {
+        "unsent_feedback": unsent_feedback,
+        "unpropagated_grades": unpropagated_grades,
+        "canvas_unpushed": canvas_unpushed,
+        "canvas_enabled": canvas_enabled,
+        "feedback_unavailable_srs": feedback_unavailable_srs,
+    }
 
 
 # ---------------------------------------------------------------------------

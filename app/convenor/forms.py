@@ -1244,6 +1244,13 @@ class ConfirmCanvasPushEventForm(Form):
     submit = SubmitField("Confirm push to Canvas")
 
 
+class CloseMarkingEventForm(Form):
+    """Form backing the close-event confirmation page. Provides CSRF plus an optional
+    flag to advance remaining SubmitterReports to FEEDBACK_AVAILABLE before closing."""
+
+    make_feedback_available = BooleanField("Make feedback available on the web platform now")
+
+
 # ---- MarkingWorkflow forms ----
 
 # Role choices for MarkingWorkflow: ROLE_SUPERVISOR covers both supervisor types

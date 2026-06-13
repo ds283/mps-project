@@ -1,0 +1,135 @@
+{% extends "convenor/dashboard/pclass_base.html" %}
+
+{% block title %}Close marking event – {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-lock fa-fw me-1"></i>
+                    Close marking event – <strong>{{ event.name }}</strong>
+                </h4>
+            </div>
+
+            {# ── Advisory warnings ─────────────────────────────────────────── #}
+
+            {% if unsent_feedback %}
+                <div class="alert alert-warning d-flex align-items-start gap-3 py-2 mb-3">
+                    <i class="fas fa-envelope fa-lg flex-shrink-0 mt-1"></i>
+                    <div>
+                        <strong>{{ unsent_feedback|length }} student{{ 's have' if unsent_feedback|length != 1 else ' has' }} not yet received a feedback email.</strong>
+                        Feedback PDFs exist but have not been dispatched. You can still close the event now, but
+                        those students will not receive their feedback by email unless the push is completed first.
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if unpropagated_grades %}
+                {% for cv_key, info in unpropagated_grades.items() %}
+                    <div class="alert alert-warning d-flex align-items-start gap-3 py-2 mb-3">
+                        <i class="fas fa-exclamation-triangle fa-lg flex-shrink-0 mt-1"></i>
+                        <div>
+                            <strong>"{{ cv_key|capitalize }}" grades have not been copied to submission records.</strong>
+                            {% if info.last_push %}
+                                The conflation results have changed since the last push. {{ info.count }}
+                                record{{ 's need' if info.count != 1 else ' needs' }} updating.
+                            {% else %}
+                                {{ info.count }} conflation result{{ 's have' if info.count != 1 else ' has' }} never been
+                                written to submission records. Grades will not appear in reports or exports.
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if canvas_enabled and canvas_unpushed %}
+                <div class="alert alert-warning d-flex align-items-start gap-3 py-2 mb-3">
+                    <i class="fas fa-cloud-upload-alt fa-lg flex-shrink-0 mt-1"></i>
+                    <div>
+                        <strong>{{ canvas_unpushed|length }} submission record{{ 's have' if canvas_unpushed|length != 1 else ' has' }} outstanding Canvas sync.</strong>
+                        Grades or feedback PDFs have not been pushed to Canvas for these students. You can
+                        complete Canvas sync after closing the event.
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if not unsent_feedback and not unpropagated_grades and not (canvas_enabled and canvas_unpushed) %}
+                <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3">
+                    <i class="fas fa-check-circle fa-fw"></i>
+                    All feedback has been dispatched and grades have been copied to submission records.
+                    {% if canvas_enabled %}Canvas sync is also complete.{% endif %}
+                </div>
+            {% endif %}
+
+            {# ── Main confirm card ─────────────────────────────────────────── #}
+
+            <div class="card border-danger mb-4">
+                <div class="card-header" style="background: var(--bs-danger-bg-subtle); border-bottom: 1px solid var(--bs-danger-border-subtle);">
+                    <i class="fas fa-lock fa-fw me-1" style="color: var(--bs-danger-text-emphasis);"></i>
+                    <span style="color: var(--bs-danger-text-emphasis); font-weight: 600;">Close marking event</span>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-3 small">
+                        <dt class="col-sm-4 text-body-secondary">Event</dt>
+                        <dd class="col-sm-8">{{ event.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Period</dt>
+                        <dd class="col-sm-8">{{ event.period.display_name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Project class</dt>
+                        <dd class="col-sm-8">{{ pclass.name }}</dd>
+                    </dl>
+
+                    <p class="mb-3" style="color: var(--bs-danger-text-emphasis);">
+                        <i class="fas fa-exclamation-circle fa-fw me-1"></i>
+                        Closing a marking event is a one-time operation. Once closed, it cannot be reopened
+                        and no further changes can be made to its workflows or reports.
+                    </p>
+
+                    {% if feedback_unavailable_srs %}
+                        <div class="alert alert-secondary d-flex align-items-start gap-3 py-2 mb-3">
+                            <i class="fas fa-eye-slash fa-lg flex-shrink-0 mt-1"></i>
+                            <div>
+                                <strong>{{ feedback_unavailable_srs|length }} student{{ 's' if feedback_unavailable_srs|length != 1 else '' }}
+                                cannot currently view their feedback</strong> on the web platform.
+                                You can make it available now without sending emails or pushing to Canvas.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <form method="POST" action="{{ action_url }}">
+                        {{ form.hidden_tag() }}
+
+                        {% if feedback_unavailable_srs %}
+                            <div class="form-check mb-3">
+                                {{ form.make_feedback_available(class="form-check-input") }}
+                                <label class="form-check-label" for="{{ form.make_feedback_available.id }}">
+                                    Make feedback available on the web platform now
+                                    <span class="text-body-secondary small">
+                                        ({{ feedback_unavailable_srs|length }} student{{ 's' if feedback_unavailable_srs|length != 1 else '' }}
+                                        — no emails sent, no Canvas push)
+                                    </span>
+                                </label>
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-danger" type="submit">
+                                <i class="fas fa-lock fa-fw"></i> Close marking event
+                            </button>
+                            <a class="btn btn-outline-secondary" href="{{ url }}">
+                                <i class="fas fa-times fa-fw"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

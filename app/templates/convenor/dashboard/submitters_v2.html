@@ -916,6 +916,52 @@
                     </span>
                   {% endif %}
 
+                  {# ---- Consent badges (per SubmissionRecord) ---- #}
+                  {% if r.consent_invitation_sent_at or r.exemplar_consent_granted_at or r.openday_consent_granted_at %}
+                    <span class="mx-1" style="color: var(--bs-border-color)">|</span>
+                  {% endif %}
+
+                  {% if r.consent_invitation_sent_at and not r.exemplar_consent_granted_at and not r.openday_consent_granted_at %}
+                    <span class="badge"
+                          style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color);
+                                 font-size: var(--cd-text-micro)"
+                          title="Consent invitation sent {{ r.consent_invitation_sent_at.strftime('%d %b %Y') }}">
+                      <i class="fas fa-envelope fa-fw"></i> Invited
+                    </span>
+                  {% endif %}
+
+                  {% if r.exemplar_fully_approved %}
+                    <span class="badge"
+                          style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
+                                 border: 1px solid var(--bs-success-border-subtle); font-size: var(--cd-text-micro)"
+                          title="Exemplar: student consented, supervisor approved">
+                      <i class="fas fa-check fa-fw"></i> Exemplar approved
+                    </span>
+                  {% elif r.exemplar_consent_active and r.exemplar_supervisor_approved is none %}
+                    <span class="badge"
+                          style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
+                                 border: 1px solid var(--bs-warning-border-subtle); font-size: var(--cd-text-micro)"
+                          title="Exemplar: student consented, awaiting supervisor approval">
+                      <i class="fas fa-clock fa-fw"></i> Exemplar pending
+                    </span>
+                  {% elif r.exemplar_consent_active and r.exemplar_supervisor_approved is sameas false %}
+                    <span class="badge"
+                          style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color);
+                                 font-size: var(--cd-text-micro)"
+                          title="Exemplar: student consented, supervisor declined">
+                      <i class="fas fa-times fa-fw"></i> Exemplar declined
+                    </span>
+                  {% endif %}
+
+                  {% if r.openday_consent_active %}
+                    <span class="badge"
+                          style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
+                                 border: 1px solid var(--bs-success-border-subtle); font-size: var(--cd-text-micro)"
+                          title="Open day: student consented">
+                      <i class="fas fa-check fa-fw"></i> Open day
+                    </span>
+                  {% endif %}
+
                   {# Document / Analyse / LLM report buttons #}
                   <span class="sv2-strip-actions">
                     <a href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=_back_url) }}"

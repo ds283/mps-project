@@ -47,7 +47,9 @@ from ..models import (
     ProjectDescription,
     ResearchGroup,
     SelectingStudent,
+    SubmissionPeriodRecord,
     SubmissionRecord,
+    SubmittingStudent,
     Tenant,
     User,
 )
@@ -2482,3 +2484,244 @@ def perform_reset_popularity_data(id):
     )
 
     return redirect(url_for("convenor.liveprojects", id=config.pclass_id))
+
+
+@convenor.route("/dispatch_consent_invitations/<int:config_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def dispatch_consent_invitations(config_id):
+    """
+    Dispatch consent invitation emails to all eligible submitters for a ProjectClassConfig
+    who have not yet been invited.
+
+    Eligibility per SubmissionRecord:
+      - period.closed is True
+      - report_grade is not None
+      - consent_invitation_sent_at is None (not yet invited)
+    """
+    import uuid
+
+    from ..models.emails import EmailTemplateTypesMixin
+
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(redirect_url())
+
+    eligible = (
+        db.session.query(SubmissionRecord)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .filter(
+            SubmittingStudent.config_id == config_id,
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+            SubmissionRecord.consent_invitation_sent_at.is_(None),
+        )
+        .all()
+    )
+
+    if not eligible:
+        flash("No eligible students without an existing consent invitation.", "info")
+        return redirect(redirect_url())
+
+    tmpl = EmailTemplate.find_template_(
+        EmailTemplateTypesMixin.CONSENT_INVITATION,
+        pclass_id=pclass.id,
+    )
+    if tmpl is None:
+        flash(
+            "No consent invitation email template is configured for this project class. "
+            "Please ask an administrator to create one.",
+            "danger",
+        )
+        return redirect(redirect_url())
+
+    workflow = EmailWorkflow.build_(
+        name=f"Consent invitations: {pclass.name} {config.submit_year_a}–{config.submit_year_b}",
+        template=tmpl,
+        pclasses=[pclass],
+        creator=current_user,
+    )
+    db.session.add(workflow)
+    db.session.flush()
+
+    count = 0
+    for record in eligible:
+        student_user: User = record.owner.student.user
+
+        if student_user.consent_token is None:
+            student_user.consent_token = str(uuid.uuid4())
+
+        consent_url = url_for(
+            "student.consent_by_token",
+            token=student_user.consent_token,
+            _external=True,
+        )
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload(
+                {
+                    "pclass_name": pclass.name,
+                    "year_a": config.submit_year_a,
+                    "year_b": config.submit_year_b,
+                }
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "record": record,
+                    "pclass": pclass,
+                    "config": config,
+                    "consent_url": consent_url,
+                    "grade": record.report_grade,
+                }
+            ),
+            recipient_list=[student_user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.consent.record_consent_invitation_sent",
+                    "args": [record.id],
+                    "kwargs": {},
+                }
+            ],
+            creator=current_user,
+        )
+        workflow.items.append(item)
+        count += 1
+
+    try:
+        log_db_commit(
+            f"Dispatched consent invitations for {count} student(s) "
+            f"({pclass.name} {config.submit_year_a}–{config.submit_year_b})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Consent invitation emails queued for {count} student(s).", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("An error occurred dispatching invitation emails.", "danger")
+        current_app.logger.exception("dispatch_consent_invitations failed", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/dispatch_consent_reminders/<int:config_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def dispatch_consent_reminders(config_id):
+    """
+    Dispatch consent reminder emails to submitters who were invited but have not yet
+    responded and have not yet received a reminder.
+
+    Eligibility per SubmissionRecord:
+      - consent_invitation_sent_at IS NOT NULL (already invited)
+      - consent_reminder_sent_at IS NULL (no reminder sent yet)
+      - no active consent given (exemplar or open day)
+    """
+    import uuid
+
+    from ..models.emails import EmailTemplateTypesMixin
+
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(redirect_url())
+
+    eligible = (
+        db.session.query(SubmissionRecord)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .filter(
+            SubmittingStudent.config_id == config_id,
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+            SubmissionRecord.consent_invitation_sent_at.isnot(None),
+            SubmissionRecord.consent_reminder_sent_at.is_(None),
+            SubmissionRecord.exemplar_consent_granted_at.is_(None),
+            SubmissionRecord.openday_consent_granted_at.is_(None),
+        )
+        .all()
+    )
+
+    if not eligible:
+        flash("No students awaiting a consent reminder.", "info")
+        return redirect(redirect_url())
+
+    tmpl = EmailTemplate.find_template_(
+        EmailTemplateTypesMixin.CONSENT_REMINDER,
+        pclass_id=pclass.id,
+    )
+    if tmpl is None:
+        flash(
+            "No consent reminder email template is configured for this project class. "
+            "Please ask an administrator to create one.",
+            "danger",
+        )
+        return redirect(redirect_url())
+
+    workflow = EmailWorkflow.build_(
+        name=f"Consent reminders: {pclass.name} {config.submit_year_a}–{config.submit_year_b}",
+        template=tmpl,
+        pclasses=[pclass],
+        creator=current_user,
+    )
+    db.session.add(workflow)
+    db.session.flush()
+
+    count = 0
+    for record in eligible:
+        student_user: User = record.owner.student.user
+
+        if student_user.consent_token is None:
+            student_user.consent_token = str(uuid.uuid4())
+
+        consent_url = url_for(
+            "student.consent_by_token",
+            token=student_user.consent_token,
+            _external=True,
+        )
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload(
+                {
+                    "pclass_name": pclass.name,
+                    "year_a": config.submit_year_a,
+                    "year_b": config.submit_year_b,
+                }
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "record": record,
+                    "pclass": pclass,
+                    "config": config,
+                    "consent_url": consent_url,
+                    "grade": record.report_grade,
+                }
+            ),
+            recipient_list=[student_user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.consent.record_consent_reminder_sent",
+                    "args": [record.id],
+                    "kwargs": {},
+                }
+            ],
+            creator=current_user,
+        )
+        workflow.items.append(item)
+        count += 1
+
+    try:
+        log_db_commit(
+            f"Dispatched consent reminders for {count} student(s) "
+            f"({pclass.name} {config.submit_year_a}–{config.submit_year_b})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Consent reminder emails queued for {count} student(s).", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("An error occurred dispatching reminder emails.", "danger")
+        current_app.logger.exception("dispatch_consent_reminders failed", exc_info=e)
+
+    return redirect(redirect_url())

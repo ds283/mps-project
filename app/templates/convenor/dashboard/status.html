@@ -488,6 +488,57 @@
                         </div>
                     </div>
 
+                    {# Consent invitations card — only shown when at least one period is closed #}
+                    {% if consent_stats and (config.periods | selectattr('closed') | list | length > 0) %}
+                        <div class="card border-secondary mt-2">
+                            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
+                                    <i class="fas fa-file-signature fa-fw"></i> Consent invitations
+                                </span>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="d-flex gap-2 mb-2" style="font-size: var(--cd-text-form-label); color: var(--bs-secondary-color)">
+                                    <span>{{ consent_stats.n_eligible }} eligible</span>
+                                    <span>&middot;</span>
+                                    <span>{{ consent_stats.n_invited }} invited</span>
+                                    <span>&middot;</span>
+                                    <span>{{ consent_stats.n_consented }} consented</span>
+                                </div>
+                                <div class="d-flex gap-1 flex-wrap align-items-center">
+                                    {# Send invitations button #}
+                                    {% if consent_stats.n_eligible > consent_stats.n_invited %}
+                                        <form method="POST"
+                                              action="{{ url_for('convenor.dispatch_consent_invitations', config_id=config.id) }}">
+                                            {{ consent_form.hidden_tag() }}
+                                            <button type="submit" class="btn btn-xs btn-outline-secondary">
+                                                <i class="fas fa-envelope fa-fw"></i> Send invitations
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <button class="btn btn-xs btn-outline-secondary" disabled>
+                                            <i class="fas fa-envelope fa-fw"></i> Send invitations
+                                        </button>
+                                    {% endif %}
+
+                                    {# Send reminder button — only if some invited but not yet responded #}
+                                    {% if consent_stats.n_awaiting_reminder > 0 %}
+                                        <form method="POST"
+                                              action="{{ url_for('convenor.dispatch_consent_reminders', config_id=config.id) }}">
+                                            {{ consent_form.hidden_tag() }}
+                                            <button type="submit" class="btn btn-xs btn-outline-secondary">
+                                                <i class="fas fa-bell fa-fw"></i> Send reminder
+                                            </button>
+                                        </form>
+                                    {% elif consent_stats.n_invited > 0 %}
+                                        <span class="badge bg-secondary" style="font-size: var(--cd-text-micro)">
+                                            reminder already sent
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
                 </div>
                 {# END LEFT COLUMN #}
 

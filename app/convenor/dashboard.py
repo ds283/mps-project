@@ -23,7 +23,7 @@ from flask import (
     url_for,
 )
 from flask_security import current_user, roles_accepted
-from sqlalchemy import and_, exists, or_
+from sqlalchemy import and_, exists, func, or_
 
 import app.ajax as ajax
 from app.convenor import convenor
@@ -44,6 +44,8 @@ from ..models import (
     ProjectTag,
     ProjectTagGroup,
     SubmissionPeriodRecord,
+    SubmissionRecord,
+    SubmittingStudent,
     Tenant,
     TransferableSkill,
     User,
@@ -56,6 +58,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_todo_data,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
 from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.projects import (
     get_filter_list_for_groups_and_skills,
@@ -210,6 +213,68 @@ def status(id):
     data = get_convenor_dashboard_data(pclass, config)
     action_items = get_convenor_action_items(pclass, config, data)
 
+    # Consent statistics for the consent tile in the Submission Management panel.
+    # Base query: records belonging to this config with a closed period and a graded report.
+    _base_consent = (
+        db.session.query(func.count(SubmissionRecord.id))
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .filter(
+            SubmittingStudent.config_id == config.id,
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+        )
+    )
+    n_consent_eligible = _base_consent.scalar() or 0
+    n_consent_invited = (
+        _base_consent.filter(SubmissionRecord.consent_invitation_sent_at.isnot(None)).scalar() or 0
+    )
+    n_consent_consented = (
+        db.session.query(func.count(SubmissionRecord.id))
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .filter(
+            SubmittingStudent.config_id == config.id,
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+            or_(
+                and_(
+                    SubmissionRecord.exemplar_consent_granted_at.isnot(None),
+                    SubmissionRecord.exemplar_consent_withdrawn.is_(False),
+                ),
+                and_(
+                    SubmissionRecord.openday_consent_granted_at.isnot(None),
+                    SubmissionRecord.openday_consent_withdrawn.is_(False),
+                ),
+            ),
+        )
+        .scalar()
+        or 0
+    )
+    n_awaiting_reminder = (
+        db.session.query(func.count(SubmissionRecord.id))
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .filter(
+            SubmittingStudent.config_id == config.id,
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+            SubmissionRecord.consent_invitation_sent_at.isnot(None),
+            SubmissionRecord.consent_reminder_sent_at.is_(None),
+            SubmissionRecord.exemplar_consent_granted_at.is_(None),
+            SubmissionRecord.openday_consent_granted_at.is_(None),
+        )
+        .scalar()
+        or 0
+    )
+    consent_stats = {
+        "n_eligible": n_consent_eligible,
+        "n_invited": n_consent_invited,
+        "n_consented": n_consent_consented,
+        "n_awaiting_reminder": n_awaiting_reminder,
+    }
+    consent_form = ConfirmActionForm()
+
     # Proposed match available
     if pclass.publish and config.has_published_matches and not rollover_in_progress:
         match_url = url_for("convenor.audit_matches", pclass_id=config.pclass_id)
@@ -284,6 +349,8 @@ def status(id):
         todo=todo,
         return_url=return_url,
         return_text=return_text,
+        consent_stats=consent_stats,
+        consent_form=consent_form,
     )
 
 

@@ -1,0 +1,99 @@
+{% extends "base_app.html" %}
+
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        {% if is_root %}
+            {% set warning = root_dash_data['warning'] %}
+            {% set messages = root_dash_data['messages'] %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_system %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='system') }}">
+                    {% if warning or (messages is not none and messages|length > 0) %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                    {% endif %}
+                    Administration
+                </a>
+            </li>
+        {% endif %}
+        {% if pending_marking_reports and pending_marking_reports|length > 0 %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_marking %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='marking') }}">
+                    <i class="fas fa-marker fa-fw"></i>
+                    Marking and feedback
+                    <span class="badge rounded-pill {% if pane_is_marking %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ pending_marking_reports|length }}</span>
+                </a>
+            </li>
+        {% endif %}
+        {% if pending_sign_off_reports is defined and pending_sign_off_reports and pending_sign_off_reports|length > 0 %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_signoff %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='signoff') }}">
+                    <i class="fas fa-signature fa-fw"></i>
+                    Sign-off
+                    <span class="badge rounded-pill {% if pane_is_signoff %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ pending_sign_off_reports|length }}</span>
+                </a>
+            </li>
+        {% endif %}
+        {% if pending_moderator_reports is defined and pending_moderator_reports and pending_moderator_reports|length > 0 %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_moderation %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='moderation') }}">
+                    <i class="fas fa-gavel fa-fw"></i>
+                    Moderation
+                    <span class="badge rounded-pill {% if pane_is_moderation %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ pending_moderator_reports|length }}</span>
+                </a>
+            </li>
+        {% endif %}
+        {%- set approve_total = approvals_data.get('total') -%}
+        {%- set user_num_rejected = approvals_data.get('approval_user_rejected') -%}
+        {%- set project_num_rejected = approvals_data.get('approval_project_rejected') -%}
+        {%- set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false -%}
+        {%- set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false -%}
+        {% if is_user_approver or is_project_approver or (user_warning and (is_manage_users or is_root)) %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_approve %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                    {% if user_warning or project_warning %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                    {% endif %}
+                    Approvals
+                    {% if approve_total > 0 %}
+                        <span class="badge rounded-pill {% if pane_is_approve %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ approve_total }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        {% endif %}
+        {% if enrolments and num_enrolments > 0 %}
+            {%- set ns = namespace(alert_count=0) -%}
+            {%- for item in enrolments -%}
+                {%- set cfg = item['config'] -%}
+                {%- set rec = item['record'] -%}
+                {%- set nproj_c = current_user.faculty_data.number_projects_offered(cfg.project_class) -%}
+                {%- set _wc = cfg.selector_lifecycle == cfg.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and cfg.is_confirmation_required(current_user.faculty_data) -%}
+                {%- set _np = rec.supervisor_state == rec.SUPERVISOR_ENROLLED and cfg.uses_supervisor and nproj_c is defined and nproj_c == 0 -%}
+                {%- set _ma = cfg.number_supervisor_missing_attendance(current_user.faculty_data.id) > 0 -%}
+                {%- if _wc or _np or _ma -%}{%- set ns.alert_count = ns.alert_count + 1 -%}{%- endif -%}
+            {%- endfor -%}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_enrollment %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='enrolments') }}">
+                    My enrolments
+                    {% if ns.alert_count > 0 %}
+                        <span class="badge rounded-pill {% if pane_is_enrollment %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ ns.alert_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        {% endif %}
+        <li class="nav-item">
+            <a class="nav-link {% if pane_is_my_students %}active{% endif %}"
+               href="{{ url_for('faculty.my_students') }}">
+                <i class="fas fa-user-graduate fa-fw"></i>
+                My students
+                {% if my_students_pending_count is defined and my_students_pending_count > 0 %}
+                    <span class="badge rounded-pill {% if pane_is_my_students %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ my_students_pending_count }}</span>
+                {% endif %}
+            </a>
+        </li>
+    </ul>
+{% endblock %}

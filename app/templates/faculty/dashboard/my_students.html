@@ -1,0 +1,382 @@
+{% extends "faculty/dashboard/nav.html" %}
+
+{% block title %}My students{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            {# --- Pending-approval alert banner --- #}
+            {% if my_students_pending_count > 0 %}
+                <div class="alert alert-warning d-flex align-items-center gap-2 mt-3">
+                    <i class="fas fa-clock fa-fw flex-shrink-0"></i>
+                    <span>
+                        <strong>{{ my_students_pending_count }} project{{ 's' if my_students_pending_count != 1 else '' }}</strong>
+                        have student consent for exemplar use and are awaiting your approval.
+                    </span>
+                    {% if not show_pending %}
+                        <a class="btn btn-sm btn-warning ms-auto text-dark"
+                           href="{{ url_for('faculty.my_students', pending=1) }}">
+                            Show pending
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {# --- Toolbar / filter bar --- #}
+            <form method="GET" action="{{ url_for('faculty.my_students') }}" class="mt-3 mb-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+
+                    {# Search input #}
+                    <input type="text" name="q" value="{{ search_q }}"
+                           placeholder="Search name or project…"
+                           class="form-control form-control-sm"
+                           style="max-width: 220px">
+
+                    {# Project class pills #}
+                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                        <a href="{{ url_for('faculty.my_students', q=search_q, year=year_filter, order=year_order, pending=show_pending) }}"
+                           class="badge rounded-pill text-decoration-none"
+                           style="border-radius: 20px; font-size: 12px; padding: 3px 11px;
+                                  {% if not pclass_filter %}background: var(--bs-primary); color: #fff; border: 1px solid var(--bs-primary);
+                                  {% else %}background: var(--bs-body-bg); color: var(--bs-body-color); border: 1px solid var(--bs-border-color);{% endif %}">
+                            All
+                        </a>
+                        {% for pc in available_pclasses %}
+                            <a href="{{ url_for('faculty.my_students', pclass_id=pc.id, q=search_q, year=year_filter, order=year_order, pending=show_pending) }}"
+                               class="badge rounded-pill text-decoration-none"
+                               style="border-radius: 20px; font-size: 12px; padding: 3px 11px;
+                                      {% if pclass_filter == pc.id %}background: var(--bs-primary); color: #fff; border: 1px solid var(--bs-primary);
+                                      {% else %}background: var(--bs-body-bg); color: var(--bs-body-color); border: 1px solid var(--bs-border-color);{% endif %}">
+                                {{ pc.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
+
+                    {# Year order select #}
+                    {% if available_years %}
+                        <select name="year" class="form-select form-select-sm" style="max-width: 160px"
+                                onchange="this.form.submit()">
+                            <option value="" {% if not year_filter %}selected{% endif %}>All years</option>
+                            {% for yr in available_years %}
+                                <option value="{{ yr }}" {% if year_filter == yr|string %}selected{% endif %}>{{ yr }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="order" class="form-select form-select-sm" style="max-width: 130px"
+                                onchange="this.form.submit()">
+                            <option value="desc" {% if year_order == 'desc' %}selected{% endif %}>Newest first</option>
+                            <option value="asc" {% if year_order == 'asc' %}selected{% endif %}>Oldest first</option>
+                        </select>
+                    {% endif %}
+
+                    {# Awaiting approval toggle #}
+                    <a href="{{ url_for('faculty.my_students', pending=(0 if show_pending else 1), pclass_id=pclass_filter, q=search_q, year=year_filter, order=year_order) }}"
+                       class="text-decoration-none"
+                       style="border-radius: 20px; font-size: 12px; padding: 3px 11px; white-space: nowrap;
+                              {% if show_pending %}background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); border: 1px solid var(--bs-warning-border-subtle);
+                              {% else %}background: var(--bs-body-bg); color: var(--bs-body-color); border: 1px solid var(--bs-border-color);{% endif %}">
+                        <i class="fas fa-clock fa-fw"></i>
+                        Awaiting approval{% if my_students_pending_count > 0 %} ({{ my_students_pending_count }}){% endif %}
+                    </a>
+
+                    {# Hidden params to preserve active filters when search is submitted #}
+                    {% if pclass_filter %}<input type="hidden" name="pclass_id" value="{{ pclass_filter }}">{% endif %}
+                    <input type="hidden" name="order" value="{{ year_order }}">
+
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-search fa-fw"></i>
+                    </button>
+                </div>
+            </form>
+
+            {# --- Record cards --- #}
+            {% for record in records %}
+                {%- set student_user = record.owner.student.user -%}
+                {%- set display_name = record.student_identifier['label'] -%}
+                {%- set config = record.period.config -%}
+                {%- set pclass = config.project_class -%}
+                {%- set mr = user_marking_reports.get(record.id) -%}
+
+                <div class="card mt-2 mb-2">
+                    <div class="card-body py-3 px-3">
+
+                        {# Top row: thumbnail + info + grade + actions #}
+                        <div class="d-flex gap-3 align-items-start">
+
+                            {# Thumbnail #}
+                            {% if record.report and record.report.small_thumbnail and not record.report.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type='submitted', asset_id=record.report_id, size='small') }}"
+                                     alt="Report thumbnail"
+                                     width="64" height="64"
+                                     style="object-fit: cover; border-radius: 6px; border: 0.5px solid var(--bs-border-color); flex-shrink: 0">
+                            {% else %}
+                                <div style="width:64px; height:64px; border-radius:6px; border:0.5px solid var(--bs-border-color);
+                                            background:var(--bs-tertiary-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0">
+                                    <i class="fas fa-file-alt fa-lg" style="color: var(--bs-secondary-color)"></i>
+                                </div>
+                            {% endif %}
+
+                            {# Student info column #}
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="fw-semibold" style="font-size: 14px; color: var(--bs-primary)">
+                                    {{ display_name }}
+                                </div>
+                                <div class="small mt-1" style="color: var(--bs-secondary-color)">
+                                    {{ pclass.name }} &middot; {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
+                                    {% if record.owner.student.programme %}
+                                        &middot; {{ record.owner.student.programme.full_name }}
+                                    {% endif %}
+                                    {% if record.owner.student.cohort %}
+                                        &middot; cohort {{ record.owner.student.cohort }}
+                                    {% endif %}
+                                </div>
+                                {% if record.project %}
+                                    <div class="small fst-italic mt-1" style="color: var(--bs-secondary-color)">
+                                        {{ record.project.name }}
+                                    </div>
+                                {% endif %}
+
+                                {# Metrics strip #}
+                                {%- set la = language_analysis_data.get(record.id) -%}
+                                {% if la %}
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        {% if la.page_count is not none %}
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
+                                                  style="font-size: 11px; font-weight: 400">
+                                                {{ la.page_count }} pp
+                                            </span>
+                                        {% endif %}
+                                        {% if la.declared_word_count is not none %}
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
+                                                  style="font-size: 11px; font-weight: 400"
+                                                  title="Declared word count">
+                                                {{ "{:,}".format(la.declared_word_count | int) }} w (declared)
+                                            </span>
+                                        {% endif %}
+                                        {% if la.measured_word_count is not none %}
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
+                                                  style="font-size: 11px; font-weight: 400"
+                                                  title="Measured word count">
+                                                {{ "{:,}".format(la.measured_word_count | int) }} w (measured)
+                                            </span>
+                                        {% endif %}
+                                        {% if la.estimated_reading_time_minutes is not none %}
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
+                                                  style="font-size: 11px; font-weight: 400">
+                                                ~{{ la.estimated_reading_time_minutes | int }} min read
+                                            </span>
+                                        {% endif %}
+                                        {% if la.figure_count is not none and la.figure_count > 0 %}
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
+                                                  style="font-size: 11px; font-weight: 400">
+                                                {{ la.figure_count }} fig{{ 's' if la.figure_count != 1 else '' }}
+                                            </span>
+                                        {% endif %}
+                                        {% if la.table_count is not none and la.table_count > 0 %}
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
+                                                  style="font-size: 11px; font-weight: 400">
+                                                {{ la.table_count }} table{{ 's' if la.table_count != 1 else '' }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {# Right column: grade + actions #}
+                            <div class="flex-shrink-0 text-end d-flex flex-column align-items-end gap-2">
+                                {% if record.report_grade is not none %}
+                                    <span class="badge bg-primary" style="font-size: 14px">
+                                        {{ record.report_grade | round(1) }}%
+                                    </span>
+                                {% endif %}
+                                <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                    {% if record.report %}
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
+                                            <i class="fas fa-download fa-fw"></i> Report
+                                        </a>
+                                    {% endif %}
+                                    {% if mr is not none %}
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#feedback-panel-{{ record.id }}">
+                                            <i class="fas fa-comment fa-fw"></i> My feedback
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Feedback collapse panel #}
+                        {% if mr is not none %}
+                            <div class="collapse mt-2" id="feedback-panel-{{ record.id }}">
+                                <div class="card card-body bg-body-tertiary small">
+                                    <a href="{{ url_for('faculty.view_feedback', id=record.id) }}"
+                                       class="text-decoration-none">
+                                        <i class="fas fa-external-link-alt fa-fw"></i>
+                                        View full feedback for this submission
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <hr class="my-2">
+
+                        {# Consent strip #}
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <span class="small text-body-secondary me-1">Permissions:</span>
+
+                            {# Exemplar consent badge #}
+                            {% if record.exemplar_consent_granted_at is none %}
+                                <span class="badge"
+                                      style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color); font-weight: 400; font-size: 12px">
+                                    Exemplar &mdash; no consent
+                                </span>
+                            {% elif record.exemplar_consent_active and record.exemplar_supervisor_approved is none %}
+                                <span class="badge border"
+                                      style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
+                                             border-color: var(--bs-warning-border-subtle) !important; font-weight: 400; font-size: 12px">
+                                    <i class="fas fa-clock fa-fw"></i> Exemplar &mdash; awaiting your approval
+                                </span>
+                            {% elif record.exemplar_fully_approved %}
+                                <span class="badge border"
+                                      style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
+                                             border-color: var(--bs-success-border-subtle) !important; font-weight: 400; font-size: 12px">
+                                    <i class="fas fa-check-circle fa-fw"></i> Exemplar &mdash; approved by you
+                                </span>
+                            {% elif record.exemplar_consent_active and record.exemplar_supervisor_approved == false %}
+                                <span class="badge"
+                                      style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color); font-weight: 400; font-size: 12px">
+                                    Exemplar &mdash; declined by you
+                                </span>
+                            {% endif %}
+
+                            {# Open day consent badge #}
+                            {% if record.openday_consent_active %}
+                                <span class="badge border"
+                                      style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
+                                             border-color: var(--bs-success-border-subtle) !important; font-weight: 400; font-size: 12px">
+                                    <i class="fas fa-check-circle fa-fw"></i> Open day &mdash; student consented
+                                </span>
+                            {% else %}
+                                <span class="badge"
+                                      style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color); font-weight: 400; font-size: 12px">
+                                    Open day &mdash; no consent
+                                </span>
+                            {% endif %}
+
+                            {# Approval collapse trigger — shown when there is something to action or a decision to manage #}
+                            {% set _has_active_consent = record.exemplar_consent_active %}
+                            {% set _has_decision = record.exemplar_supervisor_approved is not none %}
+                            {% if _has_active_consent or _has_decision %}
+                                <button class="btn btn-sm btn-outline-secondary ms-auto"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#collapse-consent-{{ record.id }}">
+                                    {% if _has_active_consent and record.exemplar_supervisor_approved is none %}
+                                        <i class="fas fa-gavel fa-fw"></i> Review <i class="fas fa-chevron-down fa-xs"></i>
+                                    {% else %}
+                                        <i class="fas fa-cog fa-fw"></i> Manage <i class="fas fa-chevron-down fa-xs"></i>
+                                    {% endif %}
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        {# Approval collapse panel #}
+                        <div class="collapse mt-2" id="collapse-consent-{{ record.id }}">
+                            {% if record.exemplar_consent_active and record.exemplar_supervisor_approved is none %}
+                                {# Pending state #}
+                                <div class="alert alert-warning d-flex align-items-start gap-3 mb-0">
+                                    <i class="fas fa-clock fa-fw mt-1 flex-shrink-0"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold mb-1">Exemplar consent awaiting your decision</div>
+                                        <div class="small mb-2">
+                                            {{ display_name }} has consented to their project being used as an exemplar.
+                                            Please approve or decline below.
+                                        </div>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <form method="POST"
+                                                  action="{{ url_for('faculty.consent_approve', record_id=record.id) }}">
+                                                {{ form.hidden_tag() }}
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check fa-fw"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form method="POST"
+                                                  action="{{ url_for('faculty.consent_decline', record_id=record.id) }}">
+                                                {{ form.hidden_tag() }}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-times fa-fw"></i> Decline
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            {% elif record.exemplar_fully_approved %}
+                                {# Approved state #}
+                                <div class="alert alert-success d-flex align-items-start gap-3 mb-0">
+                                    <i class="fas fa-check-circle fa-fw mt-1 flex-shrink-0"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold mb-1">You have approved exemplar use</div>
+                                        {% if record.exemplar_supervisor_actioned_at %}
+                                            <div class="small mb-2">
+                                                Decision recorded on {{ record.exemplar_supervisor_actioned_at.strftime('%a %d %b %Y') }}.
+                                            </div>
+                                        {% endif %}
+                                        <form method="POST"
+                                              action="{{ url_for('faculty.consent_revoke', record_id=record.id) }}">
+                                            {{ form.hidden_tag() }}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-undo fa-fw"></i> Withdraw approval
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                            {% elif record.exemplar_supervisor_approved == false %}
+                                {# Declined state #}
+                                <div class="alert alert-secondary d-flex align-items-start gap-3 mb-0">
+                                    <i class="fas fa-times-circle fa-fw mt-1 flex-shrink-0"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold mb-1">You have declined exemplar use</div>
+                                        {% if record.exemplar_supervisor_actioned_at %}
+                                            <div class="small mb-2">
+                                                Decision recorded on {{ record.exemplar_supervisor_actioned_at.strftime('%a %d %b %Y') }}.
+                                            </div>
+                                        {% endif %}
+                                        {% if record.exemplar_consent_active %}
+                                            <div class="small mb-2">The student's consent is still active; you may reconsider.</div>
+                                            <form method="POST"
+                                                  action="{{ url_for('faculty.consent_approve', record_id=record.id) }}">
+                                                {{ form.hidden_tag() }}
+                                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-undo fa-fw"></i> Reconsider (approve)
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+            {% else %}
+                <div class="card mt-3 mb-3 card-body bg-body-tertiary">
+                    <p class="text-body-secondary mb-0">
+                        {% if search_q or pclass_filter or year_filter or show_pending %}
+                            No students match the current filters.
+                        {% else %}
+                            No students with completed, graded submissions were found.
+                        {% endif %}
+                    </p>
+                </div>
+            {% endfor %}
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

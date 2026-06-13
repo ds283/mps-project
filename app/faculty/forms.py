@@ -516,3 +516,9 @@ class ApproveMarkingReportForm(Form):
     """CSRF-protected form for the approve-marking-report button."""
 
     pass
+
+
+class ActionForm(Form):
+    """CSRF-protected form for consent approval action buttons (approve/decline/revoke)."""
+
+    pass

@@ -24,7 +24,7 @@ from flask import abort, redirect, render_template, request, url_for
 from flask_security.forms import Form
 
 from ..database import db
-from ..models import ConsentAuditEvent, SubmissionRecord, SubmittingStudent, User
+from ..models import ConsentAuditEvent, SubmissionRecord, SubmissionRole, SubmittingStudent, User
 from ..models.project_class import ProjectClassConfig, SubmissionPeriodRecord
 from . import student
 
@@ -71,6 +71,76 @@ def _get_eligible_records_for_user(user: User):
     )
 
 
+def _request_supervisor_approval(record: SubmissionRecord):
+    """
+    Send a one-time approval-request email to all responsible supervisors for this record.
+    Only called when exemplar_supervisor_approved IS None — i.e. the supervisor has never
+    been contacted. Subsequent student consent changes do not trigger further emails.
+    """
+    from flask import current_app, url_for
+    from ..models import EmailTemplate, EmailWorkflow, EmailWorkflowItem
+    from ..models.emails import EmailTemplateTypesMixin, encode_email_payload
+
+    pclass = record.period.config.project_class
+    config = record.period.config
+
+    tmpl = EmailTemplate.find_template_(
+        EmailTemplateTypesMixin.CONSENT_SUPERVISOR_APPROVAL_REQUEST,
+        pclass=pclass,
+    )
+    if tmpl is None:
+        current_app.logger.warning(
+            f"No CONSENT_SUPERVISOR_APPROVAL_REQUEST template for pclass #{pclass.id}; "
+            f"supervisor approval email not sent for record #{record.id}"
+        )
+        return
+
+    supervisor_roles = record.roles.filter(
+        SubmissionRole.role.in_([
+            SubmissionRole.ROLE_SUPERVISOR,
+            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+        ])
+    ).all()
+
+    if not supervisor_roles:
+        current_app.logger.warning(
+            f"No supervisor roles found for record #{record.id}; "
+            f"supervisor approval email not sent"
+        )
+        return
+
+    workflow = EmailWorkflow.build_(
+        name=f"Exemplar approval request: record #{record.id}",
+        template=tmpl,
+        pclasses=[pclass],
+        send_time=datetime.now(),
+    )
+    db.session.add(workflow)
+    db.session.flush()
+
+    approval_url = url_for("faculty.my_students", _external=True)
+
+    for role in supervisor_roles:
+        supervisor_user = role.user
+        if supervisor_user is None or not supervisor_user.email:
+            continue
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({
+                "pclass_name": pclass.name,
+                "year_a": config.submit_year_a,
+                "year_b": config.submit_year_b,
+            }),
+            body_payload=encode_email_payload({
+                "record": record,
+                "pclass": pclass,
+                "config": config,
+                "approval_url": approval_url,
+            }),
+            recipient_list=[supervisor_user.email],
+        )
+        workflow.items.append(item)
+
+
 def _apply_consent_update(record: SubmissionRecord, actor_id, ip_address: str) -> bool:
     """
     Read consent toggle values from the current POST request and apply them
@@ -87,7 +157,8 @@ def _apply_consent_update(record: SubmissionRecord, actor_id, ip_address: str) -
     exemplar_currently_active = record.exemplar_consent_active
 
     if exemplar_new and not exemplar_currently_active:
-        if record.exemplar_consent_granted_at is None:
+        first_ever_grant = record.exemplar_consent_granted_at is None
+        if first_ever_grant:
             record.exemplar_consent_granted_at = now
         record.exemplar_consent_withdrawn = False
         record.exemplar_consent_withdrawn_at = None
@@ -100,6 +171,8 @@ def _apply_consent_update(record: SubmissionRecord, actor_id, ip_address: str) -
                 ip_address=ip_address,
             )
         )
+        if first_ever_grant and record.exemplar_supervisor_approved is None:
+            _request_supervisor_approval(record)
         changed = True
 
     elif not exemplar_new and exemplar_currently_active:

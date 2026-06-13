@@ -11,7 +11,7 @@
 from datetime import date, datetime
 from typing import Dict, List
 
-from flask import current_app, flash, jsonify, redirect, request, session, url_for
+from flask import abort, current_app, flash, jsonify, redirect, request, session, url_for
 from flask_security import current_user, roles_accepted, roles_required
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,6 +23,7 @@ from ..admin.forms import LevelSelectorForm
 from ..campaigns import check_2026_ATAS
 from ..database import db
 from ..models import (
+    ConsentAuditEvent,
     DegreeProgramme,
     DescriptionComment,
     EmailTemplate,
@@ -98,6 +99,7 @@ from ..shared.validators import (
 from ..shared.workflow_logging import log_db_commit
 from . import faculty
 from .forms import (
+    ActionForm,
     AddDescriptionFormFactory,
     AddProjectFormFactory,
     ApproveMarkingReportForm,
@@ -1839,6 +1841,95 @@ def project_preview(id):
     )
 
 
+def _get_faculty_nav_data(user):
+    """
+    Compute badge counts and shared context needed by every faculty dashboard route
+    to render the pill nav bar. Called by both dashboard() and my_students().
+    """
+    from ..models.markingevent import (
+        MarkingEventWorkflowStates,
+        SubmitterReport,
+        SubmitterReportWorkflowStates,
+        marking_report_to_responsible_supervisors,
+    )
+
+    pending_sign_off_reports = (
+        db.session.query(MarkingReport)
+        .join(
+            marking_report_to_responsible_supervisors,
+            marking_report_to_responsible_supervisors.c.marking_report_id == MarkingReport.id,
+        )
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .filter(
+            marking_report_to_responsible_supervisors.c.submission_role_id.in_(
+                db.session.query(SubmissionRole.id).filter(SubmissionRole.user_id == user.id)
+            ),
+            MarkingReport.signed_off_id.is_(None),
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
+        )
+        .all()
+    )
+
+    pending_moderator_reports = (
+        db.session.query(ModeratorReport)
+        .join(SubmissionRole, SubmissionRole.id == ModeratorReport.role_id)
+        .join(SubmitterReport, SubmitterReport.id == ModeratorReport.submitter_report_id)
+        .filter(
+            SubmissionRole.user_id == user.id,
+            ModeratorReport.report_submitted.is_(False),
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
+        )
+        .all()
+    )
+
+    pending_marking_reports = (
+        db.session.query(MarkingReport)
+        .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
+        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+        .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
+        .filter(
+            SubmissionRole.user_id == user.id,
+            MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
+            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
+            or_(
+                MarkingReport.report_submitted.isnot(True),
+                MarkingReport.feedback_submitted.isnot(True),
+            ),
+        )
+        .all()
+    )
+    actionable_marking_count = sum(1 for r in pending_marking_reports if r.marking_form_is_open)
+
+    my_students_pending_count = (
+        db.session.query(SubmissionRecord)
+        .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .filter(
+            SubmissionRole.user_id == user.id,
+            SubmissionRole.role.in_([
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]),
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+            SubmissionRecord.exemplar_consent_granted_at.isnot(None),
+            SubmissionRecord.exemplar_consent_withdrawn.is_(False),
+            SubmissionRecord.exemplar_supervisor_approved.is_(None),
+        )
+        .distinct()
+        .count()
+    )
+
+    return dict(
+        pending_sign_off_reports=pending_sign_off_reports,
+        pending_moderator_reports=pending_moderator_reports,
+        pending_marking_reports=pending_marking_reports,
+        actionable_marking_count=actionable_marking_count,
+        my_students_pending_count=my_students_pending_count,
+    )
+
+
 @faculty.route("/dashboard")
 @roles_required("faculty")
 def dashboard():
@@ -1965,45 +2056,15 @@ def dashboard():
         if include:
             messages.append(message)
 
-    # Find MarkingReports requiring sign-off by this user (ROLE_RESPONSIBLE_SUPERVISOR)
-    from ..models.markingevent import (
-        MarkingEventWorkflowStates,
-        SubmitterReport,
-        SubmitterReportWorkflowStates,
-        marking_report_to_responsible_supervisors,
-    )
-
-    pending_sign_off_reports = (
-        db.session.query(MarkingReport)
-        .join(
-            marking_report_to_responsible_supervisors,
-            marking_report_to_responsible_supervisors.c.marking_report_id == MarkingReport.id,
-        )
-        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
-        .filter(
-            marking_report_to_responsible_supervisors.c.submission_role_id.in_(
-                db.session.query(SubmissionRole.id).filter(SubmissionRole.user_id == current_user.id)
-            ),
-            MarkingReport.signed_off_id.is_(None),
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
-        )
-        .all()
-    )
-
-    # Find pending moderator reports for this user
-    pending_moderator_reports = (
-        db.session.query(ModeratorReport)
-        .join(SubmissionRole, SubmissionRole.id == ModeratorReport.role_id)
-        .join(SubmitterReport, SubmitterReport.id == ModeratorReport.submitter_report_id)
-        .filter(
-            SubmissionRole.user_id == current_user.id,
-            ModeratorReport.report_submitted.is_(False),
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
-        )
-        .all()
-    )
+    nav_data = _get_faculty_nav_data(current_user)
+    pending_sign_off_reports = nav_data["pending_sign_off_reports"]
+    pending_moderator_reports = nav_data["pending_moderator_reports"]
+    pending_marking_reports = nav_data["pending_marking_reports"]
+    actionable_marking_count = nav_data["actionable_marking_count"]
+    my_students_pending_count = nav_data["my_students_pending_count"]
 
     # Compute unique workflow attachments visible to ROLE_MODERATOR, for the moderator dashboard pane
+    from ..models.markingevent import SubmitterReportWorkflowStates
     seen_workflow_ids: set = set()
     moderator_workflow_attachments: List[Dict] = []
     for mod_report in pending_moderator_reports:
@@ -2015,30 +2076,6 @@ def dashboard():
                 files = [pa for pa in workflow.attachments if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)]
                 if files:
                     moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
-
-    # Find pending marking reports for this user (distributed or not, but not yet fully submitted),
-    # restricted to open MarkingEvents (not CLOSED).
-    pending_marking_reports = (
-        db.session.query(MarkingReport)
-        .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
-        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
-        .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
-        .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
-        .filter(
-            SubmissionRole.user_id == current_user.id,
-            MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
-            or_(
-                MarkingReport.report_submitted.isnot(True),
-                MarkingReport.feedback_submitted.isnot(True),
-            ),
-        )
-        .all()
-    )
-    # Actionable subset: distributed reports where the marking form is still open.
-    # Used for auto-navigation — undistributed reports are shown for workload planning
-    # but should not force the marking pane to the foreground.
-    actionable_marking_count = sum(1 for r in pending_marking_reports if r.marking_form_is_open)
 
     pane = request.args.get("pane", None)
     if pane is None and session.get("faculty_dashboard_pane"):
@@ -2085,11 +2122,11 @@ def dashboard():
             else:
                 pane = None
 
-    elif pane in ("marking", "signoff", "moderation"):
+    elif pane in ("marking", "signoff", "moderation", "my_students"):
         pass  # validated above; still a recognised pane
 
     else:
-        if pane != "enrolments" and pane not in enrolment_panes:
+        if pane != "enrolments" and pane != "my_students" and pane not in enrolment_panes:
             if num_enrolment_panes > 0:
                 pane = "enrolments"
             else:
@@ -2128,6 +2165,7 @@ def dashboard():
         pane_is_signoff=pane == "signoff",
         pane_is_moderation=pane == "moderation",
         pane_is_enrollment=pane == "enrolments" or pane in enrolment_panes,
+        pane_is_my_students=False,
         is_user_approver=current_user.has_role("user_approver"),
         is_project_approver=current_user.has_role("project_approver"),
         today=date.today(),
@@ -2136,7 +2174,312 @@ def dashboard():
         pending_sign_off_reports=pending_sign_off_reports,
         pending_moderator_reports=pending_moderator_reports,
         moderator_workflow_attachments=moderator_workflow_attachments,
+        my_students_pending_count=my_students_pending_count,
     )
+
+
+@faculty.route("/my_students")
+@roles_accepted("faculty", "admin", "root")
+def my_students():
+    """
+    Aggregated view of all closed SubmissionRecords where the current faculty member
+    holds ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR.
+    """
+    from sqlalchemy import desc
+
+    nav_data = _get_faculty_nav_data(current_user)
+
+    search_q = request.args.get("q", "").strip()
+    pclass_filter = request.args.get("pclass_id", type=int)
+    year_filter = request.args.get("year", "").strip()
+    year_order = request.args.get("order", "desc")
+    show_pending = request.args.get("pending", type=int, default=0)
+
+    base_q = (
+        db.session.query(SubmissionRecord)
+        .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+        .join(User, User.id == StudentData.id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+        .filter(
+            SubmissionRole.user_id == current_user.id,
+            SubmissionRole.role.in_([
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]),
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+        )
+        .distinct()
+    )
+
+    if search_q:
+        pattern = f"%{search_q}%"
+        base_q = base_q.filter(
+            or_(
+                User.first_name.ilike(pattern),
+                User.last_name.ilike(pattern),
+                SubmissionRecord.project.has(LiveProject.name.ilike(pattern)),
+            )
+        )
+
+    if pclass_filter:
+        base_q = base_q.filter(ProjectClass.id == pclass_filter)
+
+    if year_filter:
+        try:
+            yr = int(year_filter)
+            base_q = base_q.filter(ProjectClassConfig.year == yr)
+        except ValueError:
+            pass
+
+    if show_pending:
+        base_q = base_q.filter(
+            SubmissionRecord.exemplar_consent_granted_at.isnot(None),
+            SubmissionRecord.exemplar_consent_withdrawn.is_(False),
+            SubmissionRecord.exemplar_supervisor_approved.is_(None),
+        )
+
+    if year_order == "asc":
+        base_q = base_q.order_by(ProjectClassConfig.year.asc(), User.last_name.asc())
+    else:
+        base_q = base_q.order_by(ProjectClassConfig.year.desc(), User.last_name.asc())
+
+    records = base_q.limit(100).all()
+
+    available_pclasses = (
+        db.session.query(ProjectClass)
+        .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(SubmissionRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+        .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
+        .filter(
+            SubmissionRole.user_id == current_user.id,
+            SubmissionRole.role.in_([
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]),
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+        )
+        .distinct()
+        .order_by(ProjectClass.name)
+        .all()
+    )
+
+    year_rows = (
+        db.session.query(ProjectClassConfig.year)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(SubmissionRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+        .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
+        .filter(
+            SubmissionRole.user_id == current_user.id,
+            SubmissionRole.role.in_([
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]),
+            SubmissionPeriodRecord.closed.is_(True),
+            SubmissionRecord.report_grade.isnot(None),
+        )
+        .distinct()
+        .order_by(ProjectClassConfig.year.desc())
+        .all()
+    )
+    available_years = [r[0] for r in year_rows]
+
+    user_marking_reports = {}
+    for record in records:
+        mr = (
+            db.session.query(MarkingReport)
+            .join(MarkingReport.role)
+            .filter(
+                SubmissionRole.submission_id == record.id,
+                SubmissionRole.user_id == current_user.id,
+                SubmissionRole.role.in_([
+                    SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                    SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                ]),
+            )
+            .first()
+        )
+        if mr is not None:
+            user_marking_reports[record.id] = mr
+
+    # Pre-parse language analysis JSON for each record so the template avoids inline JSON parsing
+    import json as _json
+    language_analysis_data = {}
+    _la_keys = ("page_count", "declared_word_count", "measured_word_count",
+                "estimated_reading_time_minutes", "figure_count", "table_count")
+    for record in records:
+        if record.language_analysis_complete and record.language_analysis:
+            try:
+                blob = _json.loads(record.language_analysis)
+                language_analysis_data[record.id] = {k: blob.get(k) for k in _la_keys}
+            except (ValueError, TypeError):
+                pass
+
+    approvals_data = get_approval_queue_data()
+
+    return render_template_context(
+        "faculty/dashboard/my_students.html",
+        **nav_data,
+        pane="my_students",
+        pane_is_system=False,
+        pane_is_approve=False,
+        pane_is_marking=False,
+        pane_is_signoff=False,
+        pane_is_moderation=False,
+        pane_is_enrollment=False,
+        pane_is_my_students=True,
+        enrolments=[],
+        num_enrolments=0,
+        approvals_data=approvals_data,
+        is_user_approver=current_user.has_role("user_approver"),
+        is_project_approver=current_user.has_role("project_approver"),
+        root_dash_data=None,
+        today=date.today(),
+        moderator_workflow_attachments=[],
+        records=records,
+        search_q=search_q,
+        pclass_filter=pclass_filter,
+        year_filter=year_filter,
+        year_order=year_order,
+        show_pending=show_pending,
+        available_pclasses=available_pclasses,
+        available_years=available_years,
+        user_marking_reports=user_marking_reports,
+        language_analysis_data=language_analysis_data,
+        form=ActionForm(),
+    )
+
+
+@faculty.route("/consent_approve/<int:record_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def consent_approve(record_id):
+    """Approve exemplar use for a SubmissionRecord."""
+    form = ActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+
+    record = SubmissionRecord.query.get_or_404(record_id)
+    role = SubmissionRole.query.filter(
+        SubmissionRole.submission_id == record_id,
+        SubmissionRole.user_id == current_user.id,
+        SubmissionRole.role.in_([
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        ]),
+    ).first()
+    if role is None:
+        abort(403)
+
+    now = datetime.now()
+    record.exemplar_supervisor_approved = True
+    record.exemplar_supervisor_actioned_at = now
+    db.session.add(
+        ConsentAuditEvent(
+            record_id=record.id,
+            actor_id=current_user.id,
+            event_type=ConsentAuditEvent.EXEMPLAR_SUPERVISOR_APPROVED,
+            timestamp=now,
+            ip_address=request.remote_addr,
+        )
+    )
+    try:
+        log_db_commit(f"Approved exemplar use for submission record #{record.id}", user=current_user)
+        flash("Exemplar use approved.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("An error occurred saving your decision.", "danger")
+
+    return redirect(url_for("faculty.my_students"))
+
+
+@faculty.route("/consent_decline/<int:record_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def consent_decline(record_id):
+    """Decline exemplar use for a SubmissionRecord."""
+    form = ActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+
+    record = SubmissionRecord.query.get_or_404(record_id)
+    role = SubmissionRole.query.filter(
+        SubmissionRole.submission_id == record_id,
+        SubmissionRole.user_id == current_user.id,
+        SubmissionRole.role.in_([
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        ]),
+    ).first()
+    if role is None:
+        abort(403)
+
+    now = datetime.now()
+    record.exemplar_supervisor_approved = False
+    record.exemplar_supervisor_actioned_at = now
+    db.session.add(
+        ConsentAuditEvent(
+            record_id=record.id,
+            actor_id=current_user.id,
+            event_type=ConsentAuditEvent.EXEMPLAR_SUPERVISOR_DECLINED,
+            timestamp=now,
+            ip_address=request.remote_addr,
+        )
+    )
+    try:
+        log_db_commit(f"Declined exemplar use for submission record #{record.id}", user=current_user)
+        flash("Exemplar use declined.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("An error occurred saving your decision.", "danger")
+
+    return redirect(url_for("faculty.my_students"))
+
+
+@faculty.route("/consent_revoke/<int:record_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def consent_revoke(record_id):
+    """Revoke a previously given supervisor approval, resetting to unapproved state."""
+    form = ActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+
+    record = SubmissionRecord.query.get_or_404(record_id)
+    role = SubmissionRole.query.filter(
+        SubmissionRole.submission_id == record_id,
+        SubmissionRole.user_id == current_user.id,
+        SubmissionRole.role.in_([
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        ]),
+    ).first()
+    if role is None:
+        abort(403)
+
+    now = datetime.now()
+    record.exemplar_supervisor_approved = None
+    record.exemplar_supervisor_actioned_at = None
+    db.session.add(
+        ConsentAuditEvent(
+            record_id=record.id,
+            actor_id=current_user.id,
+            event_type=ConsentAuditEvent.EXEMPLAR_SUPERVISOR_REVOKED,
+            timestamp=now,
+            ip_address=request.remote_addr,
+        )
+    )
+    try:
+        log_db_commit(f"Revoked supervisor approval for submission record #{record.id}", user=current_user)
+        flash("Approval withdrawn. The record is now awaiting a new decision.", "info")
+    except Exception:
+        db.session.rollback()
+        flash("An error occurred saving your decision.", "danger")
+
+    return redirect(url_for("faculty.my_students"))
 
 
 @faculty.route("/confirm_pclass/<int:id>")

@@ -2069,7 +2069,6 @@ def dashboard_enrolment(cid):
         **data,
         pane="enrolments",
         enrolment_item=enrolment_item,
-        home_dashboard_url=url_for("faculty.dashboard"),
     )
 
 

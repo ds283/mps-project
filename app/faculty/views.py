@@ -3118,6 +3118,7 @@ def view_feedback(id):
     SubmissionRole on that record (i.e. they are a supervisor, marker, or moderator).
     """
     from ..models.markingevent import (
+        ConflationReport,
         MarkingEventWorkflowStates,
         MarkingWorkflow,
         SubmitterReport,
@@ -3153,22 +3154,26 @@ def view_feedback(id):
 
     period = record.period
 
-    # Build list of (event, submitter_report) for closed MarkingEvents associated with this period
+    # Build list of (event, submitter_reports, conflation_report) for closed MarkingEvents
     closed_events = MarkingEvent.query.filter(
         MarkingEvent.period_id == record.period_id,
         MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED,
     ).all()
     event_data = []
     for event in closed_events:
-        sr = (
+        srs = (
             record.submitter_reports.join(
                 MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
             )
             .filter(MarkingWorkflow.event_id == event.id)
-            .first()
+            .all()
         )
-        if sr is not None:
-            event_data.append((event, sr))
+        if srs:
+            cr = ConflationReport.query.filter_by(
+                marking_event_id=event.id,
+                submission_record_id=record.id,
+            ).first()
+            event_data.append((event, srs, cr))
 
     return render_template_context(
         "student/dashboard/view_feedback.html",
@@ -3176,11 +3181,11 @@ def view_feedback(id):
         period=period,
         event_data=event_data,
         FEEDBACK_AVAILABLE=SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
-        ROLE_SUPERVISOR=MarkingReport.ROLE_SUPERVISOR,
-        ROLE_RESPONSIBLE_SUPERVISOR=MarkingReport.ROLE_RESPONSIBLE_SUPERVISOR,
-        ROLE_PRESENTATION_ASSESSOR=MarkingReport.ROLE_PRESENTATION_ASSESSOR,
-        ROLE_MARKER=MarkingReport.ROLE_MARKER,
-        ROLE_MODERATOR=MarkingReport.ROLE_MODERATOR,
+        ROLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+        ROLE_RESPONSIBLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        ROLE_PRESENTATION_ASSESSOR=SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR,
+        ROLE_MARKER=SubmissionRoleTypesMixin.ROLE_MARKER,
+        ROLE_MODERATOR=SubmissionRoleTypesMixin.ROLE_MODERATOR,
         text=text,
         url=url,
     )

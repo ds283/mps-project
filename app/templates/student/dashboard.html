@@ -194,6 +194,14 @@
                 Make selections
             </a>
         </li>
+        {% if has_consent_eligible_records %}
+        <li class="nav-item">
+            <a class="nav-link {% if pane=='consent' %}active{% endif %}"
+               href="{{ url_for('student.use_of_work') }}">
+                <i class="fas fa-shield-alt fa-fw"></i> Use of your work
+            </a>
+        </li>
+        {% endif %}
     </ul>
 {% endblock %}
 

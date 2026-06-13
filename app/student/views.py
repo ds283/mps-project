@@ -13,8 +13,8 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from typing import Optional
 
-from flask import current_app, flash, jsonify, redirect, request, session, url_for
-from flask_security import current_user, roles_accepted, roles_required
+from flask import abort, current_app, flash, jsonify, redirect, request, session, url_for
+from flask_security import current_user, login_required, roles_accepted, roles_required
 from sqlalchemy import case
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import aliased
@@ -215,6 +215,10 @@ def dashboard():
         if include:
             messages.append(message)
 
+    from .consent import _get_eligible_records_for_user
+
+    has_consent_eligible_records = len(_get_eligible_records_for_user(current_user)) > 0
+
     return render_template_context(
         "student/dashboard.html",
         enrolled_classes=enrolled_pclasses,
@@ -225,7 +229,60 @@ def dashboard():
         pane=pane,
         has_selections=has_selections,
         has_submissions=has_submissions,
+        has_consent_eligible_records=has_consent_eligible_records,
         form=ReorderForm(),
+    )
+
+
+@student.route("/use_of_work", methods=["GET", "POST"])
+@login_required
+@roles_accepted("student")
+def use_of_work():
+    """
+    Authenticated consent management tab on the student dashboard.
+    Renders the same template as consent_by_token but with session auth.
+    """
+    from .consent import AuthConsentRecordForm, _apply_consent_update, _get_eligible_records_for_user
+
+    ip = request.remote_addr
+
+    form = AuthConsentRecordForm()
+
+    if form.validate_on_submit():
+        record_id = request.form.get("record_id", type=int)
+        if record_id is None:
+            abort(400)
+
+        record: SubmissionRecord = db.session.get(SubmissionRecord, record_id)
+        if record is None:
+            abort(404)
+
+        if record.owner is None or record.owner.student_id != current_user.id:
+            abort(403)
+
+        if not record.consent_eligible:
+            flash("This record is not currently eligible for consent management.", "warning")
+            return redirect(url_for("student.use_of_work"))
+
+        changed = _apply_consent_update(record, actor_id=current_user.id, ip_address=ip)
+
+        if changed:
+            log_db_commit(
+                f"Updated consent preferences for submission record #{record.id}",
+                user=current_user,
+            )
+
+        return redirect(url_for("student.use_of_work"))
+
+    records = _get_eligible_records_for_user(current_user)
+    return render_template_context(
+        "student/consent/manage.html",
+        user=current_user,
+        records=records,
+        token_mode=False,
+        token=None,
+        form=form,
+        error=None,
     )
 
 

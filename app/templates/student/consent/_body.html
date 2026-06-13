@@ -1,0 +1,166 @@
+{% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if records %}
+    {% for record in records %}
+        {% set config = record.period.config %}
+        {% set pclass = config.project_class %}
+        {% set supervisor = record.supervisor_roles[0] if record.supervisor_roles else none %}
+
+        <div class="card mt-3 mb-3">
+            <div class="card-header d-flex justify-content-between align-items-baseline"
+                 style="background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color)">
+                <div>
+                    <span class="fw-semibold" style="font-size: var(--cd-text-body)">
+                        {{ pclass.name }}
+                    </span>
+                    {% if not token_mode %}
+                        <span class="text-body-secondary ms-2" style="font-size: var(--cd-text-header-meta)">
+                            {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
+                            {% if supervisor %}
+                                &middot; {{ supervisor.user.name }}
+                            {% endif %}
+                            {% if record.project %}
+                                &middot; {{ record.project.name }}
+                            {% endif %}
+                        </span>
+                    {% else %}
+                        <span class="text-body-secondary ms-2" style="font-size: var(--cd-text-header-meta)">
+                            {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
+                        </span>
+                    {% endif %}
+                </div>
+                {% if record.report_grade is not none %}
+                    <span class="badge"
+                          style="background: var(--bs-success-bg-subtle);
+                                 color: var(--bs-success-text-emphasis);
+                                 border: 1px solid var(--bs-success-border-subtle);
+                                 font-size: var(--cd-text-micro)">
+                        {{ "%.0f"|format(record.report_grade) }}%
+                    </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if not token_mode %}
+                    <div class="alert alert-info py-2 px-3 mb-3" style="font-size: var(--cd-text-header-meta)">
+                        Please let us know whether we can use your project report.
+                        You can optionally make your report available as an exemplar or for open days.
+                    </div>
+                {% endif %}
+
+                {% if token_mode %}
+                    {% set post_url = url_for('student.consent_by_token', token=token) %}
+                {% else %}
+                    {% set post_url = url_for('student.use_of_work') %}
+                {% endif %}
+
+                <form method="POST" action="{{ post_url }}">
+                    {% if not token_mode %}
+                        {{ form.hidden_tag() }}
+                    {% endif %}
+                    <input type="hidden" name="record_id" value="{{ record.id }}">
+
+                    {# Exemplar consent row #}
+                    <div class="p-3 rounded mb-2
+                        {% if record.exemplar_consent_active %}border border-success{% else %}border{% endif %}"
+                         style="{% if record.exemplar_consent_active %}background: var(--bs-success-bg-subtle){% else %}background: var(--bs-tertiary-bg){% endif %}">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="form-check form-switch mt-1 mb-0">
+                                <input class="form-check-input" type="checkbox"
+                                       role="switch"
+                                       id="exemplar-{{ record.id }}"
+                                       name="exemplar_consent"
+                                       value="1"
+                                       {% if record.exemplar_consent_active %}checked{% endif %}
+                                       onchange="this.form.submit()">
+                            </div>
+                            <div>
+                                <label class="fw-semibold mb-1 d-block"
+                                       for="exemplar-{{ record.id }}"
+                                       style="font-size: var(--cd-text-body)">
+                                    Use as a teaching exemplar
+                                </label>
+                                <p class="mb-1 text-body-secondary" style="font-size: var(--cd-text-header-meta)">
+                                    Your report (name removed, candidate number visible) may be shared
+                                    with future cohorts as a graded example. Declining has no effect
+                                    on your assessment.
+                                </p>
+                                <span style="font-size: var(--cd-text-micro); font-weight: 500;
+                                             color: {% if record.exemplar_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
+                                    {% if record.exemplar_consent_active %}
+                                        <i class="fas fa-check fa-fw"></i>
+                                        Permission given
+                                        {% if record.exemplar_consent_granted_at %}
+                                            &middot; {{ record.exemplar_consent_granted_at.strftime("%d %b %Y") }}
+                                        {% endif %}
+                                    {% else %}
+                                        No permission given
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Open day consent row #}
+                    <div class="p-3 rounded mb-3
+                        {% if record.openday_consent_active %}border border-success{% else %}border{% endif %}"
+                         style="{% if record.openday_consent_active %}background: var(--bs-success-bg-subtle){% else %}background: var(--bs-tertiary-bg){% endif %}">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="form-check form-switch mt-1 mb-0">
+                                <input class="form-check-input" type="checkbox"
+                                       role="switch"
+                                       id="openday-{{ record.id }}"
+                                       name="openday_consent"
+                                       value="1"
+                                       {% if record.openday_consent_active %}checked{% endif %}
+                                       onchange="this.form.submit()">
+                            </div>
+                            <div>
+                                <label class="fw-semibold mb-1 d-block"
+                                       for="openday-{{ record.id }}"
+                                       style="font-size: var(--cd-text-body)">
+                                    Use at open days and promotional events
+                                </label>
+                                <p class="mb-1 text-body-secondary" style="font-size: var(--cd-text-header-meta)">
+                                    Your project title and abstract may be displayed at University
+                                    open days. Your name will not be shown. Candidate number visible.
+                                    Declining has no effect on your assessment.
+                                </p>
+                                <span style="font-size: var(--cd-text-micro); font-weight: 500;
+                                             color: {% if record.openday_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
+                                    {% if record.openday_consent_active %}
+                                        <i class="fas fa-check fa-fw"></i>
+                                        Permission given
+                                        {% if record.openday_consent_granted_at %}
+                                            &middot; {{ record.openday_consent_granted_at.strftime("%d %b %Y") }}
+                                        {% endif %}
+                                    {% else %}
+                                        No permission given
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
+                <div class="p-2 rounded border"
+                     style="background: var(--bs-secondary-bg); font-size: var(--cd-text-micro); color: var(--bs-secondary-color)">
+                    <i class="fas fa-lock fa-fw"></i>
+                    <strong>Keep your permanent consent link safe.</strong>
+                    When your account is anonymized, we will no longer be able to identify
+                    your report by your name or email address. Your consent link is your
+                    permanent way to manage your preferences.
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
+{% else %}
+    <div class="alert alert-info mt-3">
+        <i class="fas fa-info-circle fa-fw"></i>
+        You do not currently have any graded project reports for which consent
+        can be managed.
+    </div>
+{% endif %}

@@ -1,0 +1,80 @@
+{% if token_mode %}
+{# ------------------------------------------------------------------ #}
+{# Standalone unauthenticated page (token-based access)               #}
+{# ------------------------------------------------------------------ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage report permissions &mdash; MPS projects</title>
+    {{ bootstrap.load_css() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+</head>
+<body style="background: var(--bs-tertiary-bg)">
+<div class="container py-4" style="max-width: 680px">
+    <div class="mb-3">
+        <span class="fw-semibold" style="font-size: var(--cd-text-subsection)">MPS projects management</span>
+        <span class="ms-3 text-body-secondary" style="font-size: var(--cd-text-header-meta)">Limited access &middot; private link</span>
+    </div>
+    <p style="font-size: var(--cd-text-body); color: var(--bs-body-color)">
+        Manage permissions for your submitted reports
+    </p>
+    <p class="text-body-secondary" style="font-size: var(--cd-text-header-meta)">
+        You are accessing this page via a private link. You can review and update your
+        permissions below. No other features are available via this link.
+    </p>
+
+    {% include "student/consent/_body.html" %}
+
+    {% if not records %}
+        <p class="text-body-secondary mt-3" style="font-size: var(--cd-text-header-meta)">
+            <i class="fas fa-shield-alt fa-fw"></i>
+            This link is personal to you. Do not share it. For queries about how
+            your data is used, contact the School office.
+        </p>
+    {% endif %}
+</div>
+<script src="https://kit.fontawesome.com/a95036619a.js" crossorigin="anonymous"></script>
+{{ bootstrap.load_js() }}
+</body>
+</html>
+
+{% else %}
+{# ------------------------------------------------------------------ #}
+{# Authenticated page — extends the student dashboard layout           #}
+{# ------------------------------------------------------------------ #}
+{% extends "base_app.html" %}
+
+{% block title %}Use of your work{% endblock %}
+
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.dashboard', pane='submit') }}">
+                Manage running projects
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.dashboard', pane='select') }}">
+                Make selections
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('student.use_of_work') }}">
+                <i class="fas fa-shield-alt fa-fw"></i> Use of your work
+            </a>
+        </li>
+    </ul>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 col-lg-8 col-xl-7">
+                {% include "student/consent/_body.html" %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% endif %}

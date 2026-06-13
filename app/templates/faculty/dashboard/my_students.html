@@ -2,6 +2,78 @@
 
 {% block title %}My students{% endblock %}
 
+{% block scripts %}
+{{ super() }}
+<style>
+.ms-grade-chip {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-success-bg-subtle);
+    color: var(--bs-success-text-emphasis);
+    border: 1px solid var(--bs-success-border-subtle);
+    white-space: nowrap;
+}
+
+/* Metric capsules */
+.ms-metrics-row { display: flex; gap: 0.375rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.ms-metric-cap { border-radius: var(--bs-border-radius); overflow: hidden; border: 1px solid; flex-shrink: 0; }
+.ms-metric-cap.doc   { border-color: var(--bs-secondary-border-subtle); }
+.ms-metric-cap.words { border-color: var(--bs-primary-border-subtle); }
+.ms-metric-cap-label {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; padding: 0.125rem 0.5rem 0.1rem;
+    border-bottom: 1px solid;
+}
+.ms-metric-cap.doc   .ms-metric-cap-label { color: var(--bs-secondary-color);       background: var(--bs-tertiary-bg);       border-color: var(--bs-secondary-border-subtle); }
+.ms-metric-cap.words .ms-metric-cap-label { color: var(--bs-primary-text-emphasis); background: var(--bs-primary-bg-subtle); border-color: var(--bs-primary-border-subtle); }
+.ms-metric-cap-body { display: flex; }
+.ms-metric-cap.doc   .ms-metric-cap-body { background: var(--bs-tertiary-bg); }
+.ms-metric-cap.words .ms-metric-cap-body { background: var(--bs-primary-bg-subtle); }
+.ms-m-item { text-align: center; padding: 0.2rem 0.5rem 0.25rem; }
+.ms-m-sep  { width: 1px; align-self: stretch; margin: 0.2rem 0; }
+.ms-metric-cap.doc   .ms-m-sep { background: var(--bs-secondary-border-subtle); }
+.ms-metric-cap.words .ms-m-sep { background: var(--bs-primary-border-subtle); }
+.ms-m-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: .04em; line-height: 1.2; }
+.ms-metric-cap.doc   .ms-m-lbl { color: var(--bs-secondary-color); }
+.ms-metric-cap.words .ms-m-lbl { color: var(--bs-primary-text-emphasis); }
+.ms-m-val { font-size: 0.9rem; font-weight: 600; line-height: 1.3; color: var(--bs-body-color); }
+
+/* Group headers */
+.ms-group-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.375rem 0.75rem;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+    font-size: 0.8rem;
+}
+.ms-group-head-name { font-weight: 600; color: var(--bs-body-color); }
+.ms-group-head-meta { color: var(--bs-secondary-color); display: flex; align-items: center; gap: 0.5rem; }
+.ms-pending-pill {
+    background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
+    border: 1px solid var(--bs-warning-border-subtle);
+    border-radius: 20px; padding: 1px 8px; font-size: 0.7rem; font-weight: 500;
+}
+
+/* Pager */
+.ms-pager { display: flex; align-items: center; justify-content: space-between;
+            padding: .5rem 0; font-size: 0.8rem; color: var(--bs-secondary-color);
+            margin-top: 0.5rem; border-top: 1px solid var(--bs-border-color); }
+.ms-pager-btn { font-size: 0.8rem; padding: 0.1875rem 0.5625rem;
+                border-radius: var(--bs-border-radius-sm);
+                border: 1px solid var(--bs-border-color);
+                background: var(--bs-body-bg); color: var(--bs-body-color);
+                text-decoration: none; display: inline-block; }
+.ms-pager-btn:hover { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+.ms-pager-btn.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+.ms-pager-btn.disabled { pointer-events: none; opacity: .45; }
+.ms-pager-btns { display: flex; gap: 0.25rem; }
+</style>
+{% endblock %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-1"></div>
@@ -54,7 +126,7 @@
                         {% endfor %}
                     </div>
 
-                    {# Year order select #}
+                    {# Year and order selects #}
                     {% if available_years %}
                         <select name="year" class="form-select form-select-sm" style="max-width: 160px"
                                 onchange="this.form.submit()">
@@ -69,6 +141,14 @@
                             <option value="asc" {% if year_order == 'asc' %}selected{% endif %}>Oldest first</option>
                         </select>
                     {% endif %}
+
+                    {# Per-page selector #}
+                    <select name="per_page" class="form-select form-select-sm" style="max-width: 100px"
+                            onchange="this.form.submit()" aria-label="Records per page">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 / page</option>
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20 / page</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
+                    </select>
 
                     {# Awaiting approval toggle #}
                     <a href="{{ url_for('faculty.my_students', pending=(0 if show_pending else 1), pclass_id=pclass_filter, q=search_q, year=year_filter, order=year_order) }}"
@@ -91,14 +171,36 @@
             </form>
 
             {# --- Record cards --- #}
+            {% set ns = namespace(prev_group_key=none) %}
             {% for record in records %}
                 {%- set student_user = record.owner.student.user -%}
-                {%- set display_name = record.student_identifier['label'] -%}
+                {%- set display_name = student_user.name -%}
                 {%- set config = record.period.config -%}
                 {%- set pclass = config.project_class -%}
                 {%- set mr = user_marking_reports.get(record.id) -%}
+                {%- set la = language_analysis_data.get(record.id) -%}
+                {%- set group_key = pclass.id ~ '-' ~ config.year -%}
+                {%- set next_record = records[loop.index0 + 1] if loop.index0 + 1 < records | length else none -%}
+                {%- set is_last_in_group = next_record is none or (next_record.period.config.project_class.id ~ '-' ~ next_record.period.config.year) != group_key -%}
 
-                <div class="card mt-2 mb-2">
+                {# Group header — emitted on group key change #}
+                {% if group_key != ns.prev_group_key %}
+                    {%- set pending_in_group = group_pending_counts.get((pclass.id, config.year), 0) -%}
+                    <div class="ms-group-head {% if not loop.first %}mt-3{% endif %}">
+                        <span class="ms-group-head-name">{{ pclass.name }}</span>
+                        <span class="ms-group-head-meta">
+                            {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
+                            {% if pending_in_group > 0 %}
+                                <span class="ms-pending-pill">{{ pending_in_group }} awaiting approval</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {%- set ns.prev_group_key = group_key -%}
+                {% endif %}
+
+                {%- set card_radius = "0 0 var(--bs-border-radius) var(--bs-border-radius)" if is_last_in_group else "0" -%}
+                <div class="card border-top-0 {% if is_last_in_group %}mb-2{% else %}mb-0{% endif %}"
+                     style="border-radius: {{ card_radius }}">
                     <div class="card-body py-3 px-3">
 
                         {# Top row: thumbnail + info + grade + actions #}
@@ -137,48 +239,68 @@
                                     </div>
                                 {% endif %}
 
-                                {# Metrics strip #}
-                                {%- set la = language_analysis_data.get(record.id) -%}
+                                {# Metric capsules #}
                                 {% if la %}
-                                    <div class="d-flex flex-wrap gap-2 mt-2">
-                                        {% if la.page_count is not none %}
-                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
-                                                  style="font-size: 11px; font-weight: 400">
-                                                {{ la.page_count }} pp
-                                            </span>
+                                    <div class="ms-metrics-row">
+
+                                        {# Document capsule: pages · read time · figures · tables #}
+                                        <div class="ms-metric-cap doc">
+                                            <div class="ms-metric-cap-label">Document</div>
+                                            <div class="ms-metric-cap-body">
+                                                {% if la.page_count is not none %}
+                                                    <div class="ms-m-item">
+                                                        <div class="ms-m-val">{{ la.page_count }}</div>
+                                                        <div class="ms-m-lbl">pp</div>
+                                                    </div>
+                                                {% endif %}
+                                                {% if la.estimated_reading_time_minutes is not none %}
+                                                    {% if la.page_count is not none %}<div class="ms-m-sep"></div>{% endif %}
+                                                    <div class="ms-m-item">
+                                                        <div class="ms-m-val">~{{ la.estimated_reading_time_minutes | int }}</div>
+                                                        <div class="ms-m-lbl">min read</div>
+                                                    </div>
+                                                {% endif %}
+                                                {% if la.figure_count is not none and la.figure_count > 0 %}
+                                                    <div class="ms-m-sep"></div>
+                                                    <div class="ms-m-item">
+                                                        <div class="ms-m-val">{{ la.figure_count }}</div>
+                                                        <div class="ms-m-lbl">fig{{ 's' if la.figure_count != 1 else '' }}</div>
+                                                    </div>
+                                                {% endif %}
+                                                {% if la.table_count is not none and la.table_count > 0 %}
+                                                    <div class="ms-m-sep"></div>
+                                                    <div class="ms-m-item">
+                                                        <div class="ms-m-val">{{ la.table_count }}</div>
+                                                        <div class="ms-m-lbl">table{{ 's' if la.table_count != 1 else '' }}</div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        {# Word count capsule: declared · measured #}
+                                        {% if la.declared_word_count is not none or la.measured_word_count is not none %}
+                                            <div class="ms-metric-cap words">
+                                                <div class="ms-metric-cap-label">Words</div>
+                                                <div class="ms-metric-cap-body">
+                                                    {% if la.declared_word_count is not none %}
+                                                        <div class="ms-m-item">
+                                                            <div class="ms-m-val">{{ "{:,}".format(la.declared_word_count | int) }}</div>
+                                                            <div class="ms-m-lbl">declared</div>
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if la.declared_word_count is not none and la.measured_word_count is not none %}
+                                                        <div class="ms-m-sep"></div>
+                                                    {% endif %}
+                                                    {% if la.measured_word_count is not none %}
+                                                        <div class="ms-m-item">
+                                                            <div class="ms-m-val">{{ "{:,}".format(la.measured_word_count | int) }}</div>
+                                                            <div class="ms-m-lbl">measured</div>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                         {% endif %}
-                                        {% if la.declared_word_count is not none %}
-                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
-                                                  style="font-size: 11px; font-weight: 400"
-                                                  title="Declared word count">
-                                                {{ "{:,}".format(la.declared_word_count | int) }} w (declared)
-                                            </span>
-                                        {% endif %}
-                                        {% if la.measured_word_count is not none %}
-                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
-                                                  style="font-size: 11px; font-weight: 400"
-                                                  title="Measured word count">
-                                                {{ "{:,}".format(la.measured_word_count | int) }} w (measured)
-                                            </span>
-                                        {% endif %}
-                                        {% if la.estimated_reading_time_minutes is not none %}
-                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
-                                                  style="font-size: 11px; font-weight: 400">
-                                                ~{{ la.estimated_reading_time_minutes | int }} min read
-                                            </span>
-                                        {% endif %}
-                                        {% if la.figure_count is not none and la.figure_count > 0 %}
-                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
-                                                  style="font-size: 11px; font-weight: 400">
-                                                {{ la.figure_count }} fig{{ 's' if la.figure_count != 1 else '' }}
-                                            </span>
-                                        {% endif %}
-                                        {% if la.table_count is not none and la.table_count > 0 %}
-                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"
-                                                  style="font-size: 11px; font-weight: 400">
-                                                {{ la.table_count }} table{{ 's' if la.table_count != 1 else '' }}
-                                            </span>
-                                        {% endif %}
+
                                     </div>
                                 {% endif %}
                             </div>
@@ -186,9 +308,7 @@
                             {# Right column: grade + actions #}
                             <div class="flex-shrink-0 text-end d-flex flex-column align-items-end gap-2">
                                 {% if record.report_grade is not none %}
-                                    <span class="badge bg-primary" style="font-size: 14px">
-                                        {{ record.report_grade | round(1) }}%
-                                    </span>
+                                    <span class="ms-grade-chip">{{ record.report_grade | round(1) }}%</span>
                                 {% endif %}
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
                                     {% if record.report %}
@@ -198,14 +318,51 @@
                                         </a>
                                     {% endif %}
                                     {% if mr is not none %}
-                                        <a class="btn btn-sm btn-outline-secondary"
-                                           href="{{ url_for('faculty.view_feedback', id=record.id) }}">
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#collapse-feedback-{{ record.id }}"
+                                                aria-expanded="false">
                                             <i class="fas fa-comment fa-fw"></i> My feedback
+                                        </button>
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ url_for('faculty.view_feedback', id=record.id) }}"
+                                           title="Open full feedback page">
+                                            <i class="fas fa-external-link-alt fa-fw"></i>
                                         </a>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
+
+                        {# Inline feedback collapse panel #}
+                        {% if mr is not none %}
+                            <div class="collapse mt-2" id="collapse-feedback-{{ record.id }}">
+                                <div class="p-3 rounded border"
+                                     style="background: var(--bs-tertiary-bg); font-size: 0.875rem">
+                                    <div class="fw-semibold text-body-secondary small text-uppercase mb-2"
+                                         style="letter-spacing: .04em">
+                                        Your feedback
+                                    </div>
+                                    {% if mr.feedback_positive %}
+                                        <p class="fw-semibold text-body-secondary small text-uppercase mb-1"
+                                           style="letter-spacing: .04em">What was good?</p>
+                                        <div class="mb-3">{{ mr.feedback_positive | safe }}</div>
+                                    {% endif %}
+                                    {% if mr.feedback_positive and mr.feedback_improvement %}
+                                        <hr class="my-2">
+                                    {% endif %}
+                                    {% if mr.feedback_improvement %}
+                                        <p class="fw-semibold text-body-secondary small text-uppercase mb-1"
+                                           style="letter-spacing: .04em">Suggestions for improvement</p>
+                                        <div>{{ mr.feedback_improvement | safe }}</div>
+                                    {% endif %}
+                                    {% if not mr.feedback_positive and not mr.feedback_improvement %}
+                                        <span class="text-body-secondary small">No feedback text submitted.</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
 
                         <hr class="my-2">
 
@@ -231,7 +388,7 @@
                                              border-color: var(--bs-success-border-subtle) !important; font-weight: 400; font-size: 12px">
                                     <i class="fas fa-check-circle fa-fw"></i> Exemplar &mdash; approved by you
                                 </span>
-                            {% elif record.exemplar_consent_active and record.exemplar_supervisor_approved == false %}
+                            {% elif record.exemplar_consent_active and record.exemplar_supervisor_approved is sameas false %}
                                 <span class="badge"
                                       style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color); font-weight: 400; font-size: 12px">
                                     Exemplar &mdash; declined by you
@@ -252,7 +409,7 @@
                                 </span>
                             {% endif %}
 
-                            {# Approval collapse trigger — shown when there is something to action or a decision to manage #}
+                            {# Approval collapse trigger #}
                             {% set _has_active_consent = record.exemplar_consent_active %}
                             {% set _has_decision = record.exemplar_supervisor_approved is not none %}
                             {% if _has_active_consent or _has_decision %}
@@ -272,7 +429,6 @@
                         {# Approval collapse panel #}
                         <div class="collapse mt-2" id="collapse-consent-{{ record.id }}">
                             {% if record.exemplar_consent_active and record.exemplar_supervisor_approved is none %}
-                                {# Pending state #}
                                 <div class="alert alert-warning d-flex align-items-start gap-3 mb-0">
                                     <i class="fas fa-clock fa-fw mt-1 flex-shrink-0"></i>
                                     <div class="flex-grow-1">
@@ -301,7 +457,6 @@
                                 </div>
 
                             {% elif record.exemplar_fully_approved %}
-                                {# Approved state #}
                                 <div class="alert alert-success d-flex align-items-start gap-3 mb-0">
                                     <i class="fas fa-check-circle fa-fw mt-1 flex-shrink-0"></i>
                                     <div class="flex-grow-1">
@@ -321,8 +476,7 @@
                                     </div>
                                 </div>
 
-                            {% elif record.exemplar_supervisor_approved == false %}
-                                {# Declined state #}
+                            {% elif record.exemplar_supervisor_approved is sameas false %}
                                 <div class="alert alert-secondary d-flex align-items-start gap-3 mb-0">
                                     <i class="fas fa-times-circle fa-fw mt-1 flex-shrink-0"></i>
                                     <div class="flex-grow-1">
@@ -360,6 +514,37 @@
                     </p>
                 </div>
             {% endfor %}
+
+            {# Pager #}
+            {% if total_pages > 1 %}
+                {% macro page_url(p) %}{{ url_for('faculty.my_students',
+                    page=p, per_page=per_page, q=search_q,
+                    pclass_id=pclass_filter, year=year_filter,
+                    order=year_order, pending=show_pending) }}{% endmacro %}
+
+                <div class="ms-pager mt-3">
+                    <span>Showing {{ page_start_idx }}&ndash;{{ page_end_idx }} of {{ total_records }}</span>
+                    <div class="ms-pager-btns">
+                        <a href="{{ page_url(page - 1) }}"
+                           class="ms-pager-btn {% if page <= 1 %}disabled{% endif %}">
+                            <i class="fas fa-chevron-left fa-xs"></i>
+                        </a>
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                                <span class="ms-pager-btn active">{{ p }}</span>
+                            {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                                <a href="{{ page_url(p) }}" class="ms-pager-btn">{{ p }}</a>
+                            {% elif p == page - 3 or p == page + 3 %}
+                                <span class="ms-pager-btn disabled">&hellip;</span>
+                            {% endif %}
+                        {% endfor %}
+                        <a href="{{ page_url(page + 1) }}"
+                           class="ms-pager-btn {% if page >= total_pages %}disabled{% endif %}">
+                            <i class="fas fa-chevron-right fa-xs"></i>
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
 
         </div>
         <div class="col-1"></div>

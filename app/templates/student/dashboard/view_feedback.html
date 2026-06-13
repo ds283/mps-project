@@ -1,5 +1,33 @@
 {% extends "base_app.html" %}
 
+{% block scripts %}
+{{ super() }}
+<style>
+.vf-feedback-head {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.375rem;
+    margin-top: 0.125rem;
+}
+.vf-feedback-body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--bs-body-color);
+    margin-bottom: 0.75rem;
+}
+.vf-card-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+}
+</style>
+{% endblock %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-1"></div>
@@ -105,21 +133,21 @@
                                                 {# ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR #}
                                                 {% set assessor_label = "Feedback from " ~ mr.role.user.name %}
                                             {% endif %}
-                                            <div class="card mt-2 mb-2 border-secondary-subtle">
-                                                <div class="card-header bg-light">
+                                            <div class="card mt-3 mb-2">
+                                                <div class="card-header vf-card-header">
                                                     {{ assessor_label }}
                                                 </div>
                                                 <div class="card-body">
                                                     {% if mr.feedback_positive %}
-                                                        <span class="dashboard-subtitle">What was good?</span>
-                                                        {{ mr.feedback_positive | safe }}
+                                                        <span class="vf-feedback-head">What was good?</span>
+                                                        <div class="vf-feedback-body">{{ mr.feedback_positive | safe }}</div>
                                                     {% endif %}
                                                     {% if mr.feedback_positive and mr.feedback_improvement %}
-                                                        <hr class="intro-divider">
+                                                        <hr class="my-3">
                                                     {% endif %}
                                                     {% if mr.feedback_improvement %}
-                                                        <span class="dashboard-subtitle">Suggestions for improvement</span>
-                                                        {{ mr.feedback_improvement | safe }}
+                                                        <span class="vf-feedback-head">Suggestions for improvement</span>
+                                                        <div class="vf-feedback-body">{{ mr.feedback_improvement | safe }}</div>
                                                     {% endif %}
                                                 </div>
                                             </div>

@@ -2087,6 +2087,10 @@ def my_students():
     year_filter = request.args.get("year", "").strip()
     year_order = request.args.get("order", "desc")
     show_pending = request.args.get("pending", type=int, default=0)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    if per_page not in (10, 20, 50):
+        per_page = 20
 
     base_q = (
         db.session.query(SubmissionRecord)
@@ -2140,7 +2144,11 @@ def my_students():
     else:
         base_q = base_q.order_by(ProjectClassConfig.year.desc(), User.last_name.asc())
 
-    records = base_q.limit(100).all()
+    total_records = base_q.count()
+    records = base_q.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = max(1, (total_records + per_page - 1) // per_page)
+    page_start_idx = (page - 1) * per_page + 1
+    page_end_idx = min(page * per_page, total_records)
 
     available_pclasses = (
         db.session.query(ProjectClass)
@@ -2198,6 +2206,14 @@ def my_students():
         if mr is not None:
             user_marking_reports[record.id] = mr
 
+    group_pending_counts = {}
+    for record in records:
+        pclass_id = record.period.config.project_class.id
+        year = record.period.config.year
+        key = (pclass_id, year)
+        if record.exemplar_consent_active and record.exemplar_supervisor_approved is None:
+            group_pending_counts[key] = group_pending_counts.get(key, 0) + 1
+
     language_analysis_data = {}
     for record in records:
         if record.language_analysis_complete:
@@ -2244,6 +2260,13 @@ def my_students():
         available_years=available_years,
         user_marking_reports=user_marking_reports,
         language_analysis_data=language_analysis_data,
+        group_pending_counts=group_pending_counts,
+        page=page,
+        per_page=per_page,
+        total_records=total_records,
+        total_pages=total_pages,
+        page_start_idx=page_start_idx,
+        page_end_idx=page_end_idx,
         form=ActionForm(),
     )
 

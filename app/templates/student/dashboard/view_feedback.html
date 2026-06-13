@@ -35,26 +35,27 @@
                             </div>
                         {% else %}
                             {# Conflated grades #}
-                            {% set grade_dict = conflation_report.conflation_report_as_dict %}
-                            {% if grade_dict %}
-                                <div class="mb-3">
-                                    <span class="small text-body-secondary fw-semibold me-2">Grades</span>
-                                    <div class="d-flex flex-row flex-wrap gap-3 mt-1">
-                                        {% for target, value in grade_dict.items() %}
-                                            {% if value is not none %}
-                                                <div class="d-flex flex-column align-items-center border rounded px-3 py-2 bg-light">
-                                                    <span class="small text-body-secondary text-capitalize">{{ target }}</span>
-                                                    <span class="fw-bold text-success fs-5">{{ value | round(1) }}%</span>
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
+                            {% if conflation_report %}
+                                {% set grade_dict = conflation_report.conflation_report_as_dict %}
+                                {% if grade_dict %}
+                                    <div class="mb-3">
+                                        <span class="small text-body-secondary fw-semibold me-2">Grades</span>
+                                        <div class="d-flex flex-row flex-wrap gap-3 mt-1">
+                                            {% for target, value in grade_dict.items() %}
+                                                {% if value is not none %}
+                                                    <div class="d-flex flex-column align-items-center border rounded px-3 py-2 bg-light">
+                                                        <span class="small text-body-secondary text-capitalize">{{ target }}</span>
+                                                        <span class="fw-bold text-success fs-5">{{ value | round(1) }}%</span>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
                                     </div>
-                                </div>
-                            {% endif %}
+                                {% endif %}
 
-                            {# Feedback report downloads #}
-                            {% set feedback_reports = conflation_report.feedback_reports.all() %}
-                            {% if feedback_reports | length > 0 %}
+                                {# Feedback report downloads #}
+                                {% set feedback_reports = conflation_report.feedback_reports.all() %}
+                                {% if feedback_reports | length > 0 %}
                                 <div class="mb-3 d-flex flex-row flex-wrap gap-2 align-items-center">
                                     <span class="small text-body-secondary fw-semibold">Feedback report:</span>
                                     {% for fr in feedback_reports %}
@@ -75,6 +76,7 @@
                                         {% endif %}
                                     {% endfor %}
                                 </div>
+                                {% endif %}
                             {% endif %}
 
                             {# Per-assessor feedback #}

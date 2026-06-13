@@ -853,6 +853,46 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # any comments on the report that can be exposed in the UI when offered as an exemplar
     exemplar_comment = db.Column(db.Text(), default=None)
 
+    # CONSENT WORKFLOW
+
+    # --- Exemplar consent ---
+    # Null = student has never consented. Set once on first grant; never reset
+    # on subsequent withdrawal/re-grant cycles. Used as the sentinel to trigger
+    # the one-time supervisor approval email.
+    exemplar_consent_granted_at = db.Column(db.DateTime(), default=None, nullable=True)
+
+    # True = student has currently withdrawn consent. Active consent state is:
+    #   exemplar_consent_granted_at IS NOT NULL AND exemplar_consent_withdrawn == False
+    exemplar_consent_withdrawn = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # Timestamp of the most recent withdrawal (convenience field; full history
+    # is in ConsentAuditEvent).
+    exemplar_consent_withdrawn_at = db.Column(db.DateTime(), default=None, nullable=True)
+
+    # Supervisor approval for exemplar use. None = not yet actioned (or not yet
+    # requested because student has never consented). True = approved. False = declined.
+    # Set on first supervisor response; can be updated via the faculty My Students UI.
+    # NOT reset when the student withdraws and re-grants consent.
+    exemplar_supervisor_approved = db.Column(db.Boolean(), default=None, nullable=True)
+
+    # Timestamp of the most recent supervisor approval/decline action.
+    exemplar_supervisor_actioned_at = db.Column(db.DateTime(), default=None, nullable=True)
+
+    # --- Open day consent --- (parallel structure; no supervisor approval step)
+    openday_consent_granted_at = db.Column(db.DateTime(), default=None, nullable=True)
+    openday_consent_withdrawn = db.Column(db.Boolean(), default=False, nullable=False)
+    openday_consent_withdrawn_at = db.Column(db.DateTime(), default=None, nullable=True)
+
+    # --- Invitation tracking ---
+    # Set by the Celery callback after the consent invitation EmailWorkflowItem
+    # is successfully delivered. Null = not yet invited. The convenor UI uses
+    # this to distinguish "eligible but uninvited" from "invited, awaiting response".
+    consent_invitation_sent_at = db.Column(db.DateTime(), default=None, nullable=True)
+
+    # Timestamp of the one automatic reminder. The convenor can manually re-dispatch
+    # after this but is warned a reminder has already been sent.
+    consent_reminder_sent_at = db.Column(db.DateTime(), default=None, nullable=True)
+
     # attachments incorporated via back-reference under 'attachments' data member
 
     # LANGUAGE ANALYSIS
@@ -1074,6 +1114,42 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             and self.owner is not None
             and self.owner.canvas_user_id is not None
         )
+
+    @property
+    def consent_eligible(self) -> bool:
+        """
+        True if this record is eligible to receive a consent invitation:
+        the submission period is closed AND report_grade is not None.
+        """
+        return (
+            self.period is not None
+            and self.period.closed
+            and self.report_grade is not None
+        )
+
+    @property
+    def exemplar_consent_active(self) -> bool:
+        """True if the student has given active (non-withdrawn) exemplar consent."""
+        return (
+            self.exemplar_consent_granted_at is not None
+            and not self.exemplar_consent_withdrawn
+        )
+
+    @property
+    def openday_consent_active(self) -> bool:
+        """True if the student has given active (non-withdrawn) open day consent."""
+        return (
+            self.openday_consent_granted_at is not None
+            and not self.openday_consent_withdrawn
+        )
+
+    @property
+    def exemplar_fully_approved(self) -> bool:
+        """
+        True if the record is eligible for exemplar use: student has active consent
+        AND the supervisor has approved.
+        """
+        return self.exemplar_consent_active and self.exemplar_supervisor_approved is True
 
     @property
     def submission_period(self):
@@ -3341,3 +3417,75 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
             name="uq_custom_offer_hint_selector_record",
         ),
     )
+
+
+class ConsentAuditEvent(db.Model):
+    """
+    Immutable audit log of all consent state changes for a SubmissionRecord.
+    One row per change event; never updated or deleted.
+    """
+
+    __tablename__ = "consent_audit_events"
+
+    # --- Event type constants ---
+    EXEMPLAR_GRANTED = 1
+    EXEMPLAR_WITHDRAWN = 2
+    EXEMPLAR_SUPERVISOR_APPROVED = 3
+    EXEMPLAR_SUPERVISOR_DECLINED = 4
+    EXEMPLAR_SUPERVISOR_REVOKED = 5
+    OPENDAY_GRANTED = 10
+    OPENDAY_WITHDRAWN = 11
+
+    _EVENT_LABELS = {
+        1: "Exemplar consent granted",
+        2: "Exemplar consent withdrawn",
+        3: "Exemplar supervisor approved",
+        4: "Exemplar supervisor declined",
+        5: "Exemplar supervisor approval revoked",
+        10: "Open day consent granted",
+        11: "Open day consent withdrawn",
+    }
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning submission record
+    record_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("submission_records.id"),
+        nullable=False,
+        index=True,
+    )
+    record = db.relationship(
+        "SubmissionRecord",
+        foreign_keys=[record_id],
+        uselist=False,
+        backref=db.backref("consent_audit_events", lazy="dynamic"),
+    )
+
+    # the user who made the change (student or faculty member);
+    # nullable because token-authenticated requests have no session user
+    actor_id = db.Column(
+        db.Integer(), db.ForeignKey("users.id"), nullable=True
+    )
+    actor = db.relationship("User", foreign_keys=[actor_id], uselist=False)
+
+    # event type — one of the constants above
+    event_type = db.Column(db.Integer(), nullable=False, index=True)
+
+    # UTC timestamp of the event
+    timestamp = db.Column(
+        db.DateTime(), nullable=False, default=datetime.now, index=True
+    )
+
+    # optional free-text note (e.g. reason for supervisor decline)
+    note = db.Column(db.Text(collation="utf8_bin"), default=None, nullable=True)
+
+    # IP address of the requesting client (best-effort; may be None for
+    # server-side Celery-triggered events)
+    ip_address = db.Column(
+        db.String(45, collation="utf8_bin"), default=None, nullable=True
+    )
+
+    @property
+    def event_label(self) -> str:
+        return self._EVENT_LABELS.get(self.event_type, f"Unknown event ({self.event_type})")

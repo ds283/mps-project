@@ -209,6 +209,17 @@ class User(db.Model, UserMixin):
     # Timestamp of last Box token update.
     box_updated_at = db.Column(db.DateTime(), default=datetime.now, onupdate=datetime.now, nullable=True)
 
+    # Token for the unauthenticated consent management route /consent/<token>.
+    # Generated eagerly when the consent invitation email is dispatched.
+    # Persists through Tier 1 and Tier 2 anonymisation — must never be nulled.
+    consent_token = db.Column(
+        db.String(36, collation="utf8_bin"),
+        unique=True,
+        index=True,
+        default=None,
+        nullable=True,
+    )
+
     # KEEP-ALIVE TRACKING
 
     # keep track of when this user was last active on the site

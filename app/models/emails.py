@@ -130,6 +130,11 @@ class EmailTemplateTypesMixin:
     # attendance reminder
     ATTENDANCE_PROMPT = 44
 
+    # consent workflow
+    CONSENT_INVITATION = 70
+    CONSENT_REMINDER = 71
+    CONSENT_SUPERVISOR_APPROVAL_REQUEST = 72
+
 
 # Human-readable names for each template type
 _TYPE_NAMES = {
@@ -186,6 +191,9 @@ _TYPE_NAMES = {
     EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED: "Student notifications: Choices received",
     EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY: "Student notifications: Choices received (proxy)",
     EmailTemplateTypesMixin.ATTENDANCE_PROMPT: "Attendance: Prompt",
+    EmailTemplateTypesMixin.CONSENT_INVITATION: "Consent: Student invitation",
+    EmailTemplateTypesMixin.CONSENT_REMINDER: "Consent: Student reminder",
+    EmailTemplateTypesMixin.CONSENT_SUPERVISOR_APPROVAL_REQUEST: "Consent: Supervisor approval request",
 }
 
 TENANT_SPECIALIZABLE_TEMPLATES = [

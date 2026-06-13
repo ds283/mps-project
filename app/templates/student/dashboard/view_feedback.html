@@ -27,7 +27,7 @@
                         <strong>{{ event.name }}</strong>
                     </div>
                     <div class="card-body">
-                        {% if conflation_report is none or not conflation_report.feedback_sent %}
+                        {% if not (submitter_reports | selectattr('workflow_state', 'equalto', FEEDBACK_AVAILABLE) | list) %}
                             <div class="alert alert-secondary mb-0">
                                 <i class="fas fa-hourglass-half me-2"></i>
                                 Quality assurance for this event is still in progress. Feedback will be available once
@@ -80,15 +80,18 @@
                             {# Per-assessor feedback #}
                             {% set ns = namespace(marker_count=0, has_any_feedback=false) %}
                             {% for sr in submitter_reports %}
-                                {% for mr in sr.marking_reports.all() %}
-                                    {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
-                                        {% set ns.has_any_feedback = true %}
-                                    {% endif %}
-                                {% endfor %}
+                                {% if sr.workflow_state == FEEDBACK_AVAILABLE %}
+                                    {% for mr in sr.marking_reports.all() %}
+                                        {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
+                                            {% set ns.has_any_feedback = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
                             {% endfor %}
 
                             {% if ns.has_any_feedback %}
                                 {% for sr in submitter_reports %}
+                                    {% if sr.workflow_state == FEEDBACK_AVAILABLE %}
                                     {% for mr in sr.marking_reports.all() %}
                                         {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
                                             {% if mr.role.role == ROLE_MARKER %}
@@ -120,6 +123,7 @@
                                             </div>
                                         {% endif %}
                                     {% endfor %}
+                                    {% endif %}
                                 {% endfor %}
                             {% else %}
                                 <div class="text-body-secondary small">No individual feedback has been submitted for

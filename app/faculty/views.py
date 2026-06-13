@@ -2211,7 +2211,6 @@ def my_students():
                 SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
             ]),
             SubmissionPeriodRecord.closed.is_(True),
-            SubmissionRecord.report_grade.isnot(None),
         )
         .distinct()
     )
@@ -2263,7 +2262,6 @@ def my_students():
                 SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
             ]),
             SubmissionPeriodRecord.closed.is_(True),
-            SubmissionRecord.report_grade.isnot(None),
         )
         .distinct()
         .order_by(ProjectClass.name)
@@ -2282,7 +2280,6 @@ def my_students():
                 SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
             ]),
             SubmissionPeriodRecord.closed.is_(True),
-            SubmissionRecord.report_grade.isnot(None),
         )
         .distinct()
         .order_by(ProjectClassConfig.year.desc())
@@ -2321,6 +2318,44 @@ def my_students():
             except (ValueError, TypeError):
                 pass
 
+    enrolments = []
+    fd = current_user.faculty_data
+    if fd is not None:
+        for enrol_record in fd.ordered_enrollments:
+            enrol_pclass = enrol_record.pclass
+            enrol_config = enrol_pclass.most_recent_config
+
+            if enrol_pclass.active and enrol_pclass.publish and enrol_config is not None:
+                include = False
+
+                if (
+                    (enrol_pclass.uses_supervisor and enrol_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+                    or (enrol_config.uses_marker and enrol_config.display_marker and enrol_record.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+                    or (enrol_config.uses_presentations and enrol_config.display_presentations and enrol_record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
+                ):
+                    include = True
+                else:
+                    for n in range(enrol_config.number_submissions):
+                        period = enrol_config.get_period(n + 1)
+                        num_s = period.number_supervisor_records(current_user.id)
+                        num_mk = period.number_marker_records(current_user.id)
+                        num_mo = period.number_moderator_records(current_user.id)
+                        num_p = period.number_presentation_assessor_records(current_user.id)
+
+                        if (
+                            (enrol_pclass.uses_supervisor and num_s > 0)
+                            or (enrol_config.uses_marker and enrol_config.display_marker and num_mk > 0)
+                            or (enrol_config.uses_moderator and enrol_config.display_marker and num_mo > 0)
+                            or (enrol_config.uses_presentations and enrol_config.display_presentations and num_p > 0)
+                        ):
+                            include = True
+                            break
+
+                if include:
+                    live_projects = enrol_config.live_projects.filter_by(owner_id=current_user.id)
+                    enrolments.append({"config": enrol_config, "projects": live_projects, "record": enrol_record})
+
+    num_enrolments = len(enrolments)
     approvals_data = get_approval_queue_data()
 
     return render_template_context(
@@ -2334,8 +2369,8 @@ def my_students():
         pane_is_moderation=False,
         pane_is_enrollment=False,
         pane_is_my_students=True,
-        enrolments=[],
-        num_enrolments=0,
+        enrolments=enrolments,
+        num_enrolments=num_enrolments,
         approvals_data=approvals_data,
         is_user_approver=current_user.has_role("user_approver"),
         is_project_approver=current_user.has_role("project_approver"),

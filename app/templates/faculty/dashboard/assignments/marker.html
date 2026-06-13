@@ -39,7 +39,7 @@
                     </td>
                     <td>
                         <a class="text-decoration-none"
-                           href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                           href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                             {{ rec.project.name }}
                         </a>
                         {% if rec.project.use_supervisor_pool %}
@@ -107,12 +107,12 @@
                                 {% for mr in distributed_reports %}
                                     {% if mr.marking_form_is_open %}
                                         <a class="btn btn-warning btn-sm full-width-button"
-                                           href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                           href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                             <i class="fas fa-pen fa-fw"></i> Complete marking form
                                         </a>
                                     {% elif mr.report_submitted %}
                                         <a class="btn btn-outline-secondary btn-sm full-width-button"
-                                           href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                           href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                             <i class="fas fa-search fa-fw"></i> View report
                                         </a>
                                     {% endif %}
@@ -125,7 +125,7 @@
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                     <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                       href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id), text='home dashboard') }}"><i
                                             class="fas fa-file fa-fw"></i> Manage documents
                                         ({{ rec.number_attachments }})&hellip;</a>
                                 </div>

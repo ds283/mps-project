@@ -1,0 +1,45 @@
+{% extends "faculty/dashboard/dashboard_base.html" %}
+
+{% block title %}Faculty dashboard — Sign-off{% endblock %}
+
+{% block pane_content %}
+    <div class="card mt-3 mb-3 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <i class="fas fa-signature fa-fw me-1"></i>
+            <strong>Marking reports awaiting your sign-off</strong>
+        </div>
+        <div class="card-body">
+            <p class="text-body-secondary mt-2 mb-3 small">
+                The following marking reports have been submitted by supervisors and require
+                your sign-off as responsible supervisor before the grade can be processed.
+            </p>
+            <div class="d-flex flex-column gap-3">
+                {% for report in pending_sign_off_reports %}
+                    {%- set workflow = report.workflow -%}
+                    {%- set rec = report.submitter_report.record -%}
+                    <div class="card border-secondary">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
+                                    <div class="small text-body-secondary">
+                                        {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
+                                        &mdash; submitted by <strong>{{ report.user.name }}</strong>
+                                        {% if report.grade_submitted_timestamp %}
+                                            on
+                                            {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y") }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <a class="btn btn-sm btn-warning text-dark"
+                                   href="{{ url_for('faculty.view_marking_report', report_id=report.id, url=url_for('faculty.dashboard_signoff')) }}">
+                                    <i class="fas fa-signature fa-fw"></i> Review &amp; sign off
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

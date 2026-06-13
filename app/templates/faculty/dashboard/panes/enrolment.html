@@ -1,0 +1,25 @@
+{% extends "faculty/dashboard/dashboard_base.html" %}
+
+{% from "faculty/dashboard/pclass_card.html" import pclass_card with context %}
+
+{% block title %}Faculty dashboard — {{ enrolment_item['config'].name if enrolment_item else 'Enrolment' }}{% endblock %}
+
+{% block pane_content %}
+    <div class="mb-2">
+        <a class="text-decoration-none small text-body-secondary"
+           href="{{ url_for('faculty.dashboard_enrolments') }}">
+            <i class="fas fa-arrow-left fa-fw"></i> All enrolments
+        </a>
+    </div>
+    {% if enrolment_item %}
+        {{ pclass_card(enrolment_item, today, home_dashboard_url) }}
+    {% else %}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <h3 class="dashboard-subtitle">Enrolment not found</h3>
+            <p>The requested enrolment could not be found.</p>
+            <p>
+                <a class="text-decoration-none" href="{{ url_for('faculty.dashboard_enrolments') }}">View all enrolments</a>
+            </p>
+        </div>
+    {% endif %}
+{% endblock %}

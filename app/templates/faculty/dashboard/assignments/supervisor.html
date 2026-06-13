@@ -56,7 +56,7 @@
                             {% if rec.owner.student.has_previous_submissions %}
                                 <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 small">
                                     <a class="text-decoration-none"
-                                       href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View
+                                       href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">View
                                         previous feedback...</a>
                                 </div>
                             {% endif %}
@@ -113,7 +113,7 @@
                     {% endif %}
                     <td>
                         <a class="text-decoration-none"
-                           href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                           href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                             {{ rec.project.name }}
                         </a>
                         {% if rec.project.use_supervisor_pool %}
@@ -171,7 +171,7 @@
                         {% if supv_files %}
                             <div class="mt-1">
                                 <a class="badge bg-secondary text-decoration-none"
-                                   href="{{ url_for('projecthub.downloads', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">
+                                   href="{{ url_for('projecthub.downloads', subid=rec.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id), text='home dashboard') }}">
                                     <i class="fas fa-file-download me-1"></i>
                                     {{ supv_files|length }} file{{ 's' if supv_files|length != 1 }} available
                                 </a>
@@ -184,19 +184,19 @@
                             {% for mr in distributed_reports %}
                                 {% if mr.marking_form_is_open %}
                                     <a class="btn btn-warning btn-sm full-width-button"
-                                       href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                       href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                         <i class="fas fa-pen fa-fw"></i> Complete marking form
                                     </a>
                                 {% elif mr.report_submitted %}
                                     <a class="btn btn-outline-secondary btn-sm full-width-button"
-                                       href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                       href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                         <i class="fas fa-search fa-fw"></i> View report
                                     </a>
                                 {% endif %}
                             {% endfor %}
                             <div class="btn-group">
                                 <a class="btn btn-outline-secondary btn-sm"
-                                   href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">Student
+                                   href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id), text='home dashboard') }}">Student
                                     page</a>
                                 <div class="btn-group">
                                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
@@ -205,10 +205,10 @@
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                         <a class="dropdown-item d-flex gap-2"
-                                           href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                           href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id), text='home dashboard') }}"><i
                                                 class="fab fa-hubspot fa-fw"></i> Student page</a>
                                         <a class="dropdown-item d-flex gap-2"
-                                           href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                           href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id), text='home dashboard') }}"><i
                                                 class="fas fa-file fa-fw"></i> Manage documents
                                             ({{ rec.number_attachments }})...</a>
                                     </div>

@@ -43,7 +43,7 @@
                                 </td>
                                 <td>
                                     <a class="text-decoration-none"
-                                       href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                       href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                         {{ talk.project.name }} (No. {{ talk.project.number }})
                                     </a>
                                 </td>
@@ -56,7 +56,7 @@
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                                 <a class="dropdown-item d-flex gap-2"
-                                                   href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                                   href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id), text='home dashboard') }}"><i
                                                         class="fas fa-file fa-fw"></i> Manage documents
                                                     ({{ talk.number_attachments }})...</a>
                                             </div>

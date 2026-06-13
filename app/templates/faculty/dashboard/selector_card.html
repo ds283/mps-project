@@ -58,7 +58,7 @@
             <div class="col-8">
                 <div>
                     <a class="text-decoration-none"
-                       href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
+                       href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard_enrolment', cid=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                     {% set ns = namespace(affiliation=false) %}
                     {% if project.group %}
                         {{ simple_label(project.group.make_label(), user_classes='ms-1') }}

@@ -3,12 +3,12 @@
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         {% if is_root %}
-            {% set warning = root_dash_data['warning'] %}
-            {% set messages = root_dash_data['messages'] %}
+            {% set warning = root_dash_data['warning'] if root_dash_data else false %}
+            {% set messages_motd = root_dash_data['messages'] if root_dash_data else none %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_system %}active{% endif %}"
-                   href="{{ url_for('faculty.dashboard', pane='system') }}">
-                    {% if warning or (messages is not none and messages|length > 0) %}
+                <a class="nav-link {% if pane == 'system' %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard_system') }}">
+                    {% if warning or (messages_motd is not none and messages_motd|length > 0) %}
                         <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
                     Administration
@@ -17,31 +17,31 @@
         {% endif %}
         {% if pending_marking_reports and pending_marking_reports|length > 0 %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_marking %}active{% endif %}"
-                   href="{{ url_for('faculty.dashboard', pane='marking') }}">
+                <a class="nav-link {% if pane == 'marking' %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard_marking') }}">
                     <i class="fas fa-marker fa-fw"></i>
                     Marking and feedback
-                    <span class="badge rounded-pill {% if pane_is_marking %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ pending_marking_reports|length }}</span>
+                    <span class="badge rounded-pill {% if pane == 'marking' %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ pending_marking_reports|length }}</span>
                 </a>
             </li>
         {% endif %}
         {% if pending_sign_off_reports is defined and pending_sign_off_reports and pending_sign_off_reports|length > 0 %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_signoff %}active{% endif %}"
-                   href="{{ url_for('faculty.dashboard', pane='signoff') }}">
+                <a class="nav-link {% if pane == 'signoff' %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard_signoff') }}">
                     <i class="fas fa-signature fa-fw"></i>
                     Sign-off
-                    <span class="badge rounded-pill {% if pane_is_signoff %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ pending_sign_off_reports|length }}</span>
+                    <span class="badge rounded-pill {% if pane == 'signoff' %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ pending_sign_off_reports|length }}</span>
                 </a>
             </li>
         {% endif %}
         {% if pending_moderator_reports is defined and pending_moderator_reports and pending_moderator_reports|length > 0 %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_moderation %}active{% endif %}"
-                   href="{{ url_for('faculty.dashboard', pane='moderation') }}">
+                <a class="nav-link {% if pane == 'moderation' %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard_moderation') }}">
                     <i class="fas fa-gavel fa-fw"></i>
                     Moderation
-                    <span class="badge rounded-pill {% if pane_is_moderation %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ pending_moderator_reports|length }}</span>
+                    <span class="badge rounded-pill {% if pane == 'moderation' %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ pending_moderator_reports|length }}</span>
                 </a>
             </li>
         {% endif %}
@@ -52,14 +52,14 @@
         {%- set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false -%}
         {% if is_user_approver or is_project_approver or (user_warning and (is_manage_users or is_root)) %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_approve %}active{% endif %}"
-                   href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                <a class="nav-link {% if pane == 'approve' %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard_approve') }}">
                     {% if user_warning or project_warning %}
                         <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
-                        <span class="badge rounded-pill {% if pane_is_approve %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ approve_total }}</span>
+                        <span class="badge rounded-pill {% if pane == 'approve' %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -76,22 +76,22 @@
                 {%- if _wc or _np or _ma -%}{%- set ns.alert_count = ns.alert_count + 1 -%}{%- endif -%}
             {%- endfor -%}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_enrollment %}active{% endif %}"
-                   href="{{ url_for('faculty.dashboard', pane='enrolments') }}">
+                <a class="nav-link {% if pane == 'enrolments' %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard_enrolments') }}">
                     My enrolments
                     {% if ns.alert_count > 0 %}
-                        <span class="badge rounded-pill {% if pane_is_enrollment %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ ns.alert_count }}</span>
+                        <span class="badge rounded-pill {% if pane == 'enrolments' %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ ns.alert_count }}</span>
                     {% endif %}
                 </a>
             </li>
         {% endif %}
         <li class="nav-item">
-            <a class="nav-link {% if pane_is_my_students %}active{% endif %}"
+            <a class="nav-link {% if pane == 'my_students' %}active{% endif %}"
                href="{{ url_for('faculty.my_students') }}">
                 <i class="fas fa-user-graduate fa-fw"></i>
                 My students
                 {% if my_students_pending_count is defined and my_students_pending_count > 0 %}
-                    <span class="badge rounded-pill {% if pane_is_my_students %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ my_students_pending_count }}</span>
+                    <span class="badge rounded-pill {% if pane == 'my_students' %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ my_students_pending_count }}</span>
                 {% endif %}
             </a>
         </li>

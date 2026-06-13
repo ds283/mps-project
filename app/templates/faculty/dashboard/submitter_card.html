@@ -169,12 +169,12 @@
                                         </span>
                                     {% elif not mod_report.report_submitted %}
                                         <a class="btn btn-sm btn-secondary"
-                                           href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                           href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                             <i class="fas fa-gavel fa-fw"></i> Submit report
                                         </a>
                                     {% else %}
                                         <a class="btn btn-sm btn-outline-secondary"
-                                           href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                           href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id, url=url_for('faculty.dashboard_enrolment', cid=period.config.id)) }}">
                                             <i class="fas fa-eye fa-fw"></i> View
                                         </a>
                                     {% endif %}

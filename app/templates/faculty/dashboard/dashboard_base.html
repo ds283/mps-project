@@ -1,0 +1,24 @@
+{% extends "faculty/dashboard/nav.html" %}
+
+{% from "faculty/dashboard/availability_card.html" import availability_card %}
+{% from "macros.html" import message_card %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message_card(message, current_user.faculty_data) }}
+                {% endfor %}
+            {% endif %}
+
+            {% if current_user.faculty_data.has_outstanding_availability_requests %}
+                {{ availability_card(current_user.faculty_data) }}
+            {% endif %}
+
+            {% block pane_content %}{% endblock %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

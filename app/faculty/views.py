@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import Dict, List
 
 from flask import abort, current_app, flash, jsonify, redirect, request, session, url_for
@@ -39,7 +39,6 @@ from ..models import (
     MarkingReport,
     MarkingWorkflow,
     ModeratorReport,
-    MessageOfTheDay,
     Module,
     PresentationAssessment,
     PresentationSession,
@@ -70,6 +69,7 @@ from ..shared.actions import (
     do_deconfirm_to_pending,
     render_project,
 )
+from ..shared.context.faculty_dashboard import get_faculty_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.forms.forms import ConfirmActionForm
@@ -78,7 +78,6 @@ from ..shared.projects import create_new_tags, project_list_SQL_handler
 from ..shared.utils import (
     allow_approval_for_description,
     filter_assessors,
-    get_approval_queue_data,
     get_count,
     get_current_year,
     get_main_config,
@@ -1841,116 +1840,25 @@ def project_preview(id):
     )
 
 
-def _get_faculty_nav_data(user):
-    """
-    Compute badge counts and shared context needed by every faculty dashboard route
-    to render the pill nav bar. Called by both dashboard() and my_students().
-    """
-    from ..models.markingevent import (
-        MarkingEventWorkflowStates,
-        SubmitterReport,
-        SubmitterReportWorkflowStates,
-        marking_report_to_responsible_supervisors,
-    )
-
-    pending_sign_off_reports = (
-        db.session.query(MarkingReport)
-        .join(
-            marking_report_to_responsible_supervisors,
-            marking_report_to_responsible_supervisors.c.marking_report_id == MarkingReport.id,
-        )
-        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
-        .filter(
-            marking_report_to_responsible_supervisors.c.submission_role_id.in_(
-                db.session.query(SubmissionRole.id).filter(SubmissionRole.user_id == user.id)
-            ),
-            MarkingReport.signed_off_id.is_(None),
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
-        )
-        .all()
-    )
-
-    pending_moderator_reports = (
-        db.session.query(ModeratorReport)
-        .join(SubmissionRole, SubmissionRole.id == ModeratorReport.role_id)
-        .join(SubmitterReport, SubmitterReport.id == ModeratorReport.submitter_report_id)
-        .filter(
-            SubmissionRole.user_id == user.id,
-            ModeratorReport.report_submitted.is_(False),
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
-        )
-        .all()
-    )
-
-    pending_marking_reports = (
-        db.session.query(MarkingReport)
-        .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
-        .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
-        .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
-        .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
-        .filter(
-            SubmissionRole.user_id == user.id,
-            MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
-            or_(
-                MarkingReport.report_submitted.isnot(True),
-                MarkingReport.feedback_submitted.isnot(True),
-            ),
-        )
-        .all()
-    )
-    actionable_marking_count = sum(1 for r in pending_marking_reports if r.marking_form_is_open)
-
-    my_students_pending_count = (
-        db.session.query(SubmissionRecord)
-        .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
-        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
-        .filter(
-            SubmissionRole.user_id == user.id,
-            SubmissionRole.role.in_([
-                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-            ]),
-            SubmissionPeriodRecord.closed.is_(True),
-            SubmissionRecord.report_grade.isnot(None),
-            SubmissionRecord.exemplar_consent_granted_at.isnot(None),
-            SubmissionRecord.exemplar_consent_withdrawn.is_(False),
-            SubmissionRecord.exemplar_supervisor_approved.is_(None),
-        )
-        .distinct()
-        .count()
-    )
-
-    return dict(
-        pending_sign_off_reports=pending_sign_off_reports,
-        pending_moderator_reports=pending_moderator_reports,
-        pending_marking_reports=pending_marking_reports,
-        actionable_marking_count=actionable_marking_count,
-        my_students_pending_count=my_students_pending_count,
-    )
-
-
 @faculty.route("/dashboard")
 @roles_required("faculty")
 def dashboard():
     """
-    Render the dashboard for a faculty user
-    :return:
+    Entry point for the faculty dashboard. Redirects to the most appropriate pane.
+    Handles backward-compat with old ?pane= query-param links and session memory.
     """
-    # check for unofferable projects and warn if any are present
     fd: FacultyData = current_user.faculty_data
 
     main_config: MainConfig = get_main_config()
     if main_config.enable_2026_ATAS_campaign:
-        # only consider jumping to landing page if this user belongs to a tenant participating in the campaign
         if (
             get_count(
                 current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True))
             )
             > 0
         ):
-            data = check_2026_ATAS(fd)
-            if len(data["projects"]) > 0:
+            atas_data = check_2026_ATAS(fd)
+            if len(atas_data["projects"]) > 0:
                 return redirect(url_for("campaigns.atas_2026"))
 
     num_unofferable = fd.projects_unofferable
@@ -1958,131 +1866,24 @@ def dashboard():
         plural = "" if num_unofferable == 1 else "s"
         isare = "is" if num_unofferable == 1 else "are"
         itthey = "it has" if num_unofferable == 1 else "they have"
-
         flash(
             f"You have {num_unofferable} project{plural} that {isare} active but cannot be offered to students because {itthey} validation errors. Please check your project list.",
             "error",
         )
 
-    # build list of current configuration records for all enrolled project classes
-    enrolments = []
-    enrolment_panes = []
-    enrolment_labels = {}
-
-    for record in fd.ordered_enrollments:
-        pclass: ProjectClass = record.pclass
-        config: ProjectClassConfig = pclass.most_recent_config
-
-        if pclass.active and pclass.publish and config is not None:
-            include = False
-
-            if (
-                (
-                    pclass.uses_supervisor
-                    and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                )
-                or (
-                    config.uses_marker
-                    and config.display_marker
-                    and record.marker_state == EnrollmentRecord.MARKER_ENROLLED
-                )
-                or (
-                    config.uses_presentations
-                    and config.display_presentations
-                    and record.presentations_state
-                    == EnrollmentRecord.PRESENTATIONS_ENROLLED
-                )
-            ):
-                include = True
-
-            else:
-                for n in range(config.number_submissions):
-                    period: SubmissionPeriodRecord = config.get_period(n + 1)
-
-                    num_s_records = period.number_supervisor_records(current_user.id)
-                    num_mk_records = period.number_marker_records(current_user.id)
-                    num_mo_records = period.number_moderator_records(current_user.id)
-                    num_p_records = period.number_presentation_assessor_records(current_user.id)
-
-                    if (
-                        (pclass.uses_supervisor and num_s_records > 0)
-                        or (
-                            config.uses_marker
-                            and config.display_marker
-                            and num_mk_records > 0
-                        )
-                        or (
-                            config.uses_moderator
-                            and config.display_marker
-                            and num_mo_records > 0
-                        )
-                        or (
-                            config.uses_presentations
-                            and config.display_presentations
-                            and num_p_records > 0
-                        )
-                    ):
-                        include = True
-                        break
-
-            if include:
-                # get live projects belonging to both this config item and the active user
-                live_projects = config.live_projects.filter_by(owner_id=current_user.id)
-
-                enrolments.append(
-                    {"config": config, "projects": live_projects, "record": record}
-                )
-                enrolment_panes.append(str(config.id))
-                enrolment_labels[str(config.id)] = config.name
-
-    # build list of system messages to consider displaying
-    messages = []
-    for message in (
-        db.session.query(MessageOfTheDay)
-        .filter(
-            MessageOfTheDay.show_faculty,
-            ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
-        )
-        .order_by(MessageOfTheDay.issue_date.desc())
-        .all()
-    ):
-        include = message.project_classes.first() is None
-        if not include:
-            for pcl in message.project_classes:
-                if fd.is_enrolled(pcl):
-                    include = True
-                    break
-
-        if include:
-            messages.append(message)
-
-    nav_data = _get_faculty_nav_data(current_user)
+    nav_data = get_faculty_dashboard_data(current_user)
+    enrolment_panes = nav_data["enrolment_panes"]
+    pending_marking_reports = nav_data["pending_marking_reports"]
     pending_sign_off_reports = nav_data["pending_sign_off_reports"]
     pending_moderator_reports = nav_data["pending_moderator_reports"]
-    pending_marking_reports = nav_data["pending_marking_reports"]
     actionable_marking_count = nav_data["actionable_marking_count"]
-    my_students_pending_count = nav_data["my_students_pending_count"]
 
-    # Compute unique workflow attachments visible to ROLE_MODERATOR, for the moderator dashboard pane
-    from ..models.markingevent import SubmitterReportWorkflowStates
-    seen_workflow_ids: set = set()
-    moderator_workflow_attachments: List[Dict] = []
-    for mod_report in pending_moderator_reports:
-        sr = mod_report.submitter_report
-        if sr is not None:
-            workflow = sr.workflow
-            if workflow is not None and workflow.id not in seen_workflow_ids:
-                seen_workflow_ids.add(workflow.id)
-                files = [pa for pa in workflow.attachments if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)]
-                if files:
-                    moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
-
+    # Read pane from query param (backward compat) or session
     pane = request.args.get("pane", None)
     if pane is None and session.get("faculty_dashboard_pane"):
         pane = session["faculty_dashboard_pane"]
 
-    # Validate data-dependent panes from session: if the backing data is gone, reset so
-    # auto-select can pick the right tab rather than showing a blank dashboard.
+    # Invalidate stale data-dependent session panes
     if pane == "marking" and not pending_marking_reports:
         pane = None
     elif pane == "signoff" and not pending_sign_off_reports:
@@ -2090,6 +1891,7 @@ def dashboard():
     elif pane == "moderation" and not pending_moderator_reports:
         pane = None
 
+    # Auto-select if still no valid pane
     if pane is None:
         if current_user.has_role("root"):
             pane = "system"
@@ -2099,82 +1901,175 @@ def dashboard():
             pane = "signoff"
         elif actionable_marking_count:
             pane = "marking"
-        elif len(enrolments) > 0:
+        elif enrolment_panes:
             pane = "enrolments"
 
-    num_enrolment_panes = len(enrolment_panes)
-    if pane == "system":
-        if not current_user.has_role("root"):
-            if num_enrolment_panes > 0:
-                pane = enrolment_panes[0]
-            else:
-                pane = None
+    # Validate role-restricted panes
+    if pane == "system" and not current_user.has_role("root"):
+        pane = "enrolments" if enrolment_panes else None
+    elif pane == "approve" and not (
+        current_user.has_role("user_approver")
+        or current_user.has_role("project_approver")
+        or current_user.has_role("admin")
+        or current_user.has_role("root")
+    ):
+        pane = "enrolments" if enrolment_panes else None
 
-    elif pane == "approve":
-        if not (
-            current_user.has_role("user_approver")
-            or current_user.has_role("project_approver")
-            or current_user.has_role("admin")
-            or current_user.has_role("root")
-        ):
-            if num_enrolment_panes > 0:
-                pane = enrolment_panes[0]
-            else:
-                pane = None
-
-    elif pane in ("marking", "signoff", "moderation", "my_students"):
-        pass  # validated above; still a recognised pane
-
-    else:
-        if pane != "enrolments" and pane != "my_students" and pane not in enrolment_panes:
-            if num_enrolment_panes > 0:
-                pane = "enrolments"
-            else:
-                pane = None
-
-        # mark any unviewed confirmation requests as viewed, but do it with a 15 sec delay so that the
-        # NEW labels don't disappear immediately
-        if pane is not None and pane not in ["system", "approve", "marking", "enrolments"]:
-            celery = current_app.extensions["celery"]
-            remove_new = celery.tasks["app.tasks.selecting.remove_new"]
-            remove_new.apply_async(args=(int(pane), current_user.id), countdown=15)
-
-    if pane is not None:
+    # Map named panes to their routes
+    _pane_routes = {
+        "system": "faculty.dashboard_system",
+        "approve": "faculty.dashboard_approve",
+        "marking": "faculty.dashboard_marking",
+        "signoff": "faculty.dashboard_signoff",
+        "moderation": "faculty.dashboard_moderation",
+        "enrolments": "faculty.dashboard_enrolments",
+        "my_students": "faculty.my_students",
+    }
+    if pane in _pane_routes:
         session["faculty_dashboard_pane"] = pane
+        return redirect(url_for(_pane_routes[pane]))
 
-    if current_user.has_role("root"):
-        root_dash_data = get_root_dashboard_data()
-    else:
-        root_dash_data = None
+    # Handle numeric config-ID pane (backward compat with old ?pane=<config_id> links)
+    if pane in enrolment_panes:
+        session["faculty_dashboard_pane"] = pane
+        return redirect(url_for("faculty.dashboard_enrolment", cid=int(pane)))
 
-    approvals_data = get_approval_queue_data()
-    num_enrolments = len(enrolments)
+    # Fallback: enrolments overview (or a pane that renders "no enrolments" message)
+    return redirect(url_for("faculty.dashboard_enrolments"))
+
+
+@faculty.route("/dashboard/system")
+@roles_required("faculty")
+def dashboard_system():
+    if not current_user.has_role("root"):
+        return redirect(url_for("faculty.dashboard"))
+
+    data = get_faculty_dashboard_data(current_user)
+    root_dash_data = get_root_dashboard_data()
 
     return render_template_context(
-        "faculty/dashboard/dashboard.html",
-        enrolments=enrolments,
-        num_enrolments=num_enrolments,
-        messages=messages,
+        "faculty/dashboard/panes/system.html",
+        **data,
+        pane="system",
         root_dash_data=root_dash_data,
-        approvals_data=approvals_data,
-        pane=pane,
-        pane_label=enrolment_labels.get(pane, None),
-        pane_is_system=pane == "system",
-        pane_is_approve=pane == "approve",
-        pane_is_marking=pane == "marking",
-        pane_is_signoff=pane == "signoff",
-        pane_is_moderation=pane == "moderation",
-        pane_is_enrollment=pane == "enrolments" or pane in enrolment_panes,
-        pane_is_my_students=False,
-        is_user_approver=current_user.has_role("user_approver"),
-        is_project_approver=current_user.has_role("project_approver"),
-        today=date.today(),
-        pending_marking_reports=pending_marking_reports,
-        actionable_marking_count=actionable_marking_count,
-        pending_sign_off_reports=pending_sign_off_reports,
-        pending_moderator_reports=pending_moderator_reports,
+    )
+
+
+@faculty.route("/dashboard/approve")
+@roles_required("faculty")
+def dashboard_approve():
+    if not (
+        current_user.has_role("user_approver")
+        or current_user.has_role("project_approver")
+        or current_user.has_role("admin")
+        or current_user.has_role("root")
+    ):
+        return redirect(url_for("faculty.dashboard"))
+
+    data = get_faculty_dashboard_data(current_user)
+
+    return render_template_context(
+        "faculty/dashboard/panes/approve.html",
+        **data,
+        pane="approve",
+    )
+
+
+@faculty.route("/dashboard/marking")
+@roles_required("faculty")
+def dashboard_marking():
+    data = get_faculty_dashboard_data(current_user)
+    if not data["pending_marking_reports"]:
+        return redirect(url_for("faculty.dashboard"))
+
+    return render_template_context(
+        "faculty/dashboard/panes/marking.html",
+        **data,
+        pane="marking",
+    )
+
+
+@faculty.route("/dashboard/signoff")
+@roles_required("faculty")
+def dashboard_signoff():
+    data = get_faculty_dashboard_data(current_user)
+    if not data["pending_sign_off_reports"]:
+        return redirect(url_for("faculty.dashboard"))
+
+    return render_template_context(
+        "faculty/dashboard/panes/signoff.html",
+        **data,
+        pane="signoff",
+    )
+
+
+@faculty.route("/dashboard/moderation")
+@roles_required("faculty")
+def dashboard_moderation():
+    data = get_faculty_dashboard_data(current_user)
+    if not data["pending_moderator_reports"]:
+        return redirect(url_for("faculty.dashboard"))
+
+    seen_workflow_ids: set = set()
+    moderator_workflow_attachments: List[Dict] = []
+    for mod_report in data["pending_moderator_reports"]:
+        sr = mod_report.submitter_report
+        if sr is not None:
+            workflow = sr.workflow
+            if workflow is not None and workflow.id not in seen_workflow_ids:
+                seen_workflow_ids.add(workflow.id)
+                files = [
+                    pa
+                    for pa in workflow.attachments
+                    if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)
+                ]
+                if files:
+                    moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
+
+    return render_template_context(
+        "faculty/dashboard/panes/moderation.html",
+        **data,
+        pane="moderation",
         moderator_workflow_attachments=moderator_workflow_attachments,
-        my_students_pending_count=my_students_pending_count,
+    )
+
+
+@faculty.route("/dashboard/enrolments")
+@roles_required("faculty")
+def dashboard_enrolments():
+    data = get_faculty_dashboard_data(current_user)
+
+    return render_template_context(
+        "faculty/dashboard/panes/enrolments.html",
+        **data,
+        pane="enrolments",
+    )
+
+
+@faculty.route("/dashboard/enrolment/<int:cid>")
+@roles_required("faculty")
+def dashboard_enrolment(cid):
+    data = get_faculty_dashboard_data(current_user)
+
+    if str(cid) not in data["enrolment_panes"]:
+        return redirect(url_for("faculty.dashboard"))
+
+    # Mark confirmation requests as viewed after a short delay so "NEW" labels
+    # don't vanish immediately.
+    celery = current_app.extensions["celery"]
+    remove_new = celery.tasks["app.tasks.selecting.remove_new"]
+    remove_new.apply_async(args=(cid, current_user.id), countdown=15)
+
+    enrolment_item = next(
+        (item for item in data["enrolments"] if item["config"].id == cid), None
+    )
+
+    return render_template_context(
+        "faculty/dashboard/panes/enrolment.html",
+        **data,
+        pane="enrolments",
+        enrolment_item=enrolment_item,
+        home_dashboard_url=url_for("faculty.dashboard"),
     )
 
 
@@ -2185,9 +2080,7 @@ def my_students():
     Aggregated view of all closed SubmissionRecords where the current faculty member
     holds ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR.
     """
-    from sqlalchemy import desc
-
-    nav_data = _get_faculty_nav_data(current_user)
+    data = get_faculty_dashboard_data(current_user)
 
     search_q = request.args.get("q", "").strip()
     pclass_filter = request.args.get("pclass_id", type=int)
@@ -2305,11 +2198,16 @@ def my_students():
         if mr is not None:
             user_marking_reports[record.id] = mr
 
-    # Pre-parse language analysis JSON for each record so the template avoids inline JSON parsing
     import json as _json
     language_analysis_data = {}
-    _la_keys = ("page_count", "declared_word_count", "measured_word_count",
-                "estimated_reading_time_minutes", "figure_count", "table_count")
+    _la_keys = (
+        "page_count",
+        "declared_word_count",
+        "measured_word_count",
+        "estimated_reading_time_minutes",
+        "figure_count",
+        "table_count",
+    )
     for record in records:
         if record.language_analysis_complete and record.language_analysis:
             try:
@@ -2318,65 +2216,10 @@ def my_students():
             except (ValueError, TypeError):
                 pass
 
-    enrolments = []
-    fd = current_user.faculty_data
-    if fd is not None:
-        for enrol_record in fd.ordered_enrollments:
-            enrol_pclass = enrol_record.pclass
-            enrol_config = enrol_pclass.most_recent_config
-
-            if enrol_pclass.active and enrol_pclass.publish and enrol_config is not None:
-                include = False
-
-                if (
-                    (enrol_pclass.uses_supervisor and enrol_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
-                    or (enrol_config.uses_marker and enrol_config.display_marker and enrol_record.marker_state == EnrollmentRecord.MARKER_ENROLLED)
-                    or (enrol_config.uses_presentations and enrol_config.display_presentations and enrol_record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
-                ):
-                    include = True
-                else:
-                    for n in range(enrol_config.number_submissions):
-                        period = enrol_config.get_period(n + 1)
-                        num_s = period.number_supervisor_records(current_user.id)
-                        num_mk = period.number_marker_records(current_user.id)
-                        num_mo = period.number_moderator_records(current_user.id)
-                        num_p = period.number_presentation_assessor_records(current_user.id)
-
-                        if (
-                            (enrol_pclass.uses_supervisor and num_s > 0)
-                            or (enrol_config.uses_marker and enrol_config.display_marker and num_mk > 0)
-                            or (enrol_config.uses_moderator and enrol_config.display_marker and num_mo > 0)
-                            or (enrol_config.uses_presentations and enrol_config.display_presentations and num_p > 0)
-                        ):
-                            include = True
-                            break
-
-                if include:
-                    live_projects = enrol_config.live_projects.filter_by(owner_id=current_user.id)
-                    enrolments.append({"config": enrol_config, "projects": live_projects, "record": enrol_record})
-
-    num_enrolments = len(enrolments)
-    approvals_data = get_approval_queue_data()
-
     return render_template_context(
         "faculty/dashboard/my_students.html",
-        **nav_data,
+        **data,
         pane="my_students",
-        pane_is_system=False,
-        pane_is_approve=False,
-        pane_is_marking=False,
-        pane_is_signoff=False,
-        pane_is_moderation=False,
-        pane_is_enrollment=False,
-        pane_is_my_students=True,
-        enrolments=enrolments,
-        num_enrolments=num_enrolments,
-        approvals_data=approvals_data,
-        is_user_approver=current_user.has_role("user_approver"),
-        is_project_approver=current_user.has_role("project_approver"),
-        root_dash_data=None,
-        today=date.today(),
-        moderator_workflow_attachments=[],
         records=records,
         search_q=search_q,
         pclass_filter=pclass_filter,
@@ -3750,7 +3593,7 @@ def marking_form(report_id):
                         return redirect(url)
                     return render_template_context(
                         "faculty/thankyou_marking.html",
-                        dashboard_url=url_for("faculty.dashboard", pane="marking"),
+                        dashboard_url=url_for("faculty.dashboard_marking"),
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
@@ -3999,14 +3842,14 @@ def approve_marking_report(report_id):
 @faculty.route("/thankyou_signoff")
 @roles_accepted("faculty", "admin", "root")
 def thankyou_signoff():
-    dashboard_url = url_for("faculty.dashboard", pane="signoff")
+    dashboard_url = url_for("faculty.dashboard_signoff")
     return render_template_context("faculty/thankyou_signoff.html", dashboard_url=dashboard_url)
 
 
 @faculty.route("/thankyou_moderator_report")
 @roles_accepted("faculty", "admin", "root")
 def thankyou_moderator_report():
-    dashboard_url = url_for("faculty.dashboard", pane="moderation")
+    dashboard_url = url_for("faculty.dashboard_moderation")
     return render_template_context("faculty/thankyou_moderator_report.html", dashboard_url=dashboard_url)
 
 
@@ -4042,7 +3885,7 @@ def moderator_report_form(mod_report_id):
 
     is_editable = is_owner  # convenors may view but not submit
 
-    url = request.args.get("url", url_for("faculty.dashboard", pane="moderation"))
+    url = request.args.get("url", url_for("faculty.dashboard_moderation"))
 
     class ModeratorReportForm(FlaskForm):
         grade = DecimalField(

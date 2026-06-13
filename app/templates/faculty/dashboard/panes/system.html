@@ -1,0 +1,14 @@
+{% extends "faculty/dashboard/dashboard_base.html" %}
+
+{% from "admin/admin_dashboard/admin_card.html" import admin_dashboard_card %}
+{% from "admin/admin_dashboard/root_functions.html" import root_functions, root_messages %}
+
+{% block title %}Faculty dashboard — Administration{% endblock %}
+
+{% block pane_content %}
+    {{ root_messages(root_dash_data) }}
+    <div class="card mt-3 mb-3 card-body bg-well">
+        {{ admin_dashboard_card(root_dash_data) }}
+        {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
+    </div>
+{% endblock %}

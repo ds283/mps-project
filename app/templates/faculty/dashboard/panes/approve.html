@@ -1,0 +1,15 @@
+{% extends "faculty/dashboard/dashboard_base.html" %}
+
+{% from "user_approver/dashboard_panel.html" import user_approver_panel %}
+{% from "project_approver/dashboard_panel.html" import project_approver_panel %}
+
+{% block title %}Faculty dashboard — Approvals{% endblock %}
+
+{% block pane_content %}
+    {% if is_user_approver or ((is_manage_users or is_root) and approvals_data['approval_user_rejected'] > 0) %}
+        {{ user_approver_panel(approvals_data, current_user) }}
+    {% endif %}
+    {% if is_project_approver or is_root %}
+        {{ project_approver_panel(approvals_data) }}
+    {% endif %}
+{% endblock %}

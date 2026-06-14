@@ -158,6 +158,27 @@
       .sv2-risk-btn { display: inline-flex; align-items: center; gap: 0.3125rem; font-size: 0.75rem; padding: 0.1875rem 0.625rem; border-radius: var(--bs-border-radius-sm); background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); border: 1px solid var(--bs-danger-border-subtle); text-decoration: none; margin-top: 0.3125rem; }
       .sv2-risk-btn:hover { color: var(--bs-danger-text-emphasis); filter: brightness(.95); }
 
+      /* ── Period-closed banner ── */
+      .sv2-period-closed-bar { display: flex; align-items: center; gap: .4rem; padding: .28rem .9rem; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color-translucent); font-size: var(--cd-text-micro); color: var(--bs-secondary-color); }
+      .sv2-closed-chip { display: inline-flex; align-items: center; gap: .2rem; font-size: var(--cd-text-micro); font-weight: 500; padding: 1px 6px; border-radius: 20px; background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); }
+
+      /* ── Consent strip ── */
+      .sv2-consent-strip { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; padding: .28rem .55rem; margin-top: .35rem; border-radius: var(--bs-border-radius); border: 1px solid var(--bs-border-color-translucent); background: var(--bs-tertiary-bg); font-size: var(--cd-text-micro); }
+      .sv2-consent-lbl { font-size: var(--cd-text-micro); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--bs-secondary-color); white-space: nowrap; margin-right: .15rem; flex-shrink: 0; }
+      .sv2-cbadge { display: inline-flex; align-items: center; gap: .2rem; font-size: var(--cd-text-micro); padding: 1px 6px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+      .sv2-cb-uninvited { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); }
+      .sv2-cb-invited { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px dashed var(--bs-border-color); }
+      .sv2-cb-pending { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); border: 1px solid var(--bs-warning-border-subtle); }
+      .sv2-cb-approved { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); border: 1px solid var(--bs-success-border-subtle); }
+      .sv2-cb-declined { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); }
+      .sv2-cb-withdrawn { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); text-decoration: line-through; }
+      .sv2-cbtn { display: inline-flex; align-items: center; gap: .2rem; font-size: var(--cd-text-micro); padding: 1px 7px; border-radius: var(--bs-border-radius-sm); border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); color: var(--bs-secondary-color); text-decoration: none; white-space: nowrap; cursor: pointer; }
+      .sv2-cbtn:hover { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+      .sv2-cbtn.send { border-color: var(--bs-primary-border-subtle); color: var(--bs-primary-text-emphasis); }
+      .sv2-cbtn.send:hover { background: var(--bs-primary-bg-subtle); }
+      .sv2-cbtn.remind { border-color: var(--bs-warning-border-subtle); color: var(--bs-warning-text-emphasis); }
+      .sv2-cbtn.remind:hover { background: var(--bs-warning-bg-subtle); }
+
       /* ── Roles grid ── */
       .sv2-roles-grid { display: flex; gap: 1.5rem; margin-top: 0.5rem; padding-top: 0.4375rem; border-top: 1px solid var(--bs-border-color-translucent); flex-wrap: wrap; }
       .sv2-role-hd { font-size: 0.7rem; font-weight: 700; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 0.1875rem; }
@@ -693,6 +714,13 @@
                     {% endif %}
                   {% endif %}
 
+                  {# Closed chip in summary bar #}
+                  {% if period.closed %}
+                    <span class="sv2-closed-chip" style="font-size:9px">
+                      <i class="fas fa-lock" style="font-size:8px"></i> Closed
+                    </span>
+                  {% endif %}
+
                   {# "Viewing" indicator — hidden by default on non-active periods, shown by JS on tab switch #}
                   <span class="sv2-psbar-viewing"
                         id="sv2-psbar-{{ sid }}-viewing-{{ loop.index0 }}"
@@ -729,6 +757,15 @@
             {% set period = r.period %}
             <div class="sv2-period-panel{% if loop.index0 == active_period.idx %} active{% endif %}"
                  id="sv2-{{ sid }}-panel-{{ loop.index0 }}">
+
+              {# ── Period-closed indicator ── #}
+              {% if period.closed %}
+                <div class="sv2-period-closed-bar">
+                  <i class="fas fa-lock" style="font-size:9px"></i>
+                  <span>{{ period.display_name }}</span>
+                  <span class="sv2-closed-chip">Closed</span>
+                </div>
+              {% endif %}
 
               {% if r.project is not none %}
 
@@ -916,52 +953,6 @@
                     </span>
                   {% endif %}
 
-                  {# ---- Consent badges (per SubmissionRecord) ---- #}
-                  {% if r.consent_invitation_sent_at or r.exemplar_consent_granted_at or r.openday_consent_granted_at %}
-                    <span class="mx-1" style="color: var(--bs-border-color)">|</span>
-                  {% endif %}
-
-                  {% if r.consent_invitation_sent_at and not r.exemplar_consent_granted_at and not r.openday_consent_granted_at %}
-                    <span class="badge"
-                          style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color);
-                                 font-size: var(--cd-text-micro)"
-                          title="Consent invitation sent {{ r.consent_invitation_sent_at.strftime('%d %b %Y') }}">
-                      <i class="fas fa-envelope fa-fw"></i> Invited
-                    </span>
-                  {% endif %}
-
-                  {% if r.exemplar_fully_approved %}
-                    <span class="badge"
-                          style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
-                                 border: 1px solid var(--bs-success-border-subtle); font-size: var(--cd-text-micro)"
-                          title="Exemplar: student consented, supervisor approved">
-                      <i class="fas fa-check fa-fw"></i> Exemplar approved
-                    </span>
-                  {% elif r.exemplar_consent_active and r.exemplar_supervisor_approved is none %}
-                    <span class="badge"
-                          style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
-                                 border: 1px solid var(--bs-warning-border-subtle); font-size: var(--cd-text-micro)"
-                          title="Exemplar: student consented, awaiting supervisor approval">
-                      <i class="fas fa-clock fa-fw"></i> Exemplar pending
-                    </span>
-                  {% elif r.exemplar_consent_active and r.exemplar_supervisor_approved is sameas false %}
-                    <span class="badge"
-                          style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color);
-                                 font-size: var(--cd-text-micro)"
-                          title="Exemplar: student consented, supervisor declined">
-                      <i class="fas fa-times fa-fw"></i> Exemplar declined
-                    </span>
-                  {% endif %}
-
-                  {% if r.openday_consent_active %}
-                    <span class="badge"
-                          style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
-                                 border: 1px solid var(--bs-success-border-subtle); font-size: var(--cd-text-micro)"
-                          title="Open day: student consented">
-                      <i class="fas fa-check fa-fw"></i> Open day
-                    </span>
-                  {% endif %}
-
                   {# Document / Analyse / LLM report buttons #}
                   <span class="sv2-strip-actions">
                     <a href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=_back_url) }}"
@@ -983,6 +974,107 @@
                   </span>
 
                 </div>{# /status-strip #}
+
+                {# ── Consent strip — only for eligible closed-period records ── #}
+                {% if r.consent_eligible %}
+                  {#
+                    Three invitation states:
+                      uninvited : consent_invitation_sent_at is None
+                      invited   : consent_invitation_sent_at is not None, no consent granted yet on either type
+                      responded : at least one of exemplar_consent_granted_at / openday_consent_granted_at is set
+                  #}
+                  {% set cta_send   = r.consent_invitation_sent_at is none %}
+                  {% set cta_remind = (r.consent_invitation_sent_at is not none)
+                                      and (r.consent_reminder_sent_at is none)
+                                      and (not r.exemplar_consent_granted_at)
+                                      and (not r.openday_consent_granted_at) %}
+
+                  <div class="sv2-consent-strip">
+                    <span class="sv2-consent-lbl">Consent</span>
+
+                    {# ── Exemplar badge ── #}
+                    {% if r.exemplar_fully_approved %}
+                      <span class="sv2-cbadge sv2-cb-approved"
+                            title="Student consented; supervisor approved">
+                        <i class="fas fa-check fa-fw" style="font-size:9px"></i> Exemplar approved
+                      </span>
+                    {% elif r.exemplar_consent_active and r.exemplar_supervisor_approved is none %}
+                      <span class="sv2-cbadge sv2-cb-pending"
+                            title="Student consented; awaiting supervisor decision">
+                        <i class="fas fa-clock fa-fw" style="font-size:9px"></i> Exemplar — awaiting supervisor
+                      </span>
+                    {% elif r.exemplar_consent_active and r.exemplar_supervisor_approved is sameas false %}
+                      <span class="sv2-cbadge sv2-cb-declined"
+                            title="Student consented; supervisor declined">
+                        <i class="fas fa-times fa-fw" style="font-size:9px"></i> Exemplar — supervisor declined
+                      </span>
+                    {% elif r.exemplar_consent_withdrawn %}
+                      <span class="sv2-cbadge sv2-cb-withdrawn"
+                            title="Student withdrew exemplar consent">
+                        <i class="fas fa-times fa-fw" style="font-size:9px"></i> Exemplar (withdrawn)
+                      </span>
+                    {% elif r.consent_invitation_sent_at %}
+                      <span class="sv2-cbadge sv2-cb-invited"
+                            title="Invitation sent {{ r.consent_invitation_sent_at.strftime('%d %b %Y') }}; awaiting response">
+                        <i class="fas fa-envelope fa-fw" style="font-size:9px"></i> Exemplar — awaiting
+                      </span>
+                    {% else %}
+                      <span class="sv2-cbadge sv2-cb-uninvited">
+                        <i class="fas fa-envelope fa-fw" style="font-size:9px"></i> Exemplar — not invited
+                      </span>
+                    {% endif %}
+
+                    <span class="sv2-stud-meta-sep">·</span>
+
+                    {# ── Open day badge ── #}
+                    {% if r.openday_consent_active %}
+                      <span class="sv2-cbadge sv2-cb-approved"
+                            title="Student consented to open day use">
+                        <i class="fas fa-check fa-fw" style="font-size:9px"></i> Open day
+                      </span>
+                    {% elif r.openday_consent_withdrawn %}
+                      <span class="sv2-cbadge sv2-cb-withdrawn"
+                            title="Student withdrew open day consent">
+                        <i class="fas fa-times fa-fw" style="font-size:9px"></i> Open day (withdrawn)
+                      </span>
+                    {% elif r.consent_invitation_sent_at %}
+                      <span class="sv2-cbadge sv2-cb-invited"
+                            title="Invitation sent {{ r.consent_invitation_sent_at.strftime('%d %b %Y') }}; awaiting response">
+                        <i class="fas fa-presentation fa-fw" style="font-size:9px"></i> Open day — awaiting
+                      </span>
+                    {% else %}
+                      <span class="sv2-cbadge sv2-cb-uninvited">
+                        <i class="fas fa-presentation fa-fw" style="font-size:9px"></i> Open day — not invited
+                      </span>
+                    {% endif %}
+
+                    {# ── CTA buttons (right-aligned) ── #}
+                    {#
+                      No per-record consent dispatch routes currently exist.
+                      CTA buttons link to the convenor Overview tab where bulk
+                      invitation/reminder dispatch is available.
+                    #}
+                    {% if cta_send or cta_remind %}
+                      <span class="ms-auto d-flex gap-1">
+                        {% if cta_send %}
+                          <a href="{{ url_for('convenor.status', id=pclass.id) }}#consent"
+                             class="sv2-cbtn send"
+                             title="Go to Overview to dispatch consent invitations">
+                            <i class="fas fa-envelope fa-fw" style="font-size:9px"></i> Send invitation…
+                          </a>
+                        {% endif %}
+                        {% if cta_remind %}
+                          <a href="{{ url_for('convenor.status', id=pclass.id) }}#consent"
+                             class="sv2-cbtn remind"
+                             title="Go to Overview to send consent reminders">
+                            <i class="fas fa-bell fa-fw" style="font-size:9px"></i> Remind…
+                          </a>
+                        {% endif %}
+                      </span>
+                    {% endif %}
+
+                  </div>{# /sv2-consent-strip #}
+                {% endif %}
 
                 {# Canvas pull (if available and report not yet uploaded) #}
                 {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available %}

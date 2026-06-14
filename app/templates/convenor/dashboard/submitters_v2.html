@@ -158,8 +158,6 @@
       .sv2-risk-btn { display: inline-flex; align-items: center; gap: 0.3125rem; font-size: 0.75rem; padding: 0.1875rem 0.625rem; border-radius: var(--bs-border-radius-sm); background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); border: 1px solid var(--bs-danger-border-subtle); text-decoration: none; margin-top: 0.3125rem; }
       .sv2-risk-btn:hover { color: var(--bs-danger-text-emphasis); filter: brightness(.95); }
 
-      /* ── Period-closed banner ── */
-      .sv2-period-closed-bar { display: flex; align-items: center; gap: .4rem; padding: .28rem .9rem; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color-translucent); font-size: var(--cd-text-micro); color: var(--bs-secondary-color); }
       .sv2-closed-chip { display: inline-flex; align-items: center; gap: .2rem; font-size: var(--cd-text-micro); font-weight: 500; padding: 1px 6px; border-radius: 20px; background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); }
 
       /* ── Consent strip ── */
@@ -757,15 +755,6 @@
             {% set period = r.period %}
             <div class="sv2-period-panel{% if loop.index0 == active_period.idx %} active{% endif %}"
                  id="sv2-{{ sid }}-panel-{{ loop.index0 }}">
-
-              {# ── Period-closed indicator ── #}
-              {% if period.closed %}
-                <div class="sv2-period-closed-bar">
-                  <i class="fas fa-lock" style="font-size:9px"></i>
-                  <span>{{ period.display_name }}</span>
-                  <span class="sv2-closed-chip">Closed</span>
-                </div>
-              {% endif %}
 
               {% if r.project is not none %}
 

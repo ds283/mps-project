@@ -237,25 +237,53 @@
         <div class="card-footer bg-light">
             <div class="d-flex align-items-center flex-wrap gap-2">
                 <span class="text-muted small me-1">Feedback</span>
-                {% if with_feedback_count > 0 and (is_root or is_admin or is_convenor) %}
+                {% if is_root or is_admin or is_convenor %}
+                    {% set missing_count = total_count - with_feedback_count %}
                     {% set unsent_with_feedback = with_feedback_count - sent_count %}
-                    <form method="POST"
-                          action="{{ url_for('convenor.delete_all_conflation_report_feedback', event_id=event.id) }}">
-                        {{ delete_all_form.hidden_tag() }}
-                        <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Delete all generated feedback? This cannot be undone.')">
-                            <i class="fas fa-trash fa-fw"></i>
-                            Delete all feedback
-                            {% if unsent_with_feedback > 0 %}
+
+                    {# Delete + Regenerate: only when unsent feedback exists #}
+                    {% if unsent_with_feedback > 0 %}
+                        <form method="POST"
+                              action="{{ url_for('convenor.delete_all_conflation_report_feedback', event_id=event.id) }}">
+                            {{ delete_all_form.hidden_tag() }}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Delete all generated feedback? This cannot be undone.')">
+                                <i class="fas fa-trash fa-fw"></i>
+                                Delete all feedback
                                 <span class="badge bg-secondary ms-1">{{ unsent_with_feedback }} unsent</span>
-                            {% endif %}
-                        </button>
-                    </form>
-                    <a href="{{ url_for('convenor.regenerate_all_conflation_report_feedback', event_id=event.id) }}"
-                       class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-sync fa-fw"></i>
-                        Regenerate all feedback
-                    </a>
+                            </button>
+                        </form>
+                        <a href="{{ url_for('convenor.regenerate_all_conflation_report_feedback', event_id=event.id,
+                                            url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
+                                            text='Conflation reports') }}"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-sync fa-fw"></i>
+                            Regenerate all feedback
+                        </a>
+                    {% endif %}
+
+                    {# Generate missing: some students have feedback, some don't #}
+                    {% if missing_count > 0 and with_feedback_count > 0 %}
+                        <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id,
+                                            url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
+                                            text='Conflation reports') }}"
+                           class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-pdf fa-fw"></i>
+                            Generate missing feedback
+                            <span class="badge bg-secondary ms-1">{{ missing_count }}</span>
+                        </a>
+                    {% endif %}
+
+                    {# Generate all: no feedback exists yet (or all were deleted) #}
+                    {% if with_feedback_count == 0 and total_count > 0 %}
+                        <a href="{{ url_for('convenor.generate_marking_event_feedback', event_id=event.id,
+                                            url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
+                                            text='Conflation reports') }}"
+                           class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-pdf fa-fw"></i>
+                            Generate all feedback
+                        </a>
+                    {% endif %}
                 {% endif %}
                 <span class="ms-auto"></span>
                 <a class="btn btn-sm btn-outline-warning"

@@ -358,6 +358,12 @@ def generate_marking_event_feedback(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
+    url = request.args.get(
+        "url",
+        url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+    )
+    text = request.args.get("text", "Marking workflows")
+
     allowed_states = (
         MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK,
         MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK,
@@ -367,9 +373,7 @@ def generate_marking_event_feedback(event_id):
             "Feedback generation is not available for this event in its current state.",
             "warning",
         )
-        return redirect(
-            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-        )
+        return redirect(url)
 
     fill_missing = (
         event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
@@ -383,11 +387,6 @@ def generate_marking_event_feedback(event_id):
         pending_crs = all_crs
     pending_count = len(pending_crs)
 
-    url = request.args.get(
-        "url",
-        url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
-    )
-    text = request.args.get("text", "Marking workflows")
     title = "Fill missing feedback" if fill_missing else "Generate feedback"
 
     form = GenerateFeedbackFormFactory(pclass.id)()
@@ -401,9 +400,7 @@ def generate_marking_event_feedback(event_id):
                 "All students already have feedback documents. Nothing to generate.",
                 "info",
             )
-            return redirect(
-                url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-            )
+            return redirect(url)
 
         try:
             launch_feedback_job(
@@ -420,18 +417,14 @@ def generate_marking_event_feedback(event_id):
                 "A database error occurred while creating the feedback job. Please try again.",
                 "error",
             )
-            return redirect(
-                url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-            )
+            return redirect(url)
 
         plural = "s" if len(cr_ids) != 1 else ""
         flash(
             f'Queued {len(cr_ids)} feedback PDF{plural} for generation using recipe "{recipe.label}".',
             "success",
         )
-        return redirect(
-            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-        )
+        return redirect(url)
 
     convenor_data = {}  # TODO Phase 5b Group D: replace stub with real convenor_data
 
@@ -448,6 +441,12 @@ def generate_marking_event_feedback(event_id):
         cr_count=cr_count,
         fill_missing=fill_missing,
         pending_count=pending_count,
+        form_action=url_for(
+            "convenor.generate_marking_event_feedback",
+            event_id=event_id,
+            url=url,
+            text=text,
+        ),
     )
 
 
@@ -469,7 +468,7 @@ def marking_event_conflation_reports(event_id):
         return redirect(redirect_url())
 
     url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-    text = event.name
+    text = "Marking workflows"
 
     feedback_jobs = (
         db.session.query(FeedbackOrchestrationJob)
@@ -1670,6 +1669,12 @@ def regenerate_all_conflation_report_feedback(event_id):
         cr_count=cr_count,
         fill_missing=False,
         pending_count=cr_count,
+        form_action=url_for(
+            "convenor.regenerate_all_conflation_report_feedback",
+            event_id=event_id,
+            url=url,
+            text=text,
+        ),
     )
 
 
@@ -4086,19 +4091,6 @@ def event_marking_workflows_inspector(event_id):
                         )
                     )
 
-    # Feedback PDF generation jobs active for this event
-    feedback_jobs = (
-        db.session.query(FeedbackOrchestrationJob)
-        .filter(
-            FeedbackOrchestrationJob.event_id == event.id,
-            FeedbackOrchestrationJob.status.in_(
-                FeedbackOrchestrationJob.ACTIVE_STATUSES
-            ),
-        )
-        .order_by(FeedbackOrchestrationJob.created_at.desc())
-        .all()
-    )
-
     actions.sort(key=lambda a: _SEVERITY_ORDER.get(a.severity, 99))
 
     form = ConfirmActionForm()
@@ -4112,7 +4104,6 @@ def event_marking_workflows_inspector(event_id):
         text=text,
         can_edit=can_edit,
         actions=actions,
-        feedback_jobs=feedback_jobs,
         form=form,
     )
 

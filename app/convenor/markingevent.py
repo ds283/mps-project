@@ -520,15 +520,6 @@ def marking_event_conflation_reports(event_id):
     if "presentation" in targets and not period.presentation_grade_available:
         cv_present_but_unavailable.append(("presentation", "presentation grade"))
 
-    # Grade available on period but no CV target in this event's conflation targets
-    available_but_no_target = []
-    if period.supervision_grade_available and "supervisor" not in targets:
-        available_but_no_target.append(("supervisor", "supervision grade"))
-    if period.report_grade_available and "report" not in targets:
-        available_but_no_target.append(("report", "report grade"))
-    if period.presentation_grade_available and "presentation" not in targets:
-        available_but_no_target.append(("presentation", "presentation grade"))
-
     # Per CV target: determine push status for CTA construction
     sample_dict = all_crs[0].conflation_report_as_dict if all_crs else {}
     cv_push_status = {}
@@ -632,7 +623,6 @@ def marking_event_conflation_reports(event_id):
         period=period,
         cv_push_status=cv_push_status,
         cv_present_but_unavailable=cv_present_but_unavailable,
-        available_but_no_target=available_but_no_target,
         canvas_enabled=canvas_enabled,
         canvas_pushable_count=canvas_pushable_count,
         canvas_pushed_count=canvas_pushed_count,
@@ -3335,6 +3325,19 @@ def period_marking_events_inspector(period_id):
 
     can_delete = _can_delete_marking_event(pclass)
 
+    # Grade available on period but no MarkingEvent in this period has that conflation target
+    all_event_target_keys: set = set()
+    for ev in period.marking_events.all():
+        all_event_target_keys.update((ev.targets_as_dict or {}).keys())
+
+    available_but_no_target = []
+    if period.supervision_grade_available and "supervisor" not in all_event_target_keys:
+        available_but_no_target.append(("supervisor", "supervision grade"))
+    if period.report_grade_available and "report" not in all_event_target_keys:
+        available_but_no_target.append(("report", "report grade"))
+    if period.presentation_grade_available and "presentation" not in all_event_target_keys:
+        available_but_no_target.append(("presentation", "presentation grade"))
+
     return render_template_context(
         "convenor/markingevent/period_marking_events_inspector.html",
         period=period,
@@ -3344,6 +3347,7 @@ def period_marking_events_inspector(period_id):
         url=url,
         text=text,
         can_delete=can_delete,
+        available_but_no_target=available_but_no_target,
     )
 
 

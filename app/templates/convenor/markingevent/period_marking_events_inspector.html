@@ -73,6 +73,21 @@
                 {% endcall %}
             </div>
 
+            {% if available_but_no_target %}
+                {% for cv_key, grade_label in available_but_no_target %}
+                    <div class="alert alert-warning d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-exclamation-triangle fa-fw flex-shrink-0"></i>
+                        <div>
+                            This period is configured to track the <strong>{{ grade_label }}</strong>,
+                            but no marking event in this period has a conflation target named
+                            <strong>&ldquo;{{ cv_key }}&rdquo;</strong>.
+                            Grades cannot be copied to submission records until a matching target is defined
+                            in at least one marking event.
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white d-flex flex-row justify-content-between align-items-center">
                     <span>Marking events</span>

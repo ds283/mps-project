@@ -307,13 +307,16 @@ def upload_submission_comment_file(
     upload_url = notify_data["upload_url"]
     upload_params = notify_data["upload_params"]
 
-    # Step 2 — upload to pre-signed URL as multipart/form-data
-    # Fields must appear in order: upload_params first, then the file last
+    # Step 2 — upload to pre-signed URL as multipart/form-data.
+    # Fields must appear in order: upload_params first, then the file last.
+    # Use a plain requests.post() (not the session) because the pre-signed URL is
+    # self-authenticating via upload_params; sending the session's Authorization header
+    # alongside S3's embedded auth causes S3 to reject the request with 400.
     fields = [(key, value) for key, value in upload_params.items()]
     fields.append(("file", (filename, file_bytes, content_type)))
 
     try:
-        upload_response = session.post(upload_url, files=fields)
+        upload_response = requests.post(upload_url, files=fields)
     except requests.RequestException as e:
         raise CanvasAPIError("Canvas file upload step 2 failed: {err}".format(err=e)) from e
 

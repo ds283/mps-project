@@ -113,6 +113,7 @@ def _build_student_email_item(
                 "period": period,
                 "pclass": pclass,
                 "cr": cr,
+                "project": record.project,
             }
         ),
         recipient_list=recipient_list,

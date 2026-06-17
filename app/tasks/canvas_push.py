@@ -238,20 +238,16 @@ def register_canvas_push_tasks(celery):
             raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
-    def push_event_to_canvas(self, event_id: int, grade_target: str, mode: str = "grade"):
+    def push_event_to_canvas(self, event_id: int, grade_target: str):
         """
-        Fan out Canvas push tasks across all eligible ConflationReports in a MarkingEvent.
+        Fan out Canvas grade-push tasks across all eligible ConflationReports in a MarkingEvent.
 
         Parameters
         ----------
         event_id : int
             Primary key of the MarkingEvent.
         grade_target : str
-            Grade target name to push for each student (used only when mode="grade").
-        mode : str
-            "grade"    — dispatch push_cr_to_canvas for unpushed CRs
-            "feedback" — dispatch push_cr_feedback_to_canvas for CRs where grade
-                         is pushed but feedback is not
+            Grade target name to push for each student.
         """
         try:
             event: MarkingEvent = db.session.query(MarkingEvent).filter_by(id=event_id).first()
@@ -267,27 +263,49 @@ def register_canvas_push_tasks(celery):
         total = len(all_reports)
         n = 0
 
-        if mode == "grade":
-            for cr in all_reports:
-                if cr.canvas_push_ready and not cr.canvas_grade_pushed and grade_target in cr.conflation_report_as_dict:
-                    push_cr_to_canvas.apply_async(args=[cr.id, grade_target])
-                    n += 1
-            skipped = total - n
-            current_app.logger.info(
-                f"push_event_to_canvas: dispatched grade push for {n} of {total} ConflationReports "
-                f"in MarkingEvent id={event_id} (grade_target='{grade_target}', {skipped} skipped)"
-            )
-        elif mode == "feedback":
-            for cr in all_reports:
-                if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed:
-                    push_cr_feedback_to_canvas.apply_async(args=[cr.id])
-                    n += 1
-            skipped = total - n
-            current_app.logger.info(
-                f"push_event_to_canvas: dispatched feedback push for {n} of {total} ConflationReports "
-                f"in MarkingEvent id={event_id} ({skipped} skipped)"
-            )
-        else:
-            current_app.logger.warning(
-                f"push_event_to_canvas: unknown mode '{mode}' for MarkingEvent id={event_id}"
-            )
+        for cr in all_reports:
+            if cr.canvas_push_ready and not cr.canvas_grade_pushed and grade_target in cr.conflation_report_as_dict:
+                push_cr_to_canvas.apply_async(args=[cr.id, grade_target])
+                n += 1
+        skipped = total - n
+        current_app.logger.info(
+            f"push_event_to_canvas: dispatched grade push for {n} of {total} ConflationReports "
+            f"in MarkingEvent id={event_id} (grade_target='{grade_target}', {skipped} skipped)"
+        )
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def push_event_feedback_to_canvas(self, event_id: int):
+        """
+        Fan out Canvas feedback-PDF upload tasks across all eligible ConflationReports in a MarkingEvent.
+
+        Dispatches push_cr_feedback_to_canvas for each CR whose grade has been pushed to Canvas
+        but whose feedback PDFs have not yet been uploaded.
+
+        Parameters
+        ----------
+        event_id : int
+            Primary key of the MarkingEvent.
+        """
+        try:
+            event: MarkingEvent = db.session.query(MarkingEvent).filter_by(id=event_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if event is None:
+            current_app.logger.warning(f"push_event_feedback_to_canvas: MarkingEvent id={event_id} not found")
+            return
+
+        all_reports = event.conflation_reports.all()
+        total = len(all_reports)
+        n = 0
+
+        for cr in all_reports:
+            if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed:
+                push_cr_feedback_to_canvas.apply_async(args=[cr.id])
+                n += 1
+        skipped = total - n
+        current_app.logger.info(
+            f"push_event_feedback_to_canvas: dispatched feedback push for {n} of {total} ConflationReports "
+            f"in MarkingEvent id={event_id} ({skipped} skipped)"
+        )

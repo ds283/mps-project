@@ -1,0 +1,73 @@
+{% extends "convenor/dashboard/pclass_base.html" %}
+
+{% block title %}Confirm bulk Canvas feedback upload – {{ event.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> Back
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-file-pdf fa-fw me-1"></i>
+                    Confirm bulk Canvas feedback upload &mdash; <strong>{{ event.name }}</strong>
+                </h4>
+            </div>
+
+            <div class="card border-success mb-3">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                    <strong>Upload feedback PDFs to Canvas</strong>
+                </div>
+                <div class="card-body">
+
+                    <dl class="row mb-3 small">
+                        <dt class="col-sm-4 text-body-secondary">Event</dt>
+                        <dd class="col-sm-8">{{ event.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Period</dt>
+                        <dd class="col-sm-8">{{ event.period.display_name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Project class</dt>
+                        <dd class="col-sm-8">{{ pclass.name }}</dd>
+                        <dt class="col-sm-4 text-body-secondary">Students</dt>
+                        <dd class="col-sm-8"><strong>{{ canvas_feedback_pushable_count }}</strong></dd>
+                    </dl>
+
+                    <p class="mb-3">
+                        Feedback PDFs for <strong>{{ canvas_feedback_pushable_count }}
+                        student{{ 's' if canvas_feedback_pushable_count != 1 else '' }}</strong>
+                        will be uploaded to Canvas as submission comments.
+                        Grades already posted to Canvas will not be changed.
+                    </p>
+
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                        <strong>This cannot be undone.</strong>
+                        Once feedback PDFs have been attached to Canvas submissions they cannot be
+                        removed here. If the feedback changes, you will need to upload manually via Canvas.
+                    </div>
+
+                    <form method="POST"
+                          action="{{ url_for('convenor.push_event_feedback_to_canvas', event_id=event.id) }}">
+                        {{ form.hidden_tag() }}
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success" type="submit">
+                                <i class="fas fa-cloud-upload-alt fa-fw me-1"></i>
+                                Upload {{ canvas_feedback_pushable_count }}
+                                feedback PDF{{ 's' if canvas_feedback_pushable_count != 1 else '' }} to Canvas
+                            </button>
+                            <a class="btn btn-outline-secondary" href="{{ url }}">
+                                <i class="fas fa-times fa-fw"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

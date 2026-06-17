@@ -322,16 +322,12 @@
                     </a>
                 {% endif %}
                 {% if canvas_feedback_pushable_count > 0 %}
-                    <form method="POST"
-                          action="{{ url_for('convenor.push_event_to_canvas', event_id=event.id) }}">
-                        {{ canvas_feedback_push_event_form.hidden_tag() }}
-                        <input type="hidden" name="mode" value="feedback">
-                        <button type="submit" class="btn btn-sm btn-outline-success">
-                            <i class="fas fa-file-pdf fa-fw me-1"></i>
-                            Upload all feedback PDFs to Canvas
-                            <span class="badge bg-success ms-1">{{ canvas_feedback_pushable_count }}</span>
-                        </button>
-                    </form>
+                    <a href="{{ url_for('convenor.push_event_feedback_to_canvas', event_id=event.id) }}"
+                       class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-file-pdf fa-fw me-1"></i>
+                        Upload all feedback PDFs to Canvas
+                        <span class="badge bg-success ms-1">{{ canvas_feedback_pushable_count }}</span>
+                    </a>
                 {% endif %}
                 {% if canvas_pushable_count == 0 and canvas_feedback_pushable_count == 0 and canvas_pushed_count > 0 %}
                     <span class="text-body-secondary small">

@@ -84,7 +84,6 @@ from .forms import (
     CloseMarkingEventForm,
     AddMarkingSchemeForm,
     AssignModeratorFormFactory,
-    CanvasFeedbackPushEventForm,
     CanvasFeedbackPushForm,
     CanvasPushForm,
     ConfirmCanvasPushEventForm,
@@ -503,7 +502,6 @@ def marking_event_conflation_reports(event_id):
         for cr in all_crs
         if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed and cr.feedback_reports.count() > 0
     )
-    canvas_feedback_push_event_form = CanvasFeedbackPushEventForm()
     targets = event.targets_as_dict or {}
     any_stale = stale_count > 0
 
@@ -640,7 +638,6 @@ def marking_event_conflation_reports(event_id):
         canvas_pushable_count=canvas_pushable_count,
         canvas_pushed_count=canvas_pushed_count,
         canvas_feedback_pushable_count=canvas_feedback_pushable_count,
-        canvas_feedback_push_event_form=canvas_feedback_push_event_form,
     )
 
 
@@ -6884,9 +6881,71 @@ def push_event_to_canvas(event_id):
         flash("Could not lock the grade target due to a database error.", "error")
         return redirect(url)
 
-    task.apply_async(args=[event_id, grade_target], kwargs={"mode": "grade"})
+    task.apply_async(args=[event_id, grade_target])
     flash(
         f"Bulk grade push queued for all eligible students (target: '{grade_target}').",
+        "success",
+    )
+    return redirect(url)
+
+
+@convenor.route("/push_event_feedback_to_canvas/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "convenor")
+def push_event_feedback_to_canvas(event_id):
+    """
+    Bulk dispatch: fan out Canvas feedback-PDF upload tasks for all eligible ConflationReports.
+
+    GET: render a confirmation page showing how many feedback PDFs will be uploaded.
+    POST: dispatch the Celery task.
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+    config = event.period.config
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
+
+    all_crs = event.conflation_reports.all()
+    canvas_feedback_pushable_count = sum(
+        1
+        for cr in all_crs
+        if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed
+    )
+
+    if canvas_feedback_pushable_count == 0:
+        flash("There are no students with feedback PDFs ready to upload to Canvas at this time.", "info")
+        return redirect(url)
+
+    form = ActionForm(request.form if request.method == "POST" else None)
+
+    if request.method == "GET":
+        return render_template_context(
+            "convenor/markingevent/confirm_push_event_feedback_to_canvas.html",
+            event=event,
+            pclass=pclass,
+            config=config,
+            convenor_data=convenor_data,
+            form=form,
+            canvas_feedback_pushable_count=canvas_feedback_pushable_count,
+            url=url,
+        )
+
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks.get("app.tasks.canvas_push.push_event_feedback_to_canvas")
+    if task is None:
+        flash("Canvas feedback push task is not registered. Please contact a system administrator.", "error")
+        return redirect(url)
+
+    task.apply_async(args=[event_id])
+    flash(
+        f"Bulk feedback PDF upload queued for {canvas_feedback_pushable_count} eligible student(s).",
         "success",
     )
     return redirect(url)

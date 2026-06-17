@@ -385,6 +385,12 @@ def workflow_items_ajax(id):
     url = request.args.get("url", url_for("emailworkflow.email_workflows"))
     text = request.args.get("text", "Email workflows")
 
+    # After an item action (delete/pause/unpause) the handler redirects to the
+    # return URL embedded in the action link.  Use the workflow_items page itself
+    # so the user stays on the item list rather than being sent to the parent.
+    self_url = url_for("emailworkflow.workflow_items", id=id, url=url, text=text)
+    self_text = "Workflow items"
+
     base_query = db.session.query(EmailWorkflowItem).filter(
         EmailWorkflowItem.workflow_id == id
     )
@@ -397,7 +403,7 @@ def workflow_items_ajax(id):
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(
-            lambda items: ajax.site.email_workflow_item_data(items, url, text)
+            lambda items: ajax.site.email_workflow_item_data(items, self_url, self_text)
         )
 
 

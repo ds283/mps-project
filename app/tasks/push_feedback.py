@@ -86,6 +86,8 @@ def _build_student_email_item(
     pclass: ProjectClass = config.project_class
 
     attachments = _collect_cr_feedback_attachments(cr)
+    if not attachments:
+        return None
 
     template = EmailTemplate.find_template_(
         EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
@@ -166,6 +168,8 @@ def _build_role_group_email_items_for_cr(
             continue
 
         attachments = _collect_cr_feedback_attachments(cr)
+        if not attachments:
+            continue
 
         recipient_list = [test_email if test_email else person.email]
         if not test_email:

@@ -170,7 +170,7 @@ def register_canvas_push_tasks(celery):
         assignment_id = cr.submission_record.period.canvas_assignment_id
         user_id = cr.submission_record.owner.canvas_user_id
 
-        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         http_session = make_session(api_token)
 
         # --- upload feedback PDFs ---
@@ -179,7 +179,7 @@ def register_canvas_push_tasks(celery):
             for report in cr.feedback_reports.all():
                 adapter = AssetCloudAdapter(
                     report.asset,
-                    object_store,
+                    bucket_map[report.asset.bucket],
                     audit_data=f"push_cr_feedback_to_canvas: ConflationReport id={cr_id}",
                 )
                 pdf_bytes = adapter.get()

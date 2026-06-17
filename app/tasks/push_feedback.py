@@ -66,18 +66,6 @@ def _collect_cr_feedback_attachments(cr: ConflationReport) -> List[EmailWorkflow
     return attachments
 
 
-def _build_target_roles(notify_supervisors: bool, notify_markers: bool, notify_moderators: bool) -> List[int]:
-    """Return the list of SubmissionRole role-type integers to notify, based on form flags."""
-    roles = []
-    if notify_supervisors:
-        roles.extend([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR])
-    if notify_markers:
-        roles.append(SubmissionRole.ROLE_MARKER)
-    if notify_moderators:
-        roles.append(SubmissionRole.ROLE_MODERATOR)
-    return roles
-
-
 def _build_student_email_item(
     cr: ConflationReport,
     user_id: int,
@@ -137,42 +125,36 @@ def _build_student_email_item(
     return item
 
 
-def _build_faculty_email_items_for_cr(
+def _build_role_group_email_items_for_cr(
     cr: ConflationReport,
     defer: timedelta,
     test_email: Optional[str],
-    target_roles: List[int],
+    role_types: List[int],
 ) -> List[EmailWorkflowItem]:
     """
-    Build EmailWorkflowItem instances for each unique faculty member associated
-    with the ConflationReport's SubmissionRecord via the specified roles.
+    Build EmailWorkflowItem instances for each unique faculty member whose role type
+    appears in role_types (e.g. [ROLE_SUPERVISOR, ROLE_RESPONSIBLE_SUPERVISOR]).
+
+    The template is owned by the enclosing EmailWorkflow; no template lookup is done here.
     Registers a link_feedback_email_to_cr callback on each item.
     """
+    if not role_types:
+        return []
+
     record: SubmissionRecord = cr.submission_record
     period: SubmissionPeriodRecord = record.period
     config: ProjectClassConfig = period.config
     pclass: ProjectClass = config.project_class
 
-    if not target_roles:
-        return []
-
-    _TEMPLATE_TYPE_MAP = {
-        SubmissionRole.ROLE_SUPERVISOR: EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR,
-        SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR: EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR,
-        SubmissionRole.ROLE_MARKER: EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER,
-        SubmissionRole.ROLE_MODERATOR: EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER,
-    }
-
     sub: SubmittingStudent = record.owner
     sd: StudentData = sub.student
     student: User = sd.user
 
-    # Collect unique faculty members in target roles for this record
     faculty_ids_seen = set()
     items = []
     for role in record.roles:
         role: SubmissionRole
-        if role.role not in target_roles:
+        if role.role not in role_types:
             continue
         if role.user_id in faculty_ids_seen:
             continue
@@ -180,14 +162,6 @@ def _build_faculty_email_items_for_cr(
 
         person: User = role.user
         if person is None:
-            continue
-
-        template_type = _TEMPLATE_TYPE_MAP.get(role.role)
-        if template_type is None:
-            continue
-
-        template = EmailTemplate.find_template_(template_type, pclass=pclass)
-        if template is None:
             continue
 
         attachments = _collect_cr_feedback_attachments(cr)
@@ -338,7 +312,9 @@ def register_push_feedback_tasks(celery):
         """
         Celery task to push feedback for all unsent ConflationReports in a MarkingEvent.
 
-        Creates ONE EmailWorkflow for all student emails and ONE for all faculty emails.
+        Creates up to four EmailWorkflow instances — one per audience: students, supervisors,
+        markers, and moderators. Each faculty workflow is only created when the corresponding
+        notify_* flag is True and the appropriate EmailTemplate resolves for the project class.
         Each EmailWorkflowItem has the appropriate mark_feedback_sent / link_feedback_email_to_cr
         callback registered so per-CR state is updated after each email is dispatched.
         """
@@ -362,9 +338,7 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         pclass: ProjectClass = event.pclass
-        config: ProjectClassConfig = event.period.config
         defer = timedelta(hours=delay_hours)
-        target_roles = _build_target_roles(notify_supervisors, notify_markers, notify_moderators)
 
         unsent_crs = [cr for cr in event.conflation_reports.all() if not cr.feedback_sent]
 
@@ -377,11 +351,10 @@ def register_push_feedback_tasks(celery):
                 )
             return
 
-        # ---- Build ONE student EmailWorkflow with one item per CR ----
+        # ---- Build student EmailWorkflow — one item per unsent CR ----
         student_template = EmailTemplate.find_template_(
             EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
         )
-        student_workflow = None
         if student_template is not None:
             student_workflow = EmailWorkflow.build_(
                 name=f"Push student feedback: {pclass.name} — {event.name}",
@@ -400,33 +373,79 @@ def register_push_feedback_tasks(celery):
                     item.workflow = student_workflow
                     db.session.add(item)
 
-        # ---- Build ONE faculty EmailWorkflow, aggregating by faculty member ----
-        if target_roles:
-            # Determine a suitable faculty template (use SUPERVISOR as default for the workflow)
-            faculty_template = EmailTemplate.find_template_(
+        # ---- Build supervisor EmailWorkflow ----
+        if notify_supervisors:
+            supervisor_template = EmailTemplate.find_template_(
                 EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass
             )
-            if faculty_template is None:
-                faculty_template = EmailTemplate.find_template_(
-                    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
-                )
-
-            if faculty_template is not None:
-                faculty_workflow = EmailWorkflow.build_(
-                    name=f"Push faculty feedback: {pclass.name} — {event.name}",
-                    template=faculty_template,
+            if supervisor_template is not None:
+                supervisor_workflow = EmailWorkflow.build_(
+                    name=f"Push supervisor feedback: {pclass.name} — {event.name}",
+                    template=supervisor_template,
                     defer=defer,
                     pclasses=[pclass],
                     max_attachment_size=MAX_ATTACHMENT_SIZE,
                     creator=user_id,
                 )
-                db.session.add(faculty_workflow)
+                db.session.add(supervisor_workflow)
                 db.session.flush()
 
                 for cr in unsent_crs:
-                    faculty_items = _build_faculty_email_items_for_cr(cr, defer, test_email, target_roles)
-                    for item in faculty_items:
-                        item.workflow = faculty_workflow
+                    for item in _build_role_group_email_items_for_cr(
+                        cr,
+                        defer,
+                        test_email,
+                        [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    ):
+                        item.workflow = supervisor_workflow
+                        db.session.add(item)
+
+        # ---- Build marker EmailWorkflow ----
+        if notify_markers:
+            marker_template = EmailTemplate.find_template_(
+                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
+            )
+            if marker_template is not None:
+                marker_workflow = EmailWorkflow.build_(
+                    name=f"Push marker feedback: {pclass.name} — {event.name}",
+                    template=marker_template,
+                    defer=defer,
+                    pclasses=[pclass],
+                    max_attachment_size=MAX_ATTACHMENT_SIZE,
+                    creator=user_id,
+                )
+                db.session.add(marker_workflow)
+                db.session.flush()
+
+                for cr in unsent_crs:
+                    for item in _build_role_group_email_items_for_cr(
+                        cr, defer, test_email, [SubmissionRole.ROLE_MARKER]
+                    ):
+                        item.workflow = marker_workflow
+                        db.session.add(item)
+
+        # ---- Build moderator EmailWorkflow ----
+        if notify_moderators:
+            moderator_template = EmailTemplate.find_template_(
+                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
+            )
+            if moderator_template is not None:
+                moderator_workflow = EmailWorkflow.build_(
+                    name=f"Push moderator feedback: {pclass.name} — {event.name}",
+                    template=moderator_template,
+                    defer=defer,
+                    pclasses=[pclass],
+                    max_attachment_size=MAX_ATTACHMENT_SIZE,
+                    creator=user_id,
+                )
+                db.session.add(moderator_workflow)
+                db.session.flush()
+
+                for cr in unsent_crs:
+                    for item in _build_role_group_email_items_for_cr(
+                        cr, defer, test_email, [SubmissionRole.ROLE_MODERATOR]
+                    ):
+                        item.workflow = moderator_workflow
                         db.session.add(item)
 
         try:

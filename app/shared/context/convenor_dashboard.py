@@ -267,8 +267,10 @@ def get_convenor_action_items(
                     )
 
     # --- WARNING: open submission periods with submitters awaiting report upload ---
+    # Only shown when a marking event is active — if no event is open there is nothing
+    # actionable to do about missing reports right now.
     for period in config.periods:
-        if not period.closed:
+        if not period.closed and period.has_active_marking_event:
             # one query per open period
             n = period.number_submitters_without_reports
             if n > 0:

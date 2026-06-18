@@ -126,10 +126,17 @@
         <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
             <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
         </a>
-        <h4 class="mb-0">
-            <i class="fas fa-file-contract fa-fw me-1"></i>
-            Conflation reports for: <strong>{{ event.name }}</strong>
-        </h4>
+        <div>
+            <h4 class="mb-0">
+                <i class="fas fa-file-contract fa-fw me-1"></i>
+                Conflation reports for: <strong>{{ event.name }}</strong>
+            </h4>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary ms-auto"
+           href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id) }}">
+            <i class="fas fa-clipboard-check fa-fw"></i> Marking workflows
+            <i class="fas fa-arrow-right fa-fw ms-1"></i>
+        </a>
     </div>
 
     {# Consolidated event summary card #}
@@ -282,6 +289,21 @@
                            class="btn btn-sm btn-outline-success">
                             <i class="fas fa-file-pdf fa-fw"></i>
                             Generate all feedback
+                        </a>
+                    {% endif %}
+
+                    {# Send feedback: available when event is ready to push #}
+                    {% if event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK %}
+                        <a href="{{ url_for('convenor.push_marking_event_feedback', event_id=event.id,
+                                            url=url_for('convenor.marking_event_conflation_reports', event_id=event.id),
+                                            text='Conflation reports') }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-paper-plane fa-fw"></i>
+                            Send feedback
+                            {% set unsent = with_feedback_count - sent_count %}
+                            {% if unsent > 0 %}
+                                <span class="badge bg-primary ms-1">{{ unsent }} unsent</span>
+                            {% endif %}
                         </a>
                     {% endif %}
                 {% endif %}

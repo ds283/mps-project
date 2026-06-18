@@ -467,8 +467,8 @@ def marking_event_conflation_reports(event_id):
     ):
         return redirect(redirect_url())
 
-    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-    text = "Marking workflows"
+    url = url_for("convenor.period_marking_events_inspector", period_id=event.period_id)
+    text = "Marking events"
 
     feedback_jobs = (
         db.session.query(FeedbackOrchestrationJob)

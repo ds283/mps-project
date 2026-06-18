@@ -177,7 +177,7 @@ def _build_role_group_email_items_for_cr(
             recipient_list.append(config.convenor_email)
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"pclass": pclass.name, "period": period.name}),
+            subject_payload=encode_email_payload({"pclass": pclass.name, "period": period.name, "name": student.name}),
             body_payload=encode_email_payload(
                 {
                     "person": person,

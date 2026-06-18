@@ -8,7 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import json
+import socket
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from email.utils import parseaddr
 from smtplib import (
@@ -81,6 +82,19 @@ from ..shared.workflow_logging import log_db_commit
 # ---------------------------------------------------------------------------
 _BACKOFF_BASE_SECONDS: int = 120   # 2 minutes
 _BACKOFF_MAX_SECONDS: int = 7200   # 2 hours (cap)
+_MAX_SEND_ATTEMPTS: int = 50       # pause item permanently after this many failures
+_SMTP_CONNECT_TIMEOUT: int = 30    # seconds to wait for TCP connect to SMTP server
+
+
+@contextmanager
+def _smtp_timeout(seconds: int):
+    """Temporarily cap the default socket timeout to bound SMTP connection attempts."""
+    old = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(seconds)
+    try:
+        yield
+    finally:
+        socket.setdefaulttimeout(old)
 
 # ---------------------------------------------------------------------------
 # Mapping from encoded model class name → SQLAlchemy model class.
@@ -238,7 +252,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
 
         return {"workflows_checked": workflows_checked, "initiated": initiated}
 
-    @celery.task(bind=True, retry_backoff=True, serializer="pickle")
+    @celery.task(bind=True, serializer="pickle")
     def send_workflow_item(self, item_id):
         """
         Task 2: Send the email for a single EmailWorkflowItem.
@@ -261,6 +275,16 @@ def register_email_workflow_tasks(celery, mail: Mail):
 
         # Guard against duplicate sends: mark in-progress and commit immediately.
         item.send_attempts = (item.send_attempts or 0) + 1
+
+        if item.send_attempts > _MAX_SEND_ATTEMPTS:
+            item.paused = True
+            item.append_error(f"Item paused: exceeded {_MAX_SEND_ATTEMPTS} send attempts")
+            try:
+                log_db_commit("Paused email workflow item after max send attempts", endpoint=self.name)
+            except SQLAlchemyError:
+                db.session.rollback()
+            return {"outcome": "paused-max-attempts", "item_id": item_id}
+
         item.send_in_progress_timestamp = datetime.now()
         item.celery_send_in_progress_task_id = self.request.id
 
@@ -275,7 +299,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 "send_workflow_item: SQLAlchemyError setting in-progress flags",
                 exc_info=e,
             )
-            raise self.retry()
+            raise self.retry(max_retries=5, countdown=10)
 
         print(
             f"send_workflow_item: beginning send attempt {item.send_attempts} "
@@ -351,9 +375,25 @@ def register_email_workflow_tasks(celery, mail: Mail):
                     attachments=attachments or None,
                     max_attachment_size=max_attachment_size,
                 )
+        except (KeyError, ValueError) as e:
+            # Permanent failure: the stored payload is incompatible with the template's
+            # format string.  Pausing stops poll_email_workflows from re-dispatching.
+            current_app.logger.error(
+                f"send_workflow_item: template format error for item id={item_id} — pausing: {e}"
+            )
+            item.paused = True
+            item.append_error(f"Template format error (item paused): {e}")
+            item.send_in_progress_timestamp = None
+            item.celery_send_in_progress_task_id = None
+            try:
+                log_db_commit("Paused email workflow item after template format error", endpoint=self.name)
+            except SQLAlchemyError:
+                db.session.rollback()
+            return {"outcome": "paused-template-error", "item_id": item_id, "error": str(e)}
+
         except Exception as e:
             current_app.logger.exception(
-                f"send_workflow_item: exception building email for item id={item_id}",
+                f"send_workflow_item: unexpected exception building email for item id={item_id}",
                 exc_info=e,
             )
             item.append_error(f"Failed to build email message: {e}")
@@ -368,25 +408,27 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 )
             except SQLAlchemyError:
                 db.session.rollback()
-            raise self.retry()
+            return {"outcome": "retry-scheduled", "item_id": item_id, "reason": type(e).__name__}
 
-        # Send the email.
+        # Send the email.  _smtp_timeout caps the TCP connect wait to _SMTP_CONNECT_TIMEOUT
+        # seconds so a dead SMTP server never blocks a worker for minutes at a time.
         try:
-            if current_app.config.get("EMAIL_IS_LIVE", False):
-                if hasattr(msg, "body") and msg.body is not None:
-                    with mail.get_connection() as connection:
-                        connection.send_messages([msg])
+            with _smtp_timeout(_SMTP_CONNECT_TIMEOUT):
+                if current_app.config.get("EMAIL_IS_LIVE", False):
+                    if hasattr(msg, "body") and msg.body is not None:
+                        with mail.get_connection() as connection:
+                            connection.send_messages([msg])
+                    else:
+                        current_app.logger.error(
+                            "send_workflow_item: ignoring attempt to send email with empty body"
+                        )
+                        with mail.get_connection(backend="console") as connection:
+                            msg.connection = connection
+                            msg.send()
                 else:
-                    current_app.logger.error(
-                        "send_workflow_item: ignoring attempt to send email with empty body"
-                    )
                     with mail.get_connection(backend="console") as connection:
                         msg.connection = connection
                         msg.send()
-            else:
-                with mail.get_connection(backend="console") as connection:
-                    msg.connection = connection
-                    msg.send()
 
         except TimeoutError as e:
             current_app.logger.info(
@@ -405,7 +447,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 )
             except SQLAlchemyError:
                 db.session.rollback()
-            raise self.retry()
+            return {"outcome": "retry-scheduled", "item_id": item_id, "reason": "TimeoutError"}
 
         except (
             SMTPAuthenticationError,
@@ -435,7 +477,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 )
             except SQLAlchemyError:
                 db.session.rollback()
-            raise self.retry()
+            return {"outcome": "retry-scheduled", "item_id": item_id, "reason": type(e).__name__}
 
         # Email sent successfully.  Record success and write to EmailLog.
         print(

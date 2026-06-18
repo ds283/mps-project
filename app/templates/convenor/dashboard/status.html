@@ -281,7 +281,7 @@
                                     <div class="d-flex gap-1 align-items-center flex-shrink-0 ms-2">
                                         {% if not p.closed and not p.has_active_marking_event %}
                                             <a href="{{ url_for('convenor.close_period', id=config.id, url=url_for('convenor.status', id=pclass.id)) }}"
-                                               class="btn btn-outline-danger btn-xs">
+                                               class="btn btn-outline-danger btn-sm">
                                                 <i class="fas fa-lock fa-fw"></i> Close period
                                             </a>
                                         {% endif %}
@@ -801,7 +801,8 @@
                                             </div>
                                         {% endif %}
                                         {# Change-deadline form #}
-                                        <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
+                                        <form id="adjust-selection-deadline-form"
+                                              action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}"
                                               method="POST" name="adjust_selection_deadline">
                                             {{ change_form.hidden_tag() }}
                                             <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
@@ -814,19 +815,20 @@
                                                     {{ wtf.render_field(change_form.notify_convenor) }}
                                                 </div>
                                             </div>
-                                            <div class="d-flex justify-content-end gap-2 mt-2">
-                                                {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
-                                            </div>
                                         </form>
-                                        {# Close selections #}
-                                        <div class="mt-2">
+                                        {# Shared button row: Close selections (left) + Change deadline (right) #}
+                                        <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
                                             <form action="{{ url_for('convenor.perform_close_selections', configid=config.id) }}"
-                                                  method="POST" class="d-inline">
+                                                  method="POST" class="m-0">
                                                 {{ change_form.hidden_tag() }}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                                     <i class="fas fa-lock fa-fw"></i> Close selections
                                                 </button>
                                             </form>
+                                            <button type="submit" form="adjust-selection-deadline-form"
+                                                    class="btn btn-sm btn-outline-secondary">
+                                                Change deadline
+                                            </button>
                                         </div>
                                     </div>
                                 {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}

@@ -2527,7 +2527,7 @@ def dispatch_consent_invitations(config_id):
 
     tmpl = EmailTemplate.find_template_(
         EmailTemplateTypesMixin.CONSENT_INVITATION,
-        pclass_id=pclass.id,
+        pclass=pclass,
     )
     if tmpl is None:
         flash(
@@ -2649,7 +2649,7 @@ def dispatch_consent_reminders(config_id):
 
     tmpl = EmailTemplate.find_template_(
         EmailTemplateTypesMixin.CONSENT_REMINDER,
-        pclass_id=pclass.id,
+        pclass=pclass,
     )
     if tmpl is None:
         flash(

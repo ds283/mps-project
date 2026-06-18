@@ -9,6 +9,7 @@
 #
 import json
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from flask import current_app, render_template_string, url_for
@@ -1324,6 +1325,8 @@ def _encode_payload_value(value) -> Any:
         return value
     if isinstance(value, (int, float)):
         return value
+    if isinstance(value, Decimal):
+        return float(value)
     if isinstance(value, str):
         return value
     if isinstance(value, datetime):

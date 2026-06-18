@@ -31,21 +31,21 @@
                         </span>
                     {% endif %}
                 </div>
-                {% if record.report_grade is not none %}
-                    <span class="badge"
-                          style="background: var(--bs-success-bg-subtle);
-                                 color: var(--bs-success-text-emphasis);
-                                 border: 1px solid var(--bs-success-border-subtle);
-                                 font-size: var(--cd-text-micro)">
-                        {{ "%.0f"|format(record.report_grade) }}%
-                    </span>
-                {% endif %}
+                {#                {% if record.report_grade is not none %}#}
+                {#                    <span class="badge"#}
+                {#                          style="background: var(--bs-success-bg-subtle);#}
+                {#                                 color: var(--bs-success-text-emphasis);#}
+                {#                                 border: 1px solid var(--bs-success-border-subtle);#}
+                {#                                 font-size: var(--cd-text-micro)">#}
+                {#                        {{ "%.0f"|format(record.report_grade) }}%#}
+                {#                    </span>#}
+                {#                {% endif %}#}
             </div>
             <div class="card-body">
                 {% if not token_mode %}
                     <div class="alert alert-info py-2 px-3 mb-3" style="font-size: var(--cd-text-header-meta)">
                         Please let us know whether we can use your project report.
-                        You can optionally make your report available as an exemplar or for open days.
+                        You can choose to make it available as an exemplar or for Applicant Visit Days.
                     </div>
                 {% endif %}
 
@@ -82,12 +82,11 @@
                                     Use as a teaching exemplar
                                 </label>
                                 <p class="mb-1 text-body-secondary" style="font-size: var(--cd-text-header-meta)">
-                                    Your report (name removed, candidate number visible) may be shared
-                                    with future cohorts as a graded example. Declining has no effect
-                                    on your assessment.
+                                    Your report may be shared
+                                    with future cohorts as an exemplar. Your name won't appear.
                                 </p>
                                 <span style="font-size: var(--cd-text-micro); font-weight: 500;
-                                             color: {% if record.exemplar_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
+                                        color: {% if record.exemplar_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
                                     {% if record.exemplar_consent_active %}
                                         <i class="fas fa-check fa-fw"></i>
                                         Permission given
@@ -123,12 +122,10 @@
                                     Use at open days and promotional events
                                 </label>
                                 <p class="mb-1 text-body-secondary" style="font-size: var(--cd-text-header-meta)">
-                                    Your project title and abstract may be displayed at University
-                                    open days. Your name will not be shown. Candidate number visible.
-                                    Declining has no effect on your assessment.
+                                    Your project may be used on Applicant Visit Days.
                                 </p>
                                 <span style="font-size: var(--cd-text-micro); font-weight: 500;
-                                             color: {% if record.openday_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
+                                        color: {% if record.openday_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
                                     {% if record.openday_consent_active %}
                                         <i class="fas fa-check fa-fw"></i>
                                         Permission given
@@ -149,7 +146,9 @@
                      style="background: var(--bs-secondary-bg); font-size: var(--cd-text-micro); color: var(--bs-secondary-color)">
                     <i class="fas fa-lock fa-fw"></i>
                     <strong>Keep your permanent consent link safe.</strong>
-                    When your account is anonymized, we will no longer be able to identify
+                    Your account will be anonymized to align with University data retention
+                    policies, after which
+                    we will no longer be able to identify
                     your report by your name or email address. Your consent link is your
                     permanent way to manage your preferences.
                 </div>

@@ -464,9 +464,8 @@ Create the directory `app/templates/student/consent/` and the file
                                     Use as a teaching exemplar
                                 </label>
                                 <p class="mb-1 text-body-secondary" style="font-size: var(--cd-text-small)">
-                                    Your report (name removed, candidate number visible) may be shared
-                                    with future cohorts as a graded example. Declining has no effect
-                                    on your assessment.
+                                    Your report may be shared
+                                    with future cohorts as an exemplar. Your name won't appaer.
                                 </p>
                                 <span style="font-size: var(--cd-text-micro); font-weight: 500;
                                              color: {% if record.exemplar_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">
@@ -505,9 +504,7 @@ Create the directory `app/templates/student/consent/` and the file
                                     Use at open days and promotional events
                                 </label>
                                 <p class="mb-1 text-body-secondary" style="font-size: var(--cd-text-small)">
-                                    Your project title and abstract may be displayed at University
-                                    open days. Your name will not be shown. Candidate number visible.
-                                    Declining has no effect on your assessment.
+                                    Your project may be used on Applicant Visit Days.
                                 </p>
                                 <span style="font-size: var(--cd-text-micro); font-weight: 500;
                                              color: {% if record.openday_consent_active %}var(--bs-success-text-emphasis){% else %}var(--bs-secondary-color){% endif %}">

@@ -24,7 +24,13 @@ from flask import abort, redirect, render_template, request, url_for
 from flask_security.forms import Form
 
 from ..database import db
-from ..models import ConsentAuditEvent, SubmissionRecord, SubmissionRole, SubmittingStudent, User
+from ..models import (
+    ConsentAuditEvent,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittingStudent,
+    User,
+)
 from ..models.project_class import ProjectClassConfig, SubmissionPeriodRecord
 from . import student
 
@@ -78,6 +84,7 @@ def _request_supervisor_approval(record: SubmissionRecord):
     been contacted. Subsequent student consent changes do not trigger further emails.
     """
     from flask import current_app, url_for
+
     from ..models import EmailTemplate, EmailWorkflow, EmailWorkflowItem
     from ..models.emails import EmailTemplateTypesMixin, encode_email_payload
 
@@ -132,6 +139,7 @@ def _request_supervisor_approval(record: SubmissionRecord):
             }),
             body_payload=encode_email_payload({
                 "record": record,
+                "role": role,
                 "pclass": pclass,
                 "config": config,
                 "approval_url": approval_url,

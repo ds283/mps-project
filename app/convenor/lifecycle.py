@@ -2542,6 +2542,7 @@ def dispatch_consent_invitations(config_id):
         template=tmpl,
         pclasses=[pclass],
         creator=current_user,
+        defer=timedelta(minutes=15),
     )
     db.session.add(workflow)
     db.session.flush()
@@ -2664,6 +2665,7 @@ def dispatch_consent_reminders(config_id):
         template=tmpl,
         pclasses=[pclass],
         creator=current_user,
+        defer=timedelta(minutes=15),
     )
     db.session.add(workflow)
     db.session.flush()

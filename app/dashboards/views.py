@@ -11,25 +11,30 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from scipy.stats import gaussian_kde
 from bokeh.embed import components
-from bokeh.models import ColumnDataSource, HoverTool, NumeralTickFormatter
+from bokeh.models import HoverTool
 from bokeh.plotting import figure
-from flask import current_app, flash, jsonify, redirect, request, url_for
+from flask import current_app, flash, jsonify, redirect, request, session, url_for
 from flask_security import current_user, login_required, roles_accepted
+from scipy.stats import gaussian_kde
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import aliased
 
+from . import dashboards
+from .forms import MarkingExportForm, ResolveSimilarityConcernForm
+from ..ajax.archive import retired_reports
 from ..database import db
 from ..models import (
+    DegreeProgramme,
+    LiveProject,
     LLMOrchestrationJob,
-    MainConfig,
     ProjectClass,
     ProjectClassConfig,
+    ResearchGroup,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmittingStudent,
@@ -41,17 +46,17 @@ from ..models.markingevent import (
     MarkingReport,
     MarkingWorkflow,
     MarkingEventWorkflowStates,
-    SubmitterReport,
     SubmitterReportWorkflowStates,
 )
 from ..models.similarity import SimilarityConcern
 from ..models.students import StudentData
 from ..models.users import User as UserModel
 from ..shared.context.global_context import render_template_context
+from ..shared.conversions import is_integer
 from ..shared.scraped_text_store import delete_similarity_chunks, get_similarity_chunks
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
-from ..task_queue import progress_update, register_task
+from ..task_queue import register_task
 from ..tasks.llm_orchestration import (
     _cleanup_redis,
     _collect_error_record_ids,
@@ -71,11 +76,9 @@ from ..tasks.llm_orchestration import (
     launch_similarity_only_pipeline,
     set_pipeline_paused,
 )
+from ..tasks.pipeline_tracking import get_pipeline_redis
 from ..tasks.similarity_analysis import CHUNK_SIMILARITY_THRESHOLD, CHUNK_TYPES
-from ..tasks.pipeline_tracking import get_pipeline_redis, read_workflow_entry
 from ..tools import ServerSideSQLHandler
-from .forms import MarkingExportForm, ResolveSimilarityConcernForm
-from . import dashboards
 
 # ---------------------------------------------------------------------------
 # Metric configuration (order matters — used in template iteration)
@@ -355,7 +358,6 @@ def _get_accessible_pclasses_for_marking(
     Return ProjectClass instances the current user may view on the marking
     dashboard. A class is included only when it has at least one MarkingEvent.
     """
-    from sqlalchemy import exists
 
     has_events_subq = (
         db.session.query(MarkingEvent.id)
@@ -954,17 +956,15 @@ def overview():
         or current_user.has_role("data_dashboard_AI")
         or current_user.has_role("data_dashboard_marking")
         or current_user.has_role("data_dashboard_similarity")
-        or (
-            current_user.has_role("faculty")
-            and current_user.faculty_data is not None
-            and current_user.faculty_data.is_convenor
-        )
+        or current_user.has_role("data_dashboard_reports")
+        or (current_user.has_role("faculty") and current_user.faculty_data is not None and current_user.faculty_data.is_convenor)
     ):
         flash("You do not have permission to access the dashboards.", "error")
         return redirect(url_for("home.homepage"))
 
     summary = _dashboard_summary_for_user()
     marking_summary = _marking_summary_for_user()
+    avd_summary = _avd_dashboard_summary_for_user() if _can_access_avd_dashboard() else None
     if _can_access_similarity_dashboard():
         _overview_tenants = _get_accessible_tenants()
         _overview_pclass_ids = [
@@ -981,6 +981,7 @@ def overview():
         summary=summary,
         marking_summary=marking_summary,
         similarity_summary=similarity_summary,
+        avd_summary=avd_summary,
     )
 
 
@@ -2570,6 +2571,317 @@ def export_marking_excel(event_id: int):
         "success",
     )
     return redirect(url_for("dashboards.marking_register", event_id=event_id))
+
+
+# ===========================================================================
+# AVD Dashboard
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Access-control + summary helpers
+# ---------------------------------------------------------------------------
+
+
+def _can_access_avd_dashboard() -> bool:
+    """Return True if the current user may view the AVD dashboard.
+    No convenor branch — these users are explicitly not convenors."""
+    return current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_reports")
+
+
+def _get_accessible_pclasses_for_avd(tenant_id: int) -> List[ProjectClass]:
+    """
+    Return ProjectClass instances visible on the AVD dashboard for a single
+    tenant. Callers are already gated by _can_access_avd_dashboard()
+    (root/admin/data_dashboard_reports only), so there is no further role
+    branching here — unlike _get_accessible_pclasses(), there is no
+    convenor path.
+    """
+    return (
+        db.session.query(ProjectClass)
+        .filter(
+            ProjectClass.active.is_(True),
+            ProjectClass.publish.is_(True),
+            ProjectClass.uses_submission.is_(True),
+            ProjectClass.tenant_id == tenant_id,
+        )
+        .order_by(ProjectClass.name.asc())
+        .all()
+    )
+
+
+def _get_accessible_years_for_avd(tenant_id: int) -> List[int]:
+    """Return distinct academic years with at least one retired SubmittingStudent
+    for the given tenant, newest first."""
+    rows = (
+        db.session.query(ProjectClassConfig.year)
+        .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+        .join(SubmittingStudent, SubmittingStudent.config_id == ProjectClassConfig.id)
+        .filter(
+            SubmittingStudent.retired.is_(True),
+            ProjectClass.tenant_id == tenant_id,
+        )
+        .distinct()
+        .order_by(ProjectClassConfig.year.desc())
+        .all()
+    )
+    return [r[0] for r in rows]
+
+
+def _get_accessible_research_groups_for_avd(tenant_id: int) -> List[ResearchGroup]:
+    """Return active ResearchGroup instances belonging to the given tenant."""
+    tenant: Optional[Tenant] = db.session.get(Tenant, tenant_id)
+    if tenant is None:
+        return []
+    return sorted((g for g in tenant.research_groups if g.active), key=lambda g: g.name)
+
+
+def _avd_dashboard_summary_for_user() -> Dict:
+    """Return counts of tenants, eligible submitted reports, and AVD-consented
+    reports for the landing-page card."""
+    tenants = _get_accessible_tenants()
+    n_tenants = len(tenants)
+
+    pclass_ids = []
+    for t in tenants:
+        pclass_ids.extend(p.id for p in _get_accessible_pclasses_for_avd(t.id))
+
+    if not pclass_ids:
+        return {"n_tenants": n_tenants, "n_reports": 0, "n_consented": 0}
+
+    n_reports = (
+        db.session.query(SubmittingStudent)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+        .filter(
+            ProjectClassConfig.pclass_id.in_(pclass_ids),
+            SubmittingStudent.retired.is_(True),
+        )
+        .count()
+    )
+
+    n_consented = (
+        db.session.query(SubmissionRecord)
+        .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+        .filter(
+            ProjectClassConfig.pclass_id.in_(pclass_ids),
+            SubmittingStudent.retired.is_(True),
+            SubmissionRecord.openday_consent_granted_at.isnot(None),
+            SubmissionRecord.openday_consent_withdrawn.is_(False),
+        )
+        .count()
+    )
+
+    return {"n_tenants": n_tenants, "n_reports": n_reports, "n_consented": n_consented}
+
+
+# ---------------------------------------------------------------------------
+# AVD dashboard views
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/avd")
+@login_required
+def avd_dashboard():
+    """
+    AVD dashboard: browse retired/archived submitted reports for AVD and
+    exemplar use, scoped to a single selected tenant.
+    """
+    if not _can_access_avd_dashboard():
+        flash("You do not have permission to access the AVD dashboard.", "error")
+        return redirect(url_for("home.homepage"))
+
+    # ---- resolve accessible tenants ----------------------------------------
+    accessible_tenants = _get_accessible_tenants()
+    if not accessible_tenants:
+        flash("No tenants are accessible with your current role.", "info")
+        return redirect(url_for("dashboards.overview"))
+
+    # ---- tenant filter ------------------------------------------------------
+    # Single-tenant users don't get to choose; multi-tenant users do.
+    default_tenant_id = _get_default_tenant_id(accessible_tenants)
+    if len(accessible_tenants) == 1:
+        selected_tenant_id = accessible_tenants[0].id
+    else:
+        try:
+            selected_tenant_id = int(request.args.get("tenant_id", default_tenant_id))
+        except (ValueError, TypeError):
+            selected_tenant_id = default_tenant_id
+
+    # Ensure the tenant is actually accessible
+    accessible_tenant_ids = {t.id for t in accessible_tenants}
+    if selected_tenant_id not in accessible_tenant_ids:
+        selected_tenant_id = default_tenant_id
+
+    selected_tenant = next((t for t in accessible_tenants if t.id == selected_tenant_id), None)
+
+    # --- pclass filter ---
+    pclasses = _get_accessible_pclasses_for_avd(selected_tenant_id)
+    pclass_filter = request.args.get("pclass_filter")
+
+    if pclass_filter is None and session.get("avd_dashboard_pclass_filter"):
+        pclass_filter = session["avd_dashboard_pclass_filter"]
+
+    if pclass_filter is not None and pclass_filter != "all":
+        flag, value = is_integer(pclass_filter)
+        if not flag or value not in {p.id for p in pclasses}:
+            pclass_filter = "all"
+
+    if pclass_filter is not None:
+        session["avd_dashboard_pclass_filter"] = pclass_filter
+
+    # --- year filter ---
+    years = _get_accessible_years_for_avd(selected_tenant_id)
+    year_filter = request.args.get("year_filter")
+
+    if year_filter is None and session.get("avd_dashboard_year_filter"):
+        year_filter = session["avd_dashboard_year_filter"]
+
+    if year_filter is not None and year_filter != "all":
+        flag, value = is_integer(year_filter)
+        if not flag or value not in years:
+            year_filter = "all"
+
+    if year_filter is not None:
+        session["avd_dashboard_year_filter"] = year_filter
+
+    # --- group filter ---
+    groups = _get_accessible_research_groups_for_avd(selected_tenant_id)
+    group_filter = request.args.get("group_filter")
+
+    if group_filter is None and session.get("avd_dashboard_group_filter"):
+        group_filter = session["avd_dashboard_group_filter"]
+
+    if group_filter is not None and group_filter != "all":
+        flag, value = is_integer(group_filter)
+        if not flag or value not in {g.id for g in groups}:
+            group_filter = "all"
+
+    if group_filter is not None:
+        session["avd_dashboard_group_filter"] = group_filter
+
+    return render_template_context(
+        "dashboards/avd_dashboard.html",
+        accessible_tenants=accessible_tenants,
+        selected_tenant=selected_tenant,
+        pclasses=pclasses,
+        pclass_filter=pclass_filter,
+        years=years,
+        year_filter=year_filter,
+        groups=groups,
+        group_filter=group_filter,
+    )
+
+
+@dashboards.route("/avd_ajax", methods=["POST"])
+@login_required
+def avd_dashboard_ajax():
+    """DataTables server-side endpoint for the AVD dashboard's report table."""
+    if not _can_access_avd_dashboard():
+        return jsonify({"error": "Permission denied"}), 403
+
+    # Read filter params from request.args (baked into the AJAX URL at render time)
+    try:
+        tenant_id = int(request.args.get("tenant_id", 0)) or None
+    except (ValueError, TypeError):
+        tenant_id = None
+
+    accessible_tenant_ids = {t.id for t in _get_accessible_tenants()}
+    if tenant_id not in accessible_tenant_ids:
+        tenant_id = None
+
+    pclass_filter = request.args.get("pclass_filter")
+    year_filter = request.args.get("year_filter")
+    group_filter = request.args.get("group_filter")
+
+    # Validate pclass filter belongs to the selected tenant
+    if pclass_filter is not None and pclass_filter != "all":
+        flag, value = is_integer(pclass_filter)
+        if flag:
+            pclass: Optional[ProjectClass] = db.session.get(ProjectClass, value)
+            if pclass is None or pclass.tenant_id != tenant_id:
+                pclass_filter = "all"
+        else:
+            pclass_filter = "all"
+
+    # Validate year filter
+    if year_filter is not None and year_filter != "all":
+        flag, _ = is_integer(year_filter)
+        if not flag:
+            year_filter = "all"
+
+    # Validate group filter belongs to the selected tenant
+    if group_filter is not None and group_filter != "all":
+        flag, value = is_integer(group_filter)
+        if flag:
+            group: Optional[ResearchGroup] = db.session.get(ResearchGroup, value)
+            if group is None or tenant_id not in {t.id for t in group.tenants}:
+                group_filter = "all"
+        else:
+            group_filter = "all"
+
+    # Build base query, scoped to the single selected tenant
+    base_query = (
+        db.session.query(SubmittingStudent)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+        .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+        .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+        .join(UserModel, UserModel.id == StudentData.id)
+        .join(
+            DegreeProgramme,
+            DegreeProgramme.id == StudentData.programme_id,
+            isouter=True,
+        )
+        .filter(
+            ProjectClass.uses_submission.is_(True),
+            ProjectClass.active.is_(True),
+            ProjectClass.publish.is_(True),
+            ProjectClass.tenant_id == tenant_id,
+            SubmittingStudent.retired.is_(True),
+        )
+    )
+
+    # Apply pclass filter
+    if pclass_filter is not None and pclass_filter != "all":
+        flag, value = is_integer(pclass_filter)
+        if flag:
+            base_query = base_query.filter(ProjectClass.id == value)
+
+    # Apply year filter
+    if year_filter is not None and year_filter != "all":
+        flag, value = is_integer(year_filter)
+        if flag:
+            base_query = base_query.filter(ProjectClassConfig.year == value)
+
+    # Apply group filter: join through SubmissionRecord and LiveProject to ResearchGroup
+    if group_filter is not None and group_filter != "all":
+        flag, value = is_integer(group_filter)
+        if flag:
+            base_query = (
+                base_query.join(SubmissionRecord, SubmissionRecord.owner_id == SubmittingStudent.id)
+                .join(LiveProject, LiveProject.id == SubmissionRecord.project_id)
+                .filter(LiveProject.group_id == value)
+                .distinct()
+            )
+
+    # Define columns for ServerSideSQLHandler
+    name_col = {
+        "search": func.concat(UserModel.first_name, " ", UserModel.last_name),
+        "order": [UserModel.last_name, UserModel.first_name],
+        "search_collation": "utf8_general_ci",
+    }
+    year_col = {
+        "search": ProjectClassConfig.year,
+        "order": ProjectClassConfig.year,
+    }
+
+    columns = {
+        "name": name_col,
+        "year": year_col,
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(retired_reports)
 
 
 # ===========================================================================

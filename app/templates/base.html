@@ -357,21 +357,6 @@
                         </li>
                     {% endif %}
 
-                    {% if is_archive %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
-                                Archive
-                            </a>
-                            {% if is_archive_reports %}
-                                <div class="dropdown-menu mx-0 border-0 dropdown-menu-end">
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('archive.reports') }}">
-                                        <i class="fas fa-archive fa-fw"></i> Projects&hellip;
-                                    </a>
-                                </div>
-                            {% endif %}
-                        </li>
-                    {% endif %}
-
                     {# add convenor link if user is a convenor, or an admin user #}
                     {% if is_admin or is_root or is_convenor %}
                         <li class="nav-item">

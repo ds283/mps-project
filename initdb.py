@@ -15,56 +15,27 @@ from importlib import import_module
 from pathlib import Path
 from tarfile import TarFile, TarInfo
 from tarfile import open as tarfile_open
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
-import markdown
 import pandas as pd
-from dateutil import parser
 from flask_migrate import upgrade
-from numpy import nan
 from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import db
 from app.models import (
-    EmailTemplate,
-    EmailTemplateTypesMixin,
     EnrollmentRecord,
     FacultyData,
     GradingRubric,
-    LiveMarkingScheme,
-    LiveProject,
     MarkingEvent,
-    MarkingReport,
-    MarkingWorkflow,
-    PeriodAttachment,
-    PeriodAttachmentRole,
-    Project,
-    ProjectClass,
     ProjectClassConfig,
-    ProjectTag,
-    ProjectTagGroup,
     Role,
-    ScheduleAttempt,
-    ScheduleSlot,
-    StudentData,
-    SubmissionAttachment,
-    SubmissionAttachmentRole,
     SubmissionPeriodRecord,
-    SubmissionPeriodUnit,
-    SubmissionRecord,
-    SubmissionRole,
-    SubmitterReport,
-    SubmittingStudent,
-    SupervisionEvent,
-    Tenant,
     User,
 )
 from app.models.scheduler import DatabaseSchedulerEntry, IntervalSchedule
 from app.shared.cloud_object_store import ObjectMeta, ObjectStore
-from app.shared.conversions import is_integer
 from app.shared.scratch import ScratchFileManager
-from app.shared.sqlalchemy import get_count
 from app.shared.utils import get_current_year
 
 
@@ -471,6 +442,13 @@ _REQUIRED_ROLES: List[Dict] = [
         "belonging to the user's tenants. Does not grant permission to launch "
         "similarity rebuild tasks.",
         "colour": "#c05810",
+    },
+    {
+        "name": "data_dashboard_reports",
+        "description": "Read-only access to the AVD dashboard for all project classes and cycles "
+        "belonging to the user's tenants. Does not grant convenor or marking "
+        "permissions.",
+        "colour": "#1a8a8a",
     },
 ]
 

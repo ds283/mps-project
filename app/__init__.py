@@ -15,6 +15,7 @@ from urllib import parse
 
 import latex2markdown
 import markdown
+import redis
 from dozer import Dozer
 from flask import Flask, current_app, g, make_response, request
 from flask_assets import Environment
@@ -37,8 +38,6 @@ from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from werkzeug.middleware.proxy_fix import ProxyFix
-
-import redis
 
 from .cache import cache
 from .database import db
@@ -567,10 +566,6 @@ def create_app():
     from .dashboards import dashboards as dashboards_blueprint
 
     app.register_blueprint(dashboards_blueprint, url_prefix="/dashboards")
-
-    from .archive import archive as archive_blueprint
-
-    app.register_blueprint(archive_blueprint, url_prefix="/archive")
 
     from .api import api as api_blueprint
 

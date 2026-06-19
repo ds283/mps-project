@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import date, datetime, time
+from datetime import datetime, time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union
 
 if TYPE_CHECKING:
@@ -28,7 +28,6 @@ from ..shared.llm_thresholds import (
     BURSTINESS_NOTE_LOW,
     SENT_CV_NOTE_LOW,
     SIMILARITY_INLINE_MIN_COSINE,
-    SIMILARITY_DANGER_COSINE,
 )
 from ..shared.sqlalchemy import get_count
 from .associations import (
@@ -1924,7 +1923,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         asset: Union[SubmittedAsset, GeneratedAsset]
         modified = False
 
-        allowed_roles = ["archive_reports"]
+        allowed_roles = ["data_dashboard_reports"]
         for allowed_role in allowed_roles:
             if not asset.in_role_acl(allowed_role):
                 asset.grant_role(allowed_role)
@@ -2004,7 +2003,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Ensures that asset access control is consistent with the role sets on each attachment
         and that all SubmissionRole holders can access the report and processed report.
         """
-        from .assets import GeneratedAsset, SubmittedAsset
         from .users import User as _User
 
         modified = False
@@ -2036,9 +2034,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 if asset.in_user_acl(student_user):
                     asset.revoke_user(student_user)
                     m = True
-            # ensure archive_reports role is in the role ACR
-            if not asset.in_role_acl("archive_reports"):
-                asset.grant_role("archive_reports")
+            # ensure data_dashboard_reports role is in the role ACR
+            if not asset.in_role_acl("data_dashboard_reports"):
+                asset.grant_role("data_dashboard_reports")
                 m = True
             return m
 
@@ -2076,9 +2074,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                     asset.revoke_user(student_user)
                     m = True
 
-            # ensure archive_reports role is in the role ACR
-            if not asset.in_role_acl("archive_reports"):
-                asset.grant_role("archive_reports")
+            # ensure data_dashboard_reports role is in the role ACR
+            if not asset.in_role_acl("data_dashboard_reports"):
+                asset.grant_role("data_dashboard_reports")
                 m = True
             return m
 

@@ -156,6 +156,39 @@
             {% endcall %}
             {% endif %}
 
+            {# ---- AVD Dashboard card ---- #}
+            {% if is_root or is_admin or is_data_dashboard_reports %}
+                {% call(slot) dashboard_card(
+                icon_class="fas fa-photo-film fa-2x",
+                icon_bg_style="background-color: var(--db-teal-50);",
+                title="AVD Dashboard",
+                description="Browse archived submitted reports by project class, year, and research group, with AVD and exemplar consent status for each.",
+                open_url=url_for('dashboards.avd_dashboard'),
+                open_label="Open dashboard",
+                open_btn_class="btn-db-teal"
+            ) %}
+                    {% if slot == 'badges' %}
+                        {% if avd_summary.n_tenants > 1 %}
+                            <span class="badge bg-secondary">
+                            <i class="fas fa-building me-1"></i>{{ avd_summary.n_tenants }} tenants
+                        </span>
+                        {% endif %}
+                        {% if avd_summary.n_reports > 0 %}
+                            <span class="badge bg-secondary">
+                            <i class="fas fa-file-lines me-1"></i>{{ avd_summary.n_reports }} eligible report{{ 's' if avd_summary.n_reports != 1 }}
+                        </span>
+                        {% else %}
+                            <span class="badge bg-secondary text-body-secondary">No data available</span>
+                        {% endif %}
+                        {% if avd_summary.n_consented > 0 %}
+                            <span class="badge bg-secondary">
+                            <i class="fas fa-check me-1"></i>{{ avd_summary.n_consented }} AVD-consented
+                        </span>
+                    {% endif %}
+                {% endif %}
+            {% endcall %}
+            {% endif %}
+
         </div>
 
     </div>

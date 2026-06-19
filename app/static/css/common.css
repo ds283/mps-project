@@ -47,6 +47,14 @@
     --db-orange-400: #F08030;
     --db-orange-600: #C05810;
     --db-orange-800: #7A3200;
+
+    /* Dashboard teal (AVD) */
+    --db-teal-50: #E6F5F4;
+    --db-teal-100: #B8E2DF;
+    --db-teal-200: #8ACECA;
+    --db-teal-400: #2EA39C;
+    --db-teal-600: #1A8A8A;
+    --db-teal-800: #0F5252;
 }
 
 .badge-ai-generated {
@@ -116,6 +124,18 @@
     background-color: var(--db-orange-50);
     border-color: var(--db-orange-600);
     color: var(--db-orange-800);
+}
+
+.btn-db-teal {
+    background-color: var(--db-teal-400);
+    color: #fff;
+    border-color: var(--db-teal-600);
+}
+
+.btn-db-teal:hover {
+    background-color: var(--db-teal-600);
+    border-color: var(--db-teal-800);
+    color: #fff;
 }
 
 .pipeline-panel-header {

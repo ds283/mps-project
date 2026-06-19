@@ -14,6 +14,10 @@ from flask import has_request_context, render_template, session
 from flask_login import current_user
 from jinja2 import Template
 
+from .assessments import get_assessment_data
+from .matching import get_matching_data
+from .utils import get_pclass_config_list, get_pclass_list
+from ..utils import home_dashboard_url
 from ... import site_copyright_dates, site_revision
 from ...database import db
 from ...models import ProjectClass, ProjectClassConfig, User
@@ -22,10 +26,6 @@ from ...models.markingevent import (
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
-from ..utils import home_dashboard_url
-from .assessments import get_assessment_data
-from .matching import get_matching_data
-from .utils import get_pclass_config_list, get_pclass_list
 
 
 def get_global_context_data():
@@ -104,8 +104,6 @@ def _build_global_context():
     is_office = "office" in visible_roles
     is_student = "student" in visible_roles
     is_reports = "reports" in visible_roles
-    is_archive = "archive_reports" in visible_roles
-    is_archive_reports = "archive_reports" in visible_roles
 
     is_root = "root" in visible_roles
     is_admin = "admin" in visible_roles
@@ -116,6 +114,7 @@ def _build_global_context():
     is_data_dashboard_AI = "data_dashboard_AI" in visible_roles
     is_data_dashboard_marking = "data_dashboard_marking" in visible_roles
     is_data_dashboard_similarity = "data_dashboard_similarity" in visible_roles
+    is_data_dashboard_reports = "data_dashboard_reports" in visible_roles
 
     base_context_data = get_global_context_data()
 
@@ -130,31 +129,25 @@ def _build_global_context():
             "is_office": is_office,
             "is_student": is_student,
             "is_reports": is_reports,
-            "is_convenor": is_faculty
-            and current_user.faculty_data is not None
-            and current_user.faculty_data.is_convenor,
+            "is_convenor": is_faculty and current_user.faculty_data is not None and current_user.faculty_data.is_convenor,
             "is_root": is_root,
             "is_admin": is_admin,
             "is_edit_tags": is_edit_tags,
             "is_view_email": is_view_email,
             "is_manage_users": is_manage_users,
             "is_emailer": is_emailer,
-            "is_archive": is_archive,
-            "is_archive_reports": is_archive_reports,
             "is_data_dashboard_AI": is_data_dashboard_AI,
             "is_data_dashboard_marking": is_data_dashboard_marking,
             "is_data_dashboard_similarity": is_data_dashboard_similarity,
+            "is_data_dashboard_reports": is_data_dashboard_reports,
             # Combined flag: can view at least one data dashboard
             "can_view_dashboards": is_root
             or is_admin
             or is_data_dashboard_AI
             or is_data_dashboard_marking
             or is_data_dashboard_similarity
-            or (
-                is_faculty
-                and current_user.faculty_data is not None
-                and current_user.faculty_data.is_convenor
-            ),
+            or is_data_dashboard_reports
+            or (is_faculty and current_user.faculty_data is not None and current_user.faculty_data.is_convenor),
         }
         | base_context_data
     )

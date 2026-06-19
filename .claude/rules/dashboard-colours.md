@@ -13,10 +13,16 @@ Bootstrap's `bg-primary`, `text-primary`, `bg-success`, `text-success` classes
 to express dashboard identity. Those Bootstrap classes are reserved for semantic
 use (alerts, status indicators) elsewhere in the application.
 
-The two ramps are:
+The ramps are:
 
-- `--db-blue-*`  (50, 100, 200, 400, 600, 800) — AI Risk Dashboard identity
-- `--db-green-*` (50, 100, 200, 400, 600, 800) — Marking Dashboard identity
+- `--db-blue-*`   (50, 100, 200, 400, 600, 800) — AI Risk Dashboard identity
+- `--db-green-*`  (50, 100, 200, 400, 600, 800) — Marking Dashboard identity
+- `--db-orange-*` (50, 100, 200, 400, 600, 800) — Similarity Dashboard identity
+- `--db-teal-*`   (50, 100, 200, 400, 600, 800) — AVD Dashboard identity
+
+`--db-purple-*` also exists but is **not** a dashboard-identity ramp — it is
+reserved for AI-generated-content provenance (`.badge-ai-generated`) and must
+not be assigned to a new dashboard.
 
 ## Stop usage convention
 
@@ -49,11 +55,35 @@ The two ramps are:
   Bootstrap semantic colours (`bg-success`, `bg-warning`, `bg-danger`) — these
   encode workflow health, not dashboard identity, and must not be changed
 
+**Similarity Dashboard** (`similarity_dashboard.html`)
+
+- Page header icon/heading text: `--db-orange-600`
+- Summary stat cards: `--db-orange-50` background, `--db-orange-800` heading text
+- Concern card left border: `--db-orange-200`
+- Concern card header: `--db-orange-50` background, `--db-orange-200` border, `--db-orange-800` text
+- Pill/badge backgrounds: `--db-orange-100`/`--db-orange-200`, `--db-orange-800` text
+- Secondary stat labels: `--db-orange-600`
+- Outline action buttons: `.btn-outline-db-orange`; primary action buttons (Apply,
+  Rebuild): `.btn-db-orange`
+
+**AVD Dashboard** (`avd_dashboard.html`)
+
+- Filter buttons reuse the existing `btn-sm btn-primary` / `btn-outline-secondary`
+  pattern from the original archive view rather than the `--db-teal-*` ramp —
+  this dashboard's table/filter chrome has not yet been restyled to the
+  per-dashboard identity convention used by AI/Marking/Similarity; that
+  restyle is a later phase, not part of the initial move.
+- Overview card icon background: `--db-teal-50`; open-dashboard button:
+  `.btn-db-teal`
+
 **Overview page** (`overview.html`)
 
 - AI Risk card icon background: `--db-blue-50`
 - Marking card icon background: `--db-green-50`
-- Open dashboard buttons: `.btn-db-blue` and `.btn-db-green` respectively
+- Similarity card icon background: `--db-orange-50`
+- AVD card icon background: `--db-teal-50`
+- Open dashboard buttons: `.btn-db-blue`, `.btn-db-green`, `.btn-db-orange`,
+  `.btn-db-teal` respectively
 
 ## Adding a new dashboard
 

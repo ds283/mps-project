@@ -1,0 +1,79 @@
+{% from "icon_block.html" import icon_block %}
+
+{% if url is not none and text is not none %}
+    <div class="d-flex align-items-center">
+        <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
+        </a>
+    </div>
+{% endif %}
+
+<div class="card border-primary mt-3 mb-3">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-envelope me-2"></i>{{ card_title|safe }}
+    </div>
+    <div class="card-body">
+        <div class="mt-2 mb-5 alert alert-info">
+            {% if inspector_type == "global" %}
+                {% call icon_block("check-circle") %}
+                    <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
+                    <div class="mt-1">
+                        The <em>global fallback</em> templates must always remain active.
+                    </div>
+                    <div class="mt-1">
+                        Additional templates can be created to override the default
+                        for specific tenants or purposes.
+                    </div>
+                    <div class="mt-1">
+                        You can provide more than one active template. By default, the most
+                        recent active version will be used.
+                    </div>
+                {% endcall %}
+            {% elif inspector_type == "tenant" %}
+                {% call icon_block("check-circle") %}
+                    <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
+                    <div class="mt-1">
+                        You can override any of the default templates by providing a specialized
+                        implementation for this tenant.
+                    </div>
+                    <div class="mt-1">
+                        You can provide more than one active template. By default, the most
+                        recent active version will be used.
+                    </div>
+                {% endcall %}
+            {% elif inspector_type == "pclass" %}
+                {% call icon_block("check-circle") %}
+                    <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
+                    <div class="mt-1">
+                        You can override any of the default templates by providing a specialized
+                        implementation for this project class.
+                    </div>
+                    <div class="mt-1">
+                        You can provide more than one active template. By default, the most
+                        recent active version will be used.
+                    </div>
+                {% endcall %}
+            {% endif %}
+        </div>
+        <table id="email-templates" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="20%">Type</th>
+                <th width="20%">Subject</th>
+                <th width="6%">Version</th>
+                <th width="24%">Status</th>
+                <th width="16%">Comment</th>
+                <th width="14%">Actions</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+{% if url and text %}
+    <div>
+        <a class="text-decoration-none" href="{{ url }}">
+            <i class="fas fa-backward"></i> Return to {{ text }}
+        </a>
+    </div>
+{% endif %}

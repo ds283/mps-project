@@ -36,6 +36,7 @@ from ..models import (
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.email_templates import clone_email_template
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.utils import (
     redirect_url,
 )
@@ -62,18 +63,25 @@ def email_templates(pclass_id):
     if url is None:
         url = redirect_url()
 
+    config = pclass.most_recent_config
+    data = get_convenor_dashboard_data(pclass, config)
+
     AJAX_endpoint = url_for(
         "convenor.email_templates_ajax", pclass_id=pclass_id, url=url, text=text
     )
 
     return render_template_context(
-        "admin/email_templates/list.html",
+        "convenor/email_templates/list.html",
         AJAX_endpoint=AJAX_endpoint,
         title=f"Email templates for {pclass.name}",
         card_title=f"Email templates for <strong>{pclass.name}</strong>",
         inspector_type="pclass",
         url=url,
         text=text,
+        pclass=pclass,
+        config=config,
+        convenor_data=data,
+        pane="configure",
     )
 
 

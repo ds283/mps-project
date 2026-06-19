@@ -14,6 +14,10 @@
     {% set group_filter = 'all' %}
 {% endif %}
 
+{% if not grade_filter or grade_filter is none %}
+    {% set grade_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -33,7 +37,7 @@
                 serverSide: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + {{ url_for('dashboards.avd_dashboard_ajax', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter) | tojson | safe }},
+                    url: $SCRIPT_ROOT + {{ url_for('dashboards.avd_dashboard_ajax', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter) | tojson | safe }},
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -60,11 +64,20 @@
                         }
                     },
                     {
+                        data: 'report_grade',
+                        className: 'text-end',
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue'
+                        }
+                    },
+                    {
                         data: 'records',
                         orderable: false
                     }
                 ],
-                order: [[1, 'desc'], [0, 'asc']],
+                order: [[2, 'desc'], [1, 'desc'], [0, 'asc']],
             });
         });
     </script>
@@ -93,7 +106,7 @@
                             <p class="mb-1">Filter by tenant</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
                                 {% for tenant in accessible_tenants %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=tenant.id, pclass_filter='all', year_filter='all', group_filter='all') }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=tenant.id, pclass_filter='all', year_filter='all', group_filter='all', grade_filter=grade_filter) }}"
                                        class="btn btn-sm filter-btn {% if tenant.id == selected_tenant.id %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ tenant.name }}
                                     </a>
@@ -110,12 +123,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by project class</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter='all', year_filter=year_filter, group_filter=group_filter) }}"
+                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter='all', year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter) }}"
                                    class="btn btn-sm filter-btn {% if pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All
                                 </a>
                                 {% for pclass in pclasses %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass.id, year_filter=year_filter, group_filter=group_filter) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass.id, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter) }}"
                                        class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ pclass.name }}
                                     </a>
@@ -134,12 +147,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by academic year</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter='all', group_filter=group_filter) }}"
+                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter='all', group_filter=group_filter, grade_filter=grade_filter) }}"
                                    class="btn btn-sm filter-btn {% if year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All years
                                 </a>
                                 {% for year in years %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year, group_filter=group_filter) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year, group_filter=group_filter, grade_filter=grade_filter) }}"
                                        class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ year }}&ndash;{{ year + 1 }}
                                     </a>
@@ -158,12 +171,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by research group</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter='all') }}"
+                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter='all', grade_filter=grade_filter) }}"
                                    class="btn btn-sm filter-btn {% if group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All groups
                                 </a>
                                 {% for group in groups %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group.id) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group.id, grade_filter=grade_filter) }}"
                                        class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ group.name }}
                                     </a>
@@ -173,15 +186,40 @@
                     </div>
                 {% endif %}
 
+                {# Grade filter #}
+                {% if (pclasses is not none and pclasses|length > 0) or (years is not none and years|length > 0) or (groups is not none and groups|length > 0) %}
+                    <hr class="intro-divider">
+                {% endif %}
+                <div class="row">
+                    <div class="col-12">
+                        <p class="mb-1">Filter by report grade</p>
+                        <div class="d-flex flex-row flex-wrap gap-1">
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='all') }}"
+                               class="btn btn-sm filter-btn {% if grade_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Any
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='graded') }}"
+                               class="btn btn-sm filter-btn {% if grade_filter == 'graded' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Graded
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='ungraded') }}"
+                               class="btn btn-sm filter-btn {% if grade_filter == 'ungraded' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Ungraded
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             {# end filter panel #}
 
             <table id="reports-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="20%">Student</th>
-                    <th width="15%">Year and project class</th>
-                    <th width="65%">Submissions</th>
+                    <th width="18%">Student</th>
+                    <th width="14%">Year and project class</th>
+                    <th width="10%" class="text-end">Report grade</th>
+                    <th width="58%">Submissions</th>
                 </tr>
                 </thead>
             </table>

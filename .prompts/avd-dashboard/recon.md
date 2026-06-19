@@ -31,10 +31,10 @@ Canonical helpers, already private (`_`-prefixed) module functions:
 
 ```python
 _get_accessible_tenants() -> List[Tenant]
-# root: all tenants. else: current_user.tenants.order_by(Tenant.name).all()
+    # root: all tenants. else: current_user.tenants.order_by(Tenant.name).all()
 
 _get_default_tenant_id(accessible_tenants) -> int
-# current_user.tenants.order_by(Tenant.name).first(), else accessible_tenants[0]
+    # current_user.tenants.order_by(Tenant.name).first(), else accessible_tenants[0]
 ```
 
 Route-level pattern (seen identically in `ai_dashboard()`, reused by
@@ -98,9 +98,9 @@ than AVDs:
   step.
 - **Exemplar** — student and supervisor consent shown as two *separate*
   indicators rather than collapsed into `exemplar_fully_approved`:
-    - student side: `exemplar_consent_active`
-    - supervisor side: `exemplar_supervisor_approved` (tri-state: `None` =
-      not yet actioned, `True` = approved, `False` = declined)
+  - student side: `exemplar_consent_active`
+  - supervisor side: `exemplar_supervisor_approved` (tri-state: `None` =
+    not yet actioned, `True` = approved, `False` = declined)
 
 ```python
 @property
@@ -290,39 +290,39 @@ originally sketched:
    column works today (`data: 'name', render: {_: 'display', sort:
    'sortstring'}` — sort key travels with the row independent of the
    rendered HTML). Contains, top to bottom:
-    - thumbnail
-    - student name + project title
-    - compact identity line: programme · research group · year ·
-      supervision grade · presentation grade (text, not separate columns —
-      see point 2 below)
-    - consent badges: AVD (`openday_consent_active`, visually dominant —
-      small solid teal pill) and exemplar (`exemplar_consent_active` +
-      `exemplar_supervisor_approved`, muted text, shown only when not in
-      the "never asked" default-silent state — see point 3)
-    - flags only when present (nothing rendered when absent — no "not
-      flagged"/"not moderated"/"no intervention" placeholder badges):
-      `convenor_intervention`, Turnitin score/band, AI risk
-      (`risk_factors_ui_summary()`, wording "AI flagged" / "AI flagged ·
-      resolved", with a small note icon appended only when an annotation
-      exists — clicking it opens the same details panel as everything
-      else, not a separate popover), feedback document link
-      (`SubmissionRecord.feedback_reports`)
-    - staff-roles block: **generic** iteration over the record's
-      `SubmissionRole`s (not hard-coded to supervisor/marker/moderator —
-      label by `role.role` so any future role type appears automatically
-      without a template change), each row showing the role holder's name;
-      the moderator's role line specifically carries the outcome inline
-      ("grade accepted" / "out of tolerance, no moderator assigned yet")
-      rather than a separate badge — this is the resolution for surfacing
-      `out_of_tolerance` / `was_moderated` / `accepted_moderator_report`
-      from §6, tied to the role rather than floating freestanding
-    - "Show full marking & report details" inline link — row-click or this
-      link expands a DataTables child row (not a separate "Details" column)
-      containing: word/page/table/figure counts, stated vs measured word
-      count, AI declaration text, `report_summary`, full
-      `risk_factors_ui_summary()` breakdown with resolver name + annotation
-      for every present factor, and links through to each role's
-      `MarkingReport`/`ModeratorReport`.
+   - thumbnail
+   - student name + project title
+   - compact identity line: programme · research group · year ·
+     supervision grade · presentation grade (text, not separate columns —
+     see point 2 below)
+   - consent badges: AVD (`openday_consent_active`, visually dominant —
+     small solid teal pill) and exemplar (`exemplar_consent_active` +
+     `exemplar_supervisor_approved`, muted text, shown only when not in
+     the "never asked" default-silent state — see point 3)
+   - flags only when present (nothing rendered when absent — no "not
+     flagged"/"not moderated"/"no intervention" placeholder badges):
+     `convenor_intervention`, Turnitin score/band, AI risk
+     (`risk_factors_ui_summary()`, wording "AI flagged" / "AI flagged ·
+     resolved", with a small note icon appended only when an annotation
+     exists — clicking it opens the same details panel as everything
+     else, not a separate popover), feedback document link
+     (`SubmissionRecord.feedback_reports`)
+   - staff-roles block: **generic** iteration over the record's
+     `SubmissionRole`s (not hard-coded to supervisor/marker/moderator —
+     label by `role.role` so any future role type appears automatically
+     without a template change), each row showing the role holder's name;
+     the moderator's role line specifically carries the outcome inline
+     ("grade accepted" / "out of tolerance, no moderator assigned yet")
+     rather than a separate badge — this is the resolution for surfacing
+     `out_of_tolerance` / `was_moderated` / `accepted_moderator_report`
+     from §6, tied to the role rather than floating freestanding
+   - "Show full marking & report details" inline link — row-click or this
+     link expands a DataTables child row (not a separate "Details" column)
+     containing: word/page/table/figure counts, stated vs measured word
+     count, AI declaration text, `report_summary`, full
+     `risk_factors_ui_summary()` breakdown with resolver name + annotation
+     for every present factor, and links through to each role's
+     `MarkingReport`/`ModeratorReport`.
 
 2. **Report grade** — the single sortable numeric column, right-aligned,
    default sort. Supervision and presentation grades are *not* separate
@@ -360,22 +360,73 @@ table column.
 
 ## 11. Embargo / report restriction (`report_embargo` on `SubmissionRecord`)
 
-Confirmed via screenshot of the legacy view: a report can be embargoed,
-shown today as a "Report restricted" indicator that suppresses normal row
-content. The underlying column is `SubmissionRecord.report_embargo`
-(nullable `DateTime`), but the exact "is this currently restricted"
-comparison and which UI elements it currently suppresses live in code not
-covered by this recon pass (likely `app/ajax/archive.py`'s row-builder,
-which may no longer exist post-Phase-1-move) — Phase 2 starts with a
-recon step to pin this down precisely before reusing it, rather than
-guessing at the comparison.
+**Resolved in Phase 2.** `is_report_restricted` is now a real property on
+`SubmissionRecord` (`app/models/submissions.py`):
+`report_embargo is not None`. **Presence-only, not a date comparison** —
+despite the column name suggesting "embargoed until this date," it's
+confirmed to behave as a flat boolean flag in the current codebase. Any
+future phase needing this check uses the property, not a re-derived
+inline comparison.
 
-Once confirmed, this should become a single shared helper (property or
-macro) used consistently across: thumbnail suppression (Phase 2),
-Original/Processed download suppression if applicable (Phase 2), feedback
-document link suppression (Phase 5), and arguably the AI-declaration/
-LLM-summary details-panel content (Phase 5) — not re-derived inline at
-each of those call sites.
+Suppression call sites confirmed/implemented in Phase 2: thumbnail
+(replaced with a restriction indicator in the same visual slot). Still
+pending, per the original forward-dependency note: feedback document link
+(Phase 5) and AI-declaration/LLM-summary details-panel content (Phase 5)
+should both gate on `is_report_restricted` too.
+
+## 12. Base query restructure (Phase 2)
+
+Phase 2 rewrote `avd_dashboard_ajax()`'s base query to be rooted on
+`SubmissionRecord` directly — one row per record, not one row per student
+with submissions nested underneath (the shape the legacy `reports.html`
+used, visible in screenshot 1 of this thread: one card per student,
+multiple submissions listed inside). This is the right structural choice
+given grades, embargo, and (in later phases) consent and risk all live on
+`SubmissionRecord`, but it's a bigger change than "add a column," so two
+things worth confirming rather than assuming correct:
+
+- **Eligibility criteria changed**: from `SubmittingStudent.retired` to
+  `SubmissionPeriodRecord.closed`. This is a real semantic change, not a
+  refactor-only side effect — it changes which reports are eligible to
+  appear, not just how they're grouped. Worth confirming the total
+  eligible-report count still matches expectations against the legacy
+  view's "725 entries" baseline (screenshot 1, original review) before
+  later phases build on this query. **Confirmed**: dashboard now reports
+  803 eligible reports, and this is expected, not a bug — per-record
+  (rather than per-student) rows mean a student with more than one
+  submission period now contributes more than one row, which the legacy
+  per-student-with-nested-submissions view collapsed into one card. This
+  is also what prompted Phase 2b (below): each row needs to visibly show
+  which submission period it belongs to, and a secondary sort by period
+  is needed so same-period rows group together regardless of primary
+  sort.
+- The legacy per-student-with-nested-submissions shape is gone; if
+  anything elsewhere still depends on that grouping (unlikely, given
+  `app/archive/` was deleted in Phase 1, but worth a mental note), it
+  would need separate handling.
+
+`app/ajax/archive/reports.py::retired_reports()` was renamed to
+`avd_dashboard_rows()` and restructured to one card per report (not per
+student) as part of this same change.
+
+## 13. Submission period grouping (Phase 2b) and deferred colour-coding
+
+Phase 2b adds the submission period (`SubmissionPeriodRecord.display_name`)
+to each row's identity line and a secondary sort key so same-period rows
+group together under whatever primary sort is active — small addition,
+not folded into Phase 3 since it's unrelated to consent. See the
+Phase 2b prompt for details, including the open question of whether
+`submission_period` (an `Integer`) is meaningful to sort on globally or
+only within a year — needs confirming against the model before
+implementation.
+
+**Deferred, explicitly out of scope for now**: colour-coding rows by
+project class (e.g. a coloured sidebar accent, matching the existing
+dashboard convention of colour-as-navigational-cue — blue/green/orange/
+teal already assigned per-dashboard, but pclass colour-coding *within* a
+dashboard's rows would be a different, additional colour dimension).
+David wants to evaluate the dashboard's output as it stands once Phases
+3–5 land before deciding on this, rather than designing it now.
 
 ## Suggested phase breakdown for implementation prompts
 

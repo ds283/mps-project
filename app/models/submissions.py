@@ -1127,6 +1127,13 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         )
 
     @property
+    def is_report_restricted(self) -> bool:
+        """True if this report is embargoed. report_embargo is checked for
+        presence only, not compared against the current date — staff must
+        explicitly clear the field once an embargo period ends."""
+        return self.report_embargo is not None
+
+    @property
     def exemplar_consent_active(self) -> bool:
         """True if the student has given active (non-withdrawn) exemplar consent."""
         return (

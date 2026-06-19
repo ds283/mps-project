@@ -8,4 +8,4 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .reports import retired_reports
+from .reports import avd_dashboard_rows

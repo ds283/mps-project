@@ -26,7 +26,7 @@ from sqlalchemy.orm import aliased
 
 from . import dashboards
 from .forms import MarkingExportForm, ResolveSimilarityConcernForm
-from ..ajax.archive import retired_reports
+from ..ajax.archive import avd_dashboard_rows
 from ..database import db
 from ..models import (
     DegreeProgramme,
@@ -2611,14 +2611,14 @@ def _get_accessible_pclasses_for_avd(tenant_id: int) -> List[ProjectClass]:
 
 
 def _get_accessible_years_for_avd(tenant_id: int) -> List[int]:
-    """Return distinct academic years with at least one retired SubmittingStudent
+    """Return distinct academic years with at least one closed SubmissionPeriodRecord
     for the given tenant, newest first."""
     rows = (
         db.session.query(ProjectClassConfig.year)
         .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
-        .join(SubmittingStudent, SubmittingStudent.config_id == ProjectClassConfig.id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
         .filter(
-            SubmittingStudent.retired.is_(True),
+            SubmissionPeriodRecord.closed.is_(True),
             ProjectClass.tenant_id == tenant_id,
         )
         .distinct()
@@ -2650,22 +2650,23 @@ def _avd_dashboard_summary_for_user() -> Dict:
         return {"n_tenants": n_tenants, "n_reports": 0, "n_consented": 0}
 
     n_reports = (
-        db.session.query(SubmittingStudent)
-        .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+        db.session.query(SubmissionRecord)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
         .filter(
             ProjectClassConfig.pclass_id.in_(pclass_ids),
-            SubmittingStudent.retired.is_(True),
+            SubmissionPeriodRecord.closed.is_(True),
         )
         .count()
     )
 
     n_consented = (
         db.session.query(SubmissionRecord)
-        .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id)
-        .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
         .filter(
             ProjectClassConfig.pclass_id.in_(pclass_ids),
-            SubmittingStudent.retired.is_(True),
+            SubmissionPeriodRecord.closed.is_(True),
             SubmissionRecord.openday_consent_granted_at.isnot(None),
             SubmissionRecord.openday_consent_withdrawn.is_(False),
         )
@@ -2760,6 +2761,17 @@ def avd_dashboard():
     if group_filter is not None:
         session["avd_dashboard_group_filter"] = group_filter
 
+    # --- grade filter (tri-state: all / graded / ungraded) ---
+    grade_filter = request.args.get("grade_filter")
+
+    if grade_filter is None and session.get("avd_dashboard_grade_filter"):
+        grade_filter = session["avd_dashboard_grade_filter"]
+
+    if grade_filter not in ("graded", "ungraded"):
+        grade_filter = "all"
+
+    session["avd_dashboard_grade_filter"] = grade_filter
+
     return render_template_context(
         "dashboards/avd_dashboard.html",
         accessible_tenants=accessible_tenants,
@@ -2770,6 +2782,7 @@ def avd_dashboard():
         year_filter=year_filter,
         groups=groups,
         group_filter=group_filter,
+        grade_filter=grade_filter,
     )
 
 
@@ -2793,6 +2806,7 @@ def avd_dashboard_ajax():
     pclass_filter = request.args.get("pclass_filter")
     year_filter = request.args.get("year_filter")
     group_filter = request.args.get("group_filter")
+    grade_filter = request.args.get("grade_filter")
 
     # Validate pclass filter belongs to the selected tenant
     if pclass_filter is not None and pclass_filter != "all":
@@ -2820,11 +2834,19 @@ def avd_dashboard_ajax():
         else:
             group_filter = "all"
 
-    # Build base query, scoped to the single selected tenant
+    # Validate grade filter (tri-state: all / graded / ungraded)
+    if grade_filter not in ("graded", "ungraded"):
+        grade_filter = "all"
+
+    # Build base query, scoped to the single selected tenant. Each row is a single
+    # SubmissionRecord belonging to a closed SubmissionPeriodRecord — a student with
+    # more than one closed period in the same cycle simply produces more than one row.
     base_query = (
-        db.session.query(SubmittingStudent)
-        .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+        db.session.query(SubmissionRecord)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
         .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         .join(StudentData, StudentData.id == SubmittingStudent.student_id)
         .join(UserModel, UserModel.id == StudentData.id)
         .join(
@@ -2837,7 +2859,7 @@ def avd_dashboard_ajax():
             ProjectClass.active.is_(True),
             ProjectClass.publish.is_(True),
             ProjectClass.tenant_id == tenant_id,
-            SubmittingStudent.retired.is_(True),
+            SubmissionPeriodRecord.closed.is_(True),
         )
     )
 
@@ -2853,16 +2875,19 @@ def avd_dashboard_ajax():
         if flag:
             base_query = base_query.filter(ProjectClassConfig.year == value)
 
-    # Apply group filter: join through SubmissionRecord and LiveProject to ResearchGroup
+    # Apply group filter: join through LiveProject to ResearchGroup
     if group_filter is not None and group_filter != "all":
         flag, value = is_integer(group_filter)
         if flag:
-            base_query = (
-                base_query.join(SubmissionRecord, SubmissionRecord.owner_id == SubmittingStudent.id)
-                .join(LiveProject, LiveProject.id == SubmissionRecord.project_id)
-                .filter(LiveProject.group_id == value)
-                .distinct()
+            base_query = base_query.join(LiveProject, LiveProject.id == SubmissionRecord.project_id).filter(
+                LiveProject.group_id == value
             )
+
+    # Apply grade filter
+    if grade_filter == "graded":
+        base_query = base_query.filter(SubmissionRecord.report_grade.isnot(None))
+    elif grade_filter == "ungraded":
+        base_query = base_query.filter(SubmissionRecord.report_grade.is_(None))
 
     # Define columns for ServerSideSQLHandler
     name_col = {
@@ -2874,14 +2899,18 @@ def avd_dashboard_ajax():
         "search": ProjectClassConfig.year,
         "order": ProjectClassConfig.year,
     }
+    report_grade_col = {
+        "order": SubmissionRecord.report_grade,
+    }
 
     columns = {
         "name": name_col,
         "year": year_col,
+        "report_grade": report_grade_col,
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(retired_reports)
+        return handler.build_payload(avd_dashboard_rows)
 
 
 # ===========================================================================

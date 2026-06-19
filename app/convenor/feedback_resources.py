@@ -72,6 +72,8 @@ def feedback_resources(pclass_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
+    convenor_data = get_convenor_dashboard_data(pclass, config)
+
     num_recipes = pclass.feedback_recipes.count()
     num_templates = pclass.feedback_templates.count()
     num_assets = pclass.feedback_assets.count()
@@ -80,6 +82,7 @@ def feedback_resources(pclass_id):
         "convenor/dashboard/feedback_resources.html",
         pclass=pclass,
         config=config,
+        convenor_data=convenor_data,
         url=url,
         text=text,
         num_recipes=num_recipes,

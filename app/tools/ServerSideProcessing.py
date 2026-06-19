@@ -76,11 +76,14 @@ class ServerSideSQLHandler(ServerSideBase):
     but searching and sorting of rows is limited to what can be achieved using SQL.
     """
 
-    def __init__(self, request, query, data):
+    def __init__(self, request, query, data, secondary_order=None):
         """
         :param request: Flask 'request' instance, needs to be parsed to extract DataTables parameters
         :param query: base query defining the set of records we consider (i.e. rows of the table)
         :param data: dictionary specifying columns to query and sort
+        :param secondary_order: optional list of SQLAlchemy order-by expressions appended after
+            whatever primary order the request specifies, to break ties deterministically without
+            overriding the user's chosen sort
         """
         # invoke superclass constructor
         super().__init__(request, query)
@@ -175,6 +178,11 @@ class ServerSideSQLHandler(ServerSideBase):
                             )
                         else:
                             self._query = self._query.order_by(order_col.desc())
+
+        # append tiebreak ordering, if supplied — order_by() appends to existing ORDER BY
+        # criteria rather than replacing it, so this does not override the primary sort above
+        if secondary_order is not None:
+            self._query = self._query.order_by(*secondary_order)
 
         # impose limit on number of records retrieved
         if self._request_length > 0:

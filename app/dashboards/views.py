@@ -2909,7 +2909,13 @@ def avd_dashboard_ajax():
         "report_grade": report_grade_col,
     }
 
-    with ServerSideSQLHandler(request, base_query, columns) as handler:
+    # Tiebreak by submission period so rows from the same period group together
+    # regardless of the active primary sort. submission_period is only meaningful
+    # relative to its ProjectClassConfig (it's a position 1, 2, 3... within that
+    # config's periods, not a globally comparable value), so year must lead.
+    secondary_order = [ProjectClassConfig.year.asc(), SubmissionPeriodRecord.submission_period.asc()]
+
+    with ServerSideSQLHandler(request, base_query, columns, secondary_order=secondary_order) as handler:
         return handler.build_payload(avd_dashboard_rows)
 
 

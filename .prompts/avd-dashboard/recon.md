@@ -68,7 +68,6 @@ dict per dashboard card (`summary`, `marking_summary`, `similarity_summary`).
 Each card on `dashboards.html` (screenshot 3) shows a small set of stat
 chips ("4 tenants", "167 open concerns") plus an "Open dashboard" button.
 Adding a fourth card means:
-
 - a `_avd_dashboard_summary_for_user()` helper (counts: tenants, eligible
   reports, AVD-consented count — cheap aggregate queries, same shape as
   `_dashboard_summary_for_user()` / `_marking_summary_for_user()`)
@@ -335,7 +334,6 @@ originally sketched:
    real need later, that's a column-set toggle to revisit, not a default.
 
 Explicitly rejected along the way, with reasoning, in case it resurfaces:
-
 - Twelve flat columns (student/title/programme/group/supervisor/year/three
   grades/status/details) — too much for a row to carry, and several
   (programme/group/year) duplicate the existing filter-button row with no
@@ -359,6 +357,25 @@ buttons, plus new AVD-consent and exemplar-consent filter buttons. Slicing
 by research group, project class, year, or consent state stays
 filter-button territory; it does not need to also exist as a sortable
 table column.
+
+## 11. Embargo / report restriction (`report_embargo` on `SubmissionRecord`)
+
+Confirmed via screenshot of the legacy view: a report can be embargoed,
+shown today as a "Report restricted" indicator that suppresses normal row
+content. The underlying column is `SubmissionRecord.report_embargo`
+(nullable `DateTime`), but the exact "is this currently restricted"
+comparison and which UI elements it currently suppresses live in code not
+covered by this recon pass (likely `app/ajax/archive.py`'s row-builder,
+which may no longer exist post-Phase-1-move) — Phase 2 starts with a
+recon step to pin this down precisely before reusing it, rather than
+guessing at the comparison.
+
+Once confirmed, this should become a single shared helper (property or
+macro) used consistently across: thumbnail suppression (Phase 2),
+Original/Processed download suppression if applicable (Phase 2), feedback
+document link suppression (Phase 5), and arguably the AI-declaration/
+LLM-summary details-panel content (Phase 5) — not re-derived inline at
+each of those call sites.
 
 ## Suggested phase breakdown for implementation prompts
 

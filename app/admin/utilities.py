@@ -1342,6 +1342,8 @@ def global_email_templates():
         title="All email templates",
         card_title="All email templates",
         inspector_type="global",
+        url=None,
+        text=None,
     )
 
 

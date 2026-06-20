@@ -97,6 +97,42 @@ _report = """
         </div>
     {% endif %}
 {% endmacro %}
+{% macro consent_badges(record) %}
+    {% set avd_state = record.openday_consent_badge_state %}
+    {% set ex_state = record.exemplar_consent_badge_state %}
+    {% if avd_state is not none or ex_state is not none %}
+        <div class="mt-1 d-flex flex-row flex-wrap align-items-center gap-2">
+            {% if avd_state == 'active' %}
+                <span class="badge rounded-pill badge-db-teal">
+                    <i class="fas fa-graduation-cap fa-fw"></i> AVD consent active
+                </span>
+            {% elif avd_state == 'withdrawn' %}
+                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis">
+                    <i class="fas fa-exclamation-triangle fa-fw"></i> AVD consent withdrawn
+                </span>
+            {% elif avd_state == 'invited' %}
+                <span class="small text-muted">
+                    <i class="fas fa-envelope fa-fw"></i> AVD: invited, awaiting response
+                </span>
+            {% endif %}
+
+            {% if ex_state == 'active' %}
+                {% if record.exemplar_supervisor_approved is sameas true %}
+                    {% set supervisor_word = 'approved' %}
+                {% elif record.exemplar_supervisor_approved is sameas false %}
+                    {% set supervisor_word = 'declined' %}
+                {% else %}
+                    {% set supervisor_word = 'pending' %}
+                {% endif %}
+                <span class="small text-muted">Exemplar: student active, supervisor {{ supervisor_word }}</span>
+            {% elif ex_state == 'withdrawn' %}
+                <span class="small text-muted">Exemplar: withdrawn</span>
+            {% elif ex_state == 'invited' %}
+                <span class="small text-muted">Exemplar: invited, awaiting response</span>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}
 {% macro role_list(roles, label) %}
     {% if roles|length > 0 %}
         <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
@@ -151,6 +187,9 @@ _report = """
                         <div class="small text-muted">{{ period.display_name }}</div>
                     {% endif %}
                 </div>
+
+                {# Consent badges #}
+                {{ consent_badges(record) }}
 
                 {# Supervision / presentation grades #}
                 {% if supervision_grade is not none or presentation_grade is not none %}

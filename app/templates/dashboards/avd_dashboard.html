@@ -18,6 +18,14 @@
     {% set grade_filter = 'all' %}
 {% endif %}
 
+{% if not avd_consent_filter or avd_consent_filter is none %}
+    {% set avd_consent_filter = 'all' %}
+{% endif %}
+
+{% if not exemplar_consent_filter or exemplar_consent_filter is none %}
+    {% set exemplar_consent_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -37,7 +45,7 @@
                 serverSide: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + {{ url_for('dashboards.avd_dashboard_ajax', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter) | tojson | safe }},
+                    url: $SCRIPT_ROOT + {{ url_for('dashboards.avd_dashboard_ajax', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) | tojson | safe }},
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -106,7 +114,7 @@
                             <p class="mb-1">Filter by tenant</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
                                 {% for tenant in accessible_tenants %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=tenant.id, pclass_filter='all', year_filter='all', group_filter='all', grade_filter=grade_filter) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=tenant.id, pclass_filter='all', year_filter='all', group_filter='all', grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                        class="btn btn-sm filter-btn {% if tenant.id == selected_tenant.id %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ tenant.name }}
                                     </a>
@@ -123,12 +131,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by project class</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter='all', year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter) }}"
+                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter='all', year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                    class="btn btn-sm filter-btn {% if pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All
                                 </a>
                                 {% for pclass in pclasses %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass.id, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass.id, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                        class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ pclass.name }}
                                     </a>
@@ -147,12 +155,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by academic year</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter='all', group_filter=group_filter, grade_filter=grade_filter) }}"
+                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter='all', group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                    class="btn btn-sm filter-btn {% if year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All years
                                 </a>
                                 {% for year in years %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year, group_filter=group_filter, grade_filter=grade_filter) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                        class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ year }}&ndash;{{ year + 1 }}
                                     </a>
@@ -171,12 +179,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by research group</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter='all', grade_filter=grade_filter) }}"
+                                <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter='all', grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                    class="btn btn-sm filter-btn {% if group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All groups
                                 </a>
                                 {% for group in groups %}
-                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group.id, grade_filter=grade_filter) }}"
+                                    <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group.id, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                        class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ group.name }}
                                     </a>
@@ -190,21 +198,73 @@
                 {% if (pclasses is not none and pclasses|length > 0) or (years is not none and years|length > 0) or (groups is not none and groups|length > 0) %}
                     <hr class="intro-divider">
                 {% endif %}
-                <div class="row">
+                <div class="row mb-2">
                     <div class="col-12">
                         <p class="mb-1">Filter by report grade</p>
                         <div class="d-flex flex-row flex-wrap gap-1">
-                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='all') }}"
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='all', avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                class="btn btn-sm filter-btn {% if grade_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 Any
                             </a>
-                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='graded') }}"
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='graded', avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                class="btn btn-sm filter-btn {% if grade_filter == 'graded' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 Graded
                             </a>
-                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='ungraded') }}"
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter='ungraded', avd_consent_filter=avd_consent_filter, exemplar_consent_filter=exemplar_consent_filter) }}"
                                class="btn btn-sm filter-btn {% if grade_filter == 'ungraded' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 Ungraded
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {# AVD (open day) consent filter #}
+                <hr class="intro-divider">
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <p class="mb-1">Filter by AVD consent</p>
+                        <div class="d-flex flex-row flex-wrap gap-1">
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter='all', exemplar_consent_filter=exemplar_consent_filter) }}"
+                               class="btn btn-sm filter-btn {% if avd_consent_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Any
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter='active', exemplar_consent_filter=exemplar_consent_filter) }}"
+                               class="btn btn-sm filter-btn {% if avd_consent_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Active
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter='withdrawn', exemplar_consent_filter=exemplar_consent_filter) }}"
+                               class="btn btn-sm filter-btn {% if avd_consent_filter == 'withdrawn' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Withdrawn
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter='not_requested', exemplar_consent_filter=exemplar_consent_filter) }}"
+                               class="btn btn-sm filter-btn {% if avd_consent_filter == 'not_requested' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Not requested
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {# Exemplar consent filter #}
+                <hr class="intro-divider">
+                <div class="row">
+                    <div class="col-12">
+                        <p class="mb-1">Filter by exemplar consent</p>
+                        <div class="d-flex flex-row flex-wrap gap-1">
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter='all') }}"
+                               class="btn btn-sm filter-btn {% if exemplar_consent_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Any
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter='active') }}"
+                               class="btn btn-sm filter-btn {% if exemplar_consent_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Active
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter='withdrawn') }}"
+                               class="btn btn-sm filter-btn {% if exemplar_consent_filter == 'withdrawn' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Withdrawn
+                            </a>
+                            <a href="{{ url_for('dashboards.avd_dashboard', tenant_id=selected_tenant.id, pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group_filter, grade_filter=grade_filter, avd_consent_filter=avd_consent_filter, exemplar_consent_filter='not_requested') }}"
+                               class="btn btn-sm filter-btn {% if exemplar_consent_filter == 'not_requested' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Not requested
                             </a>
                         </div>
                     </div>

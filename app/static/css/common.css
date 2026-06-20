@@ -62,6 +62,12 @@
     color: var(--db-purple-600);
 }
 
+/* Solid AVD consent pill — dominant badge for active open-day consent */
+.badge-db-teal {
+    background-color: var(--db-teal-400);
+    color: var(--bs-white);
+}
+
 /* Shared role badge classes — used wherever a submission role is displayed as a pill */
 .role-badge-supervisor {
     background-color: var(--bs-warning-bg-subtle);

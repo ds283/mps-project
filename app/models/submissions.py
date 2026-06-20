@@ -1158,6 +1158,30 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return self.exemplar_consent_active and self.exemplar_supervisor_approved is True
 
     @property
+    def openday_consent_badge_state(self) -> Optional[str]:
+        """One of 'active' / 'invited' / 'withdrawn', or None if open day consent has
+        never been requested (no invitation sent, no consent ever granted). Single
+        source of truth for the AVD dashboard's open-day consent badge/filter logic."""
+        if self.openday_consent_active:
+            return "active"
+        if self.openday_consent_granted_at is not None and self.openday_consent_withdrawn:
+            return "withdrawn"
+        if self.consent_invitation_sent_at is not None:
+            return "invited"
+        return None
+
+    @property
+    def exemplar_consent_badge_state(self) -> Optional[str]:
+        """Same shape as openday_consent_badge_state, for exemplar consent."""
+        if self.exemplar_consent_active:
+            return "active"
+        if self.exemplar_consent_granted_at is not None and self.exemplar_consent_withdrawn:
+            return "withdrawn"
+        if self.consent_invitation_sent_at is not None:
+            return "invited"
+        return None
+
+    @property
     def submission_period(self):
         return self.period.submission_period
 

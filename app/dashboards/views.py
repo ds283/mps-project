@@ -2772,6 +2772,28 @@ def avd_dashboard():
 
     session["avd_dashboard_grade_filter"] = grade_filter
 
+    # --- AVD (open day) consent filter (tri-state: all / active / withdrawn / not_requested) ---
+    avd_consent_filter = request.args.get("avd_consent_filter")
+
+    if avd_consent_filter is None and session.get("avd_dashboard_avd_consent_filter"):
+        avd_consent_filter = session["avd_dashboard_avd_consent_filter"]
+
+    if avd_consent_filter not in ("active", "withdrawn", "not_requested"):
+        avd_consent_filter = "all"
+
+    session["avd_dashboard_avd_consent_filter"] = avd_consent_filter
+
+    # --- Exemplar consent filter (tri-state: all / active / withdrawn / not_requested) ---
+    exemplar_consent_filter = request.args.get("exemplar_consent_filter")
+
+    if exemplar_consent_filter is None and session.get("avd_dashboard_exemplar_consent_filter"):
+        exemplar_consent_filter = session["avd_dashboard_exemplar_consent_filter"]
+
+    if exemplar_consent_filter not in ("active", "withdrawn", "not_requested"):
+        exemplar_consent_filter = "all"
+
+    session["avd_dashboard_exemplar_consent_filter"] = exemplar_consent_filter
+
     return render_template_context(
         "dashboards/avd_dashboard.html",
         accessible_tenants=accessible_tenants,
@@ -2783,6 +2805,8 @@ def avd_dashboard():
         groups=groups,
         group_filter=group_filter,
         grade_filter=grade_filter,
+        avd_consent_filter=avd_consent_filter,
+        exemplar_consent_filter=exemplar_consent_filter,
     )
 
 
@@ -2807,6 +2831,8 @@ def avd_dashboard_ajax():
     year_filter = request.args.get("year_filter")
     group_filter = request.args.get("group_filter")
     grade_filter = request.args.get("grade_filter")
+    avd_consent_filter = request.args.get("avd_consent_filter")
+    exemplar_consent_filter = request.args.get("exemplar_consent_filter")
 
     # Validate pclass filter belongs to the selected tenant
     if pclass_filter is not None and pclass_filter != "all":
@@ -2837,6 +2863,12 @@ def avd_dashboard_ajax():
     # Validate grade filter (tri-state: all / graded / ungraded)
     if grade_filter not in ("graded", "ungraded"):
         grade_filter = "all"
+
+    # Validate consent filters (tri-state: all / active / withdrawn / not_requested)
+    if avd_consent_filter not in ("active", "withdrawn", "not_requested"):
+        avd_consent_filter = "all"
+    if exemplar_consent_filter not in ("active", "withdrawn", "not_requested"):
+        exemplar_consent_filter = "all"
 
     # Build base query, scoped to the single selected tenant. Each row is a single
     # SubmissionRecord belonging to a closed SubmissionPeriodRecord — a student with
@@ -2888,6 +2920,36 @@ def avd_dashboard_ajax():
         base_query = base_query.filter(SubmissionRecord.report_grade.isnot(None))
     elif grade_filter == "ungraded":
         base_query = base_query.filter(SubmissionRecord.report_grade.is_(None))
+
+    # Apply AVD (open day) consent filter. "not_requested" deliberately covers both the
+    # never-asked and invited-awaiting-response badge states (granted_at IS NULL) so that
+    # the three non-"all" buckets are a complete, non-overlapping partition of every record.
+    if avd_consent_filter == "active":
+        base_query = base_query.filter(
+            SubmissionRecord.openday_consent_granted_at.isnot(None),
+            SubmissionRecord.openday_consent_withdrawn.is_(False),
+        )
+    elif avd_consent_filter == "withdrawn":
+        base_query = base_query.filter(
+            SubmissionRecord.openday_consent_granted_at.isnot(None),
+            SubmissionRecord.openday_consent_withdrawn.is_(True),
+        )
+    elif avd_consent_filter == "not_requested":
+        base_query = base_query.filter(SubmissionRecord.openday_consent_granted_at.is_(None))
+
+    # Apply exemplar consent filter, keyed on student consent only (same partition logic as above).
+    if exemplar_consent_filter == "active":
+        base_query = base_query.filter(
+            SubmissionRecord.exemplar_consent_granted_at.isnot(None),
+            SubmissionRecord.exemplar_consent_withdrawn.is_(False),
+        )
+    elif exemplar_consent_filter == "withdrawn":
+        base_query = base_query.filter(
+            SubmissionRecord.exemplar_consent_granted_at.isnot(None),
+            SubmissionRecord.exemplar_consent_withdrawn.is_(True),
+        )
+    elif exemplar_consent_filter == "not_requested":
+        base_query = base_query.filter(SubmissionRecord.exemplar_consent_granted_at.is_(None))
 
     # Define columns for ServerSideSQLHandler
     name_col = {

@@ -37,6 +37,7 @@ from ..models import (
     ResearchGroup,
     SubmissionPeriodRecord,
     SubmissionRecord,
+    SubmissionRole,
     SubmittingStudent,
     Tenant,
 )
@@ -2965,10 +2966,24 @@ def avd_dashboard_ajax():
         "order": SubmissionRecord.report_grade,
     }
 
+    # Role-holder names (supervisors, markers, moderators, ...) are two relationship hops away
+    # from SubmissionRecord (roles -> user), so the simple "search_collection.any(search_expr)"
+    # form doesn't apply (that only supports a one-hop relationship); use the callable form to
+    # nest a second .has() against the role's user.
+    def _role_holder_search_filter(search_expr):
+        return SubmissionRecord.roles.any(SubmissionRole.user.has(search_expr))
+
+    records_col = {
+        "search": func.concat(UserModel.first_name, " ", UserModel.last_name),
+        "search_collection": _role_holder_search_filter,
+        "search_collation": "utf8_general_ci",
+    }
+
     columns = {
         "name": name_col,
         "year": year_col,
         "report_grade": report_grade_col,
+        "records": records_col,
     }
 
     # Tiebreak by submission period so rows from the same period group together

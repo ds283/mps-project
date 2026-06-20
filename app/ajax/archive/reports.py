@@ -17,7 +17,8 @@ from flask import (
 )
 from jinja2 import Template, Environment
 
-from ...models import SubmissionRecord
+from ...models import SubmissionRecord, SubmissionRole
+from ...models.markingevent import SubmitterReport
 
 # language=jinja2
 _name = """
@@ -133,14 +134,39 @@ _report = """
         </div>
     {% endif %}
 {% endmacro %}
-{% macro role_list(roles, label) %}
-    {% if roles|length > 0 %}
-        <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
-            <span class="small text-muted fw-semibold">{{ label }}:</span>
-            {% for role in roles %}
-                <span class="small">
-                    <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+{% macro report_flags(convenor_intervention, out_of_tolerance_unassigned) %}
+    {% if convenor_intervention or out_of_tolerance_unassigned %}
+        <div class="mt-1 d-flex flex-row flex-wrap align-items-center gap-2">
+            {% if convenor_intervention %}
+                <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle">
+                    <i class="fas fa-exclamation-triangle fa-fw"></i> Convenor intervention
                 </span>
+            {% endif %}
+            {% if out_of_tolerance_unassigned %}
+                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                    <i class="fas fa-balance-scale fa-fw"></i> Out of tolerance &mdash; moderator not yet assigned
+                </span>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}
+{% macro staff_roles(roles, moderator_role_id, moderation_outcome) %}
+    {% if roles|length > 0 %}
+        <div class="mt-1 d-flex flex-column justify-content-start align-items-start gap-1">
+            {% for role_id, group in roles|groupby('role') %}
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
+                    <span class="small text-muted fw-semibold">
+                        {{ group[0].role_as_str }}{{ 's' if group|length > 1 else '' }}:
+                    </span>
+                    {% for role in group %}
+                        <span class="small">
+                            <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                        </span>
+                    {% endfor %}
+                    {% if role_id == moderator_role_id and moderation_outcome %}
+                        <span class="small text-muted">&mdash; {{ moderation_outcome }}</span>
+                    {% endif %}
+                </div>
             {% endfor %}
         </div>
     {% endif %}
@@ -202,15 +228,11 @@ _report = """
                     </div>
                 {% endif %}
 
-                {# Roles #}
-                {% set supervisor_roles = record.supervisor_roles %}
-                {% set marker_roles = record.marker_roles %}
-                {% set moderator_roles = record.moderator_roles %}
-                <div class="mt-1 d-flex flex-column justify-content-start align-items-start gap-1">
-                    {{ role_list(supervisor_roles, 'Supervisors') }}
-                    {{ role_list(marker_roles, 'Markers') }}
-                    {{ role_list(moderator_roles, 'Moderators') }}
-                </div>
+                {# Convenor intervention / out-of-tolerance flags #}
+                {{ report_flags(convenor_intervention, out_of_tolerance_unassigned) }}
+
+                {# Staff roles, generic over role type #}
+                {{ staff_roles(roles, moderator_role_id, moderation_outcome) }}
 
                 {# Turnitin data #}
                 {{ turnitin_info(record) }}
@@ -272,6 +294,31 @@ def _supervision_presentation_grades(
     return grades.get("Supervision"), grades.get("Presentation")
 
 
+def _latest_submitter_report(record: SubmissionRecord) -> Optional[SubmitterReport]:
+    """The most recently created SubmitterReport for this record, or None if the record
+    has not (yet) entered a marking workflow. A record can accumulate more than one
+    SubmitterReport across re-marking events; the most recent is the one relevant to the
+    dashboard's marking-history display."""
+    return record.submitter_reports.order_by(
+        SubmitterReport.creation_timestamp.desc(), SubmitterReport.id.desc()
+    ).first()
+
+
+def _moderation_outcome_text(sr: Optional[SubmitterReport]) -> Optional[str]:
+    """Outcome text for the moderator role-group's line, derived from the record's latest
+    SubmitterReport. Returns None when there is nothing to report (tolerance never breached,
+    or this is an unchosen second moderator role on a record with more than one)."""
+    if sr is None:
+        return None
+    if sr.accepted_moderator_report_id is not None:
+        return "grade accepted"
+    if sr.was_moderated:
+        if any(r.report_submitted for r in sr.moderator_reports):
+            return "moderator report submitted, awaiting acceptance"
+        return "awaiting moderator's report"
+    return None
+
+
 def avd_dashboard_rows(records: List[SubmissionRecord]):
     """Row formatter for the AVD dashboard: one row per SubmissionRecord
     belonging to a closed SubmissionPeriodRecord."""
@@ -286,6 +333,15 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
         supervision_grade, presentation_grade = _supervision_presentation_grades(record)
 
         report_grade = float(record.report_grade) if record.report_grade is not None else None
+
+        roles = record.roles.all()
+        has_moderator_role = any(r.role == SubmissionRole.ROLE_MODERATOR for r in roles)
+        latest_sr = _latest_submitter_report(record)
+        moderation_outcome = _moderation_outcome_text(latest_sr) if has_moderator_role else None
+        convenor_intervention = bool(latest_sr is not None and latest_sr.convenor_intervention)
+        out_of_tolerance_unassigned = bool(
+            latest_sr is not None and latest_sr.out_of_tolerance and not has_moderator_role
+        )
 
         data.append(
             {
@@ -307,6 +363,11 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
                     simple_label=simple_label,
                     supervision_grade=supervision_grade,
                     presentation_grade=presentation_grade,
+                    roles=roles,
+                    moderator_role_id=SubmissionRole.ROLE_MODERATOR,
+                    moderation_outcome=moderation_outcome,
+                    convenor_intervention=convenor_intervention,
+                    out_of_tolerance_unassigned=out_of_tolerance_unassigned,
                 ),
             }
         )

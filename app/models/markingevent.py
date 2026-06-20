@@ -1167,6 +1167,12 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
             return cr.feedback_reports
         return db.session.query(FeedbackReport).filter(False)
 
+    @property
+    def was_moderated(self) -> bool:
+        """True if at least one ModeratorReport was ever produced for this report,
+        whether or not it was the one ultimately accepted."""
+        return self.moderator_reports.first() is not None
+
 
 # association table linking MarkingReport instances (for ROLE_SUPERVISOR) to the
 # ROLE_RESPONSIBLE_SUPERVISOR SubmissionRole instances that must sign them off

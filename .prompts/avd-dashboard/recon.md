@@ -428,6 +428,37 @@ dashboard's rows would be a different, additional colour dimension).
 David wants to evaluate the dashboard's output as it stands once Phases
 3–5 land before deciding on this, rather than designing it now.
 
+## 14. Consent badges (Phase 3, resolved)
+
+Implemented: `openday_consent_badge_state` / `exemplar_consent_badge_state`
+properties on `SubmissionRecord` (single source of truth, four states:
+active/invited/withdrawn/never-asked), a `consent_badges()` macro
+rendering them per §10's hierarchy (solid teal pill for active AVD,
+muted text for everything else, nothing for never-asked), and a
+`.badge-db-teal` CSS class.
+
+Two judgement calls from the Phase 3 prompt, resolved and confirmed
+against screenshot:
+
+- **Filter buckets**: Any / Active / Withdrawn / Not requested (three
+  real buckets, "invited" folded into "Not requested" to keep the filter
+  a clean partition). The "invited, awaiting response" sub-state is still
+  visible in the row badge text, just not independently filterable —
+  judged a reasonable simplification since that state is transient.
+- **Supervisor exemplar wording**: only renders once student
+  (`exemplar_consent_active`) is true — there's nothing for a supervisor
+  to approve before the student has consented.
+
+Confirmed `consent_invitation_sent_at`/`consent_reminder_sent_at` are
+genuinely shared across both consent types (resolves the open question
+from §4).
+
+**Still outstanding**: live browser/DB verification — Phase 3 was
+verified statically only (Jinja/Python parse checks, a standalone
+simulation of the four badge states and three-way filter partition, and a
+grep confirming the badge-state decision is made exactly once). Worth
+doing a manual pass before Phase 4 builds further on this.
+
 ## Suggested phase breakdown for implementation prompts
 
 1. **Move + tenant-scope + role rename**: relocate `reports()`/

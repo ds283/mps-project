@@ -57,18 +57,11 @@
                 },
                 columns: [
                     {
-                        data: 'name',
+                        data: 'report',
+                        orderable: false,
                         render: {
                             _: 'display',
                             sort: 'sortstring'
-                        }
-                    },
-                    {
-                        data: 'year',
-                        render: {
-                            _: 'display',
-                            sort: 'sortvalue',
-                            type: 'sortvalue'
                         }
                     },
                     {
@@ -79,13 +72,9 @@
                             sort: 'sortvalue',
                             type: 'sortvalue'
                         }
-                    },
-                    {
-                        data: 'records',
-                        orderable: false
                     }
                 ],
-                order: [[2, 'desc'], [1, 'desc'], [0, 'asc']],
+                order: [[1, 'desc']],
             });
         });
     </script>
@@ -276,10 +265,8 @@
             <table id="reports-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="18%">Student</th>
-                    <th width="14%">Year and project class</th>
-                    <th width="10%" class="text-end">Report grade</th>
-                    <th width="58%">Submissions</th>
+                    <th width="85%">Report</th>
+                    <th width="15%" class="text-end">Report grade</th>
                 </tr>
                 </thead>
             </table>

@@ -2887,6 +2887,10 @@ def avd_dashboard_ajax():
             DegreeProgramme.id == StudentData.programme_id,
             isouter=True,
         )
+        # Outer-joined unconditionally (not just when group_filter is active) so the
+        # project's research group name is available to the free-text search index below.
+        .join(LiveProject, LiveProject.id == SubmissionRecord.project_id, isouter=True)
+        .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id, isouter=True)
         .filter(
             ProjectClass.uses_submission.is_(True),
             ProjectClass.active.is_(True),
@@ -2908,13 +2912,11 @@ def avd_dashboard_ajax():
         if flag:
             base_query = base_query.filter(ProjectClassConfig.year == value)
 
-    # Apply group filter: join through LiveProject to ResearchGroup
+    # Apply group filter (LiveProject/ResearchGroup already joined above)
     if group_filter is not None and group_filter != "all":
         flag, value = is_integer(group_filter)
         if flag:
-            base_query = base_query.join(LiveProject, LiveProject.id == SubmissionRecord.project_id).filter(
-                LiveProject.group_id == value
-            )
+            base_query = base_query.filter(LiveProject.group_id == value)
 
     # Apply grade filter
     if grade_filter == "graded":
@@ -2952,15 +2954,13 @@ def avd_dashboard_ajax():
     elif exemplar_consent_filter == "not_requested":
         base_query = base_query.filter(SubmissionRecord.exemplar_consent_granted_at.is_(None))
 
-    # Define columns for ServerSideSQLHandler
-    name_col = {
+    # Define columns for ServerSideSQLHandler. Per the agreed two-column layout, only
+    # "report" (the rich panel) and "report_grade" are actual DataTables columns; "report"
+    # is not click-sortable (no "order" key), but its search expression and the synthetic
+    # search-only entries below all feed the same free-text search box.
+    report_col = {
         "search": func.concat(UserModel.first_name, " ", UserModel.last_name),
-        "order": [UserModel.last_name, UserModel.first_name],
         "search_collation": "utf8_general_ci",
-    }
-    year_col = {
-        "search": ProjectClassConfig.year,
-        "order": ProjectClassConfig.year,
     }
     report_grade_col = {
         "order": SubmissionRecord.report_grade,
@@ -2973,17 +2973,34 @@ def avd_dashboard_ajax():
     def _role_holder_search_filter(search_expr):
         return SubmissionRecord.roles.any(SubmissionRole.user.has(search_expr))
 
-    records_col = {
+    # The following entries have no corresponding DataTables column ("order" key) — they
+    # exist purely to widen the single free-text search box to match everything visible in
+    # the Report panel's identity line and staff-roles block, per the agreed design.
+    role_holder_col = {
         "search": func.concat(UserModel.first_name, " ", UserModel.last_name),
         "search_collection": _role_holder_search_filter,
         "search_collation": "utf8_general_ci",
     }
+    programme_search_col = {
+        "search": DegreeProgramme.name,
+        "search_collation": "utf8_general_ci",
+    }
+    group_search_col = {
+        "search": ResearchGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
+    pclass_search_col = {
+        "search": ProjectClass.name,
+        "search_collation": "utf8_general_ci",
+    }
 
     columns = {
-        "name": name_col,
-        "year": year_col,
+        "report": report_col,
         "report_grade": report_grade_col,
-        "records": records_col,
+        "role_holder_search": role_holder_col,
+        "programme_search": programme_search_col,
+        "group_search": group_search_col,
+        "pclass_search": pclass_search_col,
     }
 
     # Tiebreak by submission period so rows from the same period group together

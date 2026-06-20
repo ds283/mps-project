@@ -21,80 +21,60 @@ from ...models import SubmissionRecord, SubmissionRole
 from ...models.markingevent import SubmitterReport
 
 # language=jinja2
-_name = """
-{% set student = record.owner.student %}
-{% set user = student.user %}
-{% set programme = student.programme %}
-<div>
-    <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.name }}</a>
-</div>
-{% if programme is not none %}
-    <div class="mt-1">
-        {{ simple_label(programme.label) }}
-    </div>
-{% endif %}
-"""
-
-# language=jinja2
-_year = """
-{% set config = record.period.config %}
-<div>
-    <span class="badge bg-secondary">{{ config.year }}&ndash;{{ config.year + 1 }}</span>
-</div>
-<div class="mt-1">
-    {{ simple_label(config.project_class.make_label()) }}
-</div>
-"""
-
-# language=jinja2
 _report = """
-{% macro turnitin_info(r) %}
+{% macro turnitin_chips(r) %}
     {# turnitin_outcome is a legacy Canvas LMS field not used in current Turnitin outputs; hidden from display #}
     {% if r.turnitin_score is not none %}
-        <div class="mt-1 d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
-            <span class="small text-muted fw-semibold">Turnitin</span>
-            {% if r.turnitin_score is not none %}
-                {# 5-tier colour scale per current Turnitin documentation:
-                   0% = green (no match), 1-24% = blue (low), 25-49% = yellow (medium),
-                   50-74% = orange (high), 75-100% = red (very high) #}
-                {% if r.turnitin_score == 0 %}
-                    {% set score_class = "text-success" %}
-                    {% set badge_class = "bg-success" %}
-                    {% set score_label = "No match" %}
-                {% elif r.turnitin_score < 25 %}
-                    {% set score_class = "text-primary" %}
-                    {% set badge_class = "bg-primary" %}
-                    {% set score_label = "Low" %}
-                {% elif r.turnitin_score < 50 %}
-                    {% set score_class = "text-warning" %}
-                    {% set badge_class = "bg-warning text-dark" %}
-                    {% set score_label = "Medium" %}
-                {% elif r.turnitin_score < 75 %}
-                    {% set score_class = "" %}
-                    {% set badge_class = "bg-warning text-dark" %}
-                    {% set score_label = "High" %}
-                {% else %}
-                    {% set score_class = "text-danger" %}
-                    {% set badge_class = "bg-danger" %}
-                    {% set score_label = "Very high" %}
-                {% endif %}
-                <span class="small">
-                    Similarity:
-                    <strong class="{{ score_class }}"{% if r.turnitin_score >= 50 and r.turnitin_score < 75 %} style="color: #fd7e14"{% endif %}>
-                        {{ r.turnitin_score }}%
-                    </strong>
-                </span>
-                <span class="badge {{ badge_class }} small">{{ score_label }}</span>
-            {% endif %}
-            {% if r.turnitin_web_overlap is not none %}
-                <span class="small text-muted">Web: {{ r.turnitin_web_overlap }}%</span>
-            {% endif %}
-            {% if r.turnitin_publication_overlap is not none %}
-                <span class="small text-muted">Pub: {{ r.turnitin_publication_overlap }}%</span>
-            {% endif %}
-            {% if r.turnitin_student_overlap is not none %}
-                <span class="small text-muted">Student: {{ r.turnitin_student_overlap }}%</span>
-            {% endif %}
+        <span class="small text-muted fw-semibold">Turnitin</span>
+        {# 5-tier colour scale per current Turnitin documentation:
+           0% = green (no match), 1-24% = blue (low), 25-49% = yellow (medium),
+           50-74% = orange (high), 75-100% = red (very high) #}
+        {% if r.turnitin_score == 0 %}
+            {% set score_class = "text-success" %}
+            {% set badge_class = "bg-success" %}
+            {% set score_label = "No match" %}
+        {% elif r.turnitin_score < 25 %}
+            {% set score_class = "text-primary" %}
+            {% set badge_class = "bg-primary" %}
+            {% set score_label = "Low" %}
+        {% elif r.turnitin_score < 50 %}
+            {% set score_class = "text-warning" %}
+            {% set badge_class = "bg-warning text-dark" %}
+            {% set score_label = "Medium" %}
+        {% elif r.turnitin_score < 75 %}
+            {% set score_class = "" %}
+            {% set badge_class = "bg-warning text-dark" %}
+            {% set score_label = "High" %}
+        {% else %}
+            {% set score_class = "text-danger" %}
+            {% set badge_class = "bg-danger" %}
+            {% set score_label = "Very high" %}
+        {% endif %}
+        <span class="small">
+            Similarity:
+            <strong class="{{ score_class }}"{% if r.turnitin_score >= 50 and r.turnitin_score < 75 %} style="color: #fd7e14"{% endif %}>
+                {{ r.turnitin_score }}%
+            </strong>
+        </span>
+        <span class="badge {{ badge_class }} small">{{ score_label }}</span>
+        {% if r.turnitin_web_overlap is not none %}
+            <span class="small text-muted">Web: {{ r.turnitin_web_overlap }}%</span>
+        {% endif %}
+        {% if r.turnitin_publication_overlap is not none %}
+            <span class="small text-muted">Pub: {{ r.turnitin_publication_overlap }}%</span>
+        {% endif %}
+        {% if r.turnitin_student_overlap is not none %}
+            <span class="small text-muted">Student: {{ r.turnitin_student_overlap }}%</span>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+{% macro identity_line(parts) %}
+    {% if parts|length > 0 %}
+        <div class="small text-muted mt-1 d-flex flex-row flex-wrap align-items-center gap-1">
+            {% for part in parts %}
+                {% if not loop.first %}<span>&middot;</span>{% endif %}
+                <span>{{ part }}</span>
+            {% endfor %}
         </div>
     {% endif %}
 {% endmacro %}
@@ -134,8 +114,8 @@ _report = """
         </div>
     {% endif %}
 {% endmacro %}
-{% macro report_flags(convenor_intervention, out_of_tolerance_unassigned) %}
-    {% if convenor_intervention or out_of_tolerance_unassigned %}
+{% macro flags_line(record, convenor_intervention, out_of_tolerance_unassigned) %}
+    {% if convenor_intervention or out_of_tolerance_unassigned or record.turnitin_score is not none %}
         <div class="mt-1 d-flex flex-row flex-wrap align-items-center gap-2">
             {% if convenor_intervention %}
                 <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle">
@@ -147,6 +127,7 @@ _report = """
                     <i class="fas fa-balance-scale fa-fw"></i> Out of tolerance &mdash; moderator not yet assigned
                 </span>
             {% endif %}
+            {{ turnitin_chips(record) }}
         </div>
     {% endif %}
 {% endmacro %}
@@ -171,7 +152,7 @@ _report = """
         </div>
     {% endif %}
 {% endmacro %}
-{% set period = record.period %}
+{% set user = record.owner.student.user %}
 <div class="d-flex flex-row gap-3 align-items-start">
     {# Thumbnail, or restriction indicator in the same slot #}
     {% if record.is_report_restricted %}
@@ -198,44 +179,28 @@ _report = """
     <div class="flex-grow-1 bg-light p-2 rounded">
         <div class="d-flex flex-row justify-content-between align-items-start gap-2">
             <div class="flex-grow-1">
-                <div class="d-flex flex-row flex-swap justify-content-start align-items-baseline gap-2">
+                {# Student name + project title #}
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2">
+                    <a class="text-decoration-none fw-semibold" href="mailto:{{ user.email }}">{{ user.name }}</a>
                     {% if record.project is not none %}
-                        <div class="fw-semibold small">{{ record.project.name }}</div>
-                        {% if record.project.group is not none %}
-                            <div class="mt-1">
-                                {{ simple_label(record.project.group.make_label()) }}
-                            </div>
-                        {% endif %}
+                        <span class="text-muted">&middot;</span>
+                        <span class="fw-semibold small">{{ record.project.name }}</span>
                     {% else %}
-                        <div class="small text-muted fst-italic">No project assigned</div>
-                    {% endif %}
-                    {% if period is not none %}
-                        <div class="small text-muted">{{ period.display_name }}</div>
+                        <span class="small text-muted fst-italic">No project assigned</span>
                     {% endif %}
                 </div>
+
+                {# Identity line: programme, research group, project class, year, period, grades #}
+                {{ identity_line(identity_parts) }}
 
                 {# Consent badges #}
                 {{ consent_badges(record) }}
 
-                {# Supervision / presentation grades #}
-                {% if supervision_grade is not none or presentation_grade is not none %}
-                    <div class="small text-muted mt-1">
-                        Supervision
-                        {% if supervision_grade is not none %}{{ "%.1f"|format(supervision_grade) }}%{% else %}&mdash;{% endif %}
-                        &middot;
-                        Presentation
-                        {% if presentation_grade is not none %}{{ "%.1f"|format(presentation_grade) }}%{% else %}&mdash;{% endif %}
-                    </div>
-                {% endif %}
-
-                {# Convenor intervention / out-of-tolerance flags #}
-                {{ report_flags(convenor_intervention, out_of_tolerance_unassigned) }}
+                {# Convenor intervention / out-of-tolerance / Turnitin flags #}
+                {{ flags_line(record, convenor_intervention, out_of_tolerance_unassigned) }}
 
                 {# Staff roles, generic over role type #}
                 {{ staff_roles(roles, moderator_role_id, moderation_outcome) }}
-
-                {# Turnitin data #}
-                {{ turnitin_info(record) }}
             </div>
 
             {# Download buttons #}
@@ -270,16 +235,6 @@ _report = """
 """
 
 
-def _build_name_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_name)
-
-
-def _build_year_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_year)
-
-
 def _build_report_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_report)
@@ -292,6 +247,35 @@ def _supervision_presentation_grades(
     not yet graded or not applicable to this period's configuration."""
     grades = {g["label"]: g["grade"] for g in record.grade_display_data()}
     return grades.get("Supervision"), grades.get("Presentation")
+
+
+def _identity_line_parts(
+    record: SubmissionRecord,
+    simple_label,
+    supervision_grade: Optional[float],
+    presentation_grade: Optional[float],
+) -> List:
+    """Build the ordered list of fragments for the Report panel's identity line:
+    programme, research group, project class (colour badge, kept inline per the
+    agreed two-column design), year, submission period, supervision grade,
+    presentation grade. All plain text except the project-class badge."""
+    period = record.period
+    config = period.config
+    programme = record.owner.student.programme
+    group = record.project.group if record.project is not None else None
+
+    parts = []
+    if programme is not None:
+        parts.append(programme.full_name)
+    if group is not None:
+        parts.append(group.name)
+    parts.append(simple_label(config.project_class.make_label()))
+    parts.append("{0}–{1}".format(config.year, config.year + 1))
+    if period is not None:
+        parts.append(period.display_name)
+    parts.append("Supervision {0}".format("{:.1f}%".format(supervision_grade) if supervision_grade is not None else "—"))
+    parts.append("Presentation {0}".format("{:.1f}%".format(presentation_grade) if presentation_grade is not None else "—"))
+    return parts
 
 
 def _latest_submitter_report(record: SubmissionRecord) -> Optional[SubmitterReport]:
@@ -321,11 +305,11 @@ def _moderation_outcome_text(sr: Optional[SubmitterReport]) -> Optional[str]:
 
 def avd_dashboard_rows(records: List[SubmissionRecord]):
     """Row formatter for the AVD dashboard: one row per SubmissionRecord
-    belonging to a closed SubmissionPeriodRecord."""
+    belonging to a closed SubmissionPeriodRecord. Two columns: a single rich
+    "Report" panel (student, project, identity line, consent, flags, staff
+    roles, downloads) and the sortable "Report grade" column."""
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    name_templ: Template = _build_name_templ()
-    year_templ: Template = _build_year_templ()
     report_templ: Template = _build_report_templ()
 
     data = []
@@ -343,32 +327,27 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
             latest_sr is not None and latest_sr.out_of_tolerance and not has_moderator_role
         )
 
+        identity_parts = _identity_line_parts(record, simple_label, supervision_grade, presentation_grade)
+
         data.append(
             {
-                "name": {
-                    "display": render_template(name_templ, record=record, simple_label=simple_label),
+                "report": {
+                    "display": render_template(
+                        report_templ,
+                        record=record,
+                        identity_parts=identity_parts,
+                        roles=roles,
+                        moderator_role_id=SubmissionRole.ROLE_MODERATOR,
+                        moderation_outcome=moderation_outcome,
+                        convenor_intervention=convenor_intervention,
+                        out_of_tolerance_unassigned=out_of_tolerance_unassigned,
+                    ),
                     "sortstring": record.owner.student.user.last_name + record.owner.student.user.first_name,
-                },
-                "year": {
-                    "display": render_template(year_templ, record=record, simple_label=simple_label),
-                    "sortvalue": record.period.config.year,
                 },
                 "report_grade": {
                     "display": "{:.1f}%".format(report_grade) if report_grade is not None else "&mdash;",
                     "sortvalue": report_grade,
                 },
-                "records": render_template(
-                    report_templ,
-                    record=record,
-                    simple_label=simple_label,
-                    supervision_grade=supervision_grade,
-                    presentation_grade=presentation_grade,
-                    roles=roles,
-                    moderator_role_id=SubmissionRole.ROLE_MODERATOR,
-                    moderation_outcome=moderation_outcome,
-                    convenor_intervention=convenor_intervention,
-                    out_of_tolerance_unassigned=out_of_tolerance_unassigned,
-                ),
             }
         )
 

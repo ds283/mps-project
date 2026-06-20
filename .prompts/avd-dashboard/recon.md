@@ -495,6 +495,30 @@ regression exactly, since no phase had yet done the consolidation work,
 but worth tracking as a known gap until Phase 4b lands. All content
 exists; Phase 4b is reorganisation only, no new data.
 
+**Resolved in Phase 4b**: table is now exactly two columns (`report`,
+`report_grade`); `_name`/`_year` templates and their builder functions are
+deleted, with their content folded into the Report panel's title line
+(student + project) and a new `identity_line()` macro (programme · research
+group · project-class badge · year · period · supervision grade ·
+presentation grade — all plain text except the project-class badge, which
+is the one explicit exception). Supervision/presentation grades are now
+*always* shown with an em-dash placeholder rather than the whole line being
+suppressed when both are ungraded, matching `grade_display_data()`'s own
+"always present" convention elsewhere in the model layer — a small,
+deliberate behaviour change flagged here in case it surprises anyone
+comparing before/after screenshots. `report_flags()` and `turnitin_info()`
+were merged into one `flags_line()` macro so convenor-intervention/
+out-of-tolerance badges and Turnitin chips sit in the same wrapping flex
+row. The free-text search index was widened with synthetic search-only
+`columns` dict entries (no corresponding visible column) for programme
+name, project's research-group name, and project-class name — `LiveProject`
+and `ResearchGroup` are now outer-joined unconditionally in the base query
+(previously only joined when the group filter was active) so these are
+available to every row, not just when filtering. Role-holder search was
+already wired into free-text search by the time Phase 4 shipped, resolving
+the open question above. AI risk and the feedback-document link remain
+absent (no placeholder) pending Phase 5.
+
 ## Suggested phase breakdown for implementation prompts
 
 1. **Move + tenant-scope + role rename**: relocate `reports()`/

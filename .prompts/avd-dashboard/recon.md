@@ -459,6 +459,42 @@ simulation of the four badge states and three-way filter partition, and a
 grep confirming the badge-state decision is made exactly once). Worth
 doing a manual pass before Phase 4 builds further on this.
 
+## 15. Staff-roles block (Phase 4, resolved) and layout consolidation (Phase 4b)
+
+Implemented: generic `staff_roles()` macro (groups by `role.role`, labels
+via the pre-existing `SubmissionRole.role_as_str` convention already used
+in 15+ templates — found during recon, not invented), a
+`report_flags()` macro for `convenor_intervention`, and a
+`SubmitterReport.was_moderated` convenience property.
+
+**Design deviation from the original Phase 4 prompt, with good reason**:
+the prompt's proposed "out of tolerance, no moderator assigned yet"
+wording for the moderator role line turned out to describe an
+unreachable state — per the `SubmitterReport` workflow docstring, a
+`ROLE_MODERATOR` `SubmissionRole` and its `ModeratorReport` are created
+together, so there's never a moderator role line with no report behind
+it. Relocated to a report-level flag in `report_flags()` instead.
+Confirmed correct; `recon.md` updated to reflect this rather than the
+original (incorrect) assumption.
+
+Role-holder name search wired in as a DataTables *filter*
+(`roles.any(user.has(...))`) — **Phase 4b should confirm whether this
+should instead (or additionally) feed the free-text search index**, per
+§10's original intent ("find reports supervised by X" via search, not a
+dedicated filter/column).
+
+**Teal colour confirmed correct**: `--db-teal-400` (`#2EA39C`) is genuine
+teal; it reads close to green at small badge size in screenshots, which
+prompted a (resolved, false-alarm) check — no fix needed.
+
+**Phase 4b — layout consolidation**: Phase 4's screenshot revealed the
+table had reverted to the legacy 4-column grid (Student / Year and
+project class / Report grade / Submissions) rather than the agreed
+two-column design from §10 (Report panel + Report grade only) — not a
+regression exactly, since no phase had yet done the consolidation work,
+but worth tracking as a known gap until Phase 4b lands. All content
+exists; Phase 4b is reorganisation only, no new data.
+
 ## Suggested phase breakdown for implementation prompts
 
 1. **Move + tenant-scope + role rename**: relocate `reports()`/

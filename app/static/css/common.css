@@ -863,6 +863,12 @@ p.copyright {
     color: #fff;
 }
 
+.badge-ghost-header {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
 /* ===== Student browse-projects table ===== */
 
 /* Project title link */

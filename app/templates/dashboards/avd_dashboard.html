@@ -179,14 +179,8 @@
         <div class="card-header bg-primary text-white">
             <div class="d-flex flex-row justify-content-between align-items-center">
                 <span>Archived submitted reports</span>
-            </div>
-        </div>
-        <div class="card-body">
-
-            {# Filter panel toggle #}
-            <div class="d-flex align-items-center mt-3 mb-1">
                 <button id="avd-filter-toggle" type="button"
-                        class="btn btn-sm btn-outline-secondary"
+                        class="btn btn-sm btn-ghost-header"
                         data-bs-toggle="collapse"
                         data-bs-target="#avd-filter-panel"
                         aria-expanded="true"
@@ -194,13 +188,15 @@
                     <i id="avd-filter-chevron" class="fas fa-chevron-up fa-fw me-1"></i>
                     <span id="avd-filter-label">Hide filters</span>
                     <span id="avd-filter-count"
-                          class="badge bg-primary ms-1 d-none"
+                          class="badge badge-ghost-header ms-1 d-none"
                           data-count="{{ active_filter_count }}">{{ active_filter_count }} active</span>
                 </button>
             </div>
+        </div>
+        <div class="card-body">
 
             {# Filter panel #}
-            <div id="avd-filter-panel" class="collapse show card mt-0 mb-3 card-body bg-well">
+            <div id="avd-filter-panel" class="collapse show card mt-3 mb-3 card-body bg-well">
 
                 {# Tenant filter #}
                 {% if accessible_tenants is not none and accessible_tenants|length > 1 %}

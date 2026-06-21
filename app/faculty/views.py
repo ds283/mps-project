@@ -13,9 +13,13 @@ from typing import Dict, List
 
 from flask import abort, current_app, flash, jsonify, redirect, request, session, url_for
 from flask_security import current_user, roles_accepted, roles_required
+from flask_wtf import FlaskForm
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.local import LocalProxy
+from wtforms import DecimalField, SubmitField, TextAreaField
+from wtforms.validators import InputRequired, NumberRange
+from wtforms.validators import Optional as WTFOptional
 
 import app.ajax as ajax
 
@@ -86,6 +90,7 @@ from ..shared.utils import (
 )
 from ..shared.validators import (
     validate_assessment,
+    validate_data_dashboard_access,
     validate_edit_description,
     validate_edit_project,
     validate_is_convenor,
@@ -3769,11 +3774,13 @@ def marking_form(report_id):
 
 
 @faculty.route("/view_marking_report/<int:report_id>")
-@roles_accepted("faculty", "admin", "root")
+@roles_accepted("faculty", "admin", "root", "data_dashboard_reports", "data_dashboard_similarity")
 def view_marking_report(report_id):
     """
     Read-only view of a submitted MarkingReport — shows grade, field values, and feedback.
-    Accessible to the role owner (after submission) and to convenors/admins/root.
+    Accessible to the role owner (after submission) and to convenors/admins/root, plus
+    (read-only, tenant-scoped) the AVD and Similarity dashboards' data_dashboard_reports/
+    data_dashboard_similarity roles.
     """
     import json as _json
 
@@ -3802,7 +3809,18 @@ def view_marking_report(report_id):
         .count()
         > 0
     )
-    if not is_allowed and not (is_role_owner and report.report_submitted) and not is_responsible_supervisor:
+    # Read-only dashboard roles (AVD/Similarity), tenant-scoped. Uses validate_data_dashboard_access,
+    # not validate_is_convenor: these roles are not convenor-equivalent and must never be folded
+    # into a convenor check, or reused anywhere as an "is_elevated"-equivalent write check.
+    is_dashboard_viewer = validate_data_dashboard_access(
+        pclass, ["data_dashboard_reports", "data_dashboard_similarity"], message=False
+    )
+    if (
+        not is_allowed
+        and not (is_role_owner and report.report_submitted)
+        and not is_responsible_supervisor
+        and not is_dashboard_viewer
+    ):
         flash("You do not have permission to view this marking report.", "error")
         return redirect(redirect_url())
 
@@ -3911,6 +3929,62 @@ def thankyou_moderator_report():
     return render_template_context("faculty/thankyou_moderator_report.html", dashboard_url=dashboard_url)
 
 
+class ModeratorReportForm(FlaskForm):
+    grade = DecimalField(
+        "Recommended grade (%)",
+        places=1,
+        validators=[InputRequired("Please enter a recommended grade."), NumberRange(min=0, max=100)],
+    )
+    report = TextAreaField(
+        "Justification",
+        validators=[WTFOptional()],
+        description="Explain your recommended grade, noting any significant discrepancies between the markers.",
+    )
+    submit = SubmitField("Submit moderator report")
+
+
+def _moderator_report_reference_data(sr: "SubmitterReport", workflow: MarkingWorkflow) -> Dict:
+    """
+    Build the marker-reference panel context (sorted marking reports, parsed field data,
+    grade spread, marker labels, scheme/schema, moderator-visible attachments) shared by
+    moderator_report_form and view_moderator_report.
+    """
+    import json
+
+    marking_reports = sr.marking_reports.all()
+    sorted_reports = sorted(marking_reports, key=lambda r: r.id)
+
+    def _parse_report(mr):
+        try:
+            blob = json.loads(mr.report) if mr.report else {}
+            return blob.get("fields", {})
+        except (ValueError, TypeError):
+            return {}
+
+    report_data = {mr.id: _parse_report(mr) for mr in sorted_reports}
+
+    submitted_grades = [float(mr.grade) for mr in sorted_reports if mr.grade is not None and mr.feedback_submitted]
+    grade_spread = max(submitted_grades) - min(submitted_grades) if len(submitted_grades) >= 2 else None
+
+    _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    marker_labels = {mr.id: f"Marker {_letters[i]}" for i, mr in enumerate(sorted_reports)}
+
+    scheme = workflow.scheme
+    schema = scheme.schema_as_dict if scheme else None
+
+    filtered_attachments = [pa for pa in workflow.attachments if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)]
+
+    return {
+        "sorted_reports": sorted_reports,
+        "report_data": report_data,
+        "marker_labels": marker_labels,
+        "grade_spread": grade_spread,
+        "scheme": scheme,
+        "schema": schema,
+        "filtered_attachments": filtered_attachments,
+    }
+
+
 @faculty.route("/moderator_report_form/<int:mod_report_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def moderator_report_form(mod_report_id):
@@ -3919,10 +3993,6 @@ def moderator_report_form(mod_report_id):
     Accessible only to the assigned moderator (or elevated users).
     """
     from datetime import datetime
-
-    from flask_wtf import FlaskForm
-    from wtforms import DecimalField, SubmitField, TextAreaField
-    from wtforms.validators import InputRequired, NumberRange, Optional as WTFOptional
 
     from ..models.markingevent import SubmitterReportWorkflowStates
 
@@ -3944,19 +4014,6 @@ def moderator_report_form(mod_report_id):
     is_editable = is_owner  # convenors may view but not submit
 
     url = request.args.get("url", url_for("faculty.dashboard_moderation"))
-
-    class ModeratorReportForm(FlaskForm):
-        grade = DecimalField(
-            "Recommended grade (%)",
-            places=1,
-            validators=[InputRequired("Please enter a recommended grade."), NumberRange(min=0, max=100)],
-        )
-        report = TextAreaField(
-            "Justification",
-            validators=[WTFOptional()],
-            description="Explain your recommended grade, noting any significant discrepancies between the markers.",
-        )
-        submit = SubmitField("Submit moderator report")
 
     form = ModeratorReportForm(request.form)
 
@@ -3998,33 +4055,7 @@ def moderator_report_form(mod_report_id):
         form.grade.data = mod_report.grade
         form.report.data = mod_report.report
 
-    import json
-
-    marking_reports = sr.marking_reports.all()
-    sorted_reports = sorted(marking_reports, key=lambda r: r.id)
-
-    def _parse_report(mr):
-        try:
-            blob = json.loads(mr.report) if mr.report else {}
-            return blob.get("fields", {})
-        except (ValueError, TypeError):
-            return {}
-
-    report_data = {mr.id: _parse_report(mr) for mr in sorted_reports}
-
-    submitted_grades = [float(mr.grade) for mr in sorted_reports if mr.grade is not None and mr.feedback_submitted]
-    grade_spread = (max(submitted_grades) - min(submitted_grades) if len(submitted_grades) >= 2 else None)
-
-    _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    marker_labels = {mr.id: f"Marker {_letters[i]}" for i, mr in enumerate(sorted_reports)}
-
-    scheme = workflow.scheme
-    schema = scheme.schema_as_dict if scheme else None
-
-    filtered_attachments = [
-        pa for pa in workflow.attachments
-        if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)
-    ]
+    ref_data = _moderator_report_reference_data(sr, workflow)
 
     return render_template_context(
         "faculty/moderator_report_form.html",
@@ -4034,16 +4065,66 @@ def moderator_report_form(mod_report_id):
         workflow=workflow,
         pclass=pclass,
         record=record,
-        sorted_reports=sorted_reports,
-        report_data=report_data,
-        marker_labels=marker_labels,
-        scheme=scheme,
-        schema=schema,
-        filtered_attachments=filtered_attachments,
         is_elevated=is_elevated,
         is_editable=is_editable,
-        grade_spread=grade_spread,
         url=url,
+        **ref_data,
+    )
+
+
+@faculty.route("/view_moderator_report/<int:mod_report_id>")
+@roles_accepted("data_dashboard_reports", "admin", "root")
+def view_moderator_report(mod_report_id):
+    """
+    Read-only view of a ModeratorReport for the AVD dashboard's archive links.
+
+    Deliberately a separate, GET-only route from faculty.moderator_report_form (the live
+    moderation-workflow route actual moderators use to submit their report) — there is no
+    methods=["POST"] on this route at all, so there is no write surface here regardless of
+    role. admin/root get unconditional access; data_dashboard_reports is scoped to their
+    accessible tenants via validate_data_dashboard_access, matching the AVD dashboard's own
+    tenant-scoping (Phase 1).
+
+    data_dashboard_similarity is intentionally not accepted here — the Similarity dashboard
+    never links a ModeratorReport (its staff-role panel only ever surfaces MarkingReport
+    links via faculty.view_marking_report), so there is no equivalent gap to fix for that role.
+
+    Risk note for future maintainers: validate_data_dashboard_access is read-only by design
+    and deliberately not convenor-equivalent (unlike validate_is_convenor). If this route ever
+    grows a write path, do not gate it with this check — data_dashboard_reports must stay
+    read-only everywhere.
+    """
+    mod_report: ModeratorReport = ModeratorReport.query.get_or_404(mod_report_id)
+    sr = mod_report.submitter_report
+    workflow = sr.workflow
+    pclass = workflow.event.pclass
+    record: SubmissionRecord = sr.record
+
+    is_elevated = current_user.has_role("admin") or current_user.has_role("root")
+    is_dashboard_viewer = validate_data_dashboard_access(pclass, ["data_dashboard_reports"], message=False)
+    if not is_elevated and not is_dashboard_viewer:
+        flash("You do not have permission to view this moderator report.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("dashboards.avd_dashboard"))
+
+    form = ModeratorReportForm()
+    form.grade.data = mod_report.grade
+    form.report.data = mod_report.report
+
+    ref_data = _moderator_report_reference_data(sr, workflow)
+
+    return render_template_context(
+        "faculty/moderator_report_form.html",
+        form=form,
+        mod_report=mod_report,
+        sr=sr,
+        workflow=workflow,
+        pclass=pclass,
+        record=record,
+        is_editable=False,
+        url=url,
+        **ref_data,
     )
 
 

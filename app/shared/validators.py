@@ -40,6 +40,39 @@ def validate_is_administrator(message=True):
     return True
 
 
+def validate_data_dashboard_access(pclass: ProjectClass, roles: List[str], message: bool = True) -> bool:
+    """
+    Validate that the logged-in user holds one of the given read-only data-dashboard roles
+    (e.g. "data_dashboard_reports", "data_dashboard_similarity") and that the role's access is
+    scoped to this pclass's tenant.
+
+    Deliberately separate from validate_is_convenor: those roles are read-only-everywhere roles
+    for the AVD/Similarity dashboards, not convenor-equivalent access, and must never be folded
+    into "is a convenor" anywhere in the app — a caller that also needs admin/root/convenor
+    access should check validate_is_convenor() separately rather than passing these role names
+    into its allow_roles parameter.
+    :param pclass: Project class model instance
+    :param roles: candidate data_dashboard_* role names to check
+    :param message: whether to flash a message on failure
+    :return: True/False
+    """
+    for role in roles:
+        if current_user.has_role(role):
+            # if pclass has a tenant, check that user belongs to the same tenant
+            # (for backwards compatibility, allow access if pclass has no tenant)
+            if pclass.tenant_id is None:
+                return True
+            if pclass.tenant is not None and any(
+                    [t.id == pclass.tenant_id for t in current_user.tenants]
+            ):
+                return True
+
+    if message:
+        flash("You do not have permission to view this content.", "error")
+
+    return False
+
+
 def validate_is_convenor(
     pclass: ProjectClass, message: bool = True, allow_roles: Optional[List[str]] = None
 ):

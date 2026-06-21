@@ -17,6 +17,7 @@ from flask import (
     render_template,
     url_for,
 )
+from flask_security import current_user
 from jinja2 import Template, Environment
 
 from ...models import SubmissionRecord, SubmissionRole
@@ -480,17 +481,35 @@ def _role_report_links(roles: List[SubmissionRole]) -> List[Dict]:
     """For each role, the most recent MarkingReport (or ModeratorReport, for the
     moderator role) tied to that specific role, linking to the existing read-only
     (or display/edit, for moderator reports) view. Most recent by creation_timestamp
-    covers roles that have accumulated more than one report across re-marking events."""
+    covers roles that have accumulated more than one report across re-marking events.
+
+    The AVD dashboard's only possible viewers are root, admin, and data_dashboard_reports
+    (_can_access_avd_dashboard() — no convenor/plain-faculty branch). admin/root keep using
+    the live faculty.moderator_report_form route exactly as before; a data_dashboard_reports
+    viewer is routed to the read-only faculty.view_moderator_report instead, since
+    moderator_report_form has a write surface that route is not widened to grant them."""
     links = []
     for role in roles:
         if role.role == SubmissionRole.ROLE_MODERATOR:
             report = role.moderator_reports.order_by(ModeratorReport.creation_timestamp.desc(), ModeratorReport.id.desc()).first()
             if report is not None:
+                if current_user.has_role("admin") or current_user.has_role("root"):
+                    report_url = url_for(
+                        "faculty.moderator_report_form",
+                        mod_report_id=report.id,
+                        url=url_for("dashboards.avd_dashboard"),
+                    )
+                else:
+                    report_url = url_for(
+                        "faculty.view_moderator_report",
+                        mod_report_id=report.id,
+                        url=url_for("dashboards.avd_dashboard"),
+                    )
                 links.append(
                     {
                         "label": role.role_as_str,
                         "user_name": role.user.name,
-                        "url": url_for("faculty.moderator_report_form", mod_report_id=report.id),
+                        "url": report_url,
                     }
                 )
         else:
@@ -500,7 +519,11 @@ def _role_report_links(roles: List[SubmissionRole]) -> List[Dict]:
                     {
                         "label": role.role_as_str,
                         "user_name": role.user.name,
-                        "url": url_for("faculty.view_marking_report", report_id=report.id),
+                        "url": url_for(
+                            "faculty.view_marking_report",
+                            report_id=report.id,
+                            url=url_for("dashboards.avd_dashboard"),
+                        ),
                     }
                 )
     return links

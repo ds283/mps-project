@@ -251,7 +251,7 @@
                                 <span style="flex:1;">{{ role.user.name }}</span>
                                 <span class="badge {{ _role_badge_class.get(role.roleid_as_str, 'role-badge-moderator') }}"
                                       style="font-size:0.7em;">{{ role.role_as_str }}</span>
-                                {% if is_faculty or is_admin or is_root %}
+                                {% if is_faculty or is_admin or is_root or is_data_dashboard_similarity %}
                                     {% for mr in role.marking_reports %}
                                         <a href="{{ url_for('faculty.view_marking_report', report_id=mr.id,
                                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),
@@ -482,7 +482,7 @@
                                 <span style="flex:1;">{{ role.user.name }}</span>
                                 <span class="badge {{ _role_badge_class.get(role.roleid_as_str, 'role-badge-moderator') }}"
                                       style="font-size:0.7em;">{{ role.role_as_str }}</span>
-                                {% if is_faculty or is_admin or is_root %}
+                                {% if is_faculty or is_admin or is_root or is_data_dashboard_similarity %}
                                     {% for mr in role.marking_reports %}
                                         <a href="{{ url_for('faculty.view_marking_report', report_id=mr.id,
                                                             url=url_for('dashboards.similarity_concern_detail', concern_id=concern.id),

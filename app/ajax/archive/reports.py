@@ -246,30 +246,28 @@ _report = """
                 {{ staff_roles(grouped_roles, role_report_urls, moderator_role_id, moderation_outcome) }}
             </div>
 
-            {# Download buttons #}
+            {# Download button: processed report preferred; original triggers an unprocessed-warning modal #}
             <div class="d-flex flex-column justify-content-start align-items-end gap-1">
                 {% if record.report_secret %}
                     <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Report restricted</span>
                 {% elif record.is_report_restricted %}
                     <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Restricted until {{ record.report_embargo.strftime("%a %d %b %Y %H:%M") }}</span>
+                {% elif record.processed_report is not none %}
+                    <a class="btn btn-xs btn-outline-secondary"
+                       href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report_id) }}"
+                       data-bs-toggle="tooltip" title="Download report">
+                        <i class="fas fa-file-pdf fa-fw"></i> Download report
+                    </a>
+                {% elif record.report is not none %}
+                    <button class="btn btn-xs btn-outline-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#avdUnprocessedReportModal"
+                            data-download-url="{{ url_for('admin.download_submitted_asset', asset_id=record.report_id) }}"
+                            title="Download report (unprocessed)">
+                        <i class="fas fa-file-download fa-fw"></i> Download report
+                    </button>
                 {% else %}
-                    {% if record.report is not none %}
-                        <a class="btn btn-xs btn-outline-primary"
-                           href="{{ url_for('admin.download_submitted_asset', asset_id=record.report_id) }}"
-                           data-bs-toggle="tooltip" title="Download original report">
-                            <i class="fas fa-file-download fa-fw"></i> Original
-                        </a>
-                    {% endif %}
-                    {% if record.processed_report is not none %}
-                        <a class="btn btn-xs btn-outline-secondary"
-                           href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report_id) }}"
-                           data-bs-toggle="tooltip" title="Download processed report">
-                            <i class="fas fa-file-pdf fa-fw"></i> Processed
-                        </a>
-                    {% endif %}
-                    {% if record.report is none and record.processed_report is none %}
-                        <span class="badge bg-light text-muted border">No report</span>
-                    {% endif %}
+                    <span class="badge bg-light text-muted border">No report</span>
                 {% endif %}
             </div>
         </div>
@@ -322,7 +320,7 @@ _details = """
         <div class="text-body-secondary" style="font-size:10px">{{ label }}</div>
     </div>
 {% endmacro %}
-<div class="p-3" style="background: var(--bs-tertiary-bg); border-radius: 6px; border: 1px solid var(--bs-border-color)">
+<div class="p-3">
 
     {# Report summary callout — promoted to the top of the details panel #}
     {% if report_summary %}
@@ -450,7 +448,7 @@ _details = """
                 <h6 class="text-uppercase small text-muted mb-2">Feedback documents</h6>
                 <div class="d-flex flex-row flex-wrap gap-2">
                     {% for fl in feedback_links %}
-                        <a class="btn btn-xs btn-outline-primary" href="{{ fl.url }}"
+                        <a class="btn btn-xs btn-outline-secondary" href="{{ fl.url }}"
                            data-bs-toggle="tooltip" title="Download feedback report">
                             <i class="fas fa-file-pdf fa-fw"></i> Download{% if feedback_links|length > 1 %} {{ loop.index }}{% endif %}
                         </a>
@@ -463,6 +461,41 @@ _details = """
 """
 
 
+# language=jinja2
+_grade = """
+<div class="text-end">
+    <div class="fw-semibold">
+        {% if report_grade is not none %}{{ "%.1f"|format(report_grade) }}%{% else %}&mdash;{% endif %}
+    </div>
+    {% if grade_data|length > 0 %}
+        <div class="mt-1 d-flex justify-content-end">
+            <div class="sv2-metric-cap grades">
+                <div class="sv2-metric-cap-label">Grades</div>
+                <div class="sv2-metric-cap-body">
+                    {% for g in grade_data %}
+                        {% if not loop.first %}<div class="sv2-m-sep"></div>{% endif %}
+                        <div class="sv2-m-item">
+                            <div class="sv2-m-lbl">{{ g.label }}</div>
+                            {% if g.grade is not none %}
+                                <div class="sv2-m-val sv2-mv-ok">{{ "%.1f"|format(g.grade) }}%</div>
+                            {% else %}
+                                <div class="sv2-m-val sv2-mv-dim">&mdash;</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+"""
+
+
+def _build_grade_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_grade)
+
+
 def _build_report_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_report)
@@ -473,25 +506,14 @@ def _build_details_templ() -> Template:
     return env.from_string(_details)
 
 
-def _supervision_presentation_grades(
-    record: SubmissionRecord,
-) -> Tuple[Optional[float], Optional[float]]:
-    """Return (supervision_grade, presentation_grade), or None for either when
-    not yet graded or not applicable to this period's configuration."""
-    grades = {g["label"]: g["grade"] for g in record.grade_display_data()}
-    return grades.get("Supervision"), grades.get("Presentation")
-
-
 def _identity_line_parts(
     record: SubmissionRecord,
     simple_label,
-    supervision_grade: Optional[float],
-    presentation_grade: Optional[float],
 ) -> List:
     """Build the ordered list of fragments for the Report panel's identity line:
     programme, research group, project class (colour badge, kept inline per the
-    agreed two-column design), year, submission period, supervision grade,
-    presentation grade. All plain text except the project-class badge."""
+    agreed two-column design), year, submission period. All plain text except
+    the project-class badge. Grades are shown in the right-column grade capsule."""
     period = record.period
     config = period.config
     programme = record.owner.student.programme
@@ -506,8 +528,6 @@ def _identity_line_parts(
     parts.append("{0}–{1}".format(config.year, config.year + 1))
     if period is not None:
         parts.append(period.display_name)
-    parts.append("Supervision {0}".format("{:.1f}%".format(supervision_grade) if supervision_grade is not None else "—"))
-    parts.append("Presentation {0}".format("{:.1f}%".format(presentation_grade) if presentation_grade is not None else "—"))
     return parts
 
 
@@ -721,13 +741,13 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     report_templ: Template = _build_report_templ()
+    grade_templ: Template = _build_grade_templ()
     details_templ: Template = _build_details_templ()
 
     data = []
     for record in records:
-        supervision_grade, presentation_grade = _supervision_presentation_grades(record)
-
         report_grade = float(record.report_grade) if record.report_grade is not None else None
+        grade_data = record.grade_display_data()
 
         roles = record.roles.all()
         has_moderator_role = any(r.role == SubmissionRole.ROLE_MODERATOR for r in roles)
@@ -736,7 +756,7 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
         convenor_intervention = bool(latest_sr is not None and latest_sr.convenor_intervention)
         out_of_tolerance_unassigned = bool(latest_sr is not None and latest_sr.out_of_tolerance and not has_moderator_role)
 
-        identity_parts = _identity_line_parts(record, simple_label, supervision_grade, presentation_grade)
+        identity_parts = _identity_line_parts(record, simple_label)
 
         grouped_roles = _group_and_sort_roles(roles)
         role_report_urls = _role_report_url_map(roles)
@@ -763,7 +783,11 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
                     "sortstring": record.owner.student.user.last_name + record.owner.student.user.first_name,
                 },
                 "report_grade": {
-                    "display": "{:.1f}%".format(report_grade) if report_grade is not None else "&mdash;",
+                    "display": render_template(
+                        grade_templ,
+                        report_grade=report_grade,
+                        grade_data=grade_data,
+                    ),
                     "sortvalue": report_grade,
                 },
                 "details": render_template(details_templ, **details_ctx) if details_ctx["has_details"] else None,

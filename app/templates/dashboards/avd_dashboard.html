@@ -82,6 +82,13 @@
             // visible columns above. Any element tagged .avd-details-toggle (the full-width
             // footer bar, the AI-flagged badge, and its note icon) toggles the same child
             // row independently — more than one row may be expanded at once.
+            // Unprocessed-report warning modal: populate the confirm link href from the
+            // triggering button's data-download-url before the modal is shown.
+            $('#avdUnprocessedReportModal').on('show.bs.modal', function (e) {
+                var url = $(e.relatedTarget).data('download-url');
+                $('#avdConfirmUnprocessedDownload').attr('href', url || '#');
+            });
+
             $('#reports-table tbody').on('click', '.avd-details-toggle', function (e) {
                 e.preventDefault();
                 var tr = $(this).closest('tr');
@@ -294,6 +301,36 @@
                 </thead>
             </table>
 
+        </div>
+    </div>
+
+    {# Confirmation modal shown when a report has no processed version — warns that the
+       original may contain unredacted student name occurrences before download proceeds. #}
+    <div class="modal fade" id="avdUnprocessedReportModal" tabindex="-1"
+         aria-labelledby="avdUnprocessedReportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="avdUnprocessedReportModalLabel">
+                        <i class="fas fa-exclamation-triangle fa-fw me-1"></i> Report not processed
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This report has not been processed by the standard pipeline and may contain
+                        <strong>unredacted occurrences of the student's name</strong>.</p>
+                    <p class="mb-0">Please be aware that these occurrences may need to be
+                        removed by hand.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times fa-fw me-1"></i> Cancel
+                    </button>
+                    <a id="avdConfirmUnprocessedDownload" href="#" class="btn btn-warning" data-bs-dismiss="modal">
+                        <i class="fas fa-file-download fa-fw me-1"></i> Download anyway
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}

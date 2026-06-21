@@ -189,8 +189,12 @@
             {% endif %}
 
             {% if report.submitter_report.workflow_state != SubmitterReportWorkflowStates.DROPPED %}
+                {%- set _sr_state = report.submitter_report.workflow_state -%}
+                {%- set _event_closed = workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED -%}
+                {%- set _sr_locked = _sr_state in (SubmitterReportWorkflowStates.COMPLETED,
+                                                    SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE) -%}
                 <div class="d-flex gap-2 mb-4">
-                    {% if report.marking_form_is_open or is_elevated %}
+                    {% if not _event_closed and not _sr_locked and (report.marking_form_is_open or is_elevated) %}
                         <a class="btn btn-sm btn-outline-primary"
                            href="{{ url_for('faculty.marking_form', report_id=report.id, url=url) }}">
                             <i class="fas fa-pen fa-fw"></i> Edit report

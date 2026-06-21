@@ -23,6 +23,17 @@ from jinja2 import Template, Environment
 from ...models import SubmissionRecord, SubmissionRole
 from ...models.markingevent import MarkingReport, ModeratorReport, SubmitterReport
 
+# Priority order for role groups in the staff block. Roles not in this map sort after all listed
+# types, preserving generic iteration for unlisted role types (Exam board, External examiner, etc.).
+_ROLE_PRIORITY: Dict[int, int] = {
+    SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR: 0,
+    SubmissionRole.ROLE_SUPERVISOR: 1,
+    SubmissionRole.ROLE_MARKER: 2,
+    SubmissionRole.ROLE_PRESENTATION_ASSESSOR: 3,
+    SubmissionRole.ROLE_MODERATOR: 4,
+}
+_ROLE_PRIORITY_DEFAULT: int = len(_ROLE_PRIORITY)
+
 # language=jinja2
 _report = """
 {% macro turnitin_chips(r) %}
@@ -151,24 +162,36 @@ _report = """
         </div>
     {% endif %}
 {% endmacro %}
-{% macro staff_roles(roles, moderator_role_id, moderation_outcome) %}
-    {% if roles|length > 0 %}
-        <div class="mt-1 d-flex flex-column justify-content-start align-items-start gap-1">
-            {% for role_id, group in roles|groupby('role') %}
-                <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
-                    <span class="small text-muted fw-semibold">
-                        {{ group[0].role_as_str }}{{ 's' if group|length > 1 else '' }}:
-                    </span>
-                    {% for role in group %}
-                        <span class="small">
-                            <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+{% macro staff_roles(grouped_roles, role_report_urls, moderator_role_id, moderation_outcome) %}
+    {# Local label override: ROLE_PRESENTATION_ASSESSOR (2) uses 'Presentation assessor' here rather than
+       the global role_as_str value 'Assessor', which is correct for all other contexts in the application. #}
+    {% set _local_labels = {2: 'Presentation assessor'} %}
+    {% if grouped_roles|length > 0 %}
+        <div class="mt-2" style="background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: 6px; padding: 6px 10px">
+            <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--bs-secondary-color); margin-bottom: 4px">Staff</div>
+            <div class="d-flex flex-column gap-1">
+                {% for role_type, group in grouped_roles %}
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
+                        <span class="small text-muted fw-semibold">
+                            {{ _local_labels.get(role_type, group[0].role_as_str) }}{{ 's' if group|length > 1 else '' }}:
                         </span>
-                    {% endfor %}
-                    {% if role_id == moderator_role_id and moderation_outcome %}
-                        <span class="small text-muted">&mdash; {{ moderation_outcome }}</span>
-                    {% endif %}
-                </div>
-            {% endfor %}
+                        {% for role in group %}
+                            {% set report_url = role_report_urls.get(role.id) %}
+                            <span class="small">
+                                {% if report_url %}
+                                    <a class="text-decoration-none" href="{{ report_url }}">{{ role.user.name }}</a>
+                                {% else %}
+                                    {{ role.user.name }}
+                                {% endif %}
+                            </span>
+                            {% if not loop.last %}<span class="text-muted small">,</span>{% endif %}
+                        {% endfor %}
+                        {% if role_type == moderator_role_id and moderation_outcome %}
+                            <span class="small text-muted">&mdash; {{ moderation_outcome }}</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
         </div>
     {% endif %}
 {% endmacro %}
@@ -219,17 +242,8 @@ _report = """
                 {# Convenor intervention / out-of-tolerance / Turnitin / AI-risk flags #}
                 {{ flags_line(record, convenor_intervention, out_of_tolerance_unassigned, ai_risk) }}
 
-                {# Staff roles, generic over role type #}
-                {{ staff_roles(roles, moderator_role_id, moderation_outcome) }}
-
-                {# Expand trigger for the full marking & report details child row #}
-                {% if has_details %}
-                    <div class="mt-1">
-                        <a href="#" class="small text-decoration-none avd-details-toggle" role="button">
-                            <i class="fas fa-chevron-down fa-fw"></i> Show full marking &amp; report details
-                        </a>
-                    </div>
-                {% endif %}
+                {# Staff roles: visually contained, priority-ordered, role names link to their reports #}
+                {{ staff_roles(grouped_roles, role_report_urls, moderator_role_id, moderation_outcome) }}
             </div>
 
             {# Download buttons #}
@@ -259,6 +273,16 @@ _report = """
                 {% endif %}
             </div>
         </div>
+
+        {# Full-width expand/collapse footer bar #}
+        {% if has_details %}
+            <div class="avd-details-toggle avd-footer-toggle mt-2 pt-2 text-center"
+                 role="button"
+                 style="cursor: pointer; border-top: 1px solid var(--bs-border-color)">
+                <span class="avd-toggle-icon small text-muted"><i class="fas fa-chevron-down fa-fw"></i></span>
+                <span class="avd-toggle-label small text-muted ms-1">Show full marking &amp; report details</span>
+            </div>
+        {% endif %}
     </div>
 </div>
 """
@@ -266,26 +290,70 @@ _report = """
 
 # language=jinja2
 _details = """
-{% macro stat_chip(label, value) %}
-    {% if value is not none %}
-        <div class="d-flex flex-column align-items-start" style="min-width:90px">
-            <span class="small text-muted">{{ label }}</span>
-            <span class="fw-semibold">{{ value }}</span>
-        </div>
+{% macro metric_tile(value, label, variant='secondary', denominator=none, zero_variant=none, nonzero_variant=none, value_ok=none) %}
+    {# Inlined from convenor/dashboard/overview_cards/_metric_tile.html —
+       string templates compiled with env.from_string() share the app environment but inlining avoids
+       any loader-path uncertainty at render time. #}
+    {% if value_ok is not none %}
+        {% set resolved = zero_variant if value_ok else nonzero_variant %}
+    {% elif zero_variant is not none and nonzero_variant is not none %}
+        {% set resolved = zero_variant if value == 0 else nonzero_variant %}
+    {% else %}
+        {% set resolved = variant %}
     {% endif %}
+    {% if resolved == 'secondary' %}
+        {% set bg_token = 'var(--bs-secondary-bg)' %}
+        {% set border_token = 'var(--bs-border-color)' %}
+    {% else %}
+        {% set bg_token = 'var(--bs-' ~ resolved ~ '-bg-subtle)' %}
+        {% set border_token = 'var(--bs-' ~ resolved ~ '-border-subtle)' %}
+    {% endif %}
+    <div class="rounded p-1 text-center"
+         style="background: {{ bg_token }}; border: 1px solid {{ border_token }}">
+        {% if resolved == 'secondary' %}
+            <div class="small fw-bold text-body-secondary">
+                {{ value }}{% if denominator is not none %}<small class="fw-normal text-body-secondary">/{{ denominator }}</small>{% endif %}
+            </div>
+        {% else %}
+            <div class="small fw-bold" style="color: var(--bs-{{ resolved }}-text-emphasis)">
+                {{ value }}{% if denominator is not none %}<small class="fw-normal text-body-secondary">/{{ denominator }}</small>{% endif %}
+            </div>
+        {% endif %}
+        <div class="text-body-secondary" style="font-size:10px">{{ label }}</div>
+    </div>
 {% endmacro %}
 <div class="p-3" style="background: var(--bs-tertiary-bg); border-radius: 6px; border: 1px solid var(--bs-border-color)">
+
+    {# Report summary callout — promoted to the top of the details panel #}
+    {% if report_summary %}
+        <div class="mb-3 p-3 rounded" style="background: var(--bs-info-bg-subtle); border: 1px solid var(--bs-info-border-subtle)">
+            <div class="small fw-semibold mb-1" style="color: var(--bs-info-text-emphasis)">
+                <i class="fas fa-robot fa-fw"></i> AI report summary
+            </div>
+            <p class="small mb-0" style="color: var(--bs-body-color)">{{ report_summary }}</p>
+        </div>
+    {% endif %}
+
+    {% if restricted %}
+        <div class="small text-muted mb-3">
+            <i class="fas fa-lock fa-fw"></i> AI declaration, report summary, and feedback documents
+            are hidden while this report is restricted.
+        </div>
+    {% endif %}
+
     <div class="row g-4">
         <div class="col-md-6">
             {% if metrics_available %}
                 <h6 class="text-uppercase small text-muted mb-2">Report statistics</h6>
-                <div class="d-flex flex-row flex-wrap gap-3 mb-2">
-                    {{ stat_chip("Measured words", measured_word_count) }}
-                    {{ stat_chip("Appendix words", appendix_word_count) }}
-                    {{ stat_chip("Pages", page_count) }}
-                    {{ stat_chip("Figures", figure_count) }}
-                    {{ stat_chip("Tables", table_count) }}
+                <div class="d-flex flex-row flex-wrap gap-2 mb-2">
+                    {{ metric_tile(measured_word_count, 'Words') }}
+                    {{ metric_tile(page_count, 'Pages') }}
+                    {{ metric_tile(figure_count, 'Figures') }}
+                    {{ metric_tile(table_count, 'Tables') }}
                 </div>
+                {% if appendix_word_count is not none %}
+                    <div class="small text-muted mb-1">Appendix: {{ appendix_word_count }} words</div>
+                {% endif %}
                 {% if stated_word_count is not none %}
                     <div class="small mb-3">
                         <span class="text-muted">Stated word count:</span> <strong>{{ stated_word_count }}</strong>
@@ -299,65 +367,80 @@ _details = """
                 {% endif %}
             {% endif %}
 
-            {% if genai_status is not none %}
+            {# AI declaration (neutral informational styling) + compliance verdict attached directly beneath.
+               Only shown when not restricted and a declaration was detected — both are driven by the same
+               genai_statement_found flag, so they co-occur cleanly. ai_compliance_factor is None when the
+               record is restricted or has no declaration (in which case the factor stays in the right column). #}
+            {% if not restricted and genai_status is not none %}
                 <h6 class="text-uppercase small text-muted mt-2 mb-2">AI declaration</h6>
                 {% if genai_status %}
-                    <div class="alert alert-warning py-2 small mb-3">
-                        <i class="fas fa-file-signature fa-fw me-1"></i>
-                        <strong>Statement detected:</strong> {{ genai_statement }}
+                    <div class="rounded mb-3" style="background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color)">
+                        <div class="p-2 small">
+                            <i class="fas fa-info-circle fa-fw me-1" style="color: var(--bs-secondary-color)"></i>
+                            <strong class="text-body-secondary">Statement detected:</strong>
+                            <span class="text-body">{{ genai_statement }}</span>
+                        </div>
+                        {% if ai_compliance_factor is not none %}
+                            <hr class="my-0" style="border-color: var(--bs-border-color)">
+                            <div class="p-2 small">
+                                {% if ai_compliance_factor.resolved %}
+                                    <div class="d-flex flex-row flex-wrap align-items-center gap-1 mb-1">
+                                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
+                                            <i class="fas fa-check-circle fa-fw"></i> AI compliance statement
+                                        </span>
+                                        <span class="text-muted">
+                                            {% if ai_compliance_factor.resolved_by_name %}resolved by {{ ai_compliance_factor.resolved_by_name }}{% else %}resolved{% endif %}
+                                            {% if ai_compliance_factor.resolved_at_display %}&middot; {{ ai_compliance_factor.resolved_at_display }}{% endif %}
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    <div class="mb-1">
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            <i class="fas fa-exclamation-circle fa-fw"></i> AI compliance statement &mdash; pending review
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                {% if ai_compliance_factor.annotation %}
+                                    <div class="text-muted mt-1 ps-2" style="border-left: 2px solid var(--bs-border-color)">{{ ai_compliance_factor.annotation }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                 {% else %}
                     <div class="small text-muted mb-3">No AI declaration found in report.</div>
                 {% endif %}
             {% endif %}
-
-            {% if report_summary %}
-                <h6 class="text-uppercase small text-muted mt-2 mb-2">Report summary</h6>
-                <p class="small mb-3">{{ report_summary }}</p>
-            {% endif %}
-
-            {% if restricted %}
-                <div class="small text-muted">
-                    <i class="fas fa-lock fa-fw"></i> AI declaration, report summary, and feedback documents
-                    are hidden while this report is restricted.
-                </div>
-            {% endif %}
         </div>
 
         <div class="col-md-6">
-            {% if rf.has_any_present %}
+            {# Risk factors: AI compliance statement has been relocated to the left column (attached to the
+               declaration). This column shows all remaining factors only. #}
+            {% if other_rf_has_any %}
                 <h6 class="text-uppercase small text-muted mb-2">Risk factors</h6>
                 <div class="d-flex flex-column gap-2 mb-3">
-                    {% for f in rf.factors %}
-                        <div class="small">
-                            {% if f.resolved %}
-                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
-                                    <i class="fas fa-check-circle fa-fw"></i> {{ f.label }}
-                                </span>
-                                <span class="text-muted ms-1">
-                                    {% if f.resolved_by_name %}resolved by {{ f.resolved_by_name }}{% else %}resolved{% endif %}
-                                    {% if f.resolved_at_display %}&middot; {{ f.resolved_at_display }}{% endif %}
-                                </span>
-                            {% else %}
-                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">
-                                    <i class="fas fa-exclamation-triangle fa-fw"></i> {{ f.label }}
-                                </span>
-                            {% endif %}
-                            {% if f.annotation %}
-                                <div class="text-muted ps-3 mt-1" style="border-left: 2px solid var(--bs-border-color)">{{ f.annotation }}</div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            {% if role_reports|length > 0 %}
-                <h6 class="text-uppercase small text-muted mb-2">Marking &amp; moderation reports</h6>
-                <div class="d-flex flex-column gap-1 mb-3">
-                    {% for rr in role_reports %}
-                        <div class="small">
-                            <span class="text-muted">{{ rr.label }}:</span>
-                            <a href="{{ rr.url }}">{{ rr.user_name }}&rsquo;s report</a>
+                    {% for f in other_rf_factors %}
+                        <div class="rounded" style="border: 1px solid var(--bs-border-color); overflow: hidden">
+                            <div class="d-flex flex-row align-items-center gap-2 px-2 py-1"
+                                 style="background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color)">
+                                {% if f.resolved %}
+                                    <i class="fas fa-check-circle small" style="color: var(--bs-success-text-emphasis)"></i>
+                                    <span class="small fw-semibold" style="color: var(--bs-success-text-emphasis)">{{ f.label }}</span>
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle small" style="color: var(--bs-danger-text-emphasis)"></i>
+                                    <span class="small fw-semibold" style="color: var(--bs-danger-text-emphasis)">{{ f.label }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="px-2 py-1">
+                                {% if f.resolved %}
+                                    <div class="small text-muted">
+                                        {% if f.resolved_by_name %}Resolved by {{ f.resolved_by_name }}{% else %}Resolved{% endif %}
+                                        {% if f.resolved_at_display %}&middot; {{ f.resolved_at_display }}{% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if f.annotation %}
+                                    <div class="small text-muted mt-1" style="border-left: 2px solid var(--bs-border-color); padding-left: 6px">{{ f.annotation }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
@@ -477,56 +560,50 @@ def _ai_risk_summary(rf: Dict) -> Optional[Dict]:
     }
 
 
-def _role_report_links(roles: List[SubmissionRole]) -> List[Dict]:
-    """For each role, the most recent MarkingReport (or ModeratorReport, for the
-    moderator role) tied to that specific role, linking to the existing read-only
-    (or display/edit, for moderator reports) view. Most recent by creation_timestamp
-    covers roles that have accumulated more than one report across re-marking events.
+def _role_report_url_map(roles: List[SubmissionRole]) -> Dict[int, str]:
+    """Map SubmissionRole.id → report URL for clickable role-holder names in the staff block.
+    Roles without a report yet produce no entry (the name renders as plain text).
 
     The AVD dashboard's only possible viewers are root, admin, and data_dashboard_reports
     (_can_access_avd_dashboard() — no convenor/plain-faculty branch). admin/root keep using
-    the live faculty.moderator_report_form route exactly as before; a data_dashboard_reports
-    viewer is routed to the read-only faculty.view_moderator_report instead, since
-    moderator_report_form has a write surface that route is not widened to grant them."""
-    links = []
+    the live faculty.moderator_report_form route; a data_dashboard_reports viewer is routed
+    to the read-only faculty.view_moderator_report instead."""
+    url_map: Dict[int, str] = {}
     for role in roles:
         if role.role == SubmissionRole.ROLE_MODERATOR:
             report = role.moderator_reports.order_by(ModeratorReport.creation_timestamp.desc(), ModeratorReport.id.desc()).first()
             if report is not None:
                 if current_user.has_role("admin") or current_user.has_role("root"):
-                    report_url = url_for(
+                    url_map[role.id] = url_for(
                         "faculty.moderator_report_form",
                         mod_report_id=report.id,
                         url=url_for("dashboards.avd_dashboard"),
                     )
                 else:
-                    report_url = url_for(
+                    url_map[role.id] = url_for(
                         "faculty.view_moderator_report",
                         mod_report_id=report.id,
                         url=url_for("dashboards.avd_dashboard"),
                     )
-                links.append(
-                    {
-                        "label": role.role_as_str,
-                        "user_name": role.user.name,
-                        "url": report_url,
-                    }
-                )
         else:
             report = role.marking_reports.order_by(MarkingReport.creation_timestamp.desc(), MarkingReport.id.desc()).first()
             if report is not None:
-                links.append(
-                    {
-                        "label": role.role_as_str,
-                        "user_name": role.user.name,
-                        "url": url_for(
-                            "faculty.view_marking_report",
-                            report_id=report.id,
-                            url=url_for("dashboards.avd_dashboard"),
-                        ),
-                    }
+                url_map[role.id] = url_for(
+                    "faculty.view_marking_report",
+                    report_id=report.id,
+                    url=url_for("dashboards.avd_dashboard"),
                 )
-    return links
+    return url_map
+
+
+def _group_and_sort_roles(roles: List[SubmissionRole]) -> List[Tuple[int, List[SubmissionRole]]]:
+    """Group roles by type and sort by the fixed priority order in _ROLE_PRIORITY.
+    Role types not listed there (e.g. Exam board, External examiner) sort after all
+    named types, preserving the generic iteration property from Phase 4."""
+    groups: Dict[int, List[SubmissionRole]] = {}
+    for role in roles:
+        groups.setdefault(role.role, []).append(role)
+    return sorted(groups.items(), key=lambda item: _ROLE_PRIORITY.get(item[0], _ROLE_PRIORITY_DEFAULT))
 
 
 def _feedback_links(record: SubmissionRecord) -> List[Dict]:
@@ -534,10 +611,10 @@ def _feedback_links(record: SubmissionRecord) -> List[Dict]:
     return [{"url": url_for("admin.download_generated_asset", asset_id=fr.asset_id)} for fr in record.feedback_reports.all() if fr.asset is not None]
 
 
-def _details_context(record: SubmissionRecord, roles: List[SubmissionRole]) -> Dict:
+def _details_context(record: SubmissionRecord) -> Dict:
     """Build the template context for the details child-row panel: language-analysis
-    metrics, AI declaration, LLM report summary, full risk-factor breakdown, staff-role
-    report links, and feedback document links.
+    metrics, AI declaration, LLM report summary, full risk-factor breakdown, and
+    feedback document links.
 
     Metrics/AI-declaration/report-summary/risk-factors are only read when
     language_analysis_complete is True (matching the existing gating convention at
@@ -550,6 +627,11 @@ def _details_context(record: SubmissionRecord, roles: List[SubmissionRole]) -> D
     presence/resolution, and staff-role report links are not suppressed: they're
     operational/processing metadata (or downstream marking output), not the report's
     content itself, and convenors still need them to manage an embargoed record.
+
+    The AI compliance statement risk factor is split from other risk factors and
+    attached to the AI declaration section in the template when the record has a
+    declaration and is not restricted. When restricted, or when no declaration exists,
+    the compliance factor (if present) remains in the right-column risk factor list.
     """
     restricted = record.is_report_restricted
 
@@ -594,7 +676,17 @@ def _details_context(record: SubmissionRecord, roles: List[SubmissionRole]) -> D
 
     metrics_available = any(v is not None for v in (measured_word_count, appendix_word_count, page_count, figure_count, table_count))
 
-    role_reports = _role_report_links(roles)
+    # Split AI compliance factor from other risk factors. When a non-restricted record has a
+    # declaration (genai_status True), the compliance factor is attached directly beneath the
+    # declaration box in the left column. Otherwise it stays in the right-column risk factor list.
+    ai_compliance_factor = None
+    other_rf_factors = list(rf["factors"])
+    if not restricted and genai_status:
+        ai_compliance_factor = next((f for f in rf["factors"] if f["key"] == SubmissionRecord.RISK_AI_COMPLIANCE), None)
+        if ai_compliance_factor is not None:
+            other_rf_factors = [f for f in rf["factors"] if f["key"] != SubmissionRecord.RISK_AI_COMPLIANCE]
+    other_rf_has_any = len(other_rf_factors) > 0
+
     feedback_links = [] if restricted else _feedback_links(record)
 
     return {
@@ -610,11 +702,13 @@ def _details_context(record: SubmissionRecord, roles: List[SubmissionRole]) -> D
         "genai_statement": genai_statement,
         "report_summary": report_summary,
         "restricted": restricted,
-        "rf": rf,
-        "role_reports": role_reports,
+        "ai_compliance_factor": ai_compliance_factor,
+        "other_rf_factors": other_rf_factors,
+        "other_rf_has_any": other_rf_has_any,
         "feedback_links": feedback_links,
+        "rf": rf,
         "has_details": bool(
-            metrics_available or genai_status is not None or report_summary or rf["has_any_present"] or role_reports or feedback_links or restricted
+            metrics_available or genai_status is not None or report_summary or rf["has_any_present"] or feedback_links or restricted
         ),
     }
 
@@ -644,7 +738,10 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
 
         identity_parts = _identity_line_parts(record, simple_label, supervision_grade, presentation_grade)
 
-        details_ctx = _details_context(record, roles)
+        grouped_roles = _group_and_sort_roles(roles)
+        role_report_urls = _role_report_url_map(roles)
+
+        details_ctx = _details_context(record)
         ai_risk = _ai_risk_summary(details_ctx["rf"])
 
         data.append(
@@ -654,7 +751,8 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
                         report_templ,
                         record=record,
                         identity_parts=identity_parts,
-                        roles=roles,
+                        grouped_roles=grouped_roles,
+                        role_report_urls=role_report_urls,
                         moderator_role_id=SubmissionRole.ROLE_MODERATOR,
                         moderation_outcome=moderation_outcome,
                         convenor_intervention=convenor_intervention,

@@ -34,7 +34,7 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#reports-table').DataTable({
+            var table = $('#reports-table').DataTable({
                 responsive: true,
                 bAutoWidth: false,
                 colReorder: true,
@@ -75,6 +75,32 @@
                     }
                 ],
                 order: [[1, 'desc']],
+            });
+
+            // Details child row: 'details' is carried in each row's data but is not a
+            // DataTables column, so it never affects sorting/filtering/pagination of the
+            // visible columns above. Any element tagged .avd-details-toggle (the inline
+            // "Show full marking & report details" link, the AI-flagged badge, and its
+            // note icon) toggles the same child row independently — more than one row may
+            // be expanded at once.
+            $('#reports-table tbody').on('click', '.avd-details-toggle', function (e) {
+                e.preventDefault();
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+                if (row.child.isShown()) {
+                    row.child.hide();
+                } else {
+                    var details = row.data().details;
+                    if (!details) {
+                        return;
+                    }
+                    row.child(details).show();
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                }
+                var toggles = tr.find('.avd-details-toggle');
+                var label = row.child.isShown() ? 'Hide full marking &amp; report details' : 'Show full marking &amp; report details';
+                var icon = row.child.isShown() ? 'fa-chevron-up' : 'fa-chevron-down';
+                toggles.filter('a').html('<i class="fas ' + icon + ' fa-fw"></i> ' + label);
             });
         });
     </script>

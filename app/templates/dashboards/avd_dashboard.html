@@ -26,6 +26,15 @@
     {% set exemplar_consent_filter = 'all' %}
 {% endif %}
 
+{% set active_filter_count = (
+    (pclass_filter != 'all')|int +
+    (year_filter != 'all')|int +
+    (group_filter != 'all')|int +
+    (grade_filter != 'all')|int +
+    (avd_consent_filter != 'all')|int +
+    (exemplar_consent_filter != 'all')|int
+) %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -112,6 +121,53 @@
             });
         });
     </script>
+
+    <script>
+        // Filter panel collapse — persists state in localStorage across page reloads
+        (function () {
+            var STORAGE_KEY = 'avd_filter_panel_expanded';
+            var panel = document.getElementById('avd-filter-panel');
+            var toggle = document.getElementById('avd-filter-toggle');
+            var chevron = document.getElementById('avd-filter-chevron');
+            var label = document.getElementById('avd-filter-label');
+            var countBadge = document.getElementById('avd-filter-count');
+            var activeCount = parseInt(countBadge.getAttribute('data-count'), 10);
+
+            function setExpanded(expanded) {
+                if (expanded) {
+                    label.textContent = 'Hide filters';
+                    chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                    countBadge.classList.add('d-none');
+                    toggle.setAttribute('aria-expanded', 'true');
+                } else {
+                    label.textContent = 'Show filters';
+                    chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+                    if (activeCount > 0) {
+                        countBadge.classList.remove('d-none');
+                    }
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+            }
+
+            // Restore saved state before first paint (Bootstrap adds .show via CSS, so
+            // remove it synchronously here if the saved state is collapsed)
+            var saved = localStorage.getItem(STORAGE_KEY);
+            if (saved === 'false') {
+                panel.classList.remove('show');
+                setExpanded(false);
+            }
+
+            panel.addEventListener('hide.bs.collapse', function () {
+                localStorage.setItem(STORAGE_KEY, 'false');
+                setExpanded(false);
+            });
+
+            panel.addEventListener('show.bs.collapse', function () {
+                localStorage.setItem(STORAGE_KEY, 'true');
+                setExpanded(true);
+            });
+        })();
+    </script>
 {% endblock %}
 
 {% block title %}
@@ -127,8 +183,24 @@
         </div>
         <div class="card-body">
 
+            {# Filter panel toggle #}
+            <div class="d-flex align-items-center mt-3 mb-1">
+                <button id="avd-filter-toggle" type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#avd-filter-panel"
+                        aria-expanded="true"
+                        aria-controls="avd-filter-panel">
+                    <i id="avd-filter-chevron" class="fas fa-chevron-up fa-fw me-1"></i>
+                    <span id="avd-filter-label">Hide filters</span>
+                    <span id="avd-filter-count"
+                          class="badge bg-primary ms-1 d-none"
+                          data-count="{{ active_filter_count }}">{{ active_filter_count }} active</span>
+                </button>
+            </div>
+
             {# Filter panel #}
-            <div class="card mt-3 mb-3 card-body bg-well">
+            <div id="avd-filter-panel" class="collapse show card mt-0 mb-3 card-body bg-well">
 
                 {# Tenant filter #}
                 {% if accessible_tenants is not none and accessible_tenants|length > 1 %}

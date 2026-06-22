@@ -25,7 +25,8 @@
                     {% call icon_block("ban") %}
                         <div><strong>A marking report is not required for this student.</strong></div>
                         <div class="mt-1">This student has been withdrawn from the current marking
-                            event. Contact the project convenor if you have queries.</div>
+                            event. Contact the project convenor if you have queries.
+                        </div>
                     {% endcall %}
                 </div>
             {% endif %}
@@ -102,7 +103,7 @@
             {# Field values from report JSON #}
             {% if field_values and schema.get('scheme') %}
                 <div class="card border-secondary mb-3">
-                    <div class="card-header bg-secondary text-white">
+                    <div class="card-header bg-secondary-subtle text-secondary-emphasis">
                         <i class="fas fa-clipboard-list fa-fw me-1"></i> Submitted answers
                     </div>
                     <div class="card-body">
@@ -120,10 +121,10 @@
                                         {% if key in field_values %}
                                             {% if ftype == 'boolean' %}
                                                 {% if field_values[key] %}
-                                                    <span class="badge bg-success-subtle"><i
+                                                    <span class="badge bg-success-subtle text-success-emphasis"><i
                                                             class="fas fa-check"></i> Yes</span>
                                                 {% else %}
-                                                    <span class="badge bg-secondary"><i
+                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis"><i
                                                             class="fas fa-times"></i> No</span>
                                                 {% endif %}
                                             {% elif ftype in ('number', 'percent') %}
@@ -161,19 +162,20 @@
                                 <i class="fas fa-pencil-alt fa-fw"></i> Edit feedback
                             </a>
                         {% else %}
-                            <span class="small text-body-secondary fst-italic"><i class="fas fa-lock fa-fw"></i> Locked</span>
+                            <span class="small text-success-emphasis opacity-75 fst-italic"><i
+                                    class="fas fa-lock fa-fw"></i> Locked</span>
                         {% endif %}
                     </div>
                     <div class="card-body">
                         {% if report.feedback_positive %}
                             <div class="mb-3">
-                                <span class="badge bg-success-subtle mb-2">What was good?</span>
+                                <span class="small fw-semibold text-success-emphasis d-block mb-1">What was good?</span>
                                 <div class="small">{{ report.feedback_positive | safe }}</div>
                             </div>
                         {% endif %}
                         {% if report.feedback_improvement %}
                             <div class="mb-3">
-                                <span class="badge bg-secondary mb-2">What could be improved next time?</span>
+                                <span class="small fw-semibold text-secondary-emphasis d-block mb-1">What could be improved next time?</span>
                                 <div class="small">{{ report.feedback_improvement | safe }}</div>
                             </div>
                         {% endif %}
@@ -187,7 +189,7 @@
                 </div>
             {% elif scheme and scheme.uses_standard_feedback %}
                 <div class="card border-secondary mb-3">
-                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-secondary-subtle text-secondary-emphasis d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-comment fa-fw me-1"></i> Feedback to student</span>
                         {% if _feedback_editable %}
                             <a class="btn btn-sm btn-outline-secondary"
@@ -211,7 +213,8 @@
                         </a>
                     {% endif %}
                     {% if is_responsible_supervisor is defined and is_responsible_supervisor and report.signed_off_id is none %}
-                        <form method="POST" action="{{ url_for('faculty.approve_marking_report', report_id=report.id) }}"
+                        <form method="POST"
+                              action="{{ url_for('faculty.approve_marking_report', report_id=report.id) }}"
                               class="d-inline">
                             {{ approve_form.hidden_tag() }}
                             <button type="submit" class="btn btn-sm btn-warning text-dark">

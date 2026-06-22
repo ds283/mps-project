@@ -51,10 +51,13 @@ def get_faculty_dashboard_data(user) -> dict:
             marking_report_to_responsible_supervisors.c.marking_report_id == MarkingReport.id,
         )
         .join(SubmitterReport, SubmitterReport.id == MarkingReport.submitter_report_id)
+        .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+        .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
         .filter(
             marking_report_to_responsible_supervisors.c.submission_role_id.in_(
                 db.session.query(SubmissionRole.id).filter(SubmissionRole.user_id == user.id)
             ),
+            MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
             MarkingReport.signed_off_id.is_(None),
             SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
         )
@@ -65,8 +68,11 @@ def get_faculty_dashboard_data(user) -> dict:
         db.session.query(ModeratorReport)
         .join(SubmissionRole, SubmissionRole.id == ModeratorReport.role_id)
         .join(SubmitterReport, SubmitterReport.id == ModeratorReport.submitter_report_id)
+        .join(MarkingWorkflow, MarkingWorkflow.id == SubmitterReport.workflow_id)
+        .join(MarkingEvent, MarkingEvent.id == MarkingWorkflow.event_id)
         .filter(
             SubmissionRole.user_id == user.id,
+            MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED,
             ModeratorReport.report_submitted.is_(False),
             SubmitterReport.workflow_state != SubmitterReportWorkflowStates.DROPPED,
         )

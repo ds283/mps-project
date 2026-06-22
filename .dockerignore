@@ -6,12 +6,15 @@
 .vscode
 .claude
 .prompts
+.documents
+.github
+.plans
 AWS
 Deployments
 MPS-Project.sqlite
 PyMuPDF-setup.py
 __pycache__
-assets
+arxiv_analysis_venv
 backups
 basic_database
 build.sh
@@ -37,4 +40,3 @@ restart.sh
 test_pdf.py
 venv
 worker-output
-workplan.md

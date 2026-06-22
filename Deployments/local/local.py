@@ -26,9 +26,6 @@ BRANDING_PUBLIC_LANDING_STRING = "Welcome to the MPS public projects list"
 # public browser
 ENABLE_PUBLIC_BROWSER = True
 
-# VIDEO_EXPLAINER_PANOPTO_SERVER = "sussex.cloud.panopto.eu"
-# VIDEO_EXPLAINER_PANOPTO_SESSION = "c2274660-a8f0-4f71-ba13-acd101735f7b"
-
 # features
 BACKUP_IS_LIVE = True
 

@@ -70,21 +70,7 @@ def build_static_context_data(app):
         ),
         "email_is_live": app.config.get("EMAIL_IS_LIVE", False),
         "backup_is_live": app.config.get("BACKUP_IS_LIVE", False),
-        "video_explainer_panopto_server": app.config.get(
-            "VIDEO_EXPLAINER_PANOPTO_SERVER", None
-        ),
-        "video_explainer_panopto_session": app.config.get(
-            "VIDEO_EXPLAINER_PANOPTO_SESSION", None
-        ),
     }
-
-    if (
-        _static_ctx["video_explainer_panopto_server"] is not None
-        and _static_ctx["video_explainer_panopto_session"] is not None
-    ):
-        _static_ctx["enable_video_explainer"] = True
-    else:
-        _static_ctx["enable_video_explainer"] = False
 
     return _static_ctx
 

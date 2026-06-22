@@ -20,7 +20,6 @@ These are also provided by `build_static_context_data()` and do not need per-vie
 - `website_revision`, `website_copyright_dates` — site metadata
 - `branding_label`, `branding_login_landing_string`, `branding_public_landing_string` — tenant branding
 - `email_is_live`, `backup_is_live` — feature flags
-- `enable_video_explainer`, `video_explainer_panopto_server`, `video_explainer_panopto_session` — Panopto config
 
 Per-request role flags (`is_faculty`, `is_student`, `is_convenor`, `is_root`, `is_admin`, etc.)
 and dynamic data (`current_user`, `current_time`, `all_pclasses`, etc.) are added by

@@ -64,9 +64,6 @@
                 </div>
             {% endif %}
             <div class="d-flex gap-2 justify-content-end align-items-start w-100 mt-3">
-                <button type="button" class="btn btn-sm btn-sel-ghost video-btn" data-bs-toggle="modal"
-                        data-bs-target="#PanoptoModal">Show video help
-                </button>
                 {% if has_custom_offers %}
                     <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}"
                        class="btn btn-sm btn-outline-sel-blue">Manage custom offers</a>

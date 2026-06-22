@@ -19,38 +19,6 @@
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
-        var tag = document.createElement('script');
-
-        tag.src = "https://developers.panopto.com/scripts/embedapi.min.js"
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        var embedApi;
-
-        function onPanoptoEmbedApiReady() {
-            embedApi = new EmbedApi("player", {
-                width: "750",
-                height: "422",
-                serverName: "sussex.cloud.panopto.eu",
-                sessionId: "c2274660-a8f0-4f71-ba13-acd101735f7b",
-                events: {
-                    "onlframeReady": onPanoptolframeReady,
-                    "onReady": onPanoptoVideoReady,
-                    "onStateChange": onPanoptoStateUpdate
-                }
-            });
-        };
-
-        function onPanoptolframeReady() {
-            embedApi.loadVideo();
-        }
-
-        function onPanoptoVideoReady() {
-        }
-
-        function onPanoptoStateUpdate() {
-        }
-
         function sendAjax(ranking, configid, selid) {
             $.ajax({
                 url: $SCRIPT_ROOT + "/student/update_ranking",
@@ -166,13 +134,6 @@
             {% endif %}
         {% endfor %}
 
-        $(document).ready(function () {
-            $('#PanoptoModal').modal({
-                show: false
-            }).on('hidden.bs.modal', function() {
-                embedApi.pauseVideo();
-            });
-        });
     </script>
 {% endblock %}
 
@@ -353,21 +314,5 @@
 
         </div>
         <div class="col-1"></div>
-    </div>
-    <div class="modal fade" id="PanoptoModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-100 w-75" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                </div>
-                <div class="modal-body">
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <div id="player"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
     </div>
 {% endblock %}

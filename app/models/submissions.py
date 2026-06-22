@@ -1568,7 +1568,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if role is not None:
             restricted_ids = db.session.query(
                 SubmissionAttachmentRole.attachment_id
-            ).subquery()
+            ).scalar_subquery()
             query = query.outerjoin(
                 SubmissionAttachmentRole,
                 and_(
@@ -1645,7 +1645,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if role is not None:
             restricted_ids = db.session.query(
                 PeriodAttachmentRole.attachment_id
-            ).subquery()
+            ).scalar_subquery()
             query = query.outerjoin(
                 PeriodAttachmentRole,
                 and_(

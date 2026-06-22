@@ -19,6 +19,8 @@ from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy_utils import EncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
 
+EncryptedType.cache_ok = True
+
 from ..database import db
 from ..shared.sqlalchemy import get_count
 from .associations import mask_roles_to_users, roles_to_users, tenant_to_users

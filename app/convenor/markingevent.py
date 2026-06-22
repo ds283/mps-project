@@ -90,7 +90,7 @@ from .forms import (
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     EnterTurnitinScoreForm,
-    ExportPeriodToBoxFormFactory,
+    CloudExportFormFactory,
     GenerateFeedbackFormFactory,
     MarkingReportPropertiesForm,
     ReassignMarkingReportForm,
@@ -3452,16 +3452,16 @@ def export_period_to_box(period_id):
             text=text,
         )
 
-    ExportPeriodToBoxForm = ExportPeriodToBoxFormFactory(candidates)
-    form = ExportPeriodToBoxForm(request.form)
+    CloudExportForm = CloudExportFormFactory(candidates)
+    form = CloudExportForm(request.form)
 
     if form.validate_on_submit():
-        box_user: User = form.box_user.data
-        folder_id: str = form.box_folder_id.data.strip()
+        box_user: User = form.account_user.data
+        folder_id: str = form.folder_id.data.strip()
 
         celery = current_app.extensions["celery"]
         export_task = celery.tasks[
-            "app.tasks.box_export_period_marking.box_export_period_marking"
+            "app.tasks.cloud_export_period_marking.export_period_marking"
         ]
 
         abbr = getattr(config, "abbreviation", None) or "period"

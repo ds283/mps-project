@@ -1789,30 +1789,30 @@ def RemoveMarkersFormFactory(scoped_configs: List[ProjectClassConfig]):
     return RemoveMarkersForm
 
 
-def ExportPeriodToBoxFormFactory(box_users: list):
+def CloudExportFormFactory(users_with_tokens: list):
     """
-    Build a form for initiating a Box export of a SubmissionPeriodRecord.
+    Build a form for initiating a cloud storage export of a SubmissionPeriodRecord.
 
-    box_users: list of User instances that have box_token_valid == True and are convenors or
-    co-convenors for the relevant project class.
+    users_with_tokens: list of User instances that have a valid cloud storage token and
+    are convenors or co-convenors for the relevant project class.
     """
-    _users = list(box_users)
+    _users = list(users_with_tokens)
 
-    class ExportPeriodToBoxForm(Form):
-        box_user = QuerySelectField(
-            "Box account",
-            validators=[DataRequired(message="Please select a Box account.")],
+    class CloudExportForm(Form):
+        account_user = QuerySelectField(
+            "Cloud storage account",
+            validators=[DataRequired(message="Please select a cloud storage account.")],
             query_factory=lambda: _users,
             get_pk=lambda u: u.id,
             get_label=lambda u: u.name,
         )
-        box_folder_id = StringField(
-            "Box folder ID",
+        folder_id = StringField(
+            "Destination folder ID",
             validators=[
-                DataRequired(message="Please enter a Box folder ID."),
-                Regexp(r"^\d+$", message="Box folder ID must be a number."),
+                DataRequired(message="Please enter a destination folder ID."),
+                Regexp(r"^\d+$", message="Destination folder ID must be a number."),
             ],
         )
         submit = SubmitField("Export…")
 
-    return ExportPeriodToBoxForm
+    return CloudExportForm

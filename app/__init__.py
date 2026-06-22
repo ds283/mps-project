@@ -344,7 +344,7 @@ def create_app():
     tasks.register_similarity_analysis_tasks(celery)
     tasks.register_ai_dashboard_export_tasks(celery)
     tasks.register_marking_export_tasks(celery)
-    tasks.register_box_export_period_marking_tasks(celery)
+    tasks.register_cloud_export_period_marking_tasks(celery)
     tasks.register_box_tokens_tasks(celery)
     tasks.register_data_export_tasks(celery)
     tasks.register_allocation_export_tasks(celery)

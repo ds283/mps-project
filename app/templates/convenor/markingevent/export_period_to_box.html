@@ -47,25 +47,25 @@
                             {{ form.hidden_tag() }}
 
                             <div class="mb-3">
-                                {{ form.box_user.label(class="form-label fw-semibold") }}
-                                {{ form.box_user(class="form-select select2" + (" is-invalid" if form.box_user.errors else "")) }}
-                                {% for error in form.box_user.errors %}
+                                {{ form.account_user.label(class="form-label fw-semibold") }}
+                                {{ form.account_user(class="form-select select2" + (" is-invalid" if form.account_user.errors else "")) }}
+                                {% for error in form.account_user.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                                 <div class="form-text text-body-secondary">
-                                    Only convenors and co-convenors with a linked Box account are listed.
+                                    Only convenors and co-convenors with a linked cloud storage account are listed.
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                {{ form.box_folder_id.label(class="form-label fw-semibold") }}
-                                {{ form.box_folder_id(class="form-control" + (" is-invalid" if form.box_folder_id.errors else ""), placeholder="e.g. 123456789") }}
-                                {% for error in form.box_folder_id.errors %}
+                                {{ form.folder_id.label(class="form-label fw-semibold") }}
+                                {{ form.folder_id(class="form-control" + (" is-invalid" if form.folder_id.errors else ""), placeholder="e.g. 123456789") }}
+                                {% for error in form.folder_id.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                                 <div class="form-text text-body-secondary">
-                                    Enter the numeric Box folder ID for the target folder.
-                                    You can find this in the URL when viewing the folder in Box.
+                                    Enter the numeric folder ID for the target folder.
+                                    You can find this in the URL when viewing the folder.
                                 </div>
                             </div>
 

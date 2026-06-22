@@ -1,5 +1,5 @@
 #
-# Created by David Seery on 05/06/2026.
+# Created by David Seery on 22/06/2026.
 # Copyright (c) 2026 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
@@ -9,12 +9,15 @@
 #
 
 """
-Celery task: export reports and marking summary for a SubmissionPeriodRecord to a Box folder.
+Celery task: export reports and marking summary for a SubmissionPeriodRecord to a
+cloud storage location.
 
 Steps:
   1. Build an in-scope SubmissionRecord set (excluded only if DROPPED in every workflow).
   2. Upload each student report to a "Reports" subfolder, keyed by exam number.
   3. Build an anonymised Excel marking summary and upload it to the target folder.
+
+Provider-agnostic: cloud storage operations go through CloudStorageLocation.from_user().
 """
 
 import os
@@ -24,7 +27,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import Optional
 
-from flask import current_app, url_for
+from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -34,7 +37,7 @@ from ..models.markingevent import (
     SubmitterReportWorkflowStates,
 )
 from ..shared.asset_tools import AssetCloudAdapter
-from ..shared.box_api import get_box_client
+from ..shared.cloud_storage import CloudStorageLocation
 from ..task_queue import progress_update
 
 # ---------------------------------------------------------------------------
@@ -56,149 +59,6 @@ def _letter_label(n: int) -> str:
         n, remainder = divmod(n - 1, 26)
         result = string.ascii_uppercase[remainder] + result
     return result
-
-
-def _is_box_auth_error(exc: Exception) -> bool:
-    """
-    Return True when *exc* signals that the Box OAuth tokens are invalid or expired.
-    This covers the `invalid_grant` 400 that the SDK raises when it tries to
-    use the refresh token and Box rejects it.
-    """
-    try:
-        from box_sdk_gen.box.errors import BoxAPIError
-
-        if not isinstance(exc, BoxAPIError):
-            return False
-        body = exc.response_info.body or {}
-        # 400 invalid_grant = refresh token expired / revoked
-        if exc.response_info.status_code == 400 and body.get("error") == "invalid_grant":
-            return True
-        # 401 without a usable refresh token (access token invalid and no refresh possible)
-        if exc.response_info.status_code == 401:
-            return True
-        return False
-    except Exception:
-        return False
-
-
-def _post_relink_notification(requesting_user: User) -> None:
-    """Post a 'please re-link your Box account' notification to *requesting_user*."""
-    try:
-        link = url_for("oauth2.box_login", _external=False)
-        msg = (
-            "Box export failed: your Box account credentials are no longer valid. "
-            f'Please <a href="{link}">re-link your Box account</a> and try again.'
-        )
-    except Exception:
-        msg = "Box export failed: your Box account credentials are no longer valid. Please re-link your account."
-    requesting_user.post_message(msg, "danger", autocommit=True)
-
-
-def _get_folder_items(client, folder_id: str) -> list:
-    """Retrieve all items in a Box folder, handling pagination."""
-    items = []
-    marker = None
-    while True:
-        page = client.folders.get_folder_items(
-            folder_id=folder_id,
-            limit=1000,
-            marker=marker,
-            usemarker=True,
-        )
-        if page.entries:
-            items.extend(page.entries)
-        marker = page.next_marker
-        if not marker:
-            break
-    return items
-
-
-def _get_or_create_subfolder(client, parent_folder_id: str, name: str) -> str:
-    """Return the Box ID of a subfolder named *name*, creating it if absent."""
-    from box_sdk_gen import CreateFolderParent
-
-    items = _get_folder_items(client, parent_folder_id)
-    for item in items:
-        if item.type == "folder" and item.name == name:
-            return item.id
-
-    folder = client.folders.create_folder(
-        name=name,
-        parent=CreateFolderParent(id=parent_folder_id),
-    )
-    return folder.id
-
-
-def _find_file_in_folder(client, folder_id: str, filename: str) -> Optional[str]:
-    """Return the Box file ID if *filename* exists in the folder, else None."""
-    items = _get_folder_items(client, folder_id)
-    for item in items:
-        if item.type == "file" and item.name == filename:
-            return item.id
-    return None
-
-
-def _upsert_file(
-    client,
-    folder_id: str,
-    filename: str,
-    data: bytes,
-    mimetype: str = "application/octet-stream",
-) -> str:
-    """Upload or version-replace *filename* in *folder_id*. Returns Box file ID."""
-    from box_sdk_gen import (
-        UploadFileAttributes,
-        UploadFileAttributesParentField,
-        UploadFileVersionAttributes,
-    )
-
-    existing_id = _find_file_in_folder(client, folder_id, filename)
-    buf = BytesIO(data)
-
-    if existing_id is None:
-        result = client.uploads.upload_file(
-            attributes=UploadFileAttributes(
-                name=filename,
-                parent=UploadFileAttributesParentField(id=folder_id),
-            ),
-            file=buf,
-            file_file_name=filename,
-            file_content_type=mimetype,
-        )
-        return result.entries[0].id
-    else:
-        result = client.uploads.upload_file_version(
-            file_id=existing_id,
-            attributes=UploadFileVersionAttributes(name=filename),
-            file=buf,
-            file_file_name=filename,
-            file_content_type=mimetype,
-        )
-        return result.entries[0].id
-
-
-def _get_shared_link(client, file_id: str) -> Optional[str]:
-    """Create/update a shared link for *file_id* with open (company) access and return the URL."""
-    try:
-        from box_sdk_gen import (
-            AddShareLinkToFileSharedLink,
-            AddShareLinkToFileSharedLinkAccessField,
-        )
-
-        file_full = client.shared_links_files.add_share_link_to_file(
-            file_id=file_id,
-            fields="shared_link",
-            shared_link=AddShareLinkToFileSharedLink(
-                access=AddShareLinkToFileSharedLinkAccessField.OPEN,
-            ),
-        )
-        sl = file_full.shared_link
-        return sl.url if sl else None
-    except Exception as exc:
-        current_app.logger.warning(
-            "Could not create Box shared link for file %s: %s", file_id, exc
-        )
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -256,12 +116,12 @@ _HEADER_FILL = "D0D0D0"
 _HEADER_FILL_DARK = "B0B0B0"
 
 
-def _build_excel(period: SubmissionPeriodRecord, records: list, box_url_map: dict) -> bytes:
+def _build_excel(period: SubmissionPeriodRecord, records: list, cloud_url_map: dict) -> bytes:
     """
     Build the anonymised marking summary workbook and return the raw bytes.
 
     Columns:
-      G1: Candidate number, Box link
+      G1: Candidate number, cloud link
       G2: Pages, Words
       G3: Turnitin score, Turnitin flag, Turnitin resolved, Turnitin comment
       G4: ConflationReport targets (one column per unique target name)
@@ -333,7 +193,7 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, box_url_map: dic
 
     # G1 – Candidate
     columns.append(("Candidate number", 0))
-    columns.append(("Box link", 0))
+    columns.append(("Link", 0))
 
     # G2 – Language statistics
     columns.append(("Pages", 1))
@@ -418,7 +278,7 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, box_url_map: dic
         except Exception:
             exam_num = None
         row_values[0] = exam_num
-        row_values[1] = box_url_map.get(record.id)
+        row_values[1] = cloud_url_map.get(record.id)
 
         # -- G2: Language stats
         try:
@@ -495,7 +355,7 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, box_url_map: dic
             else:
                 cell.fill = _get_group_fill(grp)
 
-            # Make Box link a hyperlink
+            # Make cloud link a hyperlink
             if col_idx == 2 and val:
                 cell.hyperlink = val
                 cell.style = "Hyperlink"
@@ -524,10 +384,10 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, box_url_map: dic
 # Celery task registration
 # ---------------------------------------------------------------------------
 
-def register_box_export_period_marking_tasks(celery):
+def register_cloud_export_period_marking_tasks(celery):
 
-    @celery.task(bind=True, default_retry_delay=30, name="app.tasks.box_export_period_marking.box_export_period_marking")
-    def box_export_period_marking(
+    @celery.task(bind=True, default_retry_delay=30, name="app.tasks.cloud_export_period_marking.export_period_marking")
+    def export_period_marking(
         self,
         period_id: int,
         box_user_id: int,
@@ -536,8 +396,8 @@ def register_box_export_period_marking_tasks(celery):
         task_id: str,
     ):
         """
-        Upload student reports and a marking summary spreadsheet to a Box folder for a
-        SubmissionPeriodRecord.
+        Upload student reports and a marking summary spreadsheet to a cloud storage
+        location for a SubmissionPeriodRecord.
         """
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
 
@@ -548,7 +408,7 @@ def register_box_export_period_marking_tasks(celery):
             box_user: User = db.session.query(User).filter_by(id=box_user_id).first()
             requesting_user: User = db.session.query(User).filter_by(id=requesting_user_id).first()
         except SQLAlchemyError as exc:
-            current_app.logger.exception("SQLAlchemyError loading records in box_export_period_marking", exc_info=exc)
+            current_app.logger.exception("SQLAlchemyError loading records in export_period_marking", exc_info=exc)
             progress_update(task_id, TaskRecord.FAILURE, 100, "Database error loading records.", autocommit=True)
             raise self.retry()
 
@@ -558,7 +418,7 @@ def register_box_export_period_marking_tasks(celery):
 
         # Diagnostic: log token state so we can detect None/missing tokens without a live debugger.
         current_app.logger.info(
-            "box_export: box_user=%s box_token_valid=%s has_access=%s has_refresh=%s",
+            "cloud_export: box_user=%s box_token_valid=%s has_access=%s has_refresh=%s",
             box_user.id,
             box_user.box_token_valid,
             box_user.box_access_token is not None,
@@ -566,15 +426,20 @@ def register_box_export_period_marking_tasks(celery):
         )
 
         # ------------------------------------------------------------------
-        # Build Box client
+        # Build CloudStorageLocation
         # ------------------------------------------------------------------
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Connecting to Box...", autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Connecting to cloud storage...", autocommit=True)
 
         try:
-            client = get_box_client(box_user)
+            location = CloudStorageLocation.from_user(
+                provider_name="box",
+                user=box_user,
+                root_ref=folder_id,
+                audit_data="export_period_marking",
+            )
         except Exception as exc:
-            current_app.logger.exception("Box client setup error in box_export_period_marking", exc_info=exc)
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Box is not configured on this server.", autocommit=True)
+            current_app.logger.exception("Cloud storage client setup error in export_period_marking", exc_info=exc)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage is not configured on this server.", autocommit=True)
             return
 
         # ------------------------------------------------------------------
@@ -602,35 +467,33 @@ def register_box_export_period_marking_tasks(celery):
         # ------------------------------------------------------------------
         # Create project subfolder and "Reports" subfolder within it
         # ------------------------------------------------------------------
-        progress_update(task_id, TaskRecord.RUNNING, 20, "Preparing Box folder structure...", autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 20, "Preparing cloud storage folder structure...", autocommit=True)
 
         try:
-            project_folder_id = _get_or_create_subfolder(client, folder_id, abbr)
+            project_folder_id = location.get_or_create_folder(None, abbr)
         except Exception as exc:
-            current_app.logger.exception("box_export: Box error creating project subfolder", exc_info=exc)
-            if _is_box_auth_error(exc):
-                _post_relink_notification(requesting_user)
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+            current_app.logger.exception("cloud_export: error creating project subfolder", exc_info=exc)
+            if location.handle_auth_error(exc, requesting_user):
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
             else:
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error creating project subfolder.", autocommit=True)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage API error creating project subfolder.", autocommit=True)
             return
 
         try:
-            reports_folder_id = _get_or_create_subfolder(client, project_folder_id, "Reports")
+            reports_folder_id = location.get_or_create_folder(project_folder_id, "Reports")
         except Exception as exc:
-            current_app.logger.exception("box_export: Box error creating Reports subfolder", exc_info=exc)
-            if _is_box_auth_error(exc):
-                _post_relink_notification(requesting_user)
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+            current_app.logger.exception("cloud_export: error creating Reports subfolder", exc_info=exc)
+            if location.handle_auth_error(exc, requesting_user):
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
             else:
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error creating Reports subfolder.", autocommit=True)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage API error creating Reports subfolder.", autocommit=True)
             return
 
         # ------------------------------------------------------------------
         # Upload reports
         # ------------------------------------------------------------------
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-        box_url_map: dict = {}
+        cloud_url_map: dict = {}
         total = len(records)
 
         for idx, record in enumerate(records):
@@ -646,7 +509,7 @@ def register_box_export_period_marking_tasks(celery):
             # Select asset: prefer processed_report, fall back to report
             asset = record.processed_report or record.report
             if asset is None:
-                box_url_map[record.id] = None
+                cloud_url_map[record.id] = None
                 continue
 
             try:
@@ -654,7 +517,7 @@ def register_box_export_period_marking_tasks(celery):
             except Exception:
                 exam_num = None
             if exam_num is None:
-                box_url_map[record.id] = None
+                cloud_url_map[record.id] = None
                 continue
 
             # Determine file extension
@@ -665,25 +528,24 @@ def register_box_export_period_marking_tasks(celery):
                 file_bytes = AssetCloudAdapter(
                     asset=asset,
                     storage=object_store,
-                    audit_data="box_export_period_marking.upload_report",
+                    audit_data="cloud_export_period_marking.upload_report",
                 ).get()
             except Exception as exc:
                 current_app.logger.warning("Could not download asset %s for record %s: %s", asset.id, record.id, exc)
-                box_url_map[record.id] = None
+                cloud_url_map[record.id] = None
                 continue
 
             try:
-                file_id = _upsert_file(client, reports_folder_id, filename, file_bytes)
-                url = _get_shared_link(client, file_id)
-                box_url_map[record.id] = url
+                file_ref = location.upsert_file(reports_folder_id, filename, file_bytes)
+                url = location.get_shareable_url(file_ref)
+                cloud_url_map[record.id] = url
             except Exception as exc:
-                if _is_box_auth_error(exc):
-                    current_app.logger.exception("box_export: Box auth error during file upload", exc_info=exc)
-                    _post_relink_notification(requesting_user)
-                    progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+                if location.handle_auth_error(exc, requesting_user):
+                    current_app.logger.exception("cloud_export: auth error during file upload", exc_info=exc)
+                    progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
                     return
-                current_app.logger.warning("box_export: Could not upload report for record %s: %s", record.id, exc)
-                box_url_map[record.id] = None
+                current_app.logger.warning("cloud_export: could not upload report for record %s: %s", record.id, exc)
+                cloud_url_map[record.id] = None
 
         # ------------------------------------------------------------------
         # Build Excel workbook
@@ -691,9 +553,9 @@ def register_box_export_period_marking_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 65, "Building marking summary spreadsheet...", autocommit=True)
 
         try:
-            xlsx_bytes = _build_excel(period, records, box_url_map)
+            xlsx_bytes = _build_excel(period, records, cloud_url_map)
         except Exception as exc:
-            current_app.logger.exception("Error building Excel workbook in box_export_period_marking", exc_info=exc)
+            current_app.logger.exception("Error building Excel workbook in export_period_marking", exc_info=exc)
             progress_update(task_id, TaskRecord.FAILURE, 100, "Error building marking summary spreadsheet.", autocommit=True)
             return
 
@@ -707,32 +569,30 @@ def register_box_export_period_marking_tasks(celery):
             raw_name = f"marking-report-{abbr}-{period_name}.xlsx"
             xlsx_filename = _normalize_filename(raw_name)
 
-            _upsert_file(
-                client,
+            location.upsert_file(
                 project_folder_id,
                 xlsx_filename,
                 xlsx_bytes,
                 mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         except Exception as exc:
-            current_app.logger.exception("box_export: Box error during Excel upload", exc_info=exc)
-            if _is_box_auth_error(exc):
-                _post_relink_notification(requesting_user)
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Box authentication failed — please re-link your account.", autocommit=True)
+            current_app.logger.exception("cloud_export: error during Excel upload", exc_info=exc)
+            if location.handle_auth_error(exc, requesting_user):
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
             else:
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Box API error uploading marking summary.", autocommit=True)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage API error uploading marking summary.", autocommit=True)
             return
 
         # ------------------------------------------------------------------
         # Complete
         # ------------------------------------------------------------------
         try:
-            n_uploaded = sum(1 for v in box_url_map.values() if v is not None)
+            n_uploaded = sum(1 for v in cloud_url_map.values() if v is not None)
             n_skipped = total - n_uploaded
-            msg_parts = [f"<strong>Box export for “{period.display_name}” is complete.</strong>"]
+            msg_parts = [f"<strong>Cloud storage export for “{period.display_name}” is complete.</strong>"]
             msg_parts.append(
                 f"Uploaded {n_uploaded} of {total} report{'' if total == 1 else 's'} "
-                f"and a marking summary spreadsheet to Box folder {folder_id}."
+                f"and a marking summary spreadsheet."
             )
             if n_skipped:
                 msg_parts.append(
@@ -745,4 +605,4 @@ def register_box_export_period_marking_tasks(celery):
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Export complete.", autocommit=True)
 
-    return (box_export_period_marking,)
+    return (export_period_marking,)

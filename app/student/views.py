@@ -13,7 +13,16 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from typing import Optional
 
-from flask import abort, current_app, flash, jsonify, redirect, request, session, url_for
+from flask import (
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    request,
+    session,
+    url_for,
+)
 from flask_security import current_user, login_required, roles_accepted, roles_required
 from sqlalchemy import case
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -48,6 +57,7 @@ from ..models import (
     SkillGroup,
     StudentData,
     SubmissionRecord,
+    SubmissionRole,
     SubmitterReport,
     SubmitterReportWorkflowStates,
     SubmittingStudent,
@@ -242,7 +252,11 @@ def use_of_work():
     Authenticated consent management tab on the student dashboard.
     Renders the same template as consent_by_token but with session auth.
     """
-    from .consent import AuthConsentRecordForm, _apply_consent_update, _get_eligible_records_for_user
+    from .consent import (
+        AuthConsentRecordForm,
+        _apply_consent_update,
+        _get_eligible_records_for_user,
+    )
 
     ip = request.remote_addr
 
@@ -261,7 +275,10 @@ def use_of_work():
             abort(403)
 
         if not record.consent_eligible:
-            flash("This record is not currently eligible for consent management.", "warning")
+            flash(
+                "This record is not currently eligible for consent management.",
+                "warning",
+            )
             return redirect(url_for("student.use_of_work"))
 
         changed = _apply_consent_update(record, actor_id=current_user.id, ip_address=ip)
@@ -504,12 +521,21 @@ def _project_list_endpoint(
     }
     supervisor = {
         "search": case(
-            (Project.use_supervisor_pool.is_(True), func.concat(pool_user.first_name, " ", pool_user.last_name)),
+            (
+                Project.use_supervisor_pool.is_(True),
+                func.concat(pool_user.first_name, " ", pool_user.last_name),
+            ),
             else_=func.concat(User.first_name, " ", User.last_name),
         ),
         "order": [
-            case((Project.use_supervisor_pool.is_(True), pool_user.last_name), else_=User.last_name),
-            case((Project.use_supervisor_pool.is_(True), pool_user.first_name), else_=User.first_name),
+            case(
+                (Project.use_supervisor_pool.is_(True), pool_user.last_name),
+                else_=User.last_name,
+            ),
+            case(
+                (Project.use_supervisor_pool.is_(True), pool_user.first_name),
+                else_=User.first_name,
+            ),
         ],
         "search_collation": "utf8_general_ci",
     }
@@ -1392,7 +1418,9 @@ def view_feedback(id):
             .filter(MarkingWorkflow.event_id == event.id)
             .all()
         )
-        cr = ConflationReport.query.filter_by(marking_event_id=event.id, submission_record_id=record.id).first()
+        cr = ConflationReport.query.filter_by(
+            marking_event_id=event.id, submission_record_id=record.id
+        ).first()
         if srs:
             event_data.append((event, srs, cr))
 
@@ -1401,11 +1429,11 @@ def view_feedback(id):
         record=record,
         period=period,
         event_data=event_data,
-        ROLE_SUPERVISOR=MarkingReport.ROLE_SUPERVISOR,
-        ROLE_RESPONSIBLE_SUPERVISOR=MarkingReport.ROLE_RESPONSIBLE_SUPERVISOR,
-        ROLE_PRESENTATION_ASSESSOR=MarkingReport.ROLE_PRESENTATION_ASSESSOR,
-        ROLE_MARKER=MarkingReport.ROLE_MARKER,
-        ROLE_MODERATOR=MarkingReport.ROLE_MODERATOR,
+        ROLE_SUPERVISOR=SubmissionRole.ROLE_SUPERVISOR,
+        ROLE_RESPONSIBLE_SUPERVISOR=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+        ROLE_PRESENTATION_ASSESSOR=SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+        ROLE_MARKER=SubmissionRole.ROLE_MARKER,
+        ROLE_MODERATOR=SubmissionRole.ROLE_MODERATOR,
         text=text,
         url=url,
     )

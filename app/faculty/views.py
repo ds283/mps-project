@@ -4164,6 +4164,15 @@ def edit_marking_feedback(report_id):
         )
         return redirect(redirect_url())
 
+    url = request.args.get("url", url_for("faculty.view_marking_report", report_id=report_id))
+
+    if period.closed or workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED:
+        flash(
+            "Feedback cannot be edited because the submission period or marking event is closed.",
+            "info",
+        )
+        return redirect(url)
+
     # Build a simple feedback-only form
     FeedbackFormClass = type(
         "MarkingFeedbackForm",
@@ -4179,9 +4188,6 @@ def edit_marking_feedback(report_id):
         },
     )
     form = FeedbackFormClass(request.form)
-    url = request.args.get(
-        "url", url_for("faculty.view_marking_report", report_id=report_id)
-    )
 
     if form.validate_on_submit():
         report.feedback_positive = form.feedback_positive.data or ""

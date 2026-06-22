@@ -68,6 +68,31 @@
                                     </div>
                                 </div>
                             {% endif %}
+
+                            {# Feedback document downloads #}
+                            {% set feedback_reports = conflation_report.feedback_reports.all() %}
+                            {% if feedback_reports | length > 0 %}
+                                <div class="mb-3 d-flex flex-row flex-wrap gap-2 align-items-center">
+                                    <span class="small text-body-secondary fw-semibold">Feedback report:</span>
+                                    {% for fr in feedback_reports %}
+                                        {% if fr.asset is not none %}
+                                            <div class="d-flex flex-row align-items-center gap-2">
+                                                {% if fr.asset.small_thumbnail and not fr.asset.small_thumbnail.lost %}
+                                                    <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=fr.asset_id, size='small') }}"
+                                                         class="img-thumbnail" style="max-width:60px; max-height:60px;"
+                                                         alt="Preview">
+                                                {% endif %}
+                                                <a class="btn btn-sm btn-outline-primary"
+                                                   href="{{ url_for('admin.download_generated_asset', asset_id=fr.asset_id) }}"
+                                                   data-bs-toggle="tooltip" title="Download feedback report">
+                                                    <i class="fas fa-file-pdf fa-fw"></i> Download
+                                                    {% if feedback_reports | length > 1 %}{{ loop.index }}{% endif %}
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         {% endif %}
 
                         {# Per-assessor marking reports #}
@@ -102,8 +127,10 @@
                                                     {% if mr.feedback_submitted and mr.feedback_timestamp %}
                                                         <span class="small text-success me-1">Submitted {{ mr.feedback_timestamp.strftime("%a %d %b %Y %H:%M") }}</span>
                                                     {% endif %}
-                                                    <a href="{{ url_for('convenor.edit_feedback', id=mr.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
-                                                       class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                                    {% if event.workflow_state != MarkingEventWorkflowStates.CLOSED %}
+                                                        <a href="{{ url_for('convenor.edit_feedback', id=mr.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
+                                                           class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                                    {% endif %}
                                                     {% if not mr.feedback_submitted %}
                                                         {%- set _pos = (mr.feedback_positive or '') | trim -%}
                                                         {%- set _imp = (mr.feedback_improvement or '') | trim -%}

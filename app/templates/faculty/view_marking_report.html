@@ -142,15 +142,27 @@
                 </div>
             {% endif %}
 
+            {# Compute closed/locked state once for use in both feedback and action sections #}
+            {%- set _sr_state = report.submitter_report.workflow_state -%}
+            {%- set _event_closed = workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED -%}
+            {%- set _period_closed = period.closed -%}
+            {%- set _sr_locked = _sr_state in (SubmitterReportWorkflowStates.COMPLETED,
+                                                SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE) -%}
+            {%- set _feedback_editable = not _event_closed and not _period_closed and not _sr_locked -%}
+
             {# Feedback #}
             {% if scheme and scheme.uses_standard_feedback and (report.feedback_positive or report.feedback_improvement) %}
                 <div class="card border-success mb-3">
                     <div class="card-header bg-success-subtle text-success-emphasis d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-comment fa-fw me-1"></i> Feedback to student</span>
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ url_for('faculty.edit_marking_feedback', report_id=report.id, url=url_for('faculty.view_marking_report', report_id=report.id, url=url)) }}">
-                            <i class="fas fa-pencil-alt fa-fw"></i> Edit feedback
-                        </a>
+                        {% if _feedback_editable %}
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="{{ url_for('faculty.edit_marking_feedback', report_id=report.id, url=url_for('faculty.view_marking_report', report_id=report.id, url=url)) }}">
+                                <i class="fas fa-pencil-alt fa-fw"></i> Edit feedback
+                            </a>
+                        {% else %}
+                            <span class="small text-body-secondary fst-italic"><i class="fas fa-lock fa-fw"></i> Locked</span>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         {% if report.feedback_positive %}
@@ -177,10 +189,12 @@
                 <div class="card border-secondary mb-3">
                     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-comment fa-fw me-1"></i> Feedback to student</span>
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ url_for('faculty.edit_marking_feedback', report_id=report.id, url=url_for('faculty.view_marking_report', report_id=report.id, url=url)) }}">
-                            <i class="fas fa-pencil-alt fa-fw"></i> Add feedback
-                        </a>
+                        {% if _feedback_editable %}
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="{{ url_for('faculty.edit_marking_feedback', report_id=report.id, url=url_for('faculty.view_marking_report', report_id=report.id, url=url)) }}">
+                                <i class="fas fa-pencil-alt fa-fw"></i> Add feedback
+                            </a>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         <p class="text-body-secondary fst-italic small mb-0">No feedback entered yet.</p>
@@ -189,10 +203,6 @@
             {% endif %}
 
             {% if report.submitter_report.workflow_state != SubmitterReportWorkflowStates.DROPPED %}
-                {%- set _sr_state = report.submitter_report.workflow_state -%}
-                {%- set _event_closed = workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED -%}
-                {%- set _sr_locked = _sr_state in (SubmitterReportWorkflowStates.COMPLETED,
-                                                    SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE) -%}
                 <div class="d-flex gap-2 mb-4">
                     {% if not _event_closed and not _sr_locked and (report.marking_form_is_open or is_elevated) %}
                         <a class="btn btn-sm btn-outline-primary"

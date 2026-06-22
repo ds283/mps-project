@@ -22,10 +22,10 @@ from ... import site_copyright_dates, site_revision
 from ...database import db
 from ...models import ProjectClass, ProjectClassConfig, User
 from ...models.markingevent import (
-    MarkingEvent,
     MarkingEventWorkflowStates,
     SubmitterReportWorkflowStates,
 )
+from ...models.model_mixins import SubmissionRoleTypesMixin
 
 
 def get_global_context_data():
@@ -58,9 +58,9 @@ def build_static_context_data(app):
     _static_ctx = {
         "website_revision": site_revision,
         "website_copyright_dates": site_copyright_dates,
-        "MarkingEvent": MarkingEvent,
         "MarkingEventWorkflowStates": MarkingEventWorkflowStates,
         "SubmitterReportWorkflowStates": SubmitterReportWorkflowStates,
+        "SubmissionRoleTypesMixin": SubmissionRoleTypesMixin,
         "branding_label": app.config.get("BRANDING_LABEL", "Not configured"),
         "branding_login_landing_string": app.config.get(
             "BRANDING_LOGIN_LANDING_STRING", "Not configured"

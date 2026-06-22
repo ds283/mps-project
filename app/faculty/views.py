@@ -3180,7 +3180,6 @@ def view_feedback(id):
         MarkingEventWorkflowStates,
         MarkingWorkflow,
         SubmitterReport,
-        SubmitterReportWorkflowStates,
     )
 
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
@@ -3238,12 +3237,6 @@ def view_feedback(id):
         record=record,
         period=period,
         event_data=event_data,
-        FEEDBACK_AVAILABLE=SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE,
-        ROLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-        ROLE_RESPONSIBLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-        ROLE_PRESENTATION_ASSESSOR=SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR,
-        ROLE_MARKER=SubmissionRoleTypesMixin.ROLE_MARKER,
-        ROLE_MODERATOR=SubmissionRoleTypesMixin.ROLE_MODERATOR,
         text=text,
         url=url,
     )

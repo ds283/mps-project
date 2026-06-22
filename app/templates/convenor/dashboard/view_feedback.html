@@ -98,7 +98,7 @@
                         {# Per-assessor marking reports #}
                         {% set ns = namespace(has_visible=false) %}
                         {% for sr in submitter_reports %}
-                            {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
+                            {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', SubmissionRoleTypesMixin.ROLE_MODERATOR) | list %}
                             {% if visible_reports | length > 0 %}
                                 {% set ns.has_visible = true %}
                             {% endif %}
@@ -110,7 +110,7 @@
                             </div>
                         {% else %}
                             {% for sr in submitter_reports %}
-                                {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', ROLE_MODERATOR) | list %}
+                                {% set visible_reports = sr.marking_reports.all() | rejectattr('role.role', 'equalto', SubmissionRoleTypesMixin.ROLE_MODERATOR) | list %}
                                 {% for mr in visible_reports %}
                                     {%- set _vf_pos = (mr.feedback_positive or '') | trim -%}
                                     {%- set _vf_imp = (mr.feedback_improvement or '') | trim -%}

@@ -55,7 +55,7 @@
                         <strong>{{ event.name }}</strong>
                     </div>
                     <div class="card-body">
-                        {% if not (submitter_reports | selectattr('workflow_state', 'equalto', FEEDBACK_AVAILABLE) | list) %}
+                        {% if not (submitter_reports | selectattr('workflow_state', 'equalto', SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE) | list) %}
                             <div class="alert alert-secondary mb-0">
                                 <i class="fas fa-hourglass-half me-2"></i>
                                 Quality assurance for this event is still in progress. Feedback will be available once
@@ -110,9 +110,9 @@
                             {# Per-assessor feedback #}
                             {% set ns = namespace(marker_count=0, has_any_feedback=false) %}
                             {% for sr in submitter_reports %}
-                                {% if sr.workflow_state == FEEDBACK_AVAILABLE %}
+                                {% if sr.workflow_state == SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE %}
                                     {% for mr in sr.marking_reports.all() %}
-                                        {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
+                                        {% if mr.role.role != SubmissionRoleTypesMixin.ROLE_MODERATOR and mr.feedback_submitted %}
                                             {% set ns.has_any_feedback = true %}
                                         {% endif %}
                                     {% endfor %}
@@ -121,13 +121,13 @@
 
                             {% if ns.has_any_feedback %}
                                 {% for sr in submitter_reports %}
-                                    {% if sr.workflow_state == FEEDBACK_AVAILABLE %}
+                                    {% if sr.workflow_state == SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE %}
                                     {% for mr in sr.marking_reports.all() %}
-                                        {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
-                                            {% if mr.role.role == ROLE_MARKER %}
+                                        {% if mr.role.role != SubmissionRoleTypesMixin.ROLE_MODERATOR and mr.feedback_submitted %}
+                                            {% if mr.role.role == SubmissionRoleTypesMixin.ROLE_MARKER %}
                                                 {% set ns.marker_count = ns.marker_count + 1 %}
                                                 {% set assessor_label = "Feedback from Marker " ~ ns.marker_count %}
-                                            {% elif mr.role.role == ROLE_PRESENTATION_ASSESSOR %}
+                                            {% elif mr.role.role == SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR %}
                                                 {% set assessor_label = "Presentation feedback from " ~ mr.role.user.name %}
                                             {% else %}
                                                 {# ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR #}

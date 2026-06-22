@@ -50,7 +50,6 @@ from ..models import (
     SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
-    SubmissionRoleTypesMixin,
     SubmitterReport,
     SubmittingStudent,
     SupervisionEvent,
@@ -58,8 +57,8 @@ from ..models import (
     TemporaryAsset,
     User,
 )
-from ..shared.asset_tools import AssetUploadManager
 from ..models.markingevent import ConflationReport, MarkingEventWorkflowStates
+from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
@@ -81,8 +80,8 @@ from .forms import (
     AddSubmissionPeriodUnitFormFactory,
     AddSupervisionEventTemplateFormFactory,
     EditConfigAIRubricFormFactory,
-    EditConfigCATSFormFactory,
     EditConfigCanvasFormFactory,
+    EditConfigCATSFormFactory,
     EditConfigDocLimitsFormFactory,
     EditConfigRolesForm,
     EditConfigSelectionFormFactory,
@@ -108,7 +107,9 @@ def _period_has_open_marking_event(period) -> bool:
     )
 
 
-def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[ProjectClassConfig]:
+def _get_scoped_configs(
+    anchor_config: ProjectClassConfig, user: User
+) -> List[ProjectClassConfig]:
     """Return the list of ProjectClassConfig instances in scope for the given user."""
     tenant_id = anchor_config.project_class.tenant_id
     current_year = get_current_year()
@@ -116,7 +117,11 @@ def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[P
         return (
             db.session.query(ProjectClassConfig)
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
-            .filter(ProjectClass.tenant_id == tenant_id, ProjectClassConfig.year == current_year, ProjectClassConfig.uses_marker == True)
+            .filter(
+                ProjectClass.tenant_id == tenant_id,
+                ProjectClassConfig.year == current_year,
+                ProjectClassConfig.uses_marker == True,
+            )
             .all()
         )
     else:
@@ -129,7 +134,11 @@ def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[P
         return (
             db.session.query(ProjectClassConfig)
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
-            .filter(ProjectClass.id.in_(pclass_ids), ProjectClassConfig.year == current_year, ProjectClassConfig.uses_marker == True)
+            .filter(
+                ProjectClass.id.in_(pclass_ids),
+                ProjectClassConfig.year == current_year,
+                ProjectClassConfig.uses_marker == True,
+            )
             .all()
         )
 
@@ -146,12 +155,20 @@ def audit_matches(pclass_id):
 
     config = pclass.most_recent_config
     if config is None:
-        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        flash(
+            "Could not find a current configuration for this project class. Please contact a system administrator.",
+            "error",
+        )
         return redirect(url_for("convenor.overview"))
 
     convenor_data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template_context("convenor/matching/audit.html", pclass=pclass, config=config, convenor_data=convenor_data)
+    return render_template_context(
+        "convenor/matching/audit.html",
+        pclass=pclass,
+        config=config,
+        convenor_data=convenor_data,
+    )
 
 
 @convenor.route("/audit_matches_ajax/<int:pclass_id>")
@@ -196,7 +213,10 @@ def audit_schedules(pclass_id):
 
     config = pclass.most_recent_config
     if config is None:
-        flash("Could not find a current configuration for this project class. Please contact a system administrator.", "error")
+        flash(
+            "Could not find a current configuration for this project class. Please contact a system administrator.",
+            "error",
+        )
         return redirect(url_for("convenor.overview"))
 
     convenor_data = get_convenor_dashboard_data(pclass, config)
@@ -297,7 +317,9 @@ def close_period(id):
         "{canvas_warning}"
         "<p>After closure, no immediate action is taken automatically by the platform, "
         "but no further edits can be made.</p>"
-        "<p>This action cannot be undone.</p>".format(name=config.name, canvas_warning=canvas_warning)
+        "<p>This action cannot be undone.</p>".format(
+            name=config.name, canvas_warning=canvas_warning
+        )
     )
     submit_label = "Close period"
 
@@ -493,7 +515,9 @@ def edit_config_roles(pid):
     if pclass.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -560,7 +584,9 @@ def edit_config_cats(pid):
     if pclass.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -623,7 +649,9 @@ def edit_config_selection(pid):
     if pclass.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -695,7 +723,9 @@ def edit_config_canvas(pid):
     if pclass.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -758,7 +788,9 @@ def edit_config_ai_rubric(pid):
     if pclass.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -815,7 +847,9 @@ def edit_config_doc_limits(pid):
     if pclass.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -828,7 +862,9 @@ def edit_config_doc_limits(pid):
         config.page_limit_enabled = form.page_limit_enabled.data
         config.page_limit = form.page_limit.data
         tol = form.word_count_tolerance.data
-        config.word_count_tolerance = round(float(tol) / 100, 4) if tol is not None else None
+        config.word_count_tolerance = (
+            round(float(tol) / 100, 4) if tol is not None else None
+        )
 
         try:
             log_db_commit(
@@ -851,7 +887,9 @@ def edit_config_doc_limits(pid):
     form.page_limit_enabled.data = config.page_limit_enabled
     form.page_limit.data = config.page_limit
     tolerance = config.word_count_tolerance
-    form.word_count_tolerance.data = round(float(tolerance) * 100, 1) if tolerance is not None else None
+    form.word_count_tolerance.data = (
+        round(float(tolerance) * 100, 1) if tolerance is not None else None
+    )
 
     url = request.args.get("url", url_for("convenor.status", id=pclass.id))
     text = request.args.get("text", "Configure")
@@ -1246,7 +1284,9 @@ def populate_markers(configid):
         selected_configs = form.project_classes.data or []
         # defence in depth: drop any config the user is not a convenor for
         selected_configs = [
-            c for c in selected_configs if validate_is_convenor(c.project_class, message=False)
+            c
+            for c in selected_configs
+            if validate_is_convenor(c.project_class, message=False)
         ]
 
         if not selected_configs:
@@ -1306,8 +1346,12 @@ def populate_markers(configid):
         populate = celery.tasks["app.tasks.matching.populate_markers"]
 
         if len(selected_configs) == 1:
-            tk_name = 'Populate markers for "{proj}"'.format(proj=selected_configs[0].name)
-            tk_desc = 'Populate marker assignments for "{proj}"'.format(proj=selected_configs[0].name)
+            tk_name = 'Populate markers for "{proj}"'.format(
+                proj=selected_configs[0].name
+            )
+            tk_desc = 'Populate marker assignments for "{proj}"'.format(
+                proj=selected_configs[0].name
+            )
         else:
             names = ", ".join('"{}"'.format(c.name) for c in selected_configs)
             tk_name = "Populate markers for {names}".format(names=names)
@@ -1361,7 +1405,9 @@ def remove_markers(configid):
         selected_configs = form.project_classes.data or []
         # defence in depth: drop any config the user is not a convenor for
         selected_configs = [
-            c for c in selected_configs if validate_is_convenor(c.project_class, message=False)
+            c
+            for c in selected_configs
+            if validate_is_convenor(c.project_class, message=False)
         ]
 
         if not selected_configs:
@@ -1379,7 +1425,9 @@ def remove_markers(configid):
             uuid = register_task(
                 tk_name,
                 owner=current_user,
-                description='Remove marker assignments for "{proj}"'.format(proj=cfg.name),
+                description='Remove marker assignments for "{proj}"'.format(
+                    proj=cfg.name
+                ),
             )
             seq = chain(
                 init.si(uuid, tk_name),
@@ -1522,7 +1570,9 @@ def view_feedback():
             .filter(MarkingWorkflow.event_id == event.id)
             .all()
         )
-        cr = ConflationReport.query.filter_by(marking_event_id=event.id, submission_record_id=rec.id).first()
+        cr = ConflationReport.query.filter_by(
+            marking_event_id=event.id, submission_record_id=rec.id
+        ).first()
         if srs:
             event_data.append((event, srs, cr))
 
@@ -1533,11 +1583,6 @@ def view_feedback():
         form=form,
         action_form=ConfirmActionForm(),
         event_data=event_data,
-        ROLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-        ROLE_RESPONSIBLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-        ROLE_PRESENTATION_ASSESSOR=SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR,
-        ROLE_MARKER=SubmissionRoleTypesMixin.ROLE_MARKER,
-        ROLE_MODERATOR=SubmissionRoleTypesMixin.ROLE_MODERATOR,
         text=text,
         url=url,
     )
@@ -1945,7 +1990,8 @@ def manual_assign():
         text=text,
         form=form,
         submitter=submitter,
-        allow_reassign_project=rec.project_id is None or not _period_has_open_marking_event(period),
+        allow_reassign_project=rec.project_id is None
+        or not _period_has_open_marking_event(period),
     )
 
 
@@ -3092,5 +3138,3 @@ def inspect_template_events_ajax(template_id):
                 text=text,
             )
         )
-
-

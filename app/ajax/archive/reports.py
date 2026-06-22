@@ -34,6 +34,21 @@ _ROLE_PRIORITY: Dict[int, int] = {
 }
 _ROLE_PRIORITY_DEFAULT: int = len(_ROLE_PRIORITY)
 
+# Assessment-adjacent roles whose holders are anonymised for non-admin/root viewers.
+_ANONYMISE_ROLES: set = {
+    SubmissionRole.ROLE_MARKER,
+    SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+    SubmissionRole.ROLE_MODERATOR,
+}
+# Base label for each anonymised role — "Marker A", "Presentation assessor B", etc.
+# ROLE_PRESENTATION_ASSESSOR uses "Presentation assessor" to match the _local_labels
+# override already applied in the staff_roles macro.
+_ANONYMISED_ROLE_BASE_LABELS: Dict[int, str] = {
+    SubmissionRole.ROLE_MARKER: "Marker",
+    SubmissionRole.ROLE_PRESENTATION_ASSESSOR: "Presentation assessor",
+    SubmissionRole.ROLE_MODERATOR: "Moderator",
+}
+
 # language=jinja2
 _report = """
 {% macro turnitin_chips(r) %}
@@ -162,7 +177,7 @@ _report = """
         </div>
     {% endif %}
 {% endmacro %}
-{% macro staff_roles(grouped_roles, role_report_urls, moderator_role_id, moderation_outcome) %}
+{% macro staff_roles(grouped_roles, role_report_urls, role_display_names, moderator_role_id, moderation_outcome) %}
     {# Local label override: ROLE_PRESENTATION_ASSESSOR (2) uses 'Presentation assessor' here rather than
        the global role_as_str value 'Assessor', which is correct for all other contexts in the application. #}
     {% set _local_labels = {2: 'Presentation assessor'} %}
@@ -176,15 +191,16 @@ _report = """
                             {{ _local_labels.get(role_type, group[0].role_as_str) }}{{ 's' if group|length > 1 else '' }}:
                         </span>
                         {% for role in group %}
+                            {% set display_name = role_display_names[role.id] %}
                             {% set report_url = role_report_urls.get(role.id) %}
                             <span class="small">
-                                {% if report_url %}
-                                    <a class="text-decoration-none" href="{{ report_url }}">{{ role.user.name }}</a>
-                                {% else %}
-                                    {{ role.user.name }}
-                                {% endif %}
+                                {%- if report_url -%}
+                                    <a class="text-decoration-none" href="{{ report_url }}">{{ display_name }}</a>
+                                {%- else -%}
+                                    {{ display_name }}
+                                {%- endif -%}
+                                {%- if not loop.last -%},{%- endif -%}
                             </span>
-                            {% if not loop.last %}<span class="text-muted small">,</span>{% endif %}
                         {% endfor %}
                         {% if role_type == moderator_role_id and moderation_outcome %}
                             <span class="small text-muted">&mdash; {{ moderation_outcome }}</span>
@@ -243,7 +259,7 @@ _report = """
                 {{ flags_line(record, convenor_intervention, out_of_tolerance_unassigned, ai_risk) }}
 
                 {# Staff roles: visually contained, priority-ordered, role names link to their reports #}
-                {{ staff_roles(grouped_roles, role_report_urls, moderator_role_id, moderation_outcome) }}
+                {{ staff_roles(grouped_roles, role_report_urls, role_display_names, moderator_role_id, moderation_outcome) }}
             </div>
 
             {# Download button: processed report preferred; original triggers an unprocessed-warning modal #}
@@ -616,6 +632,28 @@ def _role_report_url_map(roles: List[SubmissionRole]) -> Dict[int, str]:
     return url_map
 
 
+def _build_role_display_names(
+    grouped_roles: List[Tuple[int, List[SubmissionRole]]],
+    show_assessor_names: bool,
+) -> Dict[int, str]:
+    """Map SubmissionRole.id → display name. Assessment-adjacent roles (MARKER,
+    PRESENTATION_ASSESSOR, MODERATOR) are anonymised as 'Marker A', 'Moderator A', etc.
+    when show_assessor_names is False. Within each anonymised group, roles are sorted by
+    user_id ascending so the A/B/C assignment is deterministic across page loads."""
+    _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    display_names: Dict[int, str] = {}
+    for role_type, group in grouped_roles:
+        if not show_assessor_names and role_type in _ANONYMISE_ROLES:
+            base = _ANONYMISED_ROLE_BASE_LABELS[role_type]
+            for i, role in enumerate(sorted(group, key=lambda r: r.user_id)):
+                label = f"{base} {_letters[i]}" if i < len(_letters) else f"{base} {i + 1}"
+                display_names[role.id] = label
+        else:
+            for role in group:
+                display_names[role.id] = role.user.name
+    return display_names
+
+
 def _group_and_sort_roles(roles: List[SubmissionRole]) -> List[Tuple[int, List[SubmissionRole]]]:
     """Group roles by type and sort by the fixed priority order in _ROLE_PRIORITY.
     Role types not listed there (e.g. Exam board, External examiner) sort after all
@@ -759,6 +797,8 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
         identity_parts = _identity_line_parts(record, simple_label)
 
         grouped_roles = _group_and_sort_roles(roles)
+        show_assessor_names = current_user.has_role("admin") or current_user.has_role("root")
+        role_display_names = _build_role_display_names(grouped_roles, show_assessor_names)
         role_report_urls = _role_report_url_map(roles)
 
         details_ctx = _details_context(record)
@@ -773,6 +813,7 @@ def avd_dashboard_rows(records: List[SubmissionRecord]):
                         identity_parts=identity_parts,
                         grouped_roles=grouped_roles,
                         role_report_urls=role_report_urls,
+                        role_display_names=role_display_names,
                         moderator_role_id=SubmissionRole.ROLE_MODERATOR,
                         moderation_outcome=moderation_outcome,
                         convenor_intervention=convenor_intervention,

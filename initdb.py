@@ -33,7 +33,11 @@ from app.models import (
     SubmissionPeriodRecord,
     User,
 )
-from app.models.scheduler import CrontabSchedule, DatabaseSchedulerEntry, IntervalSchedule
+from app.models.scheduler import (
+    CrontabSchedule,
+    DatabaseSchedulerEntry,
+    IntervalSchedule,
+)
 from app.shared.cloud_object_store import ObjectMeta, ObjectStore
 from app.shared.scratch import ScratchFileManager
 from app.shared.utils import get_current_year
@@ -545,7 +549,10 @@ def ensure_historical_marking_events(app) -> None:
 
     Safe to call on every startup; skips records already in the correct state.
     """
-    from app.models.markingevent import MarkingEventWorkflowStates, SubmitterReportWorkflowStates
+    from app.models.markingevent import (
+        MarkingEventWorkflowStates,
+        SubmitterReportWorkflowStates,
+    )
 
     with app.app_context():
         current_year = get_current_year()
@@ -677,6 +684,7 @@ def ensure_object_store_backup_schedule(app) -> None:
     """
     with app.app_context():
         if not app.config.get("OBJECT_STORE_BACKUP_ENABLED", False):
+            print("** ObjectStore backup is not enabled, skipping check for scheduled task")
             return
 
         existing = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-cloud-backup").first()

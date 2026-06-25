@@ -267,7 +267,9 @@ class ObjectStore:
         if (decompress is not None or not self._compressed) and not decompress:
             return decrypt_data
 
-        return zlib_decompress(decrypt_data, bufsize=initial_buf_size)
+        if initial_buf_size is not None:
+            return zlib_decompress(decrypt_data, bufsize=initial_buf_size)
+        return zlib_decompress(decrypt_data)
 
     def get_range(
             self,

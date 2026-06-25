@@ -2383,23 +2383,14 @@ def cloud_backup():
     if request.method == "GET":
         if schedule_entry and schedule_entry.owner:
             form.backup_account.data = schedule_entry.owner
-        form.root_folder_id.data = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER", "")
 
     if form.validate_on_submit():
         old_owner_id = schedule_entry.owner_id if schedule_entry else None
         new_owner = form.backup_account.data
         new_owner_id = new_owner.id if new_owner else None
-        new_folder = form.root_folder_id.data.strip()
-        old_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER", "")
 
-        account_changed = new_owner_id != old_owner_id
-        folder_changed = new_folder != old_folder
-
-        if account_changed or folder_changed:
-            session["pending_cloud_config"] = {
-                "owner_id": new_owner_id,
-                "root_folder": new_folder,
-            }
+        if new_owner_id != old_owner_id:
+            session["pending_cloud_config"] = {"owner_id": new_owner_id}
             return redirect(url_for("admin.confirm_cloud_backup_config_change"))
 
         if schedule_entry:
@@ -2451,14 +2442,12 @@ def confirm_cloud_backup_config_change():
 
     owner_id = pending.get("owner_id")
     new_account = db.session.get(User, owner_id) if owner_id else None
-    new_folder = pending.get("root_folder", "")
 
     form = ConfirmActionForm()
     return render_template_context(
         "admin/backup_dashboard/confirm_cloud_config_change.html",
         pane="cloud",
         new_account=new_account,
-        new_folder=new_folder,
         form=form,
     )
 
@@ -2471,8 +2460,6 @@ def apply_cloud_backup_config_change():
         flash("No pending configuration change.", "warning")
         return redirect(url_for("admin.cloud_backup"))
 
-    db.session.query(ObjectStoreBackupRecord).delete()
-
     entry = (
         db.session.query(DatabaseSchedulerEntry)
         .filter_by(name="object-store-cloud-backup")
@@ -2483,11 +2470,7 @@ def apply_cloud_backup_config_change():
 
     db.session.commit()
 
-    flash(
-        "Cloud backup configuration updated. All previous backup records have been cleared. "
-        "Note: the root folder ID must also be updated in <code>instance/local.py</code> to take effect.",
-        "warning",
-    )
+    flash("Cloud backup account updated. All existing backup history has been preserved.", "success")
     return redirect(url_for("admin.cloud_backup"))
 
 

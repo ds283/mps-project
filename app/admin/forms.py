@@ -2588,7 +2588,7 @@ class EditEmailTemplateForm(Form, EmailTemplateMixin, SaveChangesMixin):
 
 
 class CloudBackupConfigForm(Form):
-    """Edit cloud backup configuration: provider, backup account, root folder."""
+    """Edit cloud backup configuration: backup account."""
 
     backup_account = QuerySelectField(
         "Backup account",
@@ -2599,19 +2599,6 @@ class CloudBackupConfigForm(Form):
         description=(
             "The administrator account whose Box credentials will be used for "
             "scheduled backups.  The account must have completed Box OAuth authorisation."
-        ),
-    )
-
-    root_folder_id = StringField(
-        "Root folder ID",
-        validators=[
-            DataRequired(message="Please enter a Box folder ID"),
-            Length(max=DEFAULT_STRING_LENGTH),
-        ],
-        description=(
-            "The Box folder ID that serves as the backup root.  All per-bucket "
-            "subfolders will be created inside this folder.  Find the folder ID "
-            "in the Box URL when viewing the folder: .../folder/<id>"
         ),
     )
 

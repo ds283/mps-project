@@ -65,7 +65,6 @@ from ..shared.forms.queries import (
     BuildConvenorRealName,
     BuildDegreeProgrammeName,
     BuildEmailTemplateLabelName,
-    BuildWorkflowTemplateLabel,
     BuildOfficeContactName,
     BuildPossibleApprovers,
     BuildPossibleOfficeContacts,
@@ -74,6 +73,7 @@ from ..shared.forms.queries import (
     BuildSubmissionPeriodName,
     BuildSysadminUserName,
     BuildTenantName,
+    BuildWorkflowTemplateLabel,
     GetActiveBackupLabels,
     GetActiveDegreeProgrammes,
     GetActiveDegreeTypes,
@@ -1259,6 +1259,8 @@ class ScheduledTaskMixin:
             "app.tasks.feedback_orchestration.feedback_watchdog",
             "Feedback PDF orchestration watchdog — recover stalled PDF generation jobs",
         ),
+        ("box-token-maintenance", "Periodic renewal of Box OAuth tokens"),
+        ("app.tasks.object_store_backup.backup_object_stores", "Backup ObjectStore buckets to cloud location"),
     ]
 
     task = SelectField("Task", choices=tasks_available)

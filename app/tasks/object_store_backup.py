@@ -20,12 +20,13 @@ from flask import current_app
 
 import app.shared.cloud_object_store.bucket_types as buckets
 from ..database import db
-from ..models import BackupRecord, User
+from ..models import BackupRecord, TaskRecord, User
 from ..models.assets import GeneratedAsset, SubmittedAsset, TemporaryAsset
 from ..models.utilities import ObjectStoreBackupRecord
 from ..shared.cloud_object_store.base import ObjectStore
 from ..shared.cloud_object_store.meta import ObjectMeta
 from ..shared.cloud_storage import CloudItem, CloudStorageLocation
+from ..task_queue import progress_update
 
 
 # Map bucket_type int → human-readable label used as Box subfolder name
@@ -158,6 +159,137 @@ def _handle_tombstones(location, cloud_items_index: dict,
                 "object_store_backup: tombstone failed for key %s: %s", key, exc
             )
     return deleted_count
+
+
+class _CloudAuthError(Exception):
+    """Sentinel raised by _do_bucket_restore when the cloud provider returns an auth error."""
+
+
+def _update_asset_nonce(bucket_type: int, key: str, new_nonce_b64: str) -> bool:
+    """
+    Write *new_nonce_b64* to the ORM row for *key* in *bucket_type*.
+    Also clears the `lost` flag on the row.
+    Returns True if a row was found and updated, False if the key is orphaned.
+    """
+    model_classes = BUCKET_MODEL_MAP.get(bucket_type, [])
+    for cls in model_classes:
+        row = db.session.query(cls).filter_by(unique_name=key).first()
+        if row is not None:
+            row.nonce = new_nonce_b64
+            row.lost = False
+            db.session.commit()
+            return True
+
+    # BackupRecord uses unique_name too, but has no `lost` flag
+    if bucket_type == buckets.BACKUP_BUCKET:
+        row = db.session.query(BackupRecord).filter_by(unique_name=key).first()
+        if row is not None:
+            row.nonce = new_nonce_b64
+            db.session.commit()
+            return True
+
+    return False
+
+
+def _clear_lost_flags(bucket_type: int, restored_keys: Set[str]) -> int:
+    """
+    For each key in *restored_keys*, clear the `lost` flag on any ORM row
+    that refers to it.  Returns the count of rows updated.
+    """
+    updated = 0
+    model_classes = BUCKET_MODEL_MAP.get(bucket_type, [])
+    for cls in model_classes:
+        rows = (
+            db.session.query(cls)
+            .filter(cls.unique_name.in_(restored_keys))
+            .filter(cls.lost.is_(True))
+            .all()
+        )
+        for row in rows:
+            row.lost = False
+            updated += 1
+    if updated:
+        db.session.commit()
+    return updated
+
+
+def _do_bucket_restore(
+    location,
+    object_store,
+    record,
+    overwrite: bool,
+    owner_user,
+    task_id: str = None,
+    progress_start: int = 15,
+    progress_end: int = 95,
+):
+    """
+    Download every object in *record.cloud_folder_ref* and put it back into
+    *object_store*.  Progress updates are emitted every 50 objects if *task_id*
+    is provided, scaled between *progress_start* and *progress_end*.
+
+    Raises _CloudAuthError if the cloud provider rejects credentials (user has
+    already been notified via location.handle_auth_error).
+    Returns (restored, skipped, errors, orphaned, total).
+    """
+    cloud_items = {item.name: item for item in location.list_folder(record.cloud_folder_ref)}
+    existing_keys = object_store.list_keys(audit_data="cloud_restore")
+
+    restored = skipped = errors = orphaned = 0
+    restored_keys: Set[str] = set()
+
+    filenames = [n for n in cloud_items if not n.endswith(".meta")]
+    total = len(filenames)
+    progress_range = progress_end - progress_start
+
+    for i, filename in enumerate(filenames):
+        key = filename.replace("__", "/")
+        cloud_item = cloud_items[filename]
+
+        if not overwrite and key in existing_keys:
+            skipped += 1
+            continue
+
+        try:
+            data = location.download_file(cloud_item.ref)
+            result = object_store.put(
+                key,
+                audit_data="cloud_restore",
+                data=data,
+                no_encryption=False,
+            )
+            new_nonce = result.get("nonce") if result else None
+            if new_nonce:
+                new_nonce_b64 = base64.b64encode(new_nonce).decode("ascii")
+                found = _update_asset_nonce(record.bucket_type, key, new_nonce_b64)
+                if not found:
+                    orphaned += 1
+                    current_app.logger.warning(
+                        "cloud_restore: key %s has no ORM row in bucket %s",
+                        key, record.bucket_label,
+                    )
+            restored_keys.add(key)
+            restored += 1
+        except Exception as exc:
+            if location.handle_auth_error(exc, notify_user=owner_user):
+                raise _CloudAuthError(str(exc)) from exc
+            errors += 1
+            current_app.logger.warning(
+                "cloud_restore: error restoring key %s: %s", key, exc
+            )
+
+        if task_id is not None and i % 50 == 0:
+            pct = progress_start + int(progress_range * i / max(total, 1))
+            progress_update(
+                task_id,
+                TaskRecord.RUNNING,
+                pct,
+                f"Restoring {record.bucket_label}: {i}/{total} objects...",
+                autocommit=True,
+            )
+
+    _clear_lost_flags(record.bucket_type, restored_keys)
+    return restored, skipped, errors, orphaned, total
 
 
 def register_object_store_backup_tasks(celery):
@@ -304,4 +436,166 @@ def register_object_store_backup_tasks(celery):
                 )
                 continue
 
-    return (backup_object_stores,)
+    @celery.task(bind=True, default_retry_delay=30)
+    def restore_object_store_bucket(
+        self,
+        task_id: str,
+        record_id: int,
+        overwrite: bool = False,
+        owner_id: int = None,
+    ):
+        progress_update(task_id, TaskRecord.RUNNING, 5, "Loading backup record...", autocommit=True)
+
+        record = db.session.get(ObjectStoreBackupRecord, record_id)
+        if record is None:
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Backup record not found", autocommit=True)
+            return
+
+        owner_user = db.session.get(User, owner_id)
+        if owner_user is None or not owner_user.box_token_valid:
+            progress_update(
+                task_id, TaskRecord.FAILURE, 100,
+                "Owner user is invalid or has no valid cloud storage token",
+                autocommit=True,
+            )
+            return
+
+        object_store = current_app.config["OBJECT_STORAGE_BUCKETS"].get(record.bucket_type)
+        if object_store is None:
+            progress_update(
+                task_id, TaskRecord.FAILURE, 100,
+                f"No object store configured for bucket type {record.bucket_type}",
+                autocommit=True,
+            )
+            return
+
+        root_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER")
+        location = CloudStorageLocation.from_user(
+            provider_name=record.provider_name,
+            user=owner_user,
+            root_ref=root_folder,
+            audit_data="cloud_restore",
+        )
+
+        progress_update(
+            task_id, TaskRecord.RUNNING, 15,
+            f"Listing cloud backup for {record.bucket_label}...",
+            autocommit=True,
+        )
+
+        try:
+            restored, skipped, errors, orphaned, _ = _do_bucket_restore(
+                location, object_store, record, overwrite, owner_user,
+                task_id=task_id, progress_start=15, progress_end=95,
+            )
+        except _CloudAuthError as exc:
+            progress_update(
+                task_id, TaskRecord.FAILURE, 100,
+                f"Cloud storage authentication error: {exc}",
+                autocommit=True,
+            )
+            return
+
+        msg = (
+            f"Restore complete: {record.bucket_label} — "
+            f"{restored} restored, {skipped} skipped, {orphaned} orphaned, {errors} errors."
+        )
+        progress_update(task_id, TaskRecord.SUCCESS, 100, msg, autocommit=True)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def restore_all_object_store_buckets(
+        self,
+        task_id: str,
+        run_id: str,
+        overwrite: bool = False,
+        owner_id: int = None,
+    ):
+        progress_update(task_id, TaskRecord.RUNNING, 5, "Loading run records...", autocommit=True)
+
+        records = (
+            db.session.query(ObjectStoreBackupRecord)
+            .filter_by(run_id=run_id)
+            .filter(
+                ObjectStoreBackupRecord.status.in_([
+                    ObjectStoreBackupRecord.SUCCESS,
+                    ObjectStoreBackupRecord.PARTIAL,
+                ])
+            )
+            .all()
+        )
+        if not records:
+            progress_update(
+                task_id, TaskRecord.FAILURE, 100,
+                "No completed backup records found for this run.",
+                autocommit=True,
+            )
+            return
+
+        owner_user = db.session.get(User, owner_id)
+        if owner_user is None or not owner_user.box_token_valid:
+            progress_update(
+                task_id, TaskRecord.FAILURE, 100,
+                "Owner user is invalid or has no valid cloud storage token",
+                autocommit=True,
+            )
+            return
+
+        root_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER")
+        n = len(records)
+        total_restored = total_skipped = total_errors = total_orphaned = 0
+
+        for idx, record in enumerate(records):
+            object_store = current_app.config["OBJECT_STORAGE_BUCKETS"].get(record.bucket_type)
+            if object_store is None:
+                current_app.logger.warning(
+                    "cloud_restore: no ObjectStore configured for bucket_type=%d; skipping",
+                    record.bucket_type,
+                )
+                continue
+
+            location = CloudStorageLocation.from_user(
+                provider_name=record.provider_name,
+                user=owner_user,
+                root_ref=root_folder,
+                audit_data="cloud_restore",
+            )
+
+            p_start = 15 + int(80 * idx / n)
+            p_end = 15 + int(80 * (idx + 1) / n)
+
+            progress_update(
+                task_id, TaskRecord.RUNNING, p_start,
+                f"Restoring {record.bucket_label} ({idx + 1}/{n})...",
+                autocommit=True,
+            )
+
+            try:
+                restored, skipped, errors, orphaned, _ = _do_bucket_restore(
+                    location, object_store, record, overwrite, owner_user,
+                    task_id=task_id, progress_start=p_start, progress_end=p_end,
+                )
+            except _CloudAuthError as exc:
+                progress_update(
+                    task_id, TaskRecord.FAILURE, 100,
+                    f"Cloud storage authentication error: {exc}",
+                    autocommit=True,
+                )
+                return
+
+            total_restored += restored
+            total_skipped += skipped
+            total_errors += errors
+            total_orphaned += orphaned
+
+        msg = (
+            f"Restore complete: {n} buckets — "
+            f"{total_restored} restored, {total_skipped} skipped, "
+            f"{total_orphaned} orphaned, {total_errors} errors."
+        )
+        progress_update(task_id, TaskRecord.SUCCESS, 100, msg, autocommit=True)
+
+    return (
+        backup_object_stores,
+        restore_object_store_bucket,
+        restore_all_object_store_buckets,
+    )

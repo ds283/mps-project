@@ -1243,6 +1243,98 @@ class BackupRecord(db.Model, BackupTypesMixin):
         )
 
 
+class ObjectStoreBackupRecord(db.Model):
+    """
+    Tracks a single cloud-storage backup run for a single object-store bucket.
+    One row per (run, bucket).  Rows from the same Beat execution share run_id.
+    """
+
+    __tablename__ = "object_store_backup_records"
+
+    # ── Status constants ──────────────────────────────────────────────────────
+    RUNNING = 0
+    SUCCESS = 1
+    FAILED = 2
+    PARTIAL = 3  # completed but with per-object errors
+
+    STATUS_LABELS = {
+        RUNNING: "Running",
+        SUCCESS: "Success",
+        FAILED: "Failed",
+        PARTIAL: "Partial",
+    }
+
+    # ── Primary key ───────────────────────────────────────────────────────────
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # ── Run grouping ──────────────────────────────────────────────────────────
+    # UUID string shared by all rows from the same Beat execution
+    run_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False, index=True)
+
+    # ── Timing ────────────────────────────────────────────────────────────────
+    timestamp = db.Column(db.DateTime(), nullable=False, default=datetime.now, index=True)
+    finished_at = db.Column(db.DateTime(), nullable=True)
+
+    # ── Which bucket ──────────────────────────────────────────────────────────
+    # Integer from cloud_object_store/bucket_types.py
+    bucket_type = db.Column(db.Integer(), nullable=False, index=True)
+    bucket_label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+
+    # ── Cloud location ────────────────────────────────────────────────────────
+    provider_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False, default="box")
+    cloud_folder_ref = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+    # Provider-specific folder ID/ref for the objects/ subfolder of this bucket
+
+    # ── Outcome ───────────────────────────────────────────────────────────────
+    status = db.Column(db.Integer(), nullable=False, default=RUNNING)
+
+    # ── Statistics ────────────────────────────────────────────────────────────
+    object_count_total = db.Column(db.Integer(), nullable=True)
+    object_count_uploaded = db.Column(db.Integer(), nullable=True)
+    object_count_skipped = db.Column(db.Integer(), nullable=True)
+    object_count_deleted = db.Column(db.Integer(), nullable=True)
+    # objects tombstoned this run (removed from MinIO since last backup)
+    object_count_orphaned = db.Column(db.Integer(), nullable=True)
+    # objects in bucket with no ORM asset row (nonce lookup failed)
+    object_count_error = db.Column(db.Integer(), nullable=True)
+
+    bytes_uploaded = db.Column(db.BigInteger(), nullable=True)
+
+    # ── Error detail ──────────────────────────────────────────────────────────
+    # Truncated log of per-object errors; max ~4000 chars
+    error_detail = db.Column(db.Text(collation="utf8_bin"), nullable=True)
+
+    # ── Owner ─────────────────────────────────────────────────────────────────
+    # Admin user whose Box tokens were used for this run
+    owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    owner = db.relationship("User", foreign_keys=[owner_id])
+
+    # ── Upload mode ───────────────────────────────────────────────────────────
+    # 0 = decrypted upload (plaintext to cloud); 1 = raw ciphertext
+    UPLOAD_MODE_DECRYPTED = 0
+    UPLOAD_MODE_CIPHERTEXT = 1
+    upload_mode = db.Column(db.Integer(), nullable=False, default=UPLOAD_MODE_DECRYPTED)
+
+    # ── Convenience properties ────────────────────────────────────────────────
+
+    @property
+    def status_label(self) -> str:
+        return self.STATUS_LABELS.get(self.status, "Unknown")
+
+    @property
+    def duration_seconds(self) -> Optional[float]:
+        if self.finished_at and self.timestamp:
+            return (self.finished_at - self.timestamp).total_seconds()
+        return None
+
+    @property
+    def readable_bytes_uploaded(self) -> str:
+        """Human-readable upload volume, e.g. '34.2 MB'."""
+        if self.bytes_uploaded is None:
+            return "—"
+        return format_size(self.bytes_uploaded)
+
+
 class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Represents a label applied to a backup

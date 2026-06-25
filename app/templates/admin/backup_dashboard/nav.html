@@ -21,5 +21,14 @@
                 {% endif %}
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'cloud' %}active{% endif %}"
+               href="{{ url_for('admin.cloud_backup') }}">
+                Cloud backup
+                {% if cloud_backup_alert is defined and cloud_backup_alert %}
+                    <span class="badge bg-danger rounded-pill">!</span>
+                {% endif %}
+            </a>
+        </li>
     </ul>
 {% endblock %}

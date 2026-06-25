@@ -1442,6 +1442,22 @@ def backups_overview():
         gauge_script = None
         gauge_div = None
 
+    # Latest cloud backup run summary
+    latest_cloud_run_id = (
+        db.session.query(ObjectStoreBackupRecord.run_id)
+        .order_by(ObjectStoreBackupRecord.timestamp.desc())
+        .limit(1)
+        .scalar()
+    )
+    latest_cloud_records = (
+        db.session.query(ObjectStoreBackupRecord).filter_by(run_id=latest_cloud_run_id).all()
+        if latest_cloud_run_id
+        else []
+    )
+    cloud_backup_alert = any(
+        r.status in (ObjectStoreBackupRecord.FAILED, ObjectStoreBackupRecord.PARTIAL) for r in latest_cloud_records
+    )
+
     return render_template_context(
         "admin/backup_dashboard/overview.html",
         pane="overview",
@@ -1456,6 +1472,8 @@ def backups_overview():
         last_batch=last_batch,
         gauge_script=gauge_script,
         gauge_div=gauge_div,
+        latest_cloud_records=latest_cloud_records,
+        cloud_backup_alert=cloud_backup_alert,
     )
 
 

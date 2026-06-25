@@ -106,4 +106,90 @@
         </div>
         <div class="col-1"></div>
     </div>
+
+    {% if latest_cloud_records is defined %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="d-flex flex-row justify-content-between align-items-center mb-3">
+                    <strong><i class="fas fa-cloud"></i> Cloud backup status</strong>
+                    <a href="{{ url_for('admin.cloud_backup') }}"
+                       class="btn btn-sm btn-outline-primary">
+                        Details <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                {% if latest_cloud_records %}
+                    {% set latest = latest_cloud_records[0] %}
+                    <div class="mb-2 small text-secondary">
+                        Last run:
+                        {{ latest.timestamp.strftime("%a %d %b %Y %H:%M") }}
+                        &nbsp;&middot;&nbsp;
+                        {% if latest.finished_at %}
+                            Duration:
+                            {{ "%.0f"|format(latest.duration_seconds) }}s
+                        {% endif %}
+                        &nbsp;&middot;&nbsp;
+                        Provider: {{ latest.provider_name|title }}
+                    </div>
+                    <table class="table table-sm table-striped table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Bucket</th>
+                                <th class="text-end">Objects</th>
+                                <th class="text-end">Uploaded</th>
+                                <th class="text-end">Skipped</th>
+                                <th class="text-end">Errors</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in latest_cloud_records %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ r.bucket_label }}</span></td>
+                                <td class="text-end">{{ r.object_count_total or '—' }}</td>
+                                <td class="text-end">{{ r.object_count_uploaded or 0 }}</td>
+                                <td class="text-end">{{ r.object_count_skipped or 0 }}</td>
+                                <td class="text-end">
+                                    {% if r.object_count_error %}
+                                        <span class="fw-bold" style="color: var(--bs-warning-text-emphasis);">{{ r.object_count_error }}</span>
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.status == 1 %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> OK
+                                        </span>
+                                    {% elif r.status == 3 %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            {{ r.object_count_error }} errors
+                                        </span>
+                                    {% elif r.status == 2 %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times"></i> Failed
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info text-dark">Running</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="alert alert-secondary mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        Cloud backup has not run yet, or is not configured.
+                        <a href="{{ url_for('admin.cloud_backup') }}">Configure now</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+    {% endif %}
 {% endblock %}

@@ -11,30 +11,54 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
+            $('#backup_account').select2({
+                selectionCssClass: 'select2-small',
+                dropdownCssClass: 'select2-small'
+            });
+
             $('#cloud-backup-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                serverSide: true, processing: true,
+                stateSave: true, serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
                     url: $SCRIPT_ROOT + '/admin/cloud_backup_ajax',
                     type: 'POST',
-                    data: function (args) {
-                        return {"args": JSON.stringify(args)};
-                    }
+                    data: function(args) { return {"args": JSON.stringify(args)}; }
                 },
-                "columns": [
-                    { "data": "timestamp" },
-                    { "data": "run_id" },
-                    { "data": "bucket" },
-                    { "data": "total" },
-                    { "data": "uploaded" },
-                    { "data": "errors" },
-                    { "data": "bytes" },
-                    { "data": "status" },
-                    { "data": "menu", "orderable": false }
+                "fnDrawCallback": function() {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'timestamp',  orderable: true,  searchable: true},
+                    {data: 'run_id',     orderable: false, searchable: false},
+                    {data: 'bucket',     orderable: true,  searchable: false},
+                    {data: 'total',      orderable: true,  searchable: false},
+                    {data: 'uploaded',   orderable: true,  searchable: false},
+                    {data: 'errors',     orderable: true,  searchable: false},
+                    {data: 'bytes',      orderable: true,  searchable: false},
+                    {data: 'status',     orderable: true,  searchable: false},
+                    {data: 'menu',       orderable: false, searchable: false},
                 ],
-                order: [[0, 'desc']]
+                order: [[0, 'desc']],
+            });
+
+            $(document).on('click', '.js-restore-bucket', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                $('#restore-run-info').text($btn.data('run-id') + ' — ' + $btn.data('timestamp'));
+                $('#restore-scope').html('<span class="badge bg-secondary">' + $btn.data('bucket') + '</span>');
+                $('#restore-modal-form').attr('action', $btn.data('restore-url'));
+                new bootstrap.Modal(document.getElementById('restoreModal')).show();
+            });
+
+            $(document).on('click', '.js-restore-run', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                $('#restore-run-info').text($btn.data('run-id') + ' — ' + $btn.data('timestamp'));
+                $('#restore-scope').text('All buckets in this run');
+                $('#restore-modal-form').attr('action', $btn.data('restore-url'));
+                new bootstrap.Modal(document.getElementById('restoreModal')).show();
             });
         });
     </script>
@@ -48,101 +72,139 @@
             {% if cloud_backup_alert %}
                 <div class="alert alert-warning mt-3">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    The most recent backup run had failures or partial completions.
+                    The most recent backup run had failures or partial completions. Review the latest run summary below.
                 </div>
             {% endif %}
 
-            {# ── Configuration card ── #}
-            <div class="card mt-3 mb-3">
-                <div class="card-header">
-                    <strong>Cloud backup configuration</strong>
-                </div>
+            {# ── Section A: Configuration card ── #}
+            <div class="card bg-well mt-3 mb-3">
+                <div class="card-header">Cloud backup configuration</div>
                 <div class="card-body">
-                    <form action="{{ url_for('admin.cloud_backup') }}" method="POST">
+                    <form action="{{ url_for('admin.cloud_backup') }}" method="POST" id="cloud-config-form">
                         {{ form.hidden_tag() }}
-                        <div class="mb-3">
-                            {{ wtf.form_field(form.backup_account, class="form-select form-select-sm select2-small") }}
+                        <div class="row mb-3">
+                            <div class="col-8">
+                                {{ wtf.render_field(form.backup_account) }}
+                                {{ wtf.render_field(form.root_folder_id) }}
+                            </div>
+                            <div class="col-4">
+                                <div class="mb-3">
+                                    <strong class="small text-uppercase text-muted">Token status</strong><br>
+                                    {% if schedule_entry and schedule_entry.owner and schedule_entry.owner.box_token_valid %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Valid</span>
+                                        <a href="{{ url_for('oauth2.box_login') }}" class="ms-2 small">Re-authenticate</a>
+                                    {% elif schedule_entry and schedule_entry.owner %}
+                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Invalid</span>
+                                        <a href="{{ url_for('oauth2.box_login') }}" class="ms-2 small">Re-authenticate now</a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not configured</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <strong class="small text-uppercase text-muted">Schedule</strong><br>
+                                    {% if schedule_entry and schedule_entry.crontab %}
+                                        <span class="small font-monospace">{{ schedule_entry.crontab.minute }} {{ schedule_entry.crontab.hour }} {{ schedule_entry.crontab.day_of_month }} {{ schedule_entry.crontab.month_of_year }} {{ schedule_entry.crontab.day_of_week }}</span>
+                                    {% elif schedule_entry and schedule_entry.interval %}
+                                        <span class="small">Every {{ schedule_entry.interval.every }} {{ schedule_entry.interval.period }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not configured</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <strong class="small text-uppercase text-muted">Last run</strong><br>
+                                    {% if schedule_entry and schedule_entry.last_run_at %}
+                                        <span class="small">{{ schedule_entry.last_run_at.strftime("%a %d %b %Y %H:%M") }}</span>
+                                    {% else %}
+                                        <span class="small text-muted">Never</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <strong class="small text-uppercase text-muted">Enabled</strong><br>
+                                    {% if schedule_entry and schedule_entry.enabled %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% elif schedule_entry %}
+                                        <span class="badge bg-secondary">No</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not configured</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            {{ wtf.form_field(form.root_folder_id, class="form-control form-control-sm") }}
+                        {% if not schedule_entry or not schedule_entry.owner_id %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    No backup account configured. Select an account above and save.
+                                </div>
+                            </div>
                         </div>
-                        {{ form.save_config(class="btn btn-sm btn-primary") }}
+                        {% endif %}
                     </form>
-                </div>
-                <div class="card-footer">
-                    <form action="{{ url_for('admin.cloud_backup_run_now') }}" method="POST">
+                    <form action="{{ url_for('admin.cloud_backup_run_now') }}" method="POST" id="run-now-form">
                         {{ run_now_form.hidden_tag() }}
-                        <button type="submit" class="btn btn-sm btn-success">
+                    </form>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="submit" form="cloud-config-form" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save configuration
+                        </button>
+                        <button type="submit" form="run-now-form" class="btn btn-success">
                             <i class="fas fa-play me-1"></i> Run backup now
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
 
-            {# ── Latest run summary ── #}
+            {# ── Section B: Latest run summary ── #}
             {% if latest_records %}
                 <div class="card mt-3 mb-3">
-                    <div class="card-header">
+                    <div class="card-header bg-primary text-white">
                         <strong>Latest backup run</strong>
-                        <span class="text-muted small ms-2">run {{ latest_records[0].run_id[:8] }}</span>
+                        <span class="ms-2 small fw-normal opacity-75">run <code class="text-white">{{ latest_records[0].run_id[:8] if latest_records[0].run_id else '—' }}</code></span>
                     </div>
                     <div class="card-body p-0">
-                        <table class="table table-sm table-hover mb-0">
+                        <table class="table table-sm table-bordered mb-0">
                             <thead>
                                 <tr>
                                     <th>Bucket</th>
-                                    <th>Started</th>
-                                    <th>Total</th>
+                                    <th>Objects</th>
                                     <th>Uploaded</th>
+                                    <th>Skipped</th>
                                     <th>Errors</th>
-                                    <th>Bytes</th>
                                     <th>Status</th>
-                                    <th></th>
+                                    <th>Duration</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for r in latest_records %}
-                                    <tr>
-                                        <td>{{ r.bucket_label or '—' }}</td>
-                                        <td class="small">{{ r.timestamp.strftime("%a %d %b %Y %H:%M") if r.timestamp else '—' }}</td>
-                                        <td>{{ r.object_count_total if r.object_count_total is not none else '—' }}</td>
-                                        <td>{{ r.object_count_uploaded if r.object_count_uploaded is not none else '—' }}</td>
-                                        <td>{{ r.object_count_error if r.object_count_error is not none else '—' }}</td>
-                                        <td>{{ r.readable_bytes_uploaded }}</td>
-                                        <td>
-                                            {% if r.status == 0 %}<span class="badge bg-warning text-dark">Running</span>
-                                            {% elif r.status == 1 %}<span class="badge bg-success">Success</span>
-                                            {% elif r.status == 2 %}<span class="badge bg-danger">Failed</span>
-                                            {% elif r.status == 3 %}<span class="badge bg-warning text-dark">Partial</span>
-                                            {% else %}<span class="badge bg-secondary">Unknown</span>{% endif %}
-                                        </td>
-                                        <td>
-                                            {% if r.status in (1, 3) %}
-                                                <a href="{{ url_for('admin.cloud_backup_restore', record_id=r.id) }}"
-                                                   class="btn btn-sm btn-outline-secondary">
-                                                    <i class="fas fa-undo"></i> Restore
-                                                </a>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ r.bucket_label or '—' }}</span></td>
+                                    <td>{{ r.object_count_total or '—' }}</td>
+                                    <td>{{ r.object_count_uploaded or 0 }}</td>
+                                    <td>{{ r.object_count_skipped or 0 }}</td>
+                                    <td>
+                                        {% if r.object_count_error %}
+                                            <span class="text-danger fw-bold"
+                                                  data-bs-toggle="popover" data-bs-trigger="focus"
+                                                  data-bs-content="{{ r.error_detail[:500] if r.error_detail else '' }}"
+                                                  tabindex="0">
+                                                {{ r.object_count_error }}
+                                            </span>
+                                        {% else %}0{% endif %}
+                                    </td>
+                                    <td>{{ r.status_label }}</td>
+                                    <td>{{ "%.0f"|format(r.duration_seconds) ~ 's' if r.duration_seconds else '—' }}</td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    {% if latest_records and latest_records[0].status in (1, 3) %}
-                        <div class="card-footer">
-                            <a href="{{ url_for('admin.cloud_backup_restore_run', run_id=latest_records[0].run_id) }}"
-                               class="btn btn-sm btn-outline-warning">
-                                <i class="fas fa-layer-group me-1"></i> Restore all buckets in this run&hellip;
-                            </a>
-                        </div>
-                    {% endif %}
                 </div>
             {% endif %}
 
-            {# ── Run history DataTable ── #}
-            <div class="card mt-3 mb-3">
-                <div class="card-header">
+            {# ── Section C: Run history DataTable ── #}
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
                     <strong>Backup run history</strong>
                 </div>
                 <div class="card-body">
@@ -166,5 +228,45 @@
 
         </div>
         <div class="col-1"></div>
+    </div>
+
+    {# ── Section D: Restore confirmation modal ── #}
+    <div class="modal fade" id="restoreModal" tabindex="-1" aria-labelledby="restoreModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="restoreModalLabel">
+                        <i class="fas fa-undo me-2"></i> Confirm restore
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="restore-modal-form" method="POST" action="">
+                    {{ restore_modal_form.hidden_tag() }}
+                    <div class="modal-body">
+                        <dl class="row mb-3">
+                            <dt class="col-4">Source run</dt>
+                            <dd class="col-8" id="restore-run-info">—</dd>
+                            <dt class="col-4">Scope</dt>
+                            <dd class="col-8" id="restore-scope">—</dd>
+                        </dl>
+                        {{ wtf.render_field(restore_modal_form.restore_mode) }}
+                        <div class="alert alert-warning mt-3 mb-2">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Re-encryption note:</strong> Objects restored from Box were uploaded without
+                            their original MinIO per-object nonces. New nonces will be generated on next access.
+                        </div>
+                        <p class="small text-muted mb-0">
+                            Objects with no matching database record will be skipped.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-undo me-1"></i> Confirm restore
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 {% endblock %}

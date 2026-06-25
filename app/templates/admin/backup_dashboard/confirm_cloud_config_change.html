@@ -1,0 +1,54 @@
+{% extends "admin/backup_dashboard/nav.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-warning mt-3 mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <strong>Confirm cloud backup configuration change</strong>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Changing the backup account or root folder will permanently delete all existing cloud
+                        backup records from the database. The cloud files in Box will not be affected, but
+                        MPS Projects will lose track of them and begin a fresh backup cycle.
+                    </div>
+                    <dl class="row mb-4">
+                        <dt class="col-3">Backup account</dt>
+                        <dd class="col-9">
+                            {% if new_account %}
+                                {{ new_account.name }} ({{ new_account.email }})
+                            {% else %}
+                                <em class="text-muted">None</em>
+                            {% endif %}
+                        </dd>
+                        <dt class="col-3">Root folder ID</dt>
+                        <dd class="col-9">
+                            {% if new_folder %}
+                                <code>{{ new_folder }}</code>
+                            {% else %}
+                                <em class="text-muted">None</em>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                    <form action="{{ url_for('admin.apply_cloud_backup_config_change') }}" method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-check me-1"></i> Confirm — reset and apply
+                            </button>
+                            <a href="{{ url_for('admin.cloud_backup') }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

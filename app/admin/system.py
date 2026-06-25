@@ -2409,12 +2409,14 @@ def cloud_backup():
     )
 
     run_now_form = ConfirmActionForm()
+    restore_modal_form = CloudBackupRestoreForm()
 
     return render_template_context(
         "admin/backup_dashboard/cloud_backup.html",
         pane="cloud",
         form=form,
         run_now_form=run_now_form,
+        restore_modal_form=restore_modal_form,
         latest_records=latest_records,
         schedule_entry=schedule_entry,
         cloud_backup_alert=cloud_backup_alert,
@@ -2429,25 +2431,16 @@ def confirm_cloud_backup_config_change():
         flash("No pending configuration change.", "warning")
         return redirect(url_for("admin.cloud_backup"))
 
-    title = "Confirm cloud backup configuration change"
-    panel_title = "Confirm cloud backup configuration change"
-    action_url = url_for("admin.apply_cloud_backup_config_change")
-    message = (
-        "<p>You are about to change the cloud backup account or root folder.</p>"
-        "<p><strong>All existing cloud backup records will be deleted.</strong> "
-        "The next scheduled backup will start fresh.</p>"
-        "<p>This action cannot be undone.</p>"
-    )
-    submit_label = "Confirm change"
+    owner_id = pending.get("owner_id")
+    new_account = db.session.get(User, owner_id) if owner_id else None
+    new_folder = pending.get("root_folder", "")
 
     form = ConfirmActionForm()
     return render_template_context(
-        "admin/danger_confirm.html",
-        title=title,
-        panel_title=panel_title,
-        action_url=action_url,
-        message=message,
-        submit_label=submit_label,
+        "admin/backup_dashboard/confirm_cloud_config_change.html",
+        pane="cloud",
+        new_account=new_account,
+        new_folder=new_folder,
         form=form,
     )
 

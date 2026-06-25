@@ -33,7 +33,7 @@ from app.models import (
     SubmissionPeriodRecord,
     User,
 )
-from app.models.scheduler import DatabaseSchedulerEntry, IntervalSchedule
+from app.models.scheduler import CrontabSchedule, DatabaseSchedulerEntry, IntervalSchedule
 from app.shared.cloud_object_store import ObjectMeta, ObjectStore
 from app.shared.scratch import ScratchFileManager
 from app.shared.utils import get_current_year
@@ -659,3 +659,76 @@ def ensure_box_token_schedule(app) -> None:
         except SQLAlchemyError as e:
             db.session.rollback()
             app.logger.exception("SQLAlchemyError in ensure_box_token_schedule", exc_info=e)
+
+
+# ---------------------------------------------------------------------------
+# Object-store cloud backup beat schedule
+# ---------------------------------------------------------------------------
+
+
+def ensure_object_store_backup_schedule(app) -> None:
+    """
+    Idempotently register the DatabaseSchedulerEntry for the object-store
+    cloud backup Beat task.
+
+    Does nothing if:
+    - OBJECT_STORE_BACKUP_ENABLED is False or absent in app.config.
+    - A DatabaseSchedulerEntry named "object-store-cloud-backup" already exists.
+    """
+    with app.app_context():
+        if not app.config.get("OBJECT_STORE_BACKUP_ENABLED", False):
+            return
+
+        existing = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-cloud-backup").first()
+        if existing is not None:
+            print("** ensure_object_store_backup_schedule: schedule entry already present")
+            return
+
+        # Daily at 03:30 — offset from the DB backup at 02:00 to avoid I/O contention
+        crontab = (
+            db.session.query(CrontabSchedule)
+            .filter_by(
+                minute="30",
+                hour="3",
+                day_of_week="*",
+                day_of_month="*",
+                month_of_year="*",
+            )
+            .first()
+        )
+        if crontab is None:
+            crontab = CrontabSchedule(
+                minute="30",
+                hour="3",
+                day_of_week="*",
+                day_of_month="*",
+                month_of_year="*",
+            )
+            db.session.add(crontab)
+            db.session.flush()
+
+        now = datetime.now()
+        entry = DatabaseSchedulerEntry(
+            name="object-store-cloud-backup",
+            task="app.tasks.object_store_backup.backup_object_stores",
+            interval_id=None,
+            crontab_id=crontab.id,
+            args=[],
+            kwargs={},
+            queue="default",
+            exchange=None,
+            routing_key=None,
+            expires=None,
+            enabled=True,
+            last_run_at=now,
+            total_run_count=0,
+            owner_id=None,
+        )
+        db.session.add(entry)
+
+        try:
+            db.session.commit()
+            print("** ensure_object_store_backup_schedule: created 'object-store-cloud-backup' schedule entry")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in ensure_object_store_backup_schedule", exc_info=e)

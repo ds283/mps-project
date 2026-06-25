@@ -18,6 +18,8 @@ from app import create_app
 from app.database import db
 from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
+    ensure_box_token_schedule,
+    ensure_object_store_backup_schedule,
     ensure_roles,
     initial_populate_database,
     populate_CATS_limits,
@@ -73,6 +75,8 @@ with app.app_context():
 
     ensure_roles(app)
     reconcile_background_tasks(app)
+    ensure_box_token_schedule(app)
+    ensure_object_store_backup_schedule(app)
 
 
 if __name__ == "__main__":

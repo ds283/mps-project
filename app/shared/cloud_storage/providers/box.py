@@ -35,6 +35,7 @@ class BoxCloudStorageProvider(CloudStorageProvider):
     def __init__(self, client, user=None):
         self._client = client
         self._user = user
+        self._folder_item_cache: dict = {}  # folder_ref -> List[item]
 
     # -- Construction --------------------------------------------------------
 
@@ -113,13 +114,23 @@ class BoxCloudStorageProvider(CloudStorageProvider):
                 break
         return items
 
+    def _get_folder_items_cached(self, folder_ref: str) -> list:
+        """Return cached folder listing; falls back to live fetch on cache miss."""
+        if folder_ref not in self._folder_item_cache:
+            self._folder_item_cache[folder_ref] = self._get_folder_items(folder_ref)
+        return self._folder_item_cache[folder_ref]
+
+    def invalidate_folder_cache(self, folder_ref: str) -> None:
+        """Remove a folder from the cache (call after a successful upsert)."""
+        self._folder_item_cache.pop(folder_ref, None)
+
     # -- Folder operations ---------------------------------------------------
 
     def get_or_create_folder(self, parent_ref: str, name: str) -> str:
         """Return the Box folder ID of *name* inside *parent_ref*, creating it if absent."""
         from box_sdk_gen import CreateFolderParent
 
-        items = self._get_folder_items(parent_ref)
+        items = self._get_folder_items_cached(parent_ref)
         for item in items:
             if item.type == "folder" and item.name == name:
                 return item.id
@@ -128,6 +139,7 @@ class BoxCloudStorageProvider(CloudStorageProvider):
             name=name,
             parent=CreateFolderParent(id=parent_ref),
         )
+        self.invalidate_folder_cache(parent_ref)
         return folder.id
 
     def list_folder(self, folder_ref: str) -> List[CloudItem]:
@@ -167,7 +179,7 @@ class BoxCloudStorageProvider(CloudStorageProvider):
         )
 
         # Check for an existing file with the same name
-        items = self._get_folder_items(folder_ref)
+        items = self._get_folder_items_cached(folder_ref)
         existing_id: Optional[str] = None
         for item in items:
             if item.type == "file" and item.name == filename:
@@ -186,6 +198,7 @@ class BoxCloudStorageProvider(CloudStorageProvider):
                 file_file_name=filename,
                 file_content_type=mimetype,
             )
+            self.invalidate_folder_cache(folder_ref)
             return result.entries[0].id
         else:
             result = self._client.uploads.upload_file_version(
@@ -195,7 +208,99 @@ class BoxCloudStorageProvider(CloudStorageProvider):
                 file_file_name=filename,
                 file_content_type=mimetype,
             )
+            self.invalidate_folder_cache(folder_ref)
             return result.entries[0].id
+
+    def upsert_file_chunked(
+        self,
+        folder_ref: str,
+        filename: str,
+        stream: BinaryIO,
+        size: int,
+        mimetype: str = "application/octet-stream",
+        chunk_size: int = 20 * 1024 * 1024,
+    ) -> str:
+        """
+        Upload *stream* to Box using the chunked upload API.
+        Falls back to upsert_file() when size < chunk_size.
+        """
+        if size < chunk_size:
+            data = stream.read()
+            return self.upsert_file(folder_ref, filename, data, mimetype)
+
+        # Check for an existing file with the same name
+        items = self._get_folder_items_cached(folder_ref)
+        existing_id: Optional[str] = None
+        for item in items:
+            if item.type == "file" and item.name == filename:
+                existing_id = item.id
+                break
+
+        if existing_id is None:
+            result = self._client.chunked_uploads.upload_big_file(
+                file=stream,
+                file_name=filename,
+                file_size=size,
+                parent_folder_id=folder_ref,
+            )
+            self.invalidate_folder_cache(folder_ref)
+            return result.id
+        else:
+            file_id = self._upload_chunked_version(existing_id, filename, stream, size)
+            self.invalidate_folder_cache(folder_ref)
+            return file_id
+
+    def _upload_chunked_version(
+        self, existing_id: str, filename: str, stream: BinaryIO, size: int
+    ) -> str:
+        """Chunked version-replacement upload for an existing Box file."""
+        from box_sdk_gen.internal.utils import (
+            Hash,
+            HashName,
+            generate_byte_stream_from_buffer,
+            iterate_chunks,
+            read_byte_stream,
+        )
+
+        session = self._client.chunked_uploads.create_file_upload_session_for_existing_file(
+            file_id=existing_id,
+            file_size=size,
+            file_name=filename,
+        )
+        upload_part_url = session.session_endpoints.upload_part
+        commit_url = session.session_endpoints.commit
+        part_size = session.part_size
+
+        file_hash = Hash(algorithm=HashName.SHA1)
+        parts = []
+        offset = 0
+
+        for chunk_stream in iterate_chunks(stream, part_size, size):
+            chunk_buf = read_byte_stream(chunk_stream)
+            chunk_len = len(chunk_buf)
+
+            part_hash = Hash(algorithm=HashName.SHA1)
+            part_hash.update_hash(chunk_buf)
+            part_digest = f"sha={part_hash.digest_hash('base64')}"
+            content_range = f"bytes {offset}-{offset + chunk_len - 1}/{size}"
+
+            uploaded = self._client.chunked_uploads.upload_file_part_by_url(
+                url=upload_part_url,
+                request_body=generate_byte_stream_from_buffer(chunk_buf),
+                digest=part_digest,
+                content_range=content_range,
+            )
+            parts.append(uploaded.part)
+            file_hash.update_hash(chunk_buf)
+            offset += chunk_len
+
+        full_digest = f"sha={file_hash.digest_hash('base64')}"
+        committed = self._client.chunked_uploads.create_file_upload_session_commit_by_url(
+            url=commit_url,
+            parts=parts,
+            digest=full_digest,
+        )
+        return committed.entries[0].id
 
     def download_file(self, file_ref: str) -> bytes:
         """Fetch file content via the Box API using the stored credential."""

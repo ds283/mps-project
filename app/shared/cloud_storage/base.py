@@ -125,6 +125,26 @@ class CloudStorageProvider(ABC):
         """
 
     @abstractmethod
+    def upsert_file_chunked(
+        self,
+        folder_ref: str,
+        filename: str,
+        stream: BinaryIO,
+        size: int,
+        mimetype: str = "application/octet-stream",
+        chunk_size: int = 20 * 1024 * 1024,
+    ) -> str:
+        """
+        Upload *stream* as *filename* inside *folder_ref* using chunked/multipart upload.
+        *size* must be the total byte length of the stream.
+        *chunk_size* is the per-part size in bytes (default 20 MB).
+        Creates a new version if the filename already exists.
+        Returns the provider file ref.
+
+        Falls back to upsert_file() for streams smaller than *chunk_size*.
+        """
+
+    @abstractmethod
     def download_file(self, file_ref: str) -> bytes:
         """Fetch the content of *file_ref* via the provider API. Returns raw bytes."""
 
@@ -266,6 +286,40 @@ class CloudStorageLocation:
             self._log_audit("upsert_file", folder_ref=folder_ref, name=filename,
                             bytes=size, elapsed_ms=int((time.monotonic() - t0) * 1000),
                             error=repr(exc))
+            raise
+
+    def upsert_file_chunked(
+        self,
+        folder_ref: str,
+        filename: str,
+        stream: BinaryIO,
+        size: int,
+        mimetype: str = "application/octet-stream",
+        chunk_size: int = 20 * 1024 * 1024,
+    ) -> str:
+        """Chunked upload via the provider; audited."""
+        t0 = time.monotonic()
+        try:
+            result = self._provider.upsert_file_chunked(
+                folder_ref, filename, stream, size, mimetype, chunk_size
+            )
+            self._log_audit(
+                "upsert_file_chunked",
+                folder_ref=folder_ref,
+                name=filename,
+                bytes=size,
+                elapsed_ms=int((time.monotonic() - t0) * 1000),
+            )
+            return result
+        except Exception as exc:
+            self._log_audit(
+                "upsert_file_chunked",
+                folder_ref=folder_ref,
+                name=filename,
+                bytes=size,
+                elapsed_ms=int((time.monotonic() - t0) * 1000),
+                error=repr(exc),
+            )
             raise
 
     def download_file(self, file_ref: str) -> bytes:

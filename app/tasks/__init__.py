@@ -57,3 +57,4 @@ from .similarity_analysis import register_similarity_analysis_tasks
 from .data_export import register_data_export_tasks
 from .allocation_export import register_allocation_export_tasks
 from .canvas_push import register_canvas_push_tasks
+from .object_store_backup import register_object_store_backup_tasks

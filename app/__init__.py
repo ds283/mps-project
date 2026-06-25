@@ -348,6 +348,7 @@ def create_app():
     tasks.register_box_tokens_tasks(celery)
     tasks.register_data_export_tasks(celery)
     tasks.register_allocation_export_tasks(celery)
+    tasks.register_object_store_backup_tasks(celery)
 
     use_pyinstrument = app.config.get("PROFILE_PYINSTRUMENT")
     if use_pyinstrument:

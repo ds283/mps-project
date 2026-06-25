@@ -59,6 +59,7 @@ from ..models import (
     User,
     WorkflowLogEntry,
 )
+from ..models.utilities import ObjectStoreBackupRecord
 from ..shared.backup import (
     compute_current_backup_count,
     compute_current_backup_size,
@@ -93,6 +94,8 @@ from .forms import (
     AddIntervalScheduledTask,
     AddMessageFormFactory,
     BackupManageForm,
+    CloudBackupConfigForm,
+    CloudBackupRestoreForm,
     EditBackupOptionsForm,
     EditCrontabScheduledTask,
     EditIntervalScheduledTask,
@@ -2342,4 +2345,332 @@ def workflow_log_export_csv():
             url=url,
             text=text,
         )
+    )
+
+
+# ── Cloud backup routes ───────────────────────────────────────────────────────
+
+
+@admin.route("/cloud_backup", methods=["GET", "POST"])
+@roles_required("root")
+def cloud_backup():
+    schedule_entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter_by(name="object-store-cloud-backup")
+        .first()
+    )
+
+    form = CloudBackupConfigForm(request.form)
+
+    if request.method == "GET":
+        if schedule_entry and schedule_entry.owner:
+            form.backup_account.data = schedule_entry.owner
+        form.root_folder_id.data = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER", "")
+
+    if form.validate_on_submit():
+        old_owner_id = schedule_entry.owner_id if schedule_entry else None
+        new_owner = form.backup_account.data
+        new_owner_id = new_owner.id if new_owner else None
+        new_folder = form.root_folder_id.data.strip()
+        old_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER", "")
+
+        account_changed = new_owner_id != old_owner_id
+        folder_changed = new_folder != old_folder
+
+        if account_changed or folder_changed:
+            session["pending_cloud_config"] = {
+                "owner_id": new_owner_id,
+                "root_folder": new_folder,
+            }
+            return redirect(url_for("admin.confirm_cloud_backup_config_change"))
+
+        if schedule_entry:
+            schedule_entry.owner_id = new_owner_id
+            db.session.commit()
+
+        flash("Cloud backup configuration saved.", "success")
+        return redirect(url_for("admin.cloud_backup"))
+
+    latest_run_id = (
+        db.session.query(ObjectStoreBackupRecord.run_id)
+        .order_by(ObjectStoreBackupRecord.timestamp.desc())
+        .limit(1)
+        .scalar()
+    )
+    latest_records = (
+        db.session.query(ObjectStoreBackupRecord).filter_by(run_id=latest_run_id).all()
+        if latest_run_id
+        else []
+    )
+
+    cloud_backup_alert = any(
+        r.status in (ObjectStoreBackupRecord.FAILED, ObjectStoreBackupRecord.PARTIAL)
+        for r in latest_records
+    )
+
+    run_now_form = ConfirmActionForm()
+
+    return render_template_context(
+        "admin/backup_dashboard/cloud_backup.html",
+        pane="cloud",
+        form=form,
+        run_now_form=run_now_form,
+        latest_records=latest_records,
+        schedule_entry=schedule_entry,
+        cloud_backup_alert=cloud_backup_alert,
+    )
+
+
+@admin.route("/confirm_cloud_backup_config_change")
+@roles_required("root")
+def confirm_cloud_backup_config_change():
+    pending = session.get("pending_cloud_config")
+    if pending is None:
+        flash("No pending configuration change.", "warning")
+        return redirect(url_for("admin.cloud_backup"))
+
+    title = "Confirm cloud backup configuration change"
+    panel_title = "Confirm cloud backup configuration change"
+    action_url = url_for("admin.apply_cloud_backup_config_change")
+    message = (
+        "<p>You are about to change the cloud backup account or root folder.</p>"
+        "<p><strong>All existing cloud backup records will be deleted.</strong> "
+        "The next scheduled backup will start fresh.</p>"
+        "<p>This action cannot be undone.</p>"
+    )
+    submit_label = "Confirm change"
+
+    form = ConfirmActionForm()
+    return render_template_context(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
+        form=form,
+    )
+
+
+@admin.route("/apply_cloud_backup_config_change", methods=["POST"])
+@roles_required("root")
+def apply_cloud_backup_config_change():
+    pending = session.pop("pending_cloud_config", None)
+    if pending is None:
+        flash("No pending configuration change.", "warning")
+        return redirect(url_for("admin.cloud_backup"))
+
+    db.session.query(ObjectStoreBackupRecord).delete()
+
+    entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter_by(name="object-store-cloud-backup")
+        .first()
+    )
+    if entry:
+        entry.owner_id = pending["owner_id"]
+
+    db.session.commit()
+
+    flash(
+        "Cloud backup configuration updated. All previous backup records have been cleared. "
+        "Note: the root folder ID must also be updated in <code>instance/local.py</code> to take effect.",
+        "warning",
+    )
+    return redirect(url_for("admin.cloud_backup"))
+
+
+@admin.route("/cloud_backup_ajax", methods=["POST"])
+@roles_required("root")
+def cloud_backup_ajax():
+    base_query = db.session.query(ObjectStoreBackupRecord)
+
+    timestamp = {
+        "search": func.date_format(ObjectStoreBackupRecord.timestamp, "%a %d %b %Y %H:%M:%S"),
+        "order": ObjectStoreBackupRecord.timestamp,
+    }
+    run_id_col = {
+        "search": ObjectStoreBackupRecord.run_id,
+        "order": ObjectStoreBackupRecord.run_id,
+        "search_collation": "utf8_general_ci",
+    }
+    bucket = {
+        "search": ObjectStoreBackupRecord.bucket_label,
+        "order": ObjectStoreBackupRecord.bucket_label,
+        "search_collation": "utf8_general_ci",
+    }
+    total = {"order": ObjectStoreBackupRecord.object_count_total}
+    uploaded = {"order": ObjectStoreBackupRecord.object_count_uploaded}
+    errors = {"order": ObjectStoreBackupRecord.object_count_error}
+    bytes_col = {"order": ObjectStoreBackupRecord.bytes_uploaded}
+    status = {"order": ObjectStoreBackupRecord.status}
+
+    columns = {
+        "timestamp": timestamp,
+        "run_id": run_id_col,
+        "bucket": bucket,
+        "total": total,
+        "uploaded": uploaded,
+        "errors": errors,
+        "bytes": bytes_col,
+        "status": status,
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.cloud_backups_data)
+
+
+@admin.route("/cloud_backup_run_now", methods=["POST"])
+@roles_required("root")
+def cloud_backup_run_now():
+    schedule_entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter_by(name="object-store-cloud-backup")
+        .first()
+    )
+    owner_id = schedule_entry.owner_id if schedule_entry else None
+
+    task_id = register_task(
+        "Cloud backup",
+        owner=current_user,
+        description="Manual object-store cloud backup",
+    )
+    celery = current_app.extensions["celery"]
+    backup_task = celery.tasks["app.tasks.object_store_backup.backup_object_stores"]
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(
+        init.si(task_id, "Cloud backup"),
+        backup_task.si(owner_id=owner_id),
+        final.si(task_id, "Cloud backup", current_user.id, notify=True),
+    ).on_error(error.si(task_id, "Cloud backup", current_user.id))
+
+    seq.apply_async(task_id=task_id)
+    flash("Cloud backup task dispatched.", "info")
+    return redirect(url_for("admin.cloud_backup"))
+
+
+@admin.route("/confirm_cloud_backup_restore/<int:record_id>", methods=["GET", "POST"])
+@roles_required("root")
+def cloud_backup_restore(record_id):
+    record = db.session.get(ObjectStoreBackupRecord, record_id)
+    if record is None:
+        flash("Backup record not found.", "error")
+        return redirect(url_for("admin.cloud_backup"))
+
+    schedule_entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter_by(name="object-store-cloud-backup")
+        .first()
+    )
+
+    form = CloudBackupRestoreForm(request.form)
+
+    if form.validate_on_submit():
+        tk_name = f"Restore cloud backup: {record.bucket_label}"
+        task_id = register_task(
+            tk_name,
+            owner=current_user,
+            description=f"Restore object-store bucket '{record.bucket_label}' from cloud backup record #{record_id}",
+        )
+
+        celery = current_app.extensions["celery"]
+        restore_task = celery.tasks["app.tasks.object_store_backup.restore_object_store_bucket"]
+        init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+        final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+        error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+        overwrite = form.restore_mode.data == CloudBackupRestoreForm.OVERWRITE_ALL
+        owner_id = schedule_entry.owner_id if schedule_entry else None
+
+        seq = chain(
+            init.si(task_id, tk_name),
+            restore_task.si(
+                task_id=task_id,
+                record_id=record_id,
+                overwrite=overwrite,
+                owner_id=owner_id,
+            ),
+            final.si(task_id, tk_name, current_user.id, notify=True),
+        ).on_error(error.si(task_id, tk_name, current_user.id))
+
+        seq.apply_async(task_id=task_id)
+        flash(f"Restore task dispatched for bucket '{record.bucket_label}'.", "info")
+        return redirect(url_for("admin.cloud_backup"))
+
+    return render_template_context(
+        "admin/backup_dashboard/cloud_backup_restore.html",
+        pane="cloud",
+        form=form,
+        record=record,
+        schedule_entry=schedule_entry,
+    )
+
+
+@admin.route("/confirm_cloud_backup_restore_run/<run_id>", methods=["GET", "POST"])
+@roles_required("root")
+def cloud_backup_restore_run(run_id):
+    records = (
+        db.session.query(ObjectStoreBackupRecord)
+        .filter_by(run_id=run_id)
+        .filter(
+            ObjectStoreBackupRecord.status.in_(
+                [ObjectStoreBackupRecord.SUCCESS, ObjectStoreBackupRecord.PARTIAL]
+            )
+        )
+        .all()
+    )
+    if not records:
+        flash("No completed backup records found for this run.", "warning")
+        return redirect(url_for("admin.cloud_backup"))
+
+    schedule_entry = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter_by(name="object-store-cloud-backup")
+        .first()
+    )
+
+    form = CloudBackupRestoreForm(request.form)
+
+    if form.validate_on_submit():
+        tk_name = f"Restore cloud backup run {run_id[:8]}"
+        task_id = register_task(
+            tk_name,
+            owner=current_user,
+            description=f"Restore all object-store buckets from cloud backup run {run_id}",
+        )
+
+        celery = current_app.extensions["celery"]
+        restore_task = celery.tasks["app.tasks.object_store_backup.restore_all_object_store_buckets"]
+        init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+        final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+        error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+        overwrite = form.restore_mode.data == CloudBackupRestoreForm.OVERWRITE_ALL
+        owner_id = schedule_entry.owner_id if schedule_entry else None
+
+        seq = chain(
+            init.si(task_id, tk_name),
+            restore_task.si(
+                task_id=task_id,
+                run_id=run_id,
+                overwrite=overwrite,
+                owner_id=owner_id,
+            ),
+            final.si(task_id, tk_name, current_user.id, notify=True),
+        ).on_error(error.si(task_id, tk_name, current_user.id))
+
+        seq.apply_async(task_id=task_id)
+        flash(f"Restore task dispatched for run {run_id[:8]}.", "info")
+        return redirect(url_for("admin.cloud_backup"))
+
+    return render_template_context(
+        "admin/backup_dashboard/cloud_backup_restore_run.html",
+        pane="cloud",
+        form=form,
+        run_id=run_id,
+        records=records,
+        schedule_entry=schedule_entry,
     )

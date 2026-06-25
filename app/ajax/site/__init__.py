@@ -10,6 +10,7 @@
 
 from .background_tasks import background_task_data
 from .backups import backups_data
+from .cloud_backups import cloud_backups_data
 from .email_log import email_log_data
 from .email_workflows import email_workflow_data, email_workflow_item_data
 from .scheduled_email import scheduled_email

@@ -47,6 +47,7 @@ from ..models import (
     ProjectClassConfig,
     ScheduleAttempt,
     Tenant,
+    User,
     auto_enrol_year_choices,
     extent_choices,
     matching_history_choices,
@@ -2584,3 +2585,53 @@ class AddEmailTemplateForm(Form, EmailTemplateMixin):
 
 class EditEmailTemplateForm(Form, EmailTemplateMixin, SaveChangesMixin):
     pass
+
+
+class CloudBackupConfigForm(Form):
+    """Edit cloud backup configuration: provider, backup account, root folder."""
+
+    backup_account = QuerySelectField(
+        "Backup account",
+        query_factory=lambda: User.query.filter_by(box_token_valid=True).order_by(User.last_name),
+        get_label=lambda u: f"{u.name} ({u.email})",
+        allow_blank=True,
+        blank_text="— not configured —",
+        description=(
+            "The administrator account whose Box credentials will be used for "
+            "scheduled backups.  The account must have completed Box OAuth authorisation."
+        ),
+    )
+
+    root_folder_id = StringField(
+        "Root folder ID",
+        validators=[
+            DataRequired(message="Please enter a Box folder ID"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+        description=(
+            "The Box folder ID that serves as the backup root.  All per-bucket "
+            "subfolders will be created inside this folder.  Find the folder ID "
+            "in the Box URL when viewing the folder: .../folder/<id>"
+        ),
+    )
+
+    save_config = SubmitField("Save configuration")
+
+
+class CloudBackupRestoreForm(Form):
+    """Confirm a restore operation."""
+
+    SKIP_EXISTING = 0
+    OVERWRITE_ALL = 1
+
+    restore_mode = RadioField(
+        "Restore mode",
+        choices=[
+            (0, "Skip existing objects"),
+            (1, "Overwrite all objects"),
+        ],
+        coerce=int,
+        default=0,
+    )
+
+    confirm = SubmitField("Confirm restore")

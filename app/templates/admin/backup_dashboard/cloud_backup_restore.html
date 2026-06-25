@@ -1,0 +1,44 @@
+{% extends "admin/backup_dashboard/nav.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-warning mt-3 mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <strong>Confirm restore: {{ record.bucket_label or 'unknown bucket' }}</strong>
+                </div>
+                <div class="card-body">
+                    <p>
+                        You are about to restore the <strong>{{ record.bucket_label }}</strong> bucket from
+                        the cloud backup taken on
+                        <strong>{{ record.timestamp.strftime("%a %d %b %Y %H:%M:%S") if record.timestamp else '—' }}</strong>.
+                    </p>
+                    <p>
+                        This run contained <strong>{{ record.object_count_total or 0 }}</strong> object(s)
+                        and uploaded <strong>{{ record.readable_bytes_uploaded }}</strong>.
+                    </p>
+                    <p class="text-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Restoring will write objects back into MinIO. Depending on the restore mode chosen,
+                        existing objects may be overwritten.
+                    </p>
+
+                    <form method="POST" action="{{ url_for('admin.cloud_backup_restore', record_id=record.id) }}">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ wtf.form_field(form.restore_mode) }}
+                        </div>
+                        <div class="d-flex gap-2">
+                            {{ form.confirm(class="btn btn-warning") }}
+                            <a href="{{ url_for('admin.cloud_backup') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

@@ -8,7 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import base64
 import itertools
 from datetime import datetime, timedelta
 from functools import partial
@@ -52,7 +51,7 @@ from ..models import (
     EmailWorkflowItemAttachment,
 )
 from ..models.emails import encode_email_payload
-from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager, encode_nonce
 from ..shared.scratch import ScratchFileManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
@@ -2108,9 +2107,7 @@ def register_scheduling_tasks(celery):
 
                     new_base64_nonce = None
                     if "nonce" in put_result:
-                        new_base64_nonce = base64.urlsafe_b64encode(
-                            put_result["nonce"]
-                        ).decode("ascii")
+                        new_base64_nonce = encode_nonce(put_result["nonce"])
 
                     # must duplicate all fields, including those usually managed by AssetUploadManager
                     new_asset = GeneratedAsset(

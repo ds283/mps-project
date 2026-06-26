@@ -25,6 +25,16 @@ from .cloud_object_store import ObjectMeta, ObjectStore
 _DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
 
 
+def encode_nonce(nonce: bytes) -> str:
+    """Encode a raw nonce to the canonical URL-safe base64 string stored in the database."""
+    return base64.urlsafe_b64encode(nonce).decode("ascii")
+
+
+def decode_nonce(nonce_b64: str) -> bytes:
+    """Decode a canonical URL-safe base64 nonce string from the database to raw bytes."""
+    return base64.urlsafe_b64decode(nonce_b64)
+
+
 class AssetCloudScratchContextManager:
     """
     A context manager for handling temporary asset files in a cloud object store.
@@ -159,7 +169,7 @@ class AssetCloudAdapter:
 
             if self._storage.uses_nonce:
                 base64_nonce = getattr(self._asset, self._nonce_attr)
-                self._nonce = base64.urlsafe_b64decode(base64_nonce)
+                self._nonce = decode_nonce(base64_nonce)
 
     def record(self):
         return self._asset
@@ -361,7 +371,7 @@ class AssetUploadManager:
 
             if hasattr(self._asset, self._nonce_attr):
                 if nonce is not None:
-                    base64_nonce = base64.urlsafe_b64encode(nonce).decode("ascii")
+                    base64_nonce = encode_nonce(nonce)
                 else:
                     base64_nonce = None
                 setattr(self._asset, self._nonce_attr, base64_nonce)

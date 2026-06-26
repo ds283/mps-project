@@ -8,7 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import base64
 import json
 from datetime import datetime
 from io import BytesIO
@@ -23,6 +22,7 @@ from ..database import db
 from ..models import BackupRecord, TaskRecord, User
 from ..models.assets import GeneratedAsset, SubmittedAsset, TemporaryAsset
 from ..models.utilities import ObjectStoreBackupRecord
+from ..shared.asset_tools import decode_nonce, encode_nonce
 from ..shared.cloud_object_store.base import ObjectStore
 from ..shared.cloud_object_store.meta import ObjectMeta
 from ..shared.cloud_storage import CloudItem, CloudStorageLocation
@@ -65,7 +65,7 @@ def _build_nonce_map(bucket_type: int, keys: Set[str]) -> Dict[str, bytes]:
         for row in rows:
             if row.nonce is not None:
                 try:
-                    result[row.unique_name] = base64.b64decode(row.nonce)
+                    result[row.unique_name] = decode_nonce(row.nonce)
                 except Exception:
                     pass
     else:
@@ -75,7 +75,7 @@ def _build_nonce_map(bucket_type: int, keys: Set[str]) -> Dict[str, bytes]:
             for row in rows:
                 if row.nonce is not None and row.unique_name not in result:
                     try:
-                        result[row.unique_name] = base64.b64decode(row.nonce)
+                        result[row.unique_name] = decode_nonce(row.nonce)
                     except Exception:
                         pass
 
@@ -260,7 +260,7 @@ def _do_bucket_restore(
             )
             new_nonce = result.get("nonce") if result else None
             if new_nonce:
-                new_nonce_b64 = base64.b64encode(new_nonce).decode("ascii")
+                new_nonce_b64 = encode_nonce(new_nonce)
                 found = _update_asset_nonce(record.bucket_type, key, new_nonce_b64)
                 if not found:
                     orphaned += 1

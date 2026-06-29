@@ -37,40 +37,18 @@ _status_badge = """
 """
 
 # language=jinja2
-_menu = """
-<div class="dropdown">
-    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
-        Actions
-    </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        {% if r.status in (1, 3) %}
-            <a class="dropdown-item d-flex gap-2 js-restore-bucket"
-               href="{{ url_for('admin.cloud_backup_restore', record_id=r.id) }}"
-               data-record-id="{{ r.id }}"
-               data-run-id="{{ r.run_id[:8] if r.run_id else '' }}"
-               data-bucket="{{ r.bucket_label or '' }}"
-               data-timestamp="{{ r.timestamp.strftime('%a %d %b %Y %H:%M:%S') if r.timestamp else '' }}"
-               data-restore-url="{{ url_for('admin.cloud_backup_restore', record_id=r.id) }}">
-                <i class="fas fa-undo fa-fw"></i> Restore this bucket&hellip;
-            </a>
-            <a class="dropdown-item d-flex gap-2 js-restore-run"
-               href="{{ url_for('admin.cloud_backup_restore_run', run_id=r.run_id) }}"
-               data-run-id="{{ r.run_id[:8] if r.run_id else '' }}"
-               data-timestamp="{{ r.timestamp.strftime('%a %d %b %Y %H:%M:%S') if r.timestamp else '' }}"
-               data-restore-url="{{ url_for('admin.cloud_backup_restore_run', run_id=r.run_id) }}">
-                <i class="fas fa-layer-group fa-fw"></i> Restore all from this run&hellip;
-            </a>
-        {% else %}
-            <span class="dropdown-item text-muted">No restore actions available</span>
-        {% endif %}
-        {% if r.object_count_error and r.error_detail %}
-            <div class="dropdown-divider"></div>
-            <div class="px-3 py-2 small text-muted" style="max-width: 300px; white-space: normal;">
-                {{ r.error_detail[:200] }}
-            </div>
-        {% endif %}
-    </div>
-</div>
+_error_detail = """
+{% if r.object_count_error and r.error_detail %}
+    <span class="badge bg-danger"
+          tabindex="0"
+          data-bs-toggle="popover"
+          data-bs-trigger="focus"
+          data-bs-title="Error detail"
+          data-bs-content="{{ r.error_detail[:400] }}"
+          style="cursor: pointer;">
+        <i class="fas fa-exclamation-triangle me-1"></i>{{ r.object_count_error }} error{{ 's' if r.object_count_error != 1 else '' }}
+    </span>
+{% endif %}
 """
 
 
@@ -85,7 +63,7 @@ def cloud_backups_data(records: List[ObjectStoreBackupRecord]):
             "errors": render_template_string(_errors, r=r),
             "bytes": r.readable_bytes_uploaded,
             "status": render_template_string(_status_badge, r=r),
-            "menu": render_template_string(_menu, r=r),
+            "error_detail": render_template_string(_error_detail, r=r),
         }
         for r in records
     ]

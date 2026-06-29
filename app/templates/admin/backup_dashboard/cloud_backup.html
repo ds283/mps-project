@@ -32,36 +32,19 @@
                     $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
                 },
                 columns: [
-                    {data: 'timestamp',  orderable: true,  searchable: true},
-                    {data: 'run_id',     orderable: false, searchable: false},
-                    {data: 'bucket',     orderable: true,  searchable: false},
-                    {data: 'total',      orderable: true,  searchable: false},
-                    {data: 'uploaded',   orderable: true,  searchable: false},
-                    {data: 'errors',     orderable: true,  searchable: false},
-                    {data: 'bytes',      orderable: true,  searchable: false},
-                    {data: 'status',     orderable: true,  searchable: false},
-                    {data: 'menu',       orderable: false, searchable: false},
+                    {data: 'timestamp',    orderable: true,  searchable: true},
+                    {data: 'run_id',       orderable: false, searchable: false},
+                    {data: 'bucket',       orderable: true,  searchable: false},
+                    {data: 'total',        orderable: true,  searchable: false},
+                    {data: 'uploaded',     orderable: true,  searchable: false},
+                    {data: 'errors',       orderable: true,  searchable: false},
+                    {data: 'bytes',        orderable: true,  searchable: false},
+                    {data: 'status',       orderable: true,  searchable: false},
+                    {data: 'error_detail', orderable: false, searchable: false},
                 ],
                 order: [[0, 'desc']],
             });
 
-            $(document).on('click', '.js-restore-bucket', function(e) {
-                e.preventDefault();
-                var $btn = $(this);
-                $('#restore-run-info').text($btn.data('run-id') + ' — ' + $btn.data('timestamp'));
-                $('#restore-scope').html('<span class="badge bg-secondary">' + $btn.data('bucket') + '</span>');
-                $('#restore-modal-form').attr('action', $btn.data('restore-url'));
-                new bootstrap.Modal(document.getElementById('restoreModal')).show();
-            });
-
-            $(document).on('click', '.js-restore-run', function(e) {
-                e.preventDefault();
-                var $btn = $(this);
-                $('#restore-run-info').text($btn.data('run-id') + ' — ' + $btn.data('timestamp'));
-                $('#restore-scope').text('All buckets in this run');
-                $('#restore-modal-form').attr('action', $btn.data('restore-url'));
-                new bootstrap.Modal(document.getElementById('restoreModal')).show();
-            });
         });
     </script>
 {% endblock %}
@@ -152,6 +135,9 @@
                         <button type="submit" form="run-now-form" class="btn btn-success">
                             <i class="fas fa-play me-1"></i> Run backup now
                         </button>
+                        <a href="{{ url_for('admin.cloud_backup_restore_select') }}" class="btn btn-outline-warning">
+                            <i class="fas fa-undo me-1"></i> Restore from cloud backup&hellip;
+                        </a>
                     </div>
                 </div>
             </div>
@@ -220,7 +206,7 @@
                                 <th>Errors</th>
                                 <th>Bytes</th>
                                 <th>Status</th>
-                                <th></th>
+                                <th>Error detail</th>
                             </tr>
                         </thead>
                     </table>
@@ -231,43 +217,4 @@
         <div class="col-1"></div>
     </div>
 
-    {# ── Section D: Restore confirmation modal ── #}
-    <div class="modal fade" id="restoreModal" tabindex="-1" aria-labelledby="restoreModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="restoreModalLabel">
-                        <i class="fas fa-undo me-2"></i> Confirm restore
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="restore-modal-form" method="POST" action="">
-                    {{ restore_modal_form.hidden_tag() }}
-                    <div class="modal-body">
-                        <dl class="row mb-3">
-                            <dt class="col-4">Source run</dt>
-                            <dd class="col-8" id="restore-run-info">—</dd>
-                            <dt class="col-4">Scope</dt>
-                            <dd class="col-8" id="restore-scope">—</dd>
-                        </dl>
-                        {{ wtf.render_field(restore_modal_form.restore_mode) }}
-                        <div class="alert alert-warning mt-3 mb-2">
-                            <i class="fas fa-exclamation-triangle me-1"></i>
-                            <strong>Re-encryption note:</strong> Objects restored from Box were uploaded without
-                            their original MinIO per-object nonces. New nonces will be generated on next access.
-                        </div>
-                        <p class="small text-muted mb-0">
-                            Objects with no matching database record will be skipped.
-                        </p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-undo me-1"></i> Confirm restore
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 {% endblock %}

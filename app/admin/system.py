@@ -95,7 +95,7 @@ from .forms import (
     AddMessageFormFactory,
     BackupManageForm,
     CloudBackupConfigForm,
-    CloudBackupRestoreForm,
+    CloudBackupRestoreSelectForm,
     EditBackupOptionsForm,
     EditCrontabScheduledTask,
     EditIntervalScheduledTask,
@@ -2418,14 +2418,12 @@ def cloud_backup():
     )
 
     run_now_form = ConfirmActionForm()
-    restore_modal_form = CloudBackupRestoreForm()
 
     return render_template_context(
         "admin/backup_dashboard/cloud_backup.html",
         pane="cloud",
         form=form,
         run_now_form=run_now_form,
-        restore_modal_form=restore_modal_form,
         latest_records=latest_records,
         schedule_entry=schedule_entry,
         cloud_backup_alert=cloud_backup_alert,
@@ -2546,78 +2544,35 @@ def cloud_backup_run_now():
     return redirect(url_for("admin.cloud_backup"))
 
 
-@admin.route("/confirm_cloud_backup_restore/<int:record_id>", methods=["GET", "POST"])
+@admin.route("/cloud_backup_restore_select", methods=["GET", "POST"])
 @roles_required("root")
-def cloud_backup_restore(record_id):
-    record = db.session.get(ObjectStoreBackupRecord, record_id)
-    if record is None:
-        flash("Backup record not found.", "error")
-        return redirect(url_for("admin.cloud_backup"))
-
-    schedule_entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter_by(name="object-store-cloud-backup")
-        .first()
-    )
-
-    form = CloudBackupRestoreForm(request.form)
-
-    if form.validate_on_submit():
-        tk_name = f"Restore cloud backup: {record.bucket_label}"
-        task_id = register_task(
-            tk_name,
-            owner=current_user,
-            description=f"Restore object-store bucket '{record.bucket_label}' from cloud backup record #{record_id}",
+def cloud_backup_restore_select():
+    subq = (
+        db.session.query(
+            ObjectStoreBackupRecord.bucket_type,
+            func.max(ObjectStoreBackupRecord.timestamp).label("max_ts"),
         )
-
-        celery = current_app.extensions["celery"]
-        restore_task = celery.tasks["app.tasks.object_store_backup.restore_object_store_bucket"]
-        init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
-        final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
-        error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
-
-        overwrite = form.restore_mode.data == CloudBackupRestoreForm.OVERWRITE_ALL
-        owner_id = schedule_entry.owner_id if schedule_entry else None
-
-        seq = chain(
-            init.si(task_id, tk_name),
-            restore_task.si(
-                task_id=task_id,
-                record_id=record_id,
-                overwrite=overwrite,
-                owner_id=owner_id,
-            ),
-            final.si(task_id, tk_name, current_user.id, notify=True),
-        ).on_error(error.si(task_id, tk_name, current_user.id))
-
-        seq.apply_async(task_id=task_id)
-        flash(f"Restore task dispatched for bucket '{record.bucket_label}'.", "info")
-        return redirect(url_for("admin.cloud_backup"))
-
-    return render_template_context(
-        "admin/backup_dashboard/cloud_backup_restore.html",
-        pane="cloud",
-        form=form,
-        record=record,
-        schedule_entry=schedule_entry,
-    )
-
-
-@admin.route("/confirm_cloud_backup_restore_run/<run_id>", methods=["GET", "POST"])
-@roles_required("root")
-def cloud_backup_restore_run(run_id):
-    records = (
-        db.session.query(ObjectStoreBackupRecord)
-        .filter_by(run_id=run_id)
         .filter(
             ObjectStoreBackupRecord.status.in_(
                 [ObjectStoreBackupRecord.SUCCESS, ObjectStoreBackupRecord.PARTIAL]
             )
         )
+        .group_by(ObjectStoreBackupRecord.bucket_type)
+        .subquery()
+    )
+    latest_records = (
+        db.session.query(ObjectStoreBackupRecord)
+        .join(
+            subq,
+            (ObjectStoreBackupRecord.bucket_type == subq.c.bucket_type)
+            & (ObjectStoreBackupRecord.timestamp == subq.c.max_ts),
+        )
+        .order_by(ObjectStoreBackupRecord.bucket_label)
         .all()
     )
-    if not records:
-        flash("No completed backup records found for this run.", "warning")
+
+    if not latest_records:
+        flash("No completed cloud backup records found.", "warning")
         return redirect(url_for("admin.cloud_backup"))
 
     schedule_entry = (
@@ -2626,30 +2581,52 @@ def cloud_backup_restore_run(run_id):
         .first()
     )
 
-    form = CloudBackupRestoreForm(request.form)
+    choices = [(r.bucket_type, r.bucket_label or str(r.bucket_type)) for r in latest_records]
+    record_by_type = {r.bucket_type: r for r in latest_records}
+
+    form = CloudBackupRestoreSelectForm(request.form)
+    form.bucket_types.choices = choices
 
     if form.validate_on_submit():
-        tk_name = f"Restore cloud backup run {run_id[:8]}"
+        selected_types = form.bucket_types.data
+        if not selected_types:
+            flash("Please select at least one bucket to restore.", "warning")
+            form.bucket_types.data = [r.bucket_type for r in latest_records]
+            return render_template_context(
+                "admin/backup_dashboard/cloud_backup_restore_select.html",
+                pane="cloud",
+                form=form,
+                latest_records=latest_records,
+                schedule_entry=schedule_entry,
+            )
+
+        selected_record_ids = [record_by_type[bt].id for bt in selected_types if bt in record_by_type]
+        bucket_names = ", ".join(
+            record_by_type[bt].bucket_label or str(bt)
+            for bt in selected_types
+            if bt in record_by_type
+        )
+        tk_name = f"Restore cloud backup: {bucket_names}"
         task_id = register_task(
             tk_name,
             owner=current_user,
-            description=f"Restore all object-store buckets from cloud backup run {run_id}",
+            description=f"Restore object-store buckets from cloud backup: {bucket_names}",
         )
 
         celery = current_app.extensions["celery"]
-        restore_task = celery.tasks["app.tasks.object_store_backup.restore_all_object_store_buckets"]
+        restore_task = celery.tasks["app.tasks.object_store_backup.restore_selected_object_store_buckets"]
         init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
         final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
         error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-        overwrite = form.restore_mode.data == CloudBackupRestoreForm.OVERWRITE_ALL
+        overwrite = form.restore_mode.data == CloudBackupRestoreSelectForm.OVERWRITE_ALL
         owner_id = schedule_entry.owner_id if schedule_entry else None
 
         seq = chain(
             init.si(task_id, tk_name),
             restore_task.si(
                 task_id=task_id,
-                run_id=run_id,
+                record_ids=selected_record_ids,
                 overwrite=overwrite,
                 owner_id=owner_id,
             ),
@@ -2657,14 +2634,14 @@ def cloud_backup_restore_run(run_id):
         ).on_error(error.si(task_id, tk_name, current_user.id))
 
         seq.apply_async(task_id=task_id)
-        flash(f"Restore task dispatched for run {run_id[:8]}.", "info")
+        flash(f"Restore task dispatched for: {bucket_names}.", "info")
         return redirect(url_for("admin.cloud_backup"))
 
+    form.bucket_types.data = [r.bucket_type for r in latest_records]
     return render_template_context(
-        "admin/backup_dashboard/cloud_backup_restore_run.html",
+        "admin/backup_dashboard/cloud_backup_restore_select.html",
         pane="cloud",
         form=form,
-        run_id=run_id,
-        records=records,
+        latest_records=latest_records,
         schedule_entry=schedule_entry,
     )

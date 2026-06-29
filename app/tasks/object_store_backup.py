@@ -516,96 +516,21 @@ def register_object_store_backup_tasks(celery):
             )
 
     @celery.task(bind=True, default_retry_delay=30)
-    def restore_object_store_bucket(
+    def restore_selected_object_store_buckets(
         self,
         task_id: str,
-        record_id: int,
+        record_ids: list,
         overwrite: bool = False,
         owner_id: int = None,
     ):
-        progress_update(task_id, TaskRecord.RUNNING, 5, "Loading backup record...", autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 5, "Loading backup records...", autocommit=True)
 
-        record = db.session.get(ObjectStoreBackupRecord, record_id)
-        if record is None:
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Backup record not found", autocommit=True)
-            return
-
-        owner_user = db.session.get(User, owner_id)
-        if owner_user is None or not owner_user.box_token_valid:
-            progress_update(
-                task_id, TaskRecord.FAILURE, 100,
-                "Owner user is invalid or has no valid cloud storage token",
-                autocommit=True,
-            )
-            return
-
-        object_store = current_app.config["OBJECT_STORAGE_BUCKETS"].get(record.bucket_type)
-        if object_store is None:
-            progress_update(
-                task_id, TaskRecord.FAILURE, 100,
-                f"No object store configured for bucket type {record.bucket_type}",
-                autocommit=True,
-            )
-            return
-
-        root_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER")
-        location = CloudStorageLocation.from_user(
-            provider_name=record.provider_name,
-            user=owner_user,
-            root_ref=root_folder,
-            audit_data="cloud_restore",
-        )
-
-        progress_update(
-            task_id, TaskRecord.RUNNING, 15,
-            f"Listing cloud backup for {record.bucket_label}...",
-            autocommit=True,
-        )
-
-        try:
-            restored, skipped, errors, orphaned, _ = _do_bucket_restore(
-                location, object_store, record, overwrite, owner_user,
-                task_id=task_id, progress_start=15, progress_end=95,
-            )
-        except _CloudAuthError as exc:
-            progress_update(
-                task_id, TaskRecord.FAILURE, 100,
-                f"Cloud storage authentication error: {exc}",
-                autocommit=True,
-            )
-            return
-
-        msg = (
-            f"Restore complete: {record.bucket_label} — "
-            f"{restored} restored, {skipped} skipped, {orphaned} orphaned, {errors} errors."
-        )
-        progress_update(task_id, TaskRecord.SUCCESS, 100, msg, autocommit=True)
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def restore_all_object_store_buckets(
-        self,
-        task_id: str,
-        run_id: str,
-        overwrite: bool = False,
-        owner_id: int = None,
-    ):
-        progress_update(task_id, TaskRecord.RUNNING, 5, "Loading run records...", autocommit=True)
-
-        records = (
-            db.session.query(ObjectStoreBackupRecord)
-            .filter_by(run_id=run_id)
-            .filter(
-                ObjectStoreBackupRecord.status.in_([
-                    ObjectStoreBackupRecord.SUCCESS,
-                    ObjectStoreBackupRecord.PARTIAL,
-                ])
-            )
-            .all()
-        )
+        records = [db.session.get(ObjectStoreBackupRecord, rid) for rid in record_ids]
+        records = [r for r in records if r is not None]
         if not records:
             progress_update(
                 task_id, TaskRecord.FAILURE, 100,
-                "No completed backup records found for this run.",
+                "No valid backup records found for the selected buckets.",
                 autocommit=True,
             )
             return
@@ -676,6 +601,5 @@ def register_object_store_backup_tasks(celery):
     return (
         backup_object_stores,
         backup_single_bucket,
-        restore_object_store_bucket,
-        restore_all_object_store_buckets,
+        restore_selected_object_store_buckets,
     )

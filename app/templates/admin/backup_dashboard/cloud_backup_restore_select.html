@@ -1,0 +1,97 @@
+{% extends "admin/backup_dashboard/nav.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-warning mt-3 mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <strong><i class="fas fa-undo me-2"></i>Restore from cloud backup</strong>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Cloud backups are not versioned.</strong>
+                        Each bucket will always be restored from its <strong>current</strong>
+                        state in cloud storage, not a snapshot from any particular run date.
+                    </div>
+
+                    <form method="POST" action="{{ url_for('admin.cloud_backup_restore_select') }}">
+                        {{ form.hidden_tag() }}
+
+                        <table class="table table-sm table-bordered mb-3">
+                            <thead>
+                                <tr>
+                                    <th style="width: 2.5rem;">
+                                        <input type="checkbox" id="select-all-buckets" checked
+                                               title="Select / deselect all">
+                                    </th>
+                                    <th>Bucket</th>
+                                    <th>Last successful backup</th>
+                                    <th>Objects</th>
+                                    <th>Size uploaded</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in latest_records %}
+                                    <tr>
+                                        <td>
+                                            <input class="bucket-select-row"
+                                                   type="checkbox"
+                                                   name="{{ form.bucket_types.name }}"
+                                                   value="{{ record.bucket_type }}"
+                                                   checked>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ record.bucket_label or '—' }}</span>
+                                        </td>
+                                        <td class="small">
+                                            {{ record.timestamp.strftime("%a %d %b %Y %H:%M") if record.timestamp else '—' }}
+                                        </td>
+                                        <td>{{ record.object_count_total if record.object_count_total is not none else '—' }}</td>
+                                        <td>{{ record.readable_bytes_uploaded }}</td>
+                                        <td>
+                                            {% if record.status == 1 %}
+                                                <span class="badge bg-success">Success</span>
+                                            {% elif record.status == 3 %}
+                                                <span class="badge bg-warning text-dark">Partial</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <div class="mb-3">
+                            {{ wtf.form_field(form.restore_mode) }}
+                        </div>
+
+                        <div class="alert alert-secondary mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <strong>Re-encryption note:</strong> Objects restored from cloud storage were
+                            uploaded without their original MinIO per-object nonces. New nonces will be
+                            assigned on next access. Objects with no matching database record will be skipped.
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.confirm(class="btn btn-warning") }}
+                            <a href="{{ url_for('admin.cloud_backup') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+
+    <script>
+        document.getElementById('select-all-buckets').addEventListener('change', function () {
+            document.querySelectorAll('.bucket-select-row').forEach(function (cb) {
+                cb.checked = this.checked;
+            }.bind(this));
+        });
+    </script>
+{% endblock %}

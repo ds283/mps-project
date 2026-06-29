@@ -20,6 +20,7 @@ from wtforms import (
     IntegerField,
     RadioField,
     SelectField,
+    SelectMultipleField,
     StringField,
     SubmitField,
     TextAreaField,
@@ -2607,11 +2608,13 @@ class CloudBackupConfigForm(Form):
     save_config = SubmitField("Save configuration")
 
 
-class CloudBackupRestoreForm(Form):
-    """Confirm a restore operation."""
+class CloudBackupRestoreSelectForm(Form):
+    """Select buckets for a cloud restore operation."""
 
     SKIP_EXISTING = 0
     OVERWRITE_ALL = 1
+
+    bucket_types = SelectMultipleField("Buckets to restore", coerce=int)
 
     restore_mode = RadioField(
         "Restore mode",
@@ -2623,4 +2626,4 @@ class CloudBackupRestoreForm(Form):
         default=0,
     )
 
-    confirm = SubmitField("Confirm restore")
+    confirm = SubmitField("Restore selected buckets")

@@ -14,6 +14,7 @@ from io import BytesIO
 from typing import Dict, List, Optional, Set
 from uuid import uuid4
 
+from celery import group as cgroup
 from celery.exceptions import Ignore
 from flask import current_app
 
@@ -375,6 +376,11 @@ def register_object_store_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=60)
     def backup_object_stores(self, owner_id: int = None):
+        """
+        Coordinator task: validates credentials, creates per-bucket ObjectStoreBackupRecord
+        rows, then fans out one backup_single_bucket task per bucket to the backup_tasks queue.
+        Returns quickly so the upstream TaskRecord chain completes without blocking.
+        """
         if not current_app.config.get("OBJECT_STORE_BACKUP_ENABLED", False):
             self.update_state(state="DISABLED", meta={"msg": "Object store backup not enabled"})
             raise Ignore()
@@ -386,55 +392,128 @@ def register_object_store_backup_tasks(celery):
             )
             raise Ignore()
 
-        root_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER")
         provider_name = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_PROVIDER", "box")
-        location = CloudStorageLocation.from_user(
-            provider_name=provider_name,
-            user=owner_user,
-            root_ref=root_folder,
-            audit_data="object_store_backup",
-        )
-
         run_id = str(uuid4())
 
         bucket_types = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_BUCKETS", [])
         all_stores: dict = current_app.config.get("OBJECT_STORAGE_BUCKETS", {})
 
+        # Mark any RUNNING records for these buckets as FAILED — they belong to an
+        # interrupted previous run and will never complete.
+        if bucket_types:
+            stale = (
+                db.session.query(ObjectStoreBackupRecord)
+                .filter(
+                    ObjectStoreBackupRecord.bucket_type.in_(bucket_types),
+                    ObjectStoreBackupRecord.status == ObjectStoreBackupRecord.RUNNING,
+                )
+                .all()
+            )
+            for r in stale:
+                r.status = ObjectStoreBackupRecord.FAILED
+                r.error_detail = "Abandoned: new backup run started"
+            if stale:
+                db.session.commit()
+
+        # Create one ObjectStoreBackupRecord per bucket upfront so the dashboard
+        # shows them immediately, then fan out one Celery task per bucket.
+        records: List[ObjectStoreBackupRecord] = []
         for bucket_type in bucket_types:
-            object_store = all_stores.get(bucket_type)
-            if object_store is None:
+            if all_stores.get(bucket_type) is None:
                 current_app.logger.warning(
                     "object_store_backup: no ObjectStore configured for bucket_type=%d; skipping",
                     bucket_type,
                 )
                 continue
-
             record = ObjectStoreBackupRecord(
                 bucket_type=bucket_type,
+                bucket_label=BUCKET_LABEL_MAP.get(bucket_type, str(bucket_type)),
                 status=ObjectStoreBackupRecord.RUNNING,
                 owner_id=owner_id,
                 provider_name=provider_name,
                 run_id=run_id,
             )
             db.session.add(record)
-            db.session.flush()
+            records.append(record)
 
-            try:
-                _do_bucket_backup(location, object_store, bucket_type, run_id, record)
-            except Exception as exc:
-                if location.handle_auth_error(exc, notify_user=owner_user):
-                    record.status = ObjectStoreBackupRecord.FAILED
-                    record.error_detail = str(exc)
-                    db.session.commit()
-                    return
+        db.session.flush()   # populate record.id for all rows
+        db.session.commit()
+
+        if not records:
+            return
+
+        bucket_group = cgroup(
+            backup_single_bucket.si(record_id=record.id, owner_id=owner_id)
+            for record in records
+        )
+        try:
+            bucket_group.apply_async()
+        except Exception as exc:
+            for record in records:
+                record.status = ObjectStoreBackupRecord.FAILED
+                record.error_detail = f"Failed to dispatch backup tasks: {exc}"
+            db.session.commit()
+            raise
+
+    @celery.task(bind=True, default_retry_delay=60)
+    def backup_single_bucket(self, record_id: int, owner_id: int = None):
+        """
+        Per-bucket backup task, routed to the backup_tasks queue.  Backs up one
+        MinIO bucket to cloud storage using the pre-created ObjectStoreBackupRecord
+        identified by *record_id*.
+        """
+        record = db.session.get(ObjectStoreBackupRecord, record_id)
+        if record is None:
+            current_app.logger.error(
+                "object_store_backup: ObjectStoreBackupRecord #%s not found", record_id
+            )
+            return
+
+        owner_user = db.session.get(User, owner_id)
+        if owner_user is None or not owner_user.box_token_valid:
+            record.status = ObjectStoreBackupRecord.FAILED
+            record.error_detail = "Owner user is invalid or has no valid Box token"
+            db.session.commit()
+            current_app.logger.error(
+                "object_store_backup: owner_id=%s is invalid or has no valid Box token", owner_id
+            )
+            return
+
+        bucket_type = record.bucket_type
+        object_store = current_app.config.get("OBJECT_STORAGE_BUCKETS", {}).get(bucket_type)
+        if object_store is None:
+            record.status = ObjectStoreBackupRecord.FAILED
+            record.error_detail = f"No ObjectStore configured for bucket_type={bucket_type}"
+            db.session.commit()
+            current_app.logger.warning(
+                "object_store_backup: no ObjectStore configured for bucket_type=%d; skipping",
+                bucket_type,
+            )
+            return
+
+        root_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER")
+        location = CloudStorageLocation.from_user(
+            provider_name=record.provider_name,
+            user=owner_user,
+            root_ref=root_folder,
+            audit_data="object_store_backup",
+        )
+
+        try:
+            _do_bucket_backup(location, object_store, bucket_type, record.run_id, record)
+        except Exception as exc:
+            if location.handle_auth_error(exc, notify_user=owner_user):
                 record.status = ObjectStoreBackupRecord.FAILED
                 record.error_detail = str(exc)
                 db.session.commit()
-                current_app.logger.exception(
-                    "object_store_backup: unhandled error for bucket_type=%d: %s",
-                    bucket_type, exc,
-                )
-                continue
+                return
+            record.status = ObjectStoreBackupRecord.FAILED
+            record.error_detail = str(exc)
+            db.session.commit()
+            current_app.logger.exception(
+                "object_store_backup: unhandled error for bucket_type=%d: %s",
+                bucket_type, exc,
+            )
 
     @celery.task(bind=True, default_retry_delay=30)
     def restore_object_store_bucket(
@@ -596,6 +675,7 @@ def register_object_store_backup_tasks(celery):
 
     return (
         backup_object_stores,
+        backup_single_bucket,
         restore_object_store_bucket,
         restore_all_object_store_buckets,
     )

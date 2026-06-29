@@ -16,7 +16,11 @@ CELERY = {
     "accept_content": ["json", "pickle"],
     "task_create_missing_queues": True,
     "task_default_queue": "default",
-    "task_routes": {"app.task.ping.ping": {"queue": "priority"}},
+    "task_routes": {
+        "app.task.ping.ping": {"queue": "priority"},
+        "app.tasks.object_store_backup.backup_object_stores": {"queue": "backup_tasks"},
+        "app.tasks.object_store_backup.backup_single_bucket": {"queue": "backup_tasks"},
+    },
     "chord_unlock_max_retries": 100,
     "result_expires": 86400,
 }

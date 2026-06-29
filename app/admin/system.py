@@ -2542,7 +2542,7 @@ def cloud_backup_run_now():
     ).on_error(error.si(task_id, "Cloud backup", current_user.id))
 
     seq.apply_async(task_id=task_id)
-    flash("Cloud backup task dispatched.", "info")
+    flash("Cloud backup dispatched — per-bucket progress is visible in the backup dashboard.", "info")
     return redirect(url_for("admin.cloud_backup"))
 
 

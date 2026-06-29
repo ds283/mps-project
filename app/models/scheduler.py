@@ -130,20 +130,24 @@ class DatabaseSchedulerEntry(db.Model):
     def args(self, value):
         self.arguments = json.dumps(value)
 
+    # Tasks whose `owner_id` is stored in the owner_id column and injected at read time
+    _OWNER_ID_TASKS = frozenset({
+        "app.tasks.backup.backup",
+        "app.tasks.object_store_backup.backup_object_stores",
+    })
+
     @property
     def kwargs(self):
         kwargs_ = json.loads(self.keyword_arguments)
-        if self.task == "app.tasks.backup.backup" and isinstance(kwargs_, dict):
-            if "owner_id" in kwargs_:
-                del kwargs_["owner_id"]
+        if self.task in self._OWNER_ID_TASKS and isinstance(kwargs_, dict):
+            kwargs_.pop("owner_id", None)
             kwargs_["owner_id"] = self.owner_id
         return kwargs_
 
     @kwargs.setter
     def kwargs(self, kwargs_):
-        if self.task == "app.tasks.backup.backup" and isinstance(kwargs_, dict):
-            if "owner_id" in kwargs_:
-                del kwargs_["owner_id"]
+        if self.task in self._OWNER_ID_TASKS and isinstance(kwargs_, dict):
+            kwargs_.pop("owner_id", None)
         self.keyword_arguments = json.dumps(kwargs_)
 
     @property

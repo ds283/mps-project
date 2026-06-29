@@ -1,11 +1,13 @@
 {% extends "admin/backup_dashboard/nav.html" %}
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "select2.html" import import_select2 %}
 {% import "bootstrap/form.html" as wtf %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};

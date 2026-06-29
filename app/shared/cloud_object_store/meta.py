@@ -12,5 +12,6 @@
 class ObjectMeta:
     def __init__(self):
         self.size = None
+        self.etag = None
         self.location = None
         self.mimetype = None

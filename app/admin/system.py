@@ -2493,6 +2493,7 @@ def cloud_backup_ajax():
     }
     total = {"order": ObjectStoreBackupRecord.object_count_total}
     uploaded = {"order": ObjectStoreBackupRecord.object_count_uploaded}
+    skipped = {"order": ObjectStoreBackupRecord.object_count_skipped}
     errors = {"order": ObjectStoreBackupRecord.object_count_error}
     bytes_col = {"order": ObjectStoreBackupRecord.bytes_uploaded}
     status = {"order": ObjectStoreBackupRecord.status}
@@ -2503,6 +2504,7 @@ def cloud_backup_ajax():
         "bucket": bucket,
         "total": total,
         "uploaded": uploaded,
+        "skipped": skipped,
         "errors": errors,
         "bytes": bytes_col,
         "status": status,

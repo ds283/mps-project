@@ -37,6 +37,7 @@
                     {data: 'bucket',       orderable: true,  searchable: false},
                     {data: 'total',        orderable: true,  searchable: false},
                     {data: 'uploaded',     orderable: true,  searchable: false},
+                    {data: 'skipped',      orderable: true,  searchable: false},
                     {data: 'errors',       orderable: true,  searchable: false},
                     {data: 'bytes',        orderable: true,  searchable: false},
                     {data: 'status',       orderable: true,  searchable: false},
@@ -157,6 +158,7 @@
                                     <th>Objects</th>
                                     <th>Uploaded</th>
                                     <th>Skipped</th>
+                                    <th>Orphaned</th>
                                     <th>Errors</th>
                                     <th>Status</th>
                                     <th>Duration</th>
@@ -169,6 +171,11 @@
                                     <td>{{ r.object_count_total or '—' }}</td>
                                     <td>{{ r.object_count_uploaded or 0 }}</td>
                                     <td>{{ r.object_count_skipped or 0 }}</td>
+                                    <td>
+                                        {% if r.object_count_orphaned %}
+                                            <span class="text-warning fw-bold">{{ r.object_count_orphaned }}</span>
+                                        {% else %}0{% endif %}
+                                    </td>
                                     <td>
                                         {% if r.object_count_error %}
                                             <span class="text-danger fw-bold"
@@ -203,6 +210,7 @@
                                 <th>Bucket</th>
                                 <th>Total</th>
                                 <th>Uploaded</th>
+                                <th>Skipped</th>
                                 <th>Errors</th>
                                 <th>Bytes</th>
                                 <th>Status</th>

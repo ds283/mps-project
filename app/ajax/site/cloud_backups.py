@@ -60,6 +60,7 @@ def cloud_backups_data(records: List[ObjectStoreBackupRecord]):
             "bucket": f'<span class="badge bg-secondary">{r.bucket_label or "—"}</span>',
             "total": str(r.object_count_total) if r.object_count_total is not None else "—",
             "uploaded": str(r.object_count_uploaded) if r.object_count_uploaded is not None else "0",
+            "skipped": str(r.object_count_skipped) if r.object_count_skipped is not None else "0",
             "errors": render_template_string(_errors, r=r),
             "bytes": r.readable_bytes_uploaded,
             "status": render_template_string(_status_badge, r=r),

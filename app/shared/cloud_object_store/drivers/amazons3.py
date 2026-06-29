@@ -148,7 +148,7 @@ class AmazonS3CloudStorageDriver:
                 )
                 return data
 
-            data.update({str(obj["Key"]): self.head(obj["Key"]) for obj in contents})
+            data.update({str(obj["Key"]): self._meta_from_list_entry(obj) for obj in contents})
 
             is_truncated = response["IsTruncated"]
             if not is_truncated:
@@ -157,6 +157,13 @@ class AmazonS3CloudStorageDriver:
             continuation_token = response["NextContinuationToken"]
 
         return data
+
+    def _meta_from_list_entry(self, obj: dict) -> ObjectMeta:
+        meta = ObjectMeta()
+        meta.size = obj.get("Size")
+        raw_etag = obj.get("ETag", "")
+        meta.etag = raw_etag.strip('"')  # S3 ETags are wrapped in double-quotes
+        return meta
 
     def head(self, key: Path) -> ObjectMeta:
         key_str = str(key)

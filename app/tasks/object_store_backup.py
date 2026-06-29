@@ -9,6 +9,7 @@
 #
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from io import BytesIO
 from typing import Dict, List, Optional, Set
@@ -313,15 +314,26 @@ def register_object_store_backup_tasks(celery):
             for item in location.list_folder(objects_folder_ref)
         }
         meta_index: Dict[str, dict] = {}
-        for name, item in cloud_items.items():
-            if name.endswith(".meta"):
-                try:
-                    raw = location.download_file(item.ref)
-                    meta_index[name[:-5]] = json.loads(raw.decode("utf-8"))
-                except Exception as exc:
-                    current_app.logger.warning(
-                        "object_store_backup: could not read .meta sidecar %s: %s", name, exc
-                    )
+        _meta_items = [(name, item) for name, item in cloud_items.items() if name.endswith(".meta")]
+        if _meta_items:
+            def _fetch_meta(args):
+                _name, _item = args
+                _raw = location.download_file(_item.ref)
+                return _name[:-5], json.loads(_raw.decode("utf-8"))
+
+            _n_workers = min(20, len(_meta_items))
+            with ThreadPoolExecutor(max_workers=_n_workers) as _pool:
+                _futures = {_pool.submit(_fetch_meta, ni): ni[0] for ni in _meta_items}
+                for _fut in as_completed(_futures):
+                    _sidecar_name = _futures[_fut]
+                    try:
+                        _key, _meta = _fut.result()
+                        meta_index[_key] = _meta
+                    except Exception as exc:
+                        current_app.logger.warning(
+                            "object_store_backup: could not read .meta sidecar %s: %s",
+                            _sidecar_name, exc
+                        )
 
         # Enumerate bucket
         bucket_meta: Dict[str, ObjectMeta] = object_store.list(audit_data="cloud_backup")

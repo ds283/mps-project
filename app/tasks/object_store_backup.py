@@ -318,8 +318,10 @@ def register_object_store_backup_tasks(celery):
                 try:
                     raw = location.download_file(item.ref)
                     meta_index[name[:-5]] = json.loads(raw.decode("utf-8"))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    current_app.logger.warning(
+                        "object_store_backup: could not read .meta sidecar %s: %s", name, exc
+                    )
 
         # Enumerate bucket
         bucket_meta: Dict[str, ObjectMeta] = object_store.list(audit_data="cloud_backup")

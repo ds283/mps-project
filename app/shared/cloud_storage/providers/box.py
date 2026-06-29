@@ -304,9 +304,10 @@ class BoxCloudStorageProvider(CloudStorageProvider):
 
     def download_file(self, file_ref: str) -> bytes:
         """Fetch file content via the Box API using the stored credential."""
-        buf = BytesIO()
-        self._client.downloads.download_file(file_id=file_ref, output_stream=buf)
-        return buf.getvalue()
+        from box_sdk_gen.internal.utils import read_byte_stream
+
+        stream = self._client.downloads.download_file(file_id=file_ref)
+        return read_byte_stream(stream)
 
     def get_shareable_url(
         self,

@@ -316,9 +316,12 @@ def register_object_store_backup_tasks(celery):
         meta_index: Dict[str, dict] = {}
         _meta_items = [(name, item) for name, item in cloud_items.items() if name.endswith(".meta")]
         if _meta_items:
+            _app = current_app._get_current_object()
+
             def _fetch_meta(args):
                 _name, _item = args
-                _raw = location.download_file(_item.ref)
+                with _app.app_context():
+                    _raw = location.download_file(_item.ref)
                 return _name[:-5], json.loads(_raw.decode("utf-8"))
 
             _n_workers = min(20, len(_meta_items))

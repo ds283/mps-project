@@ -1262,6 +1262,10 @@ class ScheduledTaskMixin:
         ),
         ("box-token-maintenance", "Periodic renewal of Box OAuth tokens"),
         ("app.tasks.object_store_backup.backup_object_stores", "Backup ObjectStore buckets to cloud location"),
+        (
+            "app.tasks.object_store_backup.prune_object_store_tombstones",
+            "Prune expired ObjectStore tombstones",
+        ),
     ]
 
     task = SelectField("Task", choices=tasks_available)

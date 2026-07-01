@@ -740,3 +740,72 @@ def ensure_object_store_backup_schedule(app) -> None:
         except SQLAlchemyError as e:
             db.session.rollback()
             app.logger.exception("SQLAlchemyError in ensure_object_store_backup_schedule", exc_info=e)
+
+
+def ensure_tombstone_prune_schedule(app) -> None:
+    """
+    Idempotently register the DatabaseSchedulerEntry for the object-store
+    tombstone pruning Beat task.
+
+    Does nothing if:
+    - OBJECT_STORE_BACKUP_ENABLED is False or absent in app.config.
+    - A DatabaseSchedulerEntry named "object-store-tombstone-prune" already exists.
+    """
+    with app.app_context():
+        if not app.config.get("OBJECT_STORE_BACKUP_ENABLED", False):
+            print("** ObjectStore backup is not enabled, skipping check for scheduled task")
+            return
+
+        existing = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-tombstone-prune").first()
+        if existing is not None:
+            print("** ensure_tombstone_prune_schedule: schedule entry already present")
+            return
+
+        # Daily at 04:30 — after the 03:30 backup run, to avoid overlap
+        crontab = (
+            db.session.query(CrontabSchedule)
+            .filter_by(
+                minute="30",
+                hour="4",
+                day_of_week="*",
+                day_of_month="*",
+                month_of_year="*",
+            )
+            .first()
+        )
+        if crontab is None:
+            crontab = CrontabSchedule(
+                minute="30",
+                hour="4",
+                day_of_week="*",
+                day_of_month="*",
+                month_of_year="*",
+            )
+            db.session.add(crontab)
+            db.session.flush()
+
+        now = datetime.now()
+        entry = DatabaseSchedulerEntry(
+            name="object-store-tombstone-prune",
+            task="app.tasks.object_store_backup.prune_object_store_tombstones",
+            interval_id=None,
+            crontab_id=crontab.id,
+            args=[],
+            kwargs={"retention_days": 90},
+            queue="default",
+            exchange=None,
+            routing_key=None,
+            expires=None,
+            enabled=True,
+            last_run_at=now,
+            total_run_count=0,
+            owner_id=None,
+        )
+        db.session.add(entry)
+
+        try:
+            db.session.commit()
+            print("** ensure_tombstone_prune_schedule: created 'object-store-tombstone-prune' schedule entry")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in ensure_tombstone_prune_schedule", exc_info=e)

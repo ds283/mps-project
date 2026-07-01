@@ -134,6 +134,7 @@ class DatabaseSchedulerEntry(db.Model):
     _OWNER_ID_TASKS = frozenset({
         "app.tasks.backup.backup",
         "app.tasks.object_store_backup.backup_object_stores",
+        "app.tasks.object_store_backup.prune_object_store_tombstones",
     })
 
     @property

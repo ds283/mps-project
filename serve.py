@@ -21,6 +21,7 @@ from initdb import (
     ensure_box_token_schedule,
     ensure_object_store_backup_schedule,
     ensure_roles,
+    ensure_tombstone_prune_schedule,
     initial_populate_database,
     populate_CATS_limits,
 )
@@ -77,6 +78,7 @@ with app.app_context():
     reconcile_background_tasks(app)
     ensure_box_token_schedule(app)
     ensure_object_store_backup_schedule(app)
+    ensure_tombstone_prune_schedule(app)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@
 
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Dict, List, Optional, Set
 from uuid import uuid4
@@ -532,6 +532,94 @@ def register_object_store_backup_tasks(celery):
                 bucket_type, exc,
             )
 
+    @celery.task(bind=True, default_retry_delay=60)
+    def prune_object_store_tombstones(self, retention_days: int = 90, owner_id: int = None):
+        """
+        Periodic maintenance task: deletes tombstoned object/sidecar pairs from
+        each bucket's Box tombstones/ folder once they are older than
+        *retention_days*. Tombstones are written by _handle_tombstones() during
+        backup_single_bucket but never previously expired.
+        """
+        if not current_app.config.get("OBJECT_STORE_BACKUP_ENABLED", False):
+            self.update_state(state="DISABLED", meta={"msg": "Object store backup not enabled"})
+            raise Ignore()
+
+        owner_user = db.session.get(User, owner_id)
+        if owner_user is None or not owner_user.box_token_valid:
+            current_app.logger.error(
+                "prune_object_store_tombstones: owner_id=%s is invalid or has no valid Box token", owner_id
+            )
+            return
+
+        provider_name = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_PROVIDER", "box")
+        root_folder = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_ROOT_FOLDER")
+        location = CloudStorageLocation.from_user(
+            provider_name=provider_name,
+            user=owner_user,
+            root_ref=root_folder,
+            audit_data="object_store_tombstone_prune",
+        )
+
+        cutoff = datetime.now() - timedelta(days=retention_days)
+        bucket_types = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_BUCKETS", [])
+
+        total_deleted = 0
+        total_errors = 0
+
+        for bucket_type in bucket_types:
+            bucket_label = BUCKET_LABEL_MAP.get(bucket_type, str(bucket_type))
+            try:
+                bucket_folder_ref = location.get_or_create_folder(None, bucket_label)
+                tombstone_folder_ref = location.get_or_create_folder(bucket_folder_ref, "tombstones")
+                items = location.list_folder(tombstone_folder_ref)
+            except Exception as exc:
+                total_errors += 1
+                current_app.logger.warning(
+                    "prune_object_store_tombstones: could not list tombstones for bucket %s: %s",
+                    bucket_label, exc,
+                )
+                continue
+
+            # Pair each data file with its .tombstone sidecar, keyed by base filename
+            pairs: Dict[str, Dict[str, CloudItem]] = {}
+            for item in items:
+                if item.name.endswith(".tombstone"):
+                    base_name = item.name[: -len(".tombstone")]
+                    pairs.setdefault(base_name, {})["tombstone"] = item
+                else:
+                    pairs.setdefault(item.name, {})["data"] = item
+
+            deleted = errors = 0
+            for base_name, pair in pairs.items():
+                data_item = pair.get("data")
+                if data_item is None or data_item.modified_at is None:
+                    continue
+                if data_item.modified_at >= cutoff:
+                    continue
+
+                for item in pair.values():
+                    try:
+                        location.delete_file(item.ref)
+                    except Exception as exc:
+                        errors += 1
+                        current_app.logger.warning(
+                            "prune_object_store_tombstones: failed to delete %s in bucket %s: %s",
+                            item.name, bucket_label, exc,
+                        )
+                deleted += 1
+
+            current_app.logger.info(
+                "prune_object_store_tombstones: bucket %s — %d pairs deleted, %d errors",
+                bucket_label, deleted, errors,
+            )
+            total_deleted += deleted
+            total_errors += errors
+
+        current_app.logger.info(
+            "prune_object_store_tombstones: complete — %d pairs deleted, %d errors across %d buckets",
+            total_deleted, total_errors, len(bucket_types),
+        )
+
     @celery.task(bind=True, default_retry_delay=30)
     def restore_selected_object_store_buckets(
         self,
@@ -619,4 +707,5 @@ def register_object_store_backup_tasks(celery):
         backup_object_stores,
         backup_single_bucket,
         restore_selected_object_store_buckets,
+        prune_object_store_tombstones,
     )

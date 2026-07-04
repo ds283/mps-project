@@ -1,4 +1,5 @@
 {% from "labels.html" import simple_label %}
+{% from "macros.html" import truncate %}
 
 {% macro format_confirm_timestamps(req, now) %}
     {% if req.request_timestamp is not none %}

@@ -9,6 +9,7 @@
 #
 
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -320,9 +321,17 @@ def register_object_store_backup_tasks(celery):
 
             def _fetch_meta(args):
                 _name, _item = args
-                with _app.app_context():
-                    _raw = location.download_file(_item.ref)
-                return _name[:-5], json.loads(_raw.decode("utf-8"))
+                _last_exc = None
+                for _attempt in range(3):
+                    try:
+                        with _app.app_context():
+                            _raw = location.download_file(_item.ref)
+                        return _name[:-5], json.loads(_raw.decode("utf-8"))
+                    except Exception as exc:
+                        _last_exc = exc
+                        if _attempt < 2:
+                            time.sleep(2 ** _attempt)
+                raise _last_exc
 
             _n_workers = min(20, len(_meta_items))
             with ThreadPoolExecutor(max_workers=_n_workers) as _pool:
@@ -361,6 +370,10 @@ def register_object_store_backup_tasks(celery):
                 if _is_up_to_date(meta_index.get(filename), len(data)):
                     skipped += 1
                     continue
+                current_app.logger.info(
+                    "object_store_backup: uploading %s (stored_meta=%r, plaintext_size=%d)",
+                    key, meta_index.get(filename), len(data),
+                )
                 _upsert_with_sidecar(location, objects_folder_ref, key, data, cloud_items)
                 bytes_up += len(data)
                 uploaded += 1

@@ -333,7 +333,7 @@ def register_object_store_backup_tasks(celery):
                             time.sleep(2 ** _attempt)
                 raise _last_exc
 
-            _n_workers = min(20, len(_meta_items))
+            _n_workers = min(5, len(_meta_items))
             with ThreadPoolExecutor(max_workers=_n_workers) as _pool:
                 _futures = {_pool.submit(_fetch_meta, ni): ni[0] for ni in _meta_items}
                 for _fut in as_completed(_futures):

@@ -1903,7 +1903,7 @@ def match_dists_view(id):
 
     pclasses = get_automatch_pclasses()
 
-    fsum = lambda x: x[0] + x[1] + x[2]
+    fsum = lambda x: x[0] + x[1]
     query = record.faculty_list_query()
     CATS_tot = [
         fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None))
@@ -2191,9 +2191,9 @@ def match_faculty_view_ajax(id):
         return get_count(record.get_marker_records(row.id))
 
     def sort_workload(row: FacultyData):
-        sup, mark, mod = record.get_faculty_CATS(row, pclass_id=pclass_value)
+        sup, mark = record.get_faculty_CATS(row, pclass_id=pclass_value)
 
-        return sup + mark + mod
+        return sup + mark
 
     name = {"search": search_name, "order": sort_name}
     projects = {"search": search_projects, "order": sort_projects}

@@ -197,7 +197,7 @@ def register_golive_tasks(celery):
             )
 
             def is_full(supervisor_id):
-                sup_CATS, mark_CATS, mod_CATS = accommodate_matching.get_faculty_CATS(
+                sup_CATS, mark_CATS = accommodate_matching.get_faculty_CATS(
                     supervisor_id
                 )
                 project_CATS = config.CATS_supervision

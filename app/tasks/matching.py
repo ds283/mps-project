@@ -1312,7 +1312,7 @@ def _compute_existing_sup_CATS(record, fac_data):
     CATS = 0
 
     for match in record.include_matches:
-        sup, mark, mod = match.get_faculty_CATS(fac_data.id)
+        sup, mark = match.get_faculty_CATS(fac_data.id)
         CATS += sup
 
     return CATS
@@ -1322,7 +1322,7 @@ def _compute_existing_mark_CATS(record, fac_data):
     CATS = 0
 
     for match in record.include_matches:
-        sup, mark, mod = match.get_faculty_CATS(fac_data.id)
+        sup, mark = match.get_faculty_CATS(fac_data.id)
         CATS += mark
 
     return CATS

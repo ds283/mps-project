@@ -254,7 +254,7 @@ def faculty_view_data(
         overassigned = sup_overassigned or mark_overassigned
 
         if show_includes:
-            this_sup, this_mark, this_mod = match_attempt.get_faculty_CATS(
+            this_sup, this_mark = match_attempt.get_faculty_CATS(
                 f, pclass_id=pclass_filter
             )
         else:
@@ -347,7 +347,7 @@ def faculty_view_data(
             if rec is None:
                 continue
 
-            sup, mark, mod = match_attempt.get_faculty_CATS(
+            sup, mark = match_attempt.get_faculty_CATS(
                 f, pclass_id=config.pclass_id
             )
 

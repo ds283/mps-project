@@ -41,6 +41,7 @@ from ..models import (
     Project,
     ProjectClass,
     ProjectClassConfig,
+    ResearchGroup,
     SelectingStudent,
     SelectionRecord,
     StudentData,
@@ -1329,7 +1330,11 @@ def _compute_existing_mark_CATS(record, fac_data):
 
 
 def _enumerate_submissions_for_markers(
-    self, configs: List[ProjectClassConfig], task_id, user: User, baseline_cats: Optional[Dict[int, float]] = None
+    self,
+    configs: List[ProjectClassConfig],
+    task_id,
+    user: User,
+    baseline_cats: Optional[Dict[int, float]] = None,
 ):
     number_to_marker = {}
     marker_to_number = {}
@@ -1404,7 +1409,8 @@ def _enumerate_submissions_for_markers(
                         autocommit=True,
                     )
                     self.update_state(
-                        "FAILURE", meta={"msg": "LiveProject did not have active assessors"}
+                        "FAILURE",
+                        meta={"msg": "LiveProject did not have active assessors"},
                     )
                     return None
 
@@ -3538,9 +3544,7 @@ def _execute_marker_problem(
                 user=user,
             )
             user.post_message(
-                "Populated {num} marker assignments".format(
-                    num=number_populated
-                ),
+                "Populated {num} marker assignments".format(num=number_populated),
                 "success",
                 autocommit=True,
             )
@@ -4029,7 +4033,9 @@ def register_matching_tasks(celery):
         missing = set(config_ids) - {c.id for c in configs}
         if missing:
             current_app.logger.warning(
-                "populate_markers: could not load ProjectClassConfig ids {ids}".format(ids=missing)
+                "populate_markers: could not load ProjectClassConfig ids {ids}".format(
+                    ids=missing
+                )
             )
 
         if user is None:
@@ -4062,7 +4068,9 @@ def register_matching_tasks(celery):
                     if period.retired or period.closed or _feedback_open:
                         continue
                     for rec in period.submissions:
-                        for role in [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]:
+                        for role in [
+                            r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER
+                        ]:
                             db.session.delete(role)
             db.session.flush()
         except SQLAlchemyError as e:
@@ -4145,7 +4153,9 @@ def register_matching_tasks(celery):
                                 f"populate_markers: ambiguous faculty match for '{last}, {first}' in CATS spreadsheet"
                             )
             except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError parsing CATS spreadsheet", exc_info=e)
+                current_app.logger.exception(
+                    "SQLAlchemyError parsing CATS spreadsheet", exc_info=e
+                )
                 # fall back to default CATS computation rather than failing the whole task
 
         elif mode == 2 and baseline_cats is not None:
@@ -5180,6 +5190,7 @@ def register_matching_tasks(celery):
                 su: User = sd.user
                 programme: DegreeProgramme = sd.programme
                 proj: LiveProject = item.project
+                group: ResearchGroup = None if proj is None else proj.group
                 config: ProjectClassConfig = sel.config
                 ofd: FacultyData = proj.owner
                 ou: User = None if ofd is None else ofd.user
@@ -5204,6 +5215,7 @@ def register_matching_tasks(celery):
                     "is_optional": sel.is_optional,
                     "is_valid_selection": sel.is_valid_selection[0],
                     "allocated_project": proj.name,
+                    "research_group": None if group is None else group.abbreviation,
                     "use_supervisor_pool": proj.use_supervisor_pool,
                     "owner_last": None if ou is None else ou.last_name,
                     "owner_first": None if ou is None else ou.first_name,

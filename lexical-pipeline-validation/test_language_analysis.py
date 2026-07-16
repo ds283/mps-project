@@ -7,25 +7,34 @@ and reference/figure/table detection from app/tasks/language_analysis.py
 WITHOUT submitting anything to an LLM.
 
 Usage:
-    python test_language_analysis.py <path-to-pdf>
+    python test_language_analysis.py [--student FILE] <path-to-pdf>
 
     Run inside arxiv_analysis_venv for the full set of metrics including
     spaCy-based burstiness and sentence-length CV:
 
         arxiv_analysis_venv/bin/python test_language_analysis.py <path-to-pdf>
 
+    --student FILE   Student report Excel file used as the pre-LLM calibration
+                     sample for the Mahalanobis AI-risk classification
+                     [default: mahalanobis_core.STUDENT_FILE]
+
 Outputs verbose diagnostics for each stage, including the raw bibliography
 text and matched/unmatched entries to help diagnose reference-counting failures.
 
 All algorithm implementations live in language_analysis_core.py.  This script
 adds diagnostic-only output (verbose bibliography matching, document-split
-tracing, etc.) on top of the core functions.
+tracing, etc.) on top of the core functions.  The Mahalanobis-distance-based
+AI risk classification (replacing the legacy literature-threshold vote) is
+shared with lexical_diversity_pipeline.py via mahalanobis_core.py.
 """
 
+import argparse
 import re
 import sys
 import textwrap
 from pathlib import Path
+
+import pandas as pd
 
 # All shared algorithm code lives in language_analysis_core.
 from language_analysis_core import (
@@ -59,6 +68,15 @@ from language_analysis_core import (
     compute_burstiness,
     compute_sentence_cv,
     count_patterns,
+)
+
+# Mahalanobis AI-risk classification, shared with lexical_diversity_pipeline.py.
+from mahalanobis_core import (
+    STUDENT_FILE,
+    split_cohorts,
+    build_reference,
+    mahal_dist,
+    classify_mahalanobis,
 )
 
 # ---------------------------------------------------------------------------
@@ -196,12 +214,19 @@ def _hr(title=""):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python test_language_analysis.py <path-to-pdf>")
-        print("       arxiv_analysis_venv/bin/python test_language_analysis.py <path-to-pdf>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Standalone diagnostic script for the language analysis pipeline"
+    )
+    parser.add_argument("pdf_path", help="Path to the PDF to analyse")
+    parser.add_argument(
+        "--student",
+        default=STUDENT_FILE,
+        help=f"Student report Excel file used as the pre-LLM calibration sample "
+        f"[default: {STUDENT_FILE}]",
+    )
+    args = parser.parse_args()
 
-    pdf_path = sys.argv[1]
+    pdf_path = args.pdf_path
     if not Path(pdf_path).exists():
         print(f"File not found: {pdf_path}")
         sys.exit(1)
@@ -336,37 +361,26 @@ def main():
             print(f"  {cnt:3d}  {pat}")
     print(f"Em-dashes / triple-hyphens: {patterns['em_dash_count']}")
 
-    # ---- Stage 11: AI concern summary ----------------------------------------
-    _hr("STAGE 11: AI CONCERN SUMMARY")
-    mattr_flag     = classify_mattr(mattr)
-    mtld_flag      = classify_mtld(mtld)
-    burst_flag     = classify_burstiness(burstiness)
-    sent_cv_flag   = classify_sentence_cv(sentence_cv)
-
-    print(f"  MATTR flag       : {mattr_flag}")
-    print(f"  MTLD flag        : {mtld_flag}")
-    print(f"  Burstiness flag  : {burst_flag}")
-    print(f"  Sentence CV flag : {sent_cv_flag}")
-    if not spacy_available:
-        print()
-        print("  NOTE: Burstiness and sentence CV were not computed (spaCy unavailable).")
-        print("  Run inside arxiv_analysis_venv/bin/python for the full 4-metric assessment.")
-    print()
-
-    flags = [mattr_flag, mtld_flag, burst_flag, sent_cv_flag]
-    outside = sum(1 for f in flags if f in ("note", "strong"))
-    strong_count = sum(1 for f in flags if f == "strong")
-    unknown_count = sum(1 for f in flags if f == "unknown")
-
-    if strong_count >= 2 or outside >= 3:
-        concern = "HIGH"
-    elif strong_count >= 1 or outside >= 2:
-        concern = "MEDIUM"
+    # ---- Stage 11: AI risk classification (Mahalanobis) ---------------------
+    _hr("STAGE 11: AI RISK CLASSIFICATION (Mahalanobis distance)")
+    if mattr is None or mtld is None or sentence_cv is None:
+        print("  Cannot compute Mahalanobis distance — MATTR, MTLD, and sentence CV")
+        print("  are all required, and at least one is unavailable for this document.")
+        if not spacy_available:
+            print("  Run inside arxiv_analysis_venv/bin/python to compute sentence CV.")
     else:
-        concern = "LOW"
+        print(f"Loading pre-LLM calibration sample from {args.student!r}...")
+        student = pd.read_excel(args.student, header=0)
+        student_main, pre, post, trans = split_cohorts(student)
+        mean_3, std_3, corr_3, inv_corr = build_reference(pre)
 
-    qualifier = " (partial — spaCy metrics unavailable)" if unknown_count >= 2 and not spacy_available else ""
-    print(f"  AI concern: {concern}{qualifier}")
+        row = pd.DataFrame([{"MATTR": mattr, "MTLD": mtld, "CV": sentence_cv}])
+        sigma = mahal_dist(row, mean_3, std_3, inv_corr)[0]
+        p_value, label = classify_mahalanobis(sigma)
+
+        print(f"\n  Mahalanobis σ : {sigma:.4f}")
+        print(f"  p-value       : {p_value:.6f}")
+        print(f"  AI risk       : {label.upper()}")
 
     _hr("DONE")
 

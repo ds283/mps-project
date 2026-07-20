@@ -11,10 +11,10 @@
 from datetime import datetime
 
 from ..database import db
-from ..models import JOURNAL_TYPE_NOTE, MainConfig, StudentJournalEntry
+from ..models import MainConfig, StudentJournalEntry
 
 
-def create_auto_journal_entry(student, html_content, title=None, project_class_config=None, entry_type=JOURNAL_TYPE_NOTE):
+def create_auto_journal_entry(student, html_content, title=None, project_class_config=None, entry_type=StudentJournalEntry.JOURNAL_TYPE_NOTE):
     """
     Create an automatically-generated journal entry for a student with no owner.
 

@@ -32,12 +32,12 @@ from ..database import db
 from ..models import (
     DegreeProgramme,
     DegreeType,
-    JOURNAL_TYPE_DELETION,
     ProjectClass,
     ProjectClassConfig,
     ResearchGroup,
     SelectingStudent,
     StudentData,
+    StudentJournalEntry,
     User,
 )
 from ..shared.context.convenor_dashboard import (
@@ -880,7 +880,7 @@ def delete_selector(sid):
                 student, journal_html,
                 title=f"Selector record deleted: {pclass.name} ({year_str})",
                 project_class_config=config,
-                entry_type=JOURNAL_TYPE_DELETION,
+                entry_type=StudentJournalEntry.JOURNAL_TYPE_DELETION,
             )
 
             log_db_commit(

@@ -16,48 +16,7 @@ from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 from ..database import db
 from . import DEFAULT_STRING_LENGTH
 from .config import get_AES_key
-
-# Entry type codes
-JOURNAL_TYPE_NOTE = 0
-JOURNAL_TYPE_COMMUNICATION = 1
-JOURNAL_TYPE_STATUS_CHANGE = 2
-JOURNAL_TYPE_ENROLMENT = 3
-JOURNAL_TYPE_DELETION = 4
-
-# Icon + colour metadata for each entry type, keyed by the integer code above.
-# 'colour' is the foreground/icon colour; 'background' is the subtle badge background.
-JOURNAL_TYPE_DISPLAY = {
-    JOURNAL_TYPE_NOTE: {
-        "label": "Note",
-        "icon": "fa-sticky-note",
-        "colour": "#555a61",
-        "background": "#e9ebee",
-    },
-    JOURNAL_TYPE_COMMUNICATION: {
-        "label": "Communication",
-        "icon": "fa-envelope",
-        "colour": "#3f51d6",
-        "background": "#e7ecff",
-    },
-    JOURNAL_TYPE_STATUS_CHANGE: {
-        "label": "Status change",
-        "icon": "fa-exchange-alt",
-        "colour": "#b5730d",
-        "background": "#fdeccf",
-    },
-    JOURNAL_TYPE_ENROLMENT: {
-        "label": "Enrolment",
-        "icon": "fa-user-plus",
-        "colour": "#0b8794",
-        "background": "#d8f3f5",
-    },
-    JOURNAL_TYPE_DELETION: {
-        "label": "Deletion",
-        "icon": "fa-trash",
-        "colour": "#c23b2c",
-        "background": "#fbe0dd",
-    },
-}
+from .model_mixins import JournalEntryTypesMixin
 
 # Association table linking StudentJournalEntry to ProjectClassConfig (many-to-many)
 journal_entry_to_pclass_config = db.Table(
@@ -95,7 +54,7 @@ student_journal_entry_read = db.Table(
 )
 
 
-class StudentJournalEntry(db.Model):
+class StudentJournalEntry(db.Model, JournalEntryTypesMixin):
     """
     Records a single journal entry associated with a student.
 
@@ -180,8 +139,8 @@ class StudentJournalEntry(db.Model):
     )
 
     # Type of entry (note, communication, status change, enrolment, deletion) --
-    # see JOURNAL_TYPE_* constants and JOURNAL_TYPE_DISPLAY above.
-    entry_type = db.Column(db.Integer(), default=JOURNAL_TYPE_NOTE, nullable=False)
+    # see JournalEntryTypesMixin for the JOURNAL_TYPE_* constants and JOURNAL_TYPE_DISPLAY.
+    entry_type = db.Column(db.Integer(), default=JournalEntryTypesMixin.JOURNAL_TYPE_NOTE, nullable=False)
 
     # Restricted entries are visible only to their owner and to convenors/admins
     # of the entry's linked project class(es); see is_visible_to() below.
@@ -192,7 +151,7 @@ class StudentJournalEntry(db.Model):
         """
         Icon/colour/label metadata for this entry's type.
         """
-        return JOURNAL_TYPE_DISPLAY.get(self.entry_type, JOURNAL_TYPE_DISPLAY[JOURNAL_TYPE_NOTE])
+        return self.JOURNAL_TYPE_DISPLAY.get(self.entry_type, self.JOURNAL_TYPE_DISPLAY[self.JOURNAL_TYPE_NOTE])
 
     @property
     def type_label(self) -> str:

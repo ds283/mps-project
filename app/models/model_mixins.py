@@ -1342,6 +1342,54 @@ class SubmissionAttachmentTypesMixin:
         return None
 
 
+class JournalEntryTypesMixin:
+    """
+    Single point of definition for StudentJournalEntry entry types, and the icon/colour
+    metadata used to render them consistently wherever they appear.
+    """
+
+    JOURNAL_TYPE_NOTE = 0
+    JOURNAL_TYPE_COMMUNICATION = 1
+    JOURNAL_TYPE_STATUS_CHANGE = 2
+    JOURNAL_TYPE_ENROLMENT = 3
+    JOURNAL_TYPE_DELETION = 4
+
+    # icon/colour/label metadata for each entry type, keyed by the constants above.
+    # 'colour' is the foreground/icon colour; 'background' is the subtle badge background.
+    JOURNAL_TYPE_DISPLAY = {
+        JOURNAL_TYPE_NOTE: {
+            "label": "Note",
+            "icon": "fa-sticky-note",
+            "colour": "#555a61",
+            "background": "#e9ebee",
+        },
+        JOURNAL_TYPE_COMMUNICATION: {
+            "label": "Communication",
+            "icon": "fa-envelope",
+            "colour": "#3f51d6",
+            "background": "#e7ecff",
+        },
+        JOURNAL_TYPE_STATUS_CHANGE: {
+            "label": "Status change",
+            "icon": "fa-exchange-alt",
+            "colour": "#b5730d",
+            "background": "#fdeccf",
+        },
+        JOURNAL_TYPE_ENROLMENT: {
+            "label": "Enrolment",
+            "icon": "fa-user-plus",
+            "colour": "#0b8794",
+            "background": "#d8f3f5",
+        },
+        JOURNAL_TYPE_DELETION: {
+            "label": "Deletion",
+            "icon": "fa-trash",
+            "colour": "#c23b2c",
+            "background": "#fbe0dd",
+        },
+    }
+
+
 class SelectHintTypesMixin:
     """
     Single point of definition for hint types associated with student selections

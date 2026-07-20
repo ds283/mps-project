@@ -32,13 +32,13 @@ from ..models import (
     CustomOffer,
     CustomOfferHint,
     FilterRecord,
-    JOURNAL_TYPE_STATUS_CHANGE,
     LiveProject,
     ProjectClass,
     ProjectClassConfig,
     ResearchGroup,
     SelectingStudent,
     SelectionRecord,
+    StudentJournalEntry,
     TransferableSkill,
 )
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
@@ -1096,7 +1096,7 @@ def create_custom_offer(sel_id, proj_id):
                 html,
                 title=f"Custom offer created: {proj.name}",
                 project_class_config=config,
-                entry_type=JOURNAL_TYPE_STATUS_CHANGE,
+                entry_type=StudentJournalEntry.JOURNAL_TYPE_STATUS_CHANGE,
             )
 
             log_db_commit(
@@ -1356,7 +1356,7 @@ def delete_custom_offer(offer_id):
             journal_html,
             title=f"Custom offer deleted: {_offer_project_name}",
             project_class_config=_offer_config,
-            entry_type=JOURNAL_TYPE_STATUS_CHANGE,
+            entry_type=StudentJournalEntry.JOURNAL_TYPE_STATUS_CHANGE,
         )
 
         log_db_commit(
@@ -1486,7 +1486,7 @@ def accept_custom_offer_hint(hint_id):
                 journal_html,
                 title=f"Custom offer created (from hint): {lp.name}",
                 project_class_config=config,
-                entry_type=JOURNAL_TYPE_STATUS_CHANGE,
+                entry_type=StudentJournalEntry.JOURNAL_TYPE_STATUS_CHANGE,
             )
             offers_created += 1
 

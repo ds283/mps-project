@@ -43,8 +43,8 @@ docker compose up -d
 # Lint with ruff
 ruff check .
 
-# Format with black (150 char line length)
-black .
+# Format with ruff (150 char line length)
+ruff format --line-length 150
 ```
 
 There is no project-level test suite.

@@ -33,6 +33,10 @@
                             <em>Untitled entry</em>
                         {% endif %}
                     </span>
+                    <span class="badge d-inline-flex align-items-center gap-1"
+                          style="color: {{ entry.type_colour }}; background-color: {{ entry.type_background }};">
+                        <i class="fas {{ entry.type_icon }}"></i> {{ entry.type_label }}
+                    </span>
                 </div>
                 <div class="d-flex flex-row align-items-center gap-2 small">
                     {% if entry.owner is not none %}
@@ -63,6 +67,15 @@
                     {% else %}
                         <div class="small text-secondary"><em>Unknown</em></div>
                     {% endif %}
+                </div>
+
+                {# Type #}
+                <div class="d-flex flex-column gap-1">
+                    <div class="small text-body-secondary fw-semibold text-uppercase">Type</div>
+                    <div class="small">
+                        <i class="fas {{ entry.type_icon }} fa-fw me-1" style="color: {{ entry.type_colour }};"></i>
+                        {{ entry.type_label }}
+                    </div>
                 </div>
 
                 {# Last edited timestamp #}

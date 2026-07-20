@@ -1456,7 +1456,7 @@ def _build_journal_pclass_config_query(user):
     else:
         # convenor: only pclasses they manage (convenor or co-convenor)
         faculty_data = user.faculty_data
-        convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
+        convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_list] if faculty_data else []
 
         def query_factory():
             if not convenor_pclass_ids:

@@ -42,6 +42,14 @@ _classes = """
 """
 
 # language=jinja2
+_type = """
+<span class="badge d-inline-flex align-items-center gap-1"
+      style="color: {{ entry.type_colour }}; background-color: {{ entry.type_background }};">
+    <i class="fas {{ entry.type_icon }}"></i> {{ entry.type_label }}
+</span>
+"""
+
+# language=jinja2
 _title = """
 <a class="text-decoration-none"
    href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=return_url, text=return_text) }}">
@@ -101,6 +109,7 @@ def journal_data(entries: List[StudentJournalEntry], return_url: str = None, ret
     timestamp_templ: Template = _build_templ(_timestamp)
     year_templ: Template = _build_templ(_year)
     classes_templ: Template = _build_templ(_classes)
+    type_templ: Template = _build_templ(_type)
     title_templ: Template = _build_templ(_title)
     owner_templ: Template = _build_templ(_owner)
     menu_templ: Template = _build_templ(_menu)
@@ -110,6 +119,7 @@ def journal_data(entries: List[StudentJournalEntry], return_url: str = None, ret
             "timestamp": render_template(timestamp_templ, entry=e),
             "year": render_template(year_templ, entry=e),
             "classes": render_template(classes_templ, entry=e),
+            "type": render_template(type_templ, entry=e),
             "title": render_template(title_templ, entry=e, return_url=return_url, return_text=return_text),
             "owner": render_template(owner_templ, entry=e),
             "actions": render_template(menu_templ, entry=e, current_user=current_user, return_url=return_url, return_text=return_text),

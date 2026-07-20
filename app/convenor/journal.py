@@ -10,7 +10,7 @@
 
 from datetime import datetime
 
-from flask import current_app, flash, redirect, request, url_for
+from flask import abort, current_app, flash, redirect, request, url_for
 from flask_security import current_user, roles_accepted
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -20,12 +20,9 @@ from app.convenor import convenor
 
 from ..database import db
 from ..models import (
-    ProjectClass,
-    ProjectClassConfig,
     StudentData,
     StudentJournalEntry,
     User,
-    journal_entry_to_pclass_config,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import get_current_year, redirect_url
@@ -67,32 +64,6 @@ def _check_access(student):
     return True
 
 
-def _build_convenor_entry_filter(base_query):
-    """
-    For convenor users, restrict the base query to entries linked to pclasses the
-    current user convenes or co-convenes.
-    """
-    faculty_data = current_user.faculty_data
-    convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
-
-    if not convenor_pclass_ids:
-        # Convenor with no project classes: show nothing
-        return base_query.filter(False)
-
-    return (
-        base_query.join(
-            journal_entry_to_pclass_config,
-            journal_entry_to_pclass_config.c.entry_id == StudentJournalEntry.id,
-        )
-        .join(
-            ProjectClassConfig,
-            ProjectClassConfig.id == journal_entry_to_pclass_config.c.config_id,
-        )
-        .filter(ProjectClassConfig.pclass_id.in_(convenor_pclass_ids))
-        .distinct()
-    )
-
-
 @convenor.route("/student_journal/<int:student_id>")
 @roles_accepted(*_ROLES)
 def student_journal_inspector(student_id):
@@ -120,19 +91,13 @@ def student_journal_ajax(student_id):
     if not _check_access(student):
         return redirect(redirect_url())
 
-    base_query = (
-        db.session.query(StudentJournalEntry)
-        .join(User, User.id == StudentJournalEntry.owner_id, isouter=True)
-        .filter(StudentJournalEntry.student_id == student_id)
-    )
-
-    if not (current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office")):
-        base_query = _build_convenor_entry_filter(base_query)
+    base_query = student.visible_journal_entries(current_user).join(User, User.id == StudentJournalEntry.owner_id, isouter=True)
 
     columns = {
         "timestamp": {"order": StudentJournalEntry.created_timestamp},
         "year": {"order": StudentJournalEntry.config_year},
         "classes": {},
+        "type": {"order": StudentJournalEntry.entry_type},
         "title": {
             "order": StudentJournalEntry.title,
             "search": StudentJournalEntry.title,
@@ -175,6 +140,12 @@ def view_journal_entry(entry_id):
 
     if not _check_access(student):
         return redirect(redirect_url())
+
+    if not entry.is_visible_to(current_user):
+        abort(403)
+
+    entry.mark_read(current_user)
+    db.session.commit()
 
     url = request.args.get("url", url_for("convenor.student_journal_inspector", student_id=student.id))
     text = request.args.get("text", "Back to journal")

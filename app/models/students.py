@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -575,6 +576,82 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     @property
     def has_active_availability_events(self):
         return get_count(self.active_availability_events) > 0
+
+    def visible_journal_entries(self, user):
+        """
+        Return this student's journal entries visible to `user`, as a (dynamic) query.
+
+        Encodes the same visibility rule as StudentJournalEntry.is_visible_to(), but
+        expressed at the query level so it can be filtered/counted efficiently without
+        decrypting entry bodies. Unrestricted entries are visible to any convenor/admin
+        who can see this student; restricted entries are visible only to their owner or
+        to a convenor of one of the entry's linked project class(es).
+        """
+        from .journal import StudentJournalEntry, journal_entry_to_pclass_config
+        from .project_class import ProjectClassConfig
+
+        base_query = self.journal_entries
+
+        if user is None or not getattr(user, "is_authenticated", False):
+            return base_query.filter(False)
+
+        if user.has_role("root"):
+            return base_query
+
+        if user.has_role("admin") or user.has_role("office"):
+            if self.user is not None:
+                student_tenant_ids = {t.id for t in self.user.tenants}
+                user_tenant_ids = {t.id for t in user.tenants}
+                if not student_tenant_ids.intersection(user_tenant_ids):
+                    return base_query.filter(False)
+            return base_query
+
+        faculty_data = getattr(user, "faculty_data", None)
+        if faculty_data is None or not faculty_data.is_convenor:
+            return base_query.filter(False)
+
+        convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_list]
+
+        restricted_visible_ids = db.session.query(journal_entry_to_pclass_config.c.entry_id)
+        if convenor_pclass_ids:
+            restricted_visible_ids = restricted_visible_ids.join(
+                ProjectClassConfig,
+                ProjectClassConfig.id == journal_entry_to_pclass_config.c.config_id,
+            ).filter(ProjectClassConfig.pclass_id.in_(convenor_pclass_ids))
+        else:
+            restricted_visible_ids = restricted_visible_ids.filter(False)
+
+        return base_query.filter(
+            db.or_(
+                StudentJournalEntry.restricted.is_(False),
+                StudentJournalEntry.owner_id == user.id,
+                StudentJournalEntry.id.in_(restricted_visible_ids),
+            )
+        )
+
+    def journal_counts(self, user) -> dict:
+        """
+        Return {'visible', 'unread', 'recent'} counts for this student's journal, scoped
+        to entries visible to `user`. 'recent' = created within the last 30 days. Does
+        not decrypt entry title/body content.
+        """
+        from .journal import StudentJournalEntry, student_journal_entry_read
+
+        visible_query = self.visible_journal_entries(user)
+
+        visible_count = visible_query.count()
+        if visible_count == 0:
+            return {"visible": 0, "unread": 0, "recent": 0}
+
+        cutoff = datetime.now() - timedelta(days=30)
+        recent_count = visible_query.filter(StudentJournalEntry.created_timestamp >= cutoff).count()
+
+        unread_count = 0
+        if user is not None and getattr(user, "id", None) is not None:
+            read_entry_ids = db.session.query(student_journal_entry_read.c.entry_id).filter(student_journal_entry_read.c.user_id == user.id)
+            unread_count = visible_query.filter(~StudentJournalEntry.id.in_(read_entry_ids)).count()
+
+        return {"visible": visible_count, "unread": unread_count, "recent": recent_count}
 
     def maintenance(self):
         edited = False

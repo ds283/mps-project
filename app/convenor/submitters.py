@@ -33,6 +33,7 @@ from ..models import (
     DegreeProgramme,
     DegreeType,
     GeneratedAsset,
+    JOURNAL_TYPE_DELETION,
     MarkingEvent,
     MarkingReport,
     MarkingWorkflow,
@@ -786,6 +787,7 @@ def delete_submitter(sid):
                 student, journal_html,
                 title=f"Submitter record deleted: {pclass.name} ({year_str})",
                 project_class_config=config,
+                entry_type=JOURNAL_TYPE_DELETION,
             )
 
             log_db_commit(

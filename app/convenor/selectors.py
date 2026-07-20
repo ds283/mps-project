@@ -32,6 +32,7 @@ from ..database import db
 from ..models import (
     DegreeProgramme,
     DegreeType,
+    JOURNAL_TYPE_DELETION,
     ProjectClass,
     ProjectClassConfig,
     ResearchGroup,
@@ -879,6 +880,7 @@ def delete_selector(sid):
                 student, journal_html,
                 title=f"Selector record deleted: {pclass.name} ({year_str})",
                 project_class_config=config,
+                entry_type=JOURNAL_TYPE_DELETION,
             )
 
             log_db_commit(

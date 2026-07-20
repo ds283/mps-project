@@ -17,6 +17,48 @@ from ..database import db
 from . import DEFAULT_STRING_LENGTH
 from .config import get_AES_key
 
+# Entry type codes
+JOURNAL_TYPE_NOTE = 0
+JOURNAL_TYPE_COMMUNICATION = 1
+JOURNAL_TYPE_STATUS_CHANGE = 2
+JOURNAL_TYPE_ENROLMENT = 3
+JOURNAL_TYPE_DELETION = 4
+
+# Icon + colour metadata for each entry type, keyed by the integer code above.
+# 'colour' is the foreground/icon colour; 'background' is the subtle badge background.
+JOURNAL_TYPE_DISPLAY = {
+    JOURNAL_TYPE_NOTE: {
+        "label": "Note",
+        "icon": "fa-sticky-note",
+        "colour": "#555a61",
+        "background": "#e9ebee",
+    },
+    JOURNAL_TYPE_COMMUNICATION: {
+        "label": "Communication",
+        "icon": "fa-envelope",
+        "colour": "#3f51d6",
+        "background": "#e7ecff",
+    },
+    JOURNAL_TYPE_STATUS_CHANGE: {
+        "label": "Status change",
+        "icon": "fa-exchange-alt",
+        "colour": "#b5730d",
+        "background": "#fdeccf",
+    },
+    JOURNAL_TYPE_ENROLMENT: {
+        "label": "Enrolment",
+        "icon": "fa-user-plus",
+        "colour": "#0b8794",
+        "background": "#d8f3f5",
+    },
+    JOURNAL_TYPE_DELETION: {
+        "label": "Deletion",
+        "icon": "fa-trash",
+        "colour": "#c23b2c",
+        "background": "#fbe0dd",
+    },
+}
+
 # Association table linking StudentJournalEntry to ProjectClassConfig (many-to-many)
 journal_entry_to_pclass_config = db.Table(
     "journal_entry_to_pclass_config",
@@ -32,6 +74,24 @@ journal_entry_to_pclass_config = db.Table(
         db.ForeignKey("project_class_config.id"),
         primary_key=True,
     ),
+)
+
+# Association table recording which users have read which journal entries
+student_journal_entry_read = db.Table(
+    "student_journal_entry_read",
+    db.Column(
+        "entry_id",
+        db.Integer(),
+        db.ForeignKey("student_journal_entries.id"),
+        primary_key=True,
+    ),
+    db.Column(
+        "user_id",
+        db.Integer(),
+        db.ForeignKey("users.id"),
+        primary_key=True,
+    ),
+    db.Column("read_timestamp", db.DateTime(), nullable=False, default=datetime.now),
 )
 
 
@@ -118,3 +178,109 @@ class StudentJournalEntry(db.Model):
         lazy="dynamic",
         backref=db.backref("journal_entries", lazy="dynamic"),
     )
+
+    # Type of entry (note, communication, status change, enrolment, deletion) --
+    # see JOURNAL_TYPE_* constants and JOURNAL_TYPE_DISPLAY above.
+    entry_type = db.Column(db.Integer(), default=JOURNAL_TYPE_NOTE, nullable=False)
+
+    # Restricted entries are visible only to their owner and to convenors/admins
+    # of the entry's linked project class(es); see is_visible_to() below.
+    restricted = db.Column(db.Boolean(), default=False, nullable=False)
+
+    @property
+    def type_display(self) -> dict:
+        """
+        Icon/colour/label metadata for this entry's type.
+        """
+        return JOURNAL_TYPE_DISPLAY.get(self.entry_type, JOURNAL_TYPE_DISPLAY[JOURNAL_TYPE_NOTE])
+
+    @property
+    def type_label(self) -> str:
+        return self.type_display["label"]
+
+    @property
+    def type_icon(self) -> str:
+        return self.type_display["icon"]
+
+    @property
+    def type_colour(self) -> str:
+        return self.type_display["colour"]
+
+    @property
+    def type_background(self) -> str:
+        return self.type_display["background"]
+
+    def is_visible_to(self, user) -> bool:
+        """
+        Determine whether this entry is visible to `user`.
+
+        Unrestricted entries are visible to any convenor/admin/root/office user who can
+        see the student. Restricted entries are visible only to the owner and to
+        convenors/admins of one of the entry's linked project class(es).
+        """
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+
+        if user.has_role("root"):
+            return True
+
+        if self.owner_id is not None and user.id == self.owner_id:
+            return True
+
+        if user.has_role("admin") or user.has_role("office"):
+            student = self.student
+            if student is not None and student.user is not None:
+                student_tenant_ids = {t.id for t in student.user.tenants}
+                user_tenant_ids = {t.id for t in user.tenants}
+                if not student_tenant_ids.intersection(user_tenant_ids):
+                    return False
+            return True
+
+        faculty_data = getattr(user, "faculty_data", None)
+        if faculty_data is None or not faculty_data.is_convenor:
+            return False
+
+        if not self.restricted:
+            return True
+
+        pclasses = {pcc.project_class for pcc in self.project_classes if pcc.project_class is not None}
+        if not pclasses:
+            return False
+
+        return any(faculty_data.is_convenor_for(pclass) for pclass in pclasses)
+
+    def is_read_by(self, user) -> bool:
+        if user is None or getattr(user, "id", None) is None:
+            return False
+
+        return (
+            db.session.query(student_journal_entry_read)
+            .filter(
+                student_journal_entry_read.c.entry_id == self.id,
+                student_journal_entry_read.c.user_id == user.id,
+            )
+            .first()
+            is not None
+        )
+
+    def mark_read(self, user) -> None:
+        if user is None or getattr(user, "id", None) is None:
+            return
+
+        if self.is_read_by(user):
+            return
+
+        db.session.execute(student_journal_entry_read.insert().values(entry_id=self.id, user_id=user.id, read_timestamp=datetime.now()))
+
+    def mark_unread(self, user) -> None:
+        if user is None or getattr(user, "id", None) is None:
+            return
+
+        db.session.execute(
+            student_journal_entry_read.delete().where(
+                db.and_(
+                    student_journal_entry_read.c.entry_id == self.id,
+                    student_journal_entry_read.c.user_id == user.id,
+                )
+            )
+        )

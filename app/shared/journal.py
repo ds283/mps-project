@@ -11,10 +11,10 @@
 from datetime import datetime
 
 from ..database import db
-from ..models import MainConfig, StudentJournalEntry
+from ..models import JOURNAL_TYPE_NOTE, MainConfig, StudentJournalEntry
 
 
-def create_auto_journal_entry(student, html_content, title=None, project_class_config=None):
+def create_auto_journal_entry(student, html_content, title=None, project_class_config=None, entry_type=JOURNAL_TYPE_NOTE):
     """
     Create an automatically-generated journal entry for a student with no owner.
 
@@ -22,6 +22,7 @@ def create_auto_journal_entry(student, html_content, title=None, project_class_c
     :param html_content: HTML string for the entry body
     :param title: optional short title string for the entry
     :param project_class_config: optional single ProjectClassConfig to link the entry to
+    :param entry_type: one of the JOURNAL_TYPE_* constants in app.models.journal
     """
     config = db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
     config_year = config.year if config is not None else None
@@ -33,6 +34,7 @@ def create_auto_journal_entry(student, html_content, title=None, project_class_c
         owner_id=None,
         title=title,
         entry=html_content,
+        entry_type=entry_type,
     )
     db.session.add(entry)
     db.session.flush()

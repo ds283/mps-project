@@ -17,6 +17,7 @@ from ..database import db
 from ..models import (
     ConfirmRequest,
     CustomOffer,
+    JOURNAL_TYPE_ENROLMENT,
     LiveProject,
     Project,
     ProjectClassConfig,
@@ -189,6 +190,7 @@ def add_selector(student, config_id, convert=True, autocommit=False):
             item, html,
             title=f"Enrolled as selector: {pclass_name} ({year_str})",
             project_class_config=config,
+            entry_type=JOURNAL_TYPE_ENROLMENT,
         )
 
     if autocommit:
@@ -258,6 +260,7 @@ def add_blank_submitter(
             item, html,
             title=f"Enrolled as submitter: {pclass_name} ({year_str})",
             project_class_config=config,
+            entry_type=JOURNAL_TYPE_ENROLMENT,
         )
 
     for i in range(0, config.number_submissions):

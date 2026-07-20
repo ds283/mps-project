@@ -1508,6 +1508,15 @@ class JournalEntryMixin:
     )
 
 
+class JournalDrawerActionForm(Form):
+    """
+    CSRF-only form backing button-only POST actions triggered from the shared
+    journal drawer (e.g. "Mark all read"), per the project's CSRF conventions.
+    """
+
+    pass
+
+
 def AddJournalEntryFormFactory(user):
     query_factory = _build_journal_pclass_config_query(user)
 

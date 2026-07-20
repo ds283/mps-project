@@ -8,9 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from flask import abort, current_app, flash, redirect, request, url_for
+from flask import abort, current_app, flash, jsonify, redirect, request, url_for
 from flask_security import current_user, roles_accepted
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,7 +28,11 @@ from ..shared.context.global_context import render_template_context
 from ..shared.utils import get_current_year, redirect_url
 from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
-from .forms import AddJournalEntryFormFactory, EditJournalEntryFormFactory
+from .forms import (
+    AddJournalEntryFormFactory,
+    EditJournalEntryFormFactory,
+    JournalDrawerActionForm,
+)
 
 _ROLES = ("faculty", "admin", "root", "office")
 
@@ -75,11 +79,15 @@ def student_journal_inspector(student_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
+    JournalForm = AddJournalEntryFormFactory(current_user)
+
     return render_template_context(
         "convenor/journal/inspector.html",
         student=student,
         url=url,
         text=text,
+        quick_add_form=JournalForm(),
+        mark_read_form=JournalDrawerActionForm(),
     )
 
 
@@ -130,6 +138,123 @@ def student_journal_ajax(student_id):
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(lambda items: ajax.convenor.journal_data(items, return_url=return_url, return_text=return_text))
+
+
+@convenor.route("/journal_drawer_ajax/<int:student_id>")
+@roles_accepted(*_ROLES)
+def journal_drawer_ajax(student_id):
+    """
+    Render the entry-list fragment shown in the shared journal drawer (offcanvas)
+    for a single student. Visible entries only, newest first.
+    """
+    student: StudentData = StudentData.query.get_or_404(student_id)
+
+    if not _check_access(student):
+        abort(403)
+
+    entries = student.visible_journal_entries(current_user).order_by(StudentJournalEntry.created_timestamp.desc()).all()
+    counts = student.journal_counts(current_user)
+
+    total_count = student.journal_entries.count()
+    locked_count = max(total_count - counts["visible"], 0)
+
+    return render_template_context(
+        "convenor/journal/_drawer_body.html",
+        student=student,
+        entries=entries,
+        counts=counts,
+        locked_count=locked_count,
+        recent_cutoff=datetime.now() - timedelta(days=30),
+        mark_read_form=JournalDrawerActionForm(),
+    )
+
+
+@convenor.route("/journal_counts_ajax/<int:student_id>")
+@roles_accepted(*_ROLES)
+def journal_counts_ajax(student_id):
+    """
+    Return {visible, unread, recent} counts for a student's journal, scoped to
+    entries visible to current_user. Used by refreshJournalIndicators() in the
+    shared journal JS to repaint indicator chips after a change.
+    """
+    student: StudentData = StudentData.query.get_or_404(student_id)
+
+    if not _check_access(student):
+        abort(403)
+
+    return jsonify(student.journal_counts(current_user))
+
+
+@convenor.route("/quick_add_journal_entry/<int:student_id>", methods=["POST"])
+@roles_accepted(*_ROLES)
+def quick_add_journal_entry(student_id):
+    """
+    Create a journal entry via AJAX from the shared quick-add modal.
+    """
+    student: StudentData = StudentData.query.get_or_404(student_id)
+
+    if not _check_access(student):
+        return jsonify(success=False, message="You do not have permission to add a journal entry for this student."), 403
+
+    JournalForm = AddJournalEntryFormFactory(current_user)
+    form = JournalForm(request.form)
+
+    if not form.validate_on_submit():
+        return jsonify(success=False, errors=form.errors), 400
+
+    config_year = get_current_year()
+    entry = StudentJournalEntry(
+        student_id=student.id,
+        config_year=config_year,
+        created_timestamp=datetime.now(),
+        owner_id=current_user.id,
+        title=form.title.data,
+        entry_type=form.entry_type.data,
+        entry=form.entry.data,
+        restricted=form.restricted.data,
+    )
+
+    try:
+        db.session.add(entry)
+        db.session.flush()
+
+        for pclass_config in form.project_classes.data:
+            entry.project_classes.append(pclass_config)
+
+        log_db_commit(
+            f"Added journal entry for student {student.user.name}",
+            user=current_user,
+            student=student,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify(success=False, message="Could not save journal entry due to a database error."), 500
+
+    return jsonify(success=True)
+
+
+@convenor.route("/journal_mark_all_read/<int:student_id>", methods=["POST"])
+@roles_accepted(*_ROLES)
+def journal_mark_all_read(student_id):
+    """
+    Mark every entry currently visible to current_user as read, for use by the
+    "Mark all read" action in the shared journal drawer.
+    """
+    student: StudentData = StudentData.query.get_or_404(student_id)
+
+    if not _check_access(student):
+        return jsonify(success=False, message="You do not have permission to view the journal for this student."), 403
+
+    form = JournalDrawerActionForm(request.form)
+    if not form.validate_on_submit():
+        return jsonify(success=False), 400
+
+    for entry in student.visible_journal_entries(current_user).all():
+        entry.mark_read(current_user)
+    db.session.commit()
+
+    return jsonify(success=True)
 
 
 @convenor.route("/view_journal_entry/<int:entry_id>")

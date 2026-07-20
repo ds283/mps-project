@@ -1,0 +1,33 @@
+{#
+  Shared journal indicator chip. Single source of truth for the "book + count"
+  indicator used on the selectors table, submitters cards, overview card and
+  the Journal tab (see .prompts/journal-redesign/04-shared-drawer.md).
+
+  counts: dict with 'visible' and 'unread' keys (see StudentData.journal_counts).
+  student_id: the student this indicator/drawer trigger refers to.
+  student_name: optional label shown in the drawer header once opened.
+#}
+{% macro journal_indicator(counts, student_id, student_name=none) %}
+    {% set visible = counts.get('visible', 0) %}
+    {% set unread = counts.get('unread', 0) %}
+    {% if visible > 0 %}
+        <span class="jchip journal-indicator{% if unread %} has-unread{% endif %}"
+              data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
+              data-student-id="{{ student_id }}"
+              {% if student_name %}data-student-name="{{ student_name }}"{% endif %}
+              role="button" tabindex="0"
+              title="{{ visible }} visible journal {{ 'entry' if visible == 1 else 'entries' }}{% if unread %}, {{ unread }} unread{% endif %}">
+            <i class="fas fa-book"></i>
+            <span class="cnt">{{ visible }}</span>
+            {% if unread %}<span class="jdot"></span>{% endif %}
+        </span>
+    {% else %}
+        <span class="jchip journal-indicator muted"
+              data-student-id="{{ student_id }}"
+              {% if student_name %}data-student-name="{{ student_name }}"{% endif %}
+              title="No entries visible to you">
+            <i class="fas fa-book"></i>
+            <span class="cnt">0</span>
+        </span>
+    {% endif %}
+{% endmacro %}

@@ -1,14 +1,19 @@
 {% extends "base_app.html" %}
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+    <script src="{{ url_for('static', filename='js/convenor/journal.js') }}"></script>
 
+    <script>
         $(document).ready(function () {
             $('#journal-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
@@ -40,6 +45,12 @@
                     {data: 'actions', orderable: false, searchable: false}
                 ],
                 order: [[0, 'desc']]
+            });
+
+            document.addEventListener('journal:updated', function (e) {
+                if (String(e.detail.studentId) === String({{ student.id }})) {
+                    $('#journal-table').DataTable().ajax.reload(null, false);
+                }
             });
         });
     </script>
@@ -119,12 +130,21 @@
                 </tr>
                 </thead>
             </table>
-            <div class="d-flex flex-row justify-content-center align-items-center mt-3 mb-2">
+            <div class="d-flex flex-row justify-content-center align-items-center gap-2 mt-3 mb-2">
                 <a class="btn btn-lg btn-secondary"
                    href="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=request.url, text='Back to journal') }}">
                     <i class="fas fa-plus fa-fw"></i> Add entry...
                 </a>
+                <button type="button" class="btn btn-lg btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+                        data-student-id="{{ student.id }}" data-student-name="{{ student.user.name }}">
+                    <i class="fas fa-bolt fa-fw"></i> Quick add...
+                </button>
             </div>
         </div>
     </div>
+
+    {% include "convenor/journal/_drawer.html" %}
+    {% with form = quick_add_form %}
+        {% include "convenor/journal/_add_modal.html" %}
+    {% endwith %}
 {% endblock %}

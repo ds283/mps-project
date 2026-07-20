@@ -1,0 +1,68 @@
+{#
+  Fragment rendered by convenor.journal_drawer_ajax and injected into
+  #journalDrawerBody. Visible entries only, newest first.
+#}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="small text-secondary">
+        <strong>{{ counts.visible }}</strong> visible
+        {% if counts.unread %} &middot; <strong>{{ counts.unread }}</strong> unread{% endif %}
+    </span>
+    {% if counts.unread %}
+        <form id="journalMarkReadForm" class="d-inline" data-student-id="{{ student.id }}">
+            {{ mark_read_form.hidden_tag() }}
+            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none">Mark all read</button>
+        </form>
+    {% endif %}
+</div>
+
+{% if entries %}
+    {% for entry in entries %}
+        <div class="journal-drawer-entry{% if not entry.is_read_by(current_user) %} unread{% endif %}">
+            <span class="type-ico" style="color: {{ entry.type_colour }}; background-color: {{ entry.type_background }};">
+                <i class="fas {{ entry.type_icon }}"></i>
+            </span>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <a class="fw-semibold text-decoration-none"
+                       href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id) }}">
+                        {{ entry.title or "Untitled" }}
+                    </a>
+                    {% if entry.created_timestamp >= recent_cutoff %}
+                        <span class="recent-tag">new</span>
+                    {% endif %}
+                </div>
+                <div class="small text-secondary mb-1">
+                    {% if entry.owner %}
+                        {{ entry.owner.name }}
+                    {% else %}
+                        <span class="badge bg-secondary">Auto</span>
+                    {% endif %}
+                    &middot; {{ entry.created_timestamp.strftime("%a %d %b %H:%M") }}
+                </div>
+                {% if entry.entry %}
+                    <div class="small">{{ entry.entry | striptags | truncate(120) }}</div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="text-secondary small fst-italic py-3">No visible journal entries for this student.</div>
+{% endif %}
+
+{% if locked_count > 0 %}
+    <div class="locked-note mt-2">
+        <i class="fas fa-lock me-1"></i>
+        {{ locked_count }} further {{ "entry is" if locked_count == 1 else "entries are" }} not visible to you.
+    </div>
+{% endif %}
+
+<div class="d-grid gap-2 mt-3">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+            data-student-id="{{ student.id }}" data-student-name="{{ student.user.name }}">
+        <i class="fas fa-plus me-1"></i> Add entry&hellip;
+    </button>
+    <a class="btn btn-sm btn-link text-decoration-none" data-bs-dismiss="offcanvas"
+       href="{{ url_for('convenor.student_journal_inspector', student_id=student.id) }}">
+        Open full journal page <i class="fas fa-arrow-right"></i>
+    </a>
+</div>

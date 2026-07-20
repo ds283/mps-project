@@ -23,6 +23,17 @@
                 <div class="modal-body">
                     <div id="journalAddFormAlert" class="alert alert-danger d-none" role="alert"></div>
                     <div class="row g-3">
+                        {% if students is defined and students %}
+                            <div class="col-12" id="quickAddStudentPickerWrap" style="display: none;">
+                                <label class="form-label fw-semibold" for="quickAddStudentPicker">Student</label>
+                                <select class="form-select" id="quickAddStudentPicker">
+                                    <option value="">Select a student&hellip;</option>
+                                    {% for s in students %}
+                                        <option value="{{ s.id }}">{{ s.user.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        {% endif %}
                         <div class="col-md-8">
                             {{ wtf.render_field(form.title, class='form-control') }}
                         </div>

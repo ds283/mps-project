@@ -44,10 +44,12 @@
                                 &middot; {{ journal_summary.visible }} accessible
                             </span>
                         </span>
-                        <button type="button" class="btn btn-sm btn-outline-primary py-0" disabled
-                                title="Available once the Journal tab launches">
-                            Open journal <i class="fas fa-arrow-right"></i>
-                        </button>
+                        {% if items %}
+                            <a class="btn btn-sm btn-outline-primary py-0"
+                               href="{{ url_for('convenor.journal_tab', id=items[0]['pclass'].id) }}">
+                                Open journal <i class="fas fa-arrow-right"></i>
+                            </a>
+                        {% endif %}
                     </div>
                     <ul class="list-group list-group-flush small">
                         {% for entry in journal_summary.recent_entries %}

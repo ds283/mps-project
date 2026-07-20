@@ -9,7 +9,7 @@
 #
 
 from .add_bookmark import add_student_bookmark
-from .journal import journal_data
+from .journal import journal_data, journal_tab_data
 from .add_ranking import add_student_ranking
 from .custom_offers import (
     project_offer_data,

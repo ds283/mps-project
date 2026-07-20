@@ -1,0 +1,154 @@
+{% extends "convenor/dashboard/pclass_base.html" %}
+
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "select2.html" import import_select2 %}
+
+{% if filter_ is not defined or filter_ is none %}{% set filter_ = 'all' %}{% endif %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+    <script src="{{ url_for('static', filename='js/convenor/journal.js') }}"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#journal-tab-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + '/convenor/journal_tab_ajax/{{ pclass.id }}?filter={{ filter_ }}',
+                    type: 'POST',
+                    data: function (args) { return { "args": JSON.stringify(args) }; }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'entry', orderable: true, searchable: true},
+                    {data: 'student', orderable: true, searchable: true},
+                    {data: 'type', orderable: true, searchable: false},
+                    {data: 'owner', orderable: true, searchable: true},
+                    {data: 'timestamp', orderable: true, searchable: false},
+                    {data: 'review', orderable: false, searchable: false}
+                ],
+                order: [[4, 'desc']]
+            });
+
+            document.addEventListener('journal:updated', function () {
+                $('#journal-tab-table').DataTable().ajax.reload(null, false);
+            });
+        });
+    </script>
+
+    <style>
+        .jt-fbtn {
+            font-size: 12px;
+            padding: 3px 11px;
+            border-radius: 20px;
+            border: 1px solid var(--bs-border-color);
+            background: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            text-decoration: none;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        .jt-fbtn.active {
+            background: var(--bs-primary);
+            color: #fff;
+            border-color: var(--bs-primary);
+        }
+
+        .jt-fbtn:hover:not(.active) {
+            border-color: var(--bs-secondary-color);
+        }
+
+        .jt-stat {
+            border: 1px solid var(--bs-border-color);
+            border-radius: .6rem;
+            padding: .6rem 1.1rem;
+            text-align: center;
+            background: var(--bs-body-bg);
+            min-width: 120px;
+        }
+    </style>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mt-3 mb-3"
+         style="background: var(--bs-primary); color: var(--bs-white); border-radius: .5rem; padding: .8rem 1rem;">
+        <span><i class="fas fa-book me-1"></i> <strong>Journal</strong> &mdash; all entries visible to you, across selectors &amp; submitters</span>
+        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#journalAddModal">
+            <i class="fas fa-plus"></i> Add entry&hellip;
+        </button>
+    </div>
+
+    <div class="d-flex gap-3 flex-wrap mb-3">
+        <div class="jt-stat">
+            <div class="fs-4 fw-bold">{{ summary.visible }}</div>
+            <div class="small text-body-secondary">accessible entries</div>
+        </div>
+        <div class="jt-stat">
+            <div class="fs-4 fw-bold text-primary">{{ summary.unread }}</div>
+            <div class="small text-body-secondary">unread</div>
+        </div>
+        <div class="jt-stat">
+            <div class="fs-4 fw-bold text-warning-emphasis">{{ summary.recent }}</div>
+            <div class="small text-body-secondary">added this month</div>
+        </div>
+        <div class="jt-stat">
+            <div class="fs-4 fw-bold text-body-secondary">{{ summary.auto }}</div>
+            <div class="small text-body-secondary">auto-generated</div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="jt-fbtn{% if filter_ == 'all' %} active{% endif %}"
+               href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='all') }}">All</a>
+            <a class="jt-fbtn{% if filter_ == 'unread' %} active{% endif %}"
+               href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='unread') }}">
+                Unread{% if summary.unread %} <span class="badge bg-light text-dark">{{ summary.unread }}</span>{% endif %}
+            </a>
+            <a class="jt-fbtn{% if filter_ == 'month' %} active{% endif %}"
+               href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='month') }}">This month</a>
+            <a class="jt-fbtn{% if filter_ == 'selectors' %} active{% endif %}"
+               href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='selectors') }}">Selectors</a>
+            <a class="jt-fbtn{% if filter_ == 'submitters' %} active{% endif %}"
+               href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='submitters') }}">Submitters</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table id="journal-tab-table" class="table table-hover align-middle">
+                <thead>
+                <tr class="small text-uppercase text-body-secondary">
+                    <th width="34%">Entry</th>
+                    <th width="18%">Student</th>
+                    <th width="10%">Type</th>
+                    <th width="14%">Created by</th>
+                    <th width="14%">When</th>
+                    <th width="10%" class="text-end">Review</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+    <div class="small text-body-secondary mt-2">
+        Entries not accessible to you are excluded automatically.
+    </div>
+
+    {% include "convenor/journal/_drawer.html" %}
+    {% with form = quick_add_form, students = picker_students %}
+        {% include "convenor/journal/_add_modal.html" %}
+    {% endwith %}
+{% endblock %}

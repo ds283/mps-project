@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from flask import url_for
+from flask_security import current_user
 from sqlalchemy import and_, func, or_
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import with_polymorphic
@@ -38,6 +39,7 @@ from ...models import (
     User,
     WorkflowMixin,
 )
+from ...models.journal import journal_unread_count
 from ...models.markingevent import ConvenorAction, ConvenorActionButton
 from ..convenor import (
     build_accepted_confirmations_query,
@@ -162,6 +164,20 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
 
     marking_urgent_count = sum(event.urgent_action_count for period in config.periods for event in period.marking_events)
 
+    config_student_ids = set(
+        sid
+        for (sid,) in db.session.query(SelectingStudent.student_id).filter(
+            SelectingStudent.config_id == config.id, SelectingStudent.retired.is_(False)
+        )
+    )
+    config_student_ids.update(
+        sid
+        for (sid,) in db.session.query(SubmittingStudent.student_id).filter(
+            SubmittingStudent.config_id == config.id, SubmittingStudent.retired.is_(False)
+        )
+    )
+    journal_unread = journal_unread_count(current_user, config_student_ids)
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -185,6 +201,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "marking_events": marking_events_count,
         "missing_canvas_count": missing_canvas_count,
         "marking_urgent_count": marking_urgent_count,
+        "journal_unread": journal_unread,
     }
 
 

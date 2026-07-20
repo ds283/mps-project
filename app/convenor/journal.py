@@ -14,18 +14,25 @@ from flask import abort, current_app, flash, jsonify, redirect, request, url_for
 from flask_security import current_user, roles_accepted
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
 
 import app.ajax as ajax
 from app.convenor import convenor
 
 from ..database import db
 from ..models import (
+    ProjectClass,
+    SelectingStudent,
     StudentData,
     StudentJournalEntry,
+    SubmittingStudent,
     User,
 )
+from ..models.journal import journal_activity_summary, student_journal_entry_read, visible_entries_query
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import get_current_year, redirect_url
+from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from .forms import (
@@ -33,6 +40,29 @@ from .forms import (
     EditJournalEntryFormFactory,
     JournalDrawerActionForm,
 )
+
+_JOURNAL_TAB_FILTERS = ("all", "unread", "month", "selectors", "submitters")
+
+
+def _config_student_scope(config):
+    """
+    Selecting/submitting student ids (retired excluded) for a single ProjectClassConfig,
+    for scoping the per-project-class Journal tab.
+    """
+    selecting_ids = {
+        sid
+        for (sid,) in db.session.query(SelectingStudent.student_id).filter(
+            SelectingStudent.config_id == config.id, SelectingStudent.retired.is_(False)
+        )
+    }
+    submitting_ids = {
+        sid
+        for (sid,) in db.session.query(SubmittingStudent.student_id).filter(
+            SubmittingStudent.config_id == config.id, SubmittingStudent.retired.is_(False)
+        )
+    }
+    return selecting_ids, submitting_ids
+
 
 _ROLES = ("faculty", "admin", "root", "office")
 
@@ -439,3 +469,125 @@ def delete_journal_entry(entry_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
+
+
+@convenor.route("/journal_tab/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def journal_tab(id):
+    """
+    Top-level "Journal" dashboard tab for a project class: an aggregate, filterable list of
+    all entries visible to the convenor across that project class's selectors and submitters.
+    """
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    config = pclass.most_recent_config
+    if config is None:
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    filter_ = request.args.get("filter", "all")
+    if filter_ not in _JOURNAL_TAB_FILTERS:
+        filter_ = "all"
+
+    selecting_ids, submitting_ids = _config_student_scope(config)
+    student_ids = selecting_ids | submitting_ids
+
+    summary = journal_activity_summary(current_user, student_ids, recent_limit=0)
+
+    picker_students = []
+    if student_ids:
+        picker_students = (
+            db.session.query(StudentData)
+            .join(User, User.id == StudentData.id)
+            .filter(StudentData.id.in_(student_ids))
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
+
+    JournalForm = AddJournalEntryFormFactory(current_user)
+
+    return render_template_context(
+        "convenor/dashboard/journal.html",
+        pane="journal",
+        pclass=pclass,
+        config=config,
+        convenor_data=get_convenor_dashboard_data(pclass, config),
+        filter_=filter_,
+        summary=summary,
+        picker_students=picker_students,
+        quick_add_form=JournalForm(),
+        mark_read_form=JournalDrawerActionForm(),
+    )
+
+
+@convenor.route("/journal_tab_ajax/<int:id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def journal_tab_ajax(id):
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    config = pclass.most_recent_config
+    if config is None:
+        return jsonify({})
+
+    filter_ = request.args.get("filter", "all")
+    if filter_ not in _JOURNAL_TAB_FILTERS:
+        filter_ = "all"
+
+    selecting_ids, submitting_ids = _config_student_scope(config)
+
+    if filter_ == "selectors":
+        student_ids = selecting_ids
+    elif filter_ == "submitters":
+        student_ids = submitting_ids
+    else:
+        student_ids = selecting_ids | submitting_ids
+
+    StudentUser = aliased(User)
+    OwnerUser = aliased(User)
+
+    base_query = (
+        visible_entries_query(current_user, student_ids)
+        .join(StudentData, StudentData.id == StudentJournalEntry.student_id)
+        .join(StudentUser, StudentUser.id == StudentData.id)
+        .join(OwnerUser, OwnerUser.id == StudentJournalEntry.owner_id, isouter=True)
+    )
+
+    recent_cutoff = datetime.now() - timedelta(days=30)
+
+    if filter_ == "unread":
+        read_entry_ids = db.session.query(student_journal_entry_read.c.entry_id).filter(student_journal_entry_read.c.user_id == current_user.id)
+        base_query = base_query.filter(~StudentJournalEntry.id.in_(read_entry_ids))
+    elif filter_ == "month":
+        base_query = base_query.filter(StudentJournalEntry.created_timestamp >= recent_cutoff)
+
+    columns = {
+        "entry": {
+            "order": StudentJournalEntry.title,
+            "search": StudentJournalEntry.title,
+        },
+        "student": {
+            "order": [StudentUser.last_name, StudentUser.first_name],
+            "search": func.concat(StudentUser.first_name, " ", StudentUser.last_name),
+            "search_collation": "utf8_general_ci",
+        },
+        "type": {"order": StudentJournalEntry.entry_type},
+        "owner": {
+            "order": [OwnerUser.last_name, OwnerUser.first_name],
+            "search": func.concat(OwnerUser.first_name, " ", OwnerUser.last_name),
+            "search_collation": "utf8_general_ci",
+        },
+        "timestamp": {"order": StudentJournalEntry.created_timestamp},
+        "review": {},
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns, secondary_order=[StudentJournalEntry.id.desc()]) as handler:
+        return handler.build_payload(lambda items: ajax.convenor.journal_tab_data(items, pclass=pclass, recent_cutoff=recent_cutoff))

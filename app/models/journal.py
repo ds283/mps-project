@@ -343,14 +343,15 @@ def batch_journal_counts(user, student_ids) -> dict:
 def journal_activity_summary(user, student_ids, recent_days=30, recent_limit=3) -> dict:
     """
     Aggregate "visible to `user`" journal activity across a set of students, for compact
-    dashboard summaries (e.g. the convenor overview "Journal activity" card): total visible
-    entries, unread count, count created within the last `recent_days`, and the most recent
+    dashboard summaries (e.g. the convenor overview "Journal activity" card, the Journal tab
+    stat chips): total visible entries, unread count, count created within the last
+    `recent_days`, count of auto-generated (ownerless) entries, and the most recent
     `recent_limit` visible entries. A single bounded set of count/limit queries, not a
     per-student loop.
 
-    Returns {"visible": n, "unread": n, "recent": n, "recent_entries": [StudentJournalEntry, ...]}.
+    Returns {"visible": n, "unread": n, "recent": n, "auto": n, "recent_entries": [StudentJournalEntry, ...]}.
     """
-    empty = {"visible": 0, "unread": 0, "recent": 0, "recent_entries": []}
+    empty = {"visible": 0, "unread": 0, "recent": 0, "auto": 0, "recent_entries": []}
 
     visibility, scoped_ids = _convenor_visibility_scope(user, student_ids)
     if not scoped_ids:
@@ -371,11 +372,51 @@ def journal_activity_summary(user, student_ids, recent_days=30, recent_limit=3) 
     read_entry_ids = db.session.query(student_journal_entry_read.c.entry_id).filter(student_journal_entry_read.c.user_id == user.id)
     unread_count = base_query.filter(~entry.id.in_(read_entry_ids)).count()
 
+    auto_count = base_query.filter(entry.owner_id.is_(None)).count()
+
     recent_entries = base_query.order_by(entry.created_timestamp.desc()).limit(recent_limit).all()
 
     return {
         "visible": visible_count,
         "unread": unread_count,
         "recent": recent_count,
+        "auto": auto_count,
         "recent_entries": recent_entries,
     }
+
+
+def journal_unread_count(user, student_ids) -> int:
+    """
+    Lightweight unread count across a set of students, scoped to entries visible to `user`.
+    Used by the per-project-class nav pill badge, where only the count is needed —
+    cheaper than journal_activity_summary(), which also computes visible/recent/auto.
+    """
+    visibility, scoped_ids = _convenor_visibility_scope(user, student_ids)
+    if not scoped_ids:
+        return 0
+
+    entry = StudentJournalEntry
+    query = db.session.query(entry.id).filter(entry.student_id.in_(scoped_ids))
+    if visibility is not None:
+        query = query.filter(visibility)
+
+    read_entry_ids = db.session.query(student_journal_entry_read.c.entry_id).filter(student_journal_entry_read.c.user_id == user.id)
+    return query.filter(~entry.id.in_(read_entry_ids)).count()
+
+
+def visible_entries_query(user, student_ids):
+    """
+    Base query of StudentJournalEntry, filtered to entries visible to `user` across the
+    given candidate student_ids. Unlike journal_activity_summary()/batch_journal_counts()
+    (which only need counts), the Journal tab AJAX endpoint needs a query object it can
+    layer further joins, filter chips and DataTables search/sort/pagination onto.
+    """
+    visibility, scoped_ids = _convenor_visibility_scope(user, student_ids)
+    if not scoped_ids:
+        return db.session.query(StudentJournalEntry).filter(False)
+
+    query = db.session.query(StudentJournalEntry).filter(StudentJournalEntry.student_id.in_(scoped_ids))
+    if visibility is not None:
+        query = query.filter(visibility)
+
+    return query

@@ -106,22 +106,48 @@
 
     function populateQuickAddModal(triggerEl) {
         var modalEl = document.getElementById("journalAddModal");
-        if (!modalEl || !triggerEl) {
+        if (!modalEl) {
             return;
         }
 
         var drawerEl = document.getElementById("journalDrawer");
-        var studentId = triggerEl.getAttribute("data-student-id") || (drawerEl && drawerEl.getAttribute("data-student-id"));
-        var studentName = triggerEl.getAttribute("data-student-name") || (drawerEl && document.getElementById("journalDrawerSubtitle").textContent);
+        var studentId = (triggerEl && triggerEl.getAttribute("data-student-id")) || (drawerEl && drawerEl.getAttribute("data-student-id"));
+        var studentName =
+            (triggerEl && triggerEl.getAttribute("data-student-name")) ||
+            (drawerEl && document.getElementById("journalDrawerSubtitle") && document.getElementById("journalDrawerSubtitle").textContent);
 
         var studentIdInput = modalEl.querySelector("#quickAddStudentId");
-        if (studentIdInput) {
-            studentIdInput.value = studentId || "";
-        }
-
         var nameEl = modalEl.querySelector("#quickAddStudentName");
-        if (nameEl) {
-            nameEl.textContent = studentName ? "— " + studentName : "";
+        var pickerWrap = modalEl.querySelector("#quickAddStudentPickerWrap");
+        var picker = modalEl.querySelector("#quickAddStudentPicker");
+
+        if (!studentId && picker) {
+            // No student pre-scoped by the trigger (e.g. the Journal tab's "Add entry…"
+            // button): show the in-modal picker and let the user choose one.
+            if (pickerWrap) {
+                pickerWrap.style.display = "";
+            }
+            if (typeof $ !== "undefined" && $.fn.select2) {
+                $(picker).val(null).trigger("change");
+            } else {
+                picker.value = "";
+            }
+            if (studentIdInput) {
+                studentIdInput.value = "";
+            }
+            if (nameEl) {
+                nameEl.textContent = "";
+            }
+        } else {
+            if (pickerWrap) {
+                pickerWrap.style.display = "none";
+            }
+            if (studentIdInput) {
+                studentIdInput.value = studentId || "";
+            }
+            if (nameEl) {
+                nameEl.textContent = studentName ? "— " + studentName : "";
+            }
         }
 
         var alertEl = modalEl.querySelector("#journalAddFormAlert");
@@ -149,11 +175,16 @@
     function submitQuickAddForm(form) {
         var studentIdInput = form.querySelector("#quickAddStudentId");
         var studentId = studentIdInput ? studentIdInput.value : null;
+        var alertEl = form.querySelector("#journalAddFormAlert");
+
         if (!studentId) {
+            if (alertEl) {
+                alertEl.textContent = "Please select a student.";
+                alertEl.classList.remove("d-none");
+            }
             return;
         }
 
-        var alertEl = form.querySelector("#journalAddFormAlert");
         var submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -272,6 +303,33 @@
                     dropdownCssClass: "select2--small",
                     minimumResultsForSearch: -1,
                     dropdownParent: $("#journalAddModal"),
+                });
+
+                var studentPicker = modalEl.querySelector("#quickAddStudentPicker");
+                if (studentPicker) {
+                    $(studentPicker).select2({
+                        theme: "bootstrap-5",
+                        selectionCssClass: "select2--small",
+                        dropdownCssClass: "select2--small",
+                        placeholder: "Select a student...",
+                        dropdownParent: $("#journalAddModal"),
+                    });
+                }
+            }
+
+            var pickerEl = modalEl.querySelector("#quickAddStudentPicker");
+            if (pickerEl) {
+                pickerEl.addEventListener("change", function () {
+                    var studentIdInput = modalEl.querySelector("#quickAddStudentId");
+                    var nameEl = modalEl.querySelector("#quickAddStudentName");
+                    var selected = pickerEl.options[pickerEl.selectedIndex];
+
+                    if (studentIdInput) {
+                        studentIdInput.value = pickerEl.value;
+                    }
+                    if (nameEl) {
+                        nameEl.textContent = pickerEl.value && selected ? "— " + selected.textContent : "";
+                    }
                 });
             }
 

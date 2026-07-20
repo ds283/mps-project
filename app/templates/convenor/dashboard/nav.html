@@ -95,6 +95,14 @@
                 <span class="badge {% if pane == 'todo' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ num_to_dos }}</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'journal' %}active{% endif %}"
+               href="{{ url_for('convenor.journal_tab', id=pclass.id) }}">
+                Journal
+                {% set journal_unread = convenor_data.get('journal_unread', 0) %}
+                <span class="badge {% if pane == 'journal' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ journal_unread }}</span>
+            </a>
+        </li>
         {% set marking_events_count = convenor_data.get('marking_events', 0) %}
         {% if marking_events_count > 0 %}
             <li class="nav-item">

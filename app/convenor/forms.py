@@ -49,6 +49,7 @@ from ..models import (
     ConvenorGenericTask,
     FacultyData,
     GradingRubric,
+    JournalEntryTypesMixin,
     LiveProject,
     MarkingScheme,
     MarkingWorkflow,
@@ -1489,8 +1490,21 @@ class JournalEntryMixin:
             Length(max=DEFAULT_STRING_LENGTH),
         ],
     )
+    entry_type = SelectField(
+        "Type",
+        choices=[(value, meta["label"]) for value, meta in JournalEntryTypesMixin.JOURNAL_TYPE_DISPLAY.items()],
+        coerce=int,
+        default=JournalEntryTypesMixin.JOURNAL_TYPE_NOTE,
+    )
     entry = TextAreaField(
         "Journal entry",
+    )
+    restricted = BooleanField(
+        "Restrict visibility to project convenors and me",
+        default=False,
+        description="If selected, this entry is visible only to you and to convenors of the linked "
+        "project class(es). Leave unchecked to keep it visible to any convenor, admin, or office "
+        "user who can see this student.",
     )
 
 

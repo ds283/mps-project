@@ -210,7 +210,9 @@ def add_journal_entry(student_id):
             created_timestamp=datetime.now(),
             owner_id=current_user.id,
             title=form.title.data,
+            entry_type=form.entry_type.data,
             entry=form.entry.data,
+            restricted=form.restricted.data,
         )
 
         try:
@@ -275,7 +277,9 @@ def edit_journal_entry(entry_id):
 
     if form.validate_on_submit():
         entry.title = form.title.data
+        entry.entry_type = form.entry_type.data
         entry.entry = form.entry.data
+        entry.restricted = form.restricted.data
         entry.last_edit_timestamp = datetime.now()
         entry.project_classes = list(form.project_classes.data)
 

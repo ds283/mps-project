@@ -26,6 +26,13 @@
                 dropdownCssClass: 'select2--small',
                 placeholder: 'Select project classes (optional)...'
             });
+
+            $('#entry_type').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                minimumResultsForSearch: -1
+            });
         });
     </script>
 {% endblock %}
@@ -53,6 +60,8 @@
 
 {{ wtf.render_field(form.title, class='form-control') }}
 
+{{ wtf.render_field(form.entry_type, id='entry_type') }}
+
 <div class="mb-3">
     <label class="form-label fw-semibold">{{ form.entry.label.text }}</label>
     {{ form.entry(id='entry-editor', class='form-control') }}
@@ -64,6 +73,8 @@
 </div>
 
 {{ wtf.render_field(form.project_classes, id='project_classes') }}
+
+{{ wtf.render_field(form.restricted) }}
 
 <div class="mt-4 d-flex gap-2">
     {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

@@ -46,6 +46,7 @@ from ..models import (
     SubmitterReport,
     SubmittingStudent,
     User,
+    batch_journal_counts,
 )
 from ..models.markingevent import MarkingEventWorkflowStates, SubmitterReportWorkflowStates
 from ..models.submissions import SubmissionRoleTypesMixin
@@ -73,6 +74,7 @@ from ..shared.workflow_logging import log_db_commit
 from ..tasks.llm_orchestration import launch_pclass_pipeline
 from ..tools import ServerSideSQLHandler
 from .forms import (
+    AddJournalEntryFormFactory,
     AddSubmitterRoleForm,
     ConfirmDeleteWithReasonForm,
     EditRolesFormFactory,
@@ -227,6 +229,9 @@ def submitters(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
+    journal_counts = batch_journal_counts(current_user, [s.student_id for s in paged_submitters])
+    JournalForm = AddJournalEntryFormFactory(current_user)
+
     template = "convenor/dashboard/submitters_v2.html" if current_app.config.get("SUBMITTERS_V2", False) else "convenor/dashboard/submitters.html"
     return render_template_context(
         template,
@@ -251,6 +256,8 @@ def submitters(id):
         total_submitters=total_submitters,
         per_page=per_page,
         allow_delete=allow_delete,
+        journal_counts=journal_counts,
+        quick_add_form=JournalForm(),
     )
 
 

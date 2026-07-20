@@ -6,8 +6,10 @@
   counts: dict with 'visible' and 'unread' keys (see StudentData.journal_counts).
   student_id: the student this indicator/drawer trigger refers to.
   student_name: optional label shown in the drawer header once opened.
+  label: optional text label rendered between the icon and the count (e.g. "Journal"),
+         for callers that need a labelled button rather than a bare icon+count chip.
 #}
-{% macro journal_indicator(counts, student_id, student_name=none) %}
+{% macro journal_indicator(counts, student_id, student_name=none, label=none) %}
     {% set visible = counts.get('visible', 0) %}
     {% set unread = counts.get('unread', 0) %}
     {% if visible > 0 %}
@@ -18,6 +20,7 @@
               role="button" tabindex="0"
               title="{{ visible }} visible journal {{ 'entry' if visible == 1 else 'entries' }}{% if unread %}, {{ unread }} unread{% endif %}">
             <i class="fas fa-book"></i>
+            {% if label %}{{ label }}{% endif %}
             <span class="cnt">{{ visible }}</span>
             {% if unread %}<span class="jdot"></span>{% endif %}
         </span>
@@ -27,6 +30,7 @@
               {% if student_name %}data-student-name="{{ student_name }}"{% endif %}
               title="No entries visible to you">
             <i class="fas fa-book"></i>
+            {% if label %}{{ label }}{% endif %}
             <span class="cnt">0</span>
         </span>
     {% endif %}

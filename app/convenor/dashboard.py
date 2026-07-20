@@ -43,6 +43,7 @@ from ..models import (
     ProjectDescription,
     ProjectTag,
     ProjectTagGroup,
+    SelectingStudent,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmittingStudent,
@@ -50,6 +51,7 @@ from ..models import (
     TransferableSkill,
     User,
 )
+from ..models.journal import journal_activity_summary
 from ..models.markingevent import ConvenorAction, ConvenorActionButton
 from ..shared.context.convenor_dashboard import (
     get_convenor_action_items,
@@ -107,7 +109,30 @@ def overview():
         data = get_convenor_dashboard_data(pclass, config)
         items.append({"pclass": pclass, "config": config, "data": data})
 
-    return render_template_context("convenor/dashboard/overview.html", items=items)
+    config_ids = [item["config"].id for item in items]
+    student_ids = set()
+    if config_ids:
+        student_ids.update(
+            sid
+            for (sid,) in db.session.query(SelectingStudent.student_id)
+            .filter(SelectingStudent.config_id.in_(config_ids), SelectingStudent.retired.is_(False))
+            .distinct()
+        )
+        student_ids.update(
+            sid
+            for (sid,) in db.session.query(SubmittingStudent.student_id)
+            .filter(SubmittingStudent.config_id.in_(config_ids), SubmittingStudent.retired.is_(False))
+            .distinct()
+        )
+
+    journal_summary = journal_activity_summary(current_user, student_ids)
+
+    return render_template_context(
+        "convenor/dashboard/overview.html",
+        items=items,
+        journal_summary=journal_summary,
+        recent_cutoff=datetime.now() - timedelta(days=30),
+    )
 
 
 @convenor.route("/status/<int:id>", methods=["GET", "POST"])

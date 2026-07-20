@@ -35,3 +35,15 @@
         </span>
     {% endif %}
 {% endmacro %}
+
+{#
+  Shared journal entry-type icon badge (colour + icon from StudentJournalEntry.type_display).
+  size: pixel width/height of the badge. Sized inline so it renders correctly both inside
+  .journal-drawer-entry (which also applies the base 30px rule in common.css) and in
+  standalone compact contexts such as the overview summary card (size=24).
+#}
+{% macro journal_type_ico(entry, size=30) %}
+    <span class="type-ico" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 0.5rem; flex: none; color: {{ entry.type_colour }}; background-color: {{ entry.type_background }}; width: {{ size }}px; height: {{ size }}px; font-size: {{ (size * 0.4)|round(2) }}px;">
+        <i class="fas {{ entry.type_icon }}"></i>
+    </span>
+{% endmacro %}

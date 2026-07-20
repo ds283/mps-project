@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import func
 from sqlalchemy_utils import EncryptedType
@@ -240,34 +240,35 @@ class StudentJournalEntry(db.Model, JournalEntryTypesMixin):
         )
 
 
-def batch_journal_counts(user, student_ids) -> dict:
+def _convenor_visibility_scope(user, student_ids):
     """
-    Batched equivalent of StudentData.journal_counts() for a set of students at once:
-    two grouped queries cover the whole batch instead of a pair of per-student queries,
-    for use by list views (e.g. the selectors table) that need a chip per row.
+    Resolve the "visible to `user`" scope for a set of candidate student ids, encoding
+    the same visibility rule as StudentJournalEntry.is_visible_to() as bulk SQL.
 
-    Returns {student_id: {"visible": n, "unread": n}}, scoped to entries visible to
-    `user`, encoding the same visibility rule as StudentData.visible_journal_entries().
+    Returns (visibility_filter, scoped_student_ids):
+      - scoped_student_ids: the subset of `student_ids` the user may see entries for at
+        all (narrowed for admin/office by tenant; empty if the user has no access).
+      - visibility_filter: an additional SQLAlchemy filter to apply on StudentJournalEntry
+        (None for root/admin/office, where no further per-entry restriction applies).
+
+    Shared by batch_journal_counts() and journal_activity_summary().
     """
     student_ids = list({sid for sid in student_ids if sid is not None})
-    result = {sid: {"visible": 0, "unread": 0} for sid in student_ids}
 
     if not student_ids or user is None or not getattr(user, "is_authenticated", False):
-        return result
-
-    entry = StudentJournalEntry
-    visibility = None
+        return None, []
 
     if user.has_role("root"):
-        pass
-    elif user.has_role("admin") or user.has_role("office"):
+        return None, student_ids
+
+    if user.has_role("admin") or user.has_role("office"):
         from .associations import tenant_to_users
         from .students import StudentData
         from .users import User
 
         user_tenant_ids = [t.id for t in user.tenants]
         if not user_tenant_ids:
-            return result
+            return None, []
 
         student_ids = [
             sid
@@ -278,33 +279,52 @@ def batch_journal_counts(user, student_ids) -> dict:
             .distinct()
             .all()
         ]
-        if not student_ids:
-            return result
+        return None, student_ids
+
+    faculty_data = getattr(user, "faculty_data", None)
+    if faculty_data is None or not faculty_data.is_convenor:
+        return None, []
+
+    convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_list]
+
+    restricted_visible_ids = db.session.query(journal_entry_to_pclass_config.c.entry_id)
+    if convenor_pclass_ids:
+        from .project_class import ProjectClassConfig
+
+        restricted_visible_ids = restricted_visible_ids.join(
+            ProjectClassConfig, ProjectClassConfig.id == journal_entry_to_pclass_config.c.config_id
+        ).filter(ProjectClassConfig.pclass_id.in_(convenor_pclass_ids))
     else:
-        faculty_data = getattr(user, "faculty_data", None)
-        if faculty_data is None or not faculty_data.is_convenor:
-            return result
+        restricted_visible_ids = restricted_visible_ids.filter(False)
 
-        convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_list]
+    visibility = db.or_(
+        StudentJournalEntry.restricted.is_(False),
+        StudentJournalEntry.owner_id == user.id,
+        StudentJournalEntry.id.in_(restricted_visible_ids),
+    )
+    return visibility, student_ids
 
-        restricted_visible_ids = db.session.query(journal_entry_to_pclass_config.c.entry_id)
-        if convenor_pclass_ids:
-            from .project_class import ProjectClassConfig
 
-            restricted_visible_ids = restricted_visible_ids.join(
-                ProjectClassConfig, ProjectClassConfig.id == journal_entry_to_pclass_config.c.config_id
-            ).filter(ProjectClassConfig.pclass_id.in_(convenor_pclass_ids))
-        else:
-            restricted_visible_ids = restricted_visible_ids.filter(False)
+def batch_journal_counts(user, student_ids) -> dict:
+    """
+    Batched equivalent of StudentData.journal_counts() for a set of students at once:
+    two grouped queries cover the whole batch instead of a pair of per-student queries,
+    for use by list views (e.g. the selectors table) that need a chip per row.
 
-        visibility = db.or_(
-            entry.restricted.is_(False),
-            entry.owner_id == user.id,
-            entry.id.in_(restricted_visible_ids),
-        )
+    Returns {student_id: {"visible": n, "unread": n}}, scoped to entries visible to
+    `user`, encoding the same visibility rule as StudentData.visible_journal_entries().
+    """
+    requested_ids = list({sid for sid in student_ids if sid is not None})
+    result = {sid: {"visible": 0, "unread": 0} for sid in requested_ids}
+
+    visibility, scoped_ids = _convenor_visibility_scope(user, requested_ids)
+    if not scoped_ids:
+        return result
+
+    entry = StudentJournalEntry
 
     def _counted(*extra_filters):
-        query = db.session.query(entry.student_id, func.count(entry.id)).filter(entry.student_id.in_(student_ids), *extra_filters)
+        query = db.session.query(entry.student_id, func.count(entry.id)).filter(entry.student_id.in_(scoped_ids), *extra_filters)
         if visibility is not None:
             query = query.filter(visibility)
         return query.group_by(entry.student_id).all()
@@ -318,3 +338,44 @@ def batch_journal_counts(user, student_ids) -> dict:
         result[sid]["unread"] = count
 
     return result
+
+
+def journal_activity_summary(user, student_ids, recent_days=30, recent_limit=3) -> dict:
+    """
+    Aggregate "visible to `user`" journal activity across a set of students, for compact
+    dashboard summaries (e.g. the convenor overview "Journal activity" card): total visible
+    entries, unread count, count created within the last `recent_days`, and the most recent
+    `recent_limit` visible entries. A single bounded set of count/limit queries, not a
+    per-student loop.
+
+    Returns {"visible": n, "unread": n, "recent": n, "recent_entries": [StudentJournalEntry, ...]}.
+    """
+    empty = {"visible": 0, "unread": 0, "recent": 0, "recent_entries": []}
+
+    visibility, scoped_ids = _convenor_visibility_scope(user, student_ids)
+    if not scoped_ids:
+        return empty
+
+    entry = StudentJournalEntry
+    base_query = db.session.query(entry).filter(entry.student_id.in_(scoped_ids))
+    if visibility is not None:
+        base_query = base_query.filter(visibility)
+
+    visible_count = base_query.count()
+    if visible_count == 0:
+        return empty
+
+    cutoff = datetime.now() - timedelta(days=recent_days)
+    recent_count = base_query.filter(entry.created_timestamp >= cutoff).count()
+
+    read_entry_ids = db.session.query(student_journal_entry_read.c.entry_id).filter(student_journal_entry_read.c.user_id == user.id)
+    unread_count = base_query.filter(~entry.id.in_(read_entry_ids)).count()
+
+    recent_entries = base_query.order_by(entry.created_timestamp.desc()).limit(recent_limit).all()
+
+    return {
+        "visible": visible_count,
+        "unread": unread_count,
+        "recent": recent_count,
+        "recent_entries": recent_entries,
+    }

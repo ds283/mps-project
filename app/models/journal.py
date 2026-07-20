@@ -10,6 +10,7 @@
 
 from datetime import datetime
 
+from sqlalchemy import func
 from sqlalchemy_utils import EncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
@@ -237,3 +238,83 @@ class StudentJournalEntry(db.Model, JournalEntryTypesMixin):
                 )
             )
         )
+
+
+def batch_journal_counts(user, student_ids) -> dict:
+    """
+    Batched equivalent of StudentData.journal_counts() for a set of students at once:
+    two grouped queries cover the whole batch instead of a pair of per-student queries,
+    for use by list views (e.g. the selectors table) that need a chip per row.
+
+    Returns {student_id: {"visible": n, "unread": n}}, scoped to entries visible to
+    `user`, encoding the same visibility rule as StudentData.visible_journal_entries().
+    """
+    student_ids = list({sid for sid in student_ids if sid is not None})
+    result = {sid: {"visible": 0, "unread": 0} for sid in student_ids}
+
+    if not student_ids or user is None or not getattr(user, "is_authenticated", False):
+        return result
+
+    entry = StudentJournalEntry
+    visibility = None
+
+    if user.has_role("root"):
+        pass
+    elif user.has_role("admin") or user.has_role("office"):
+        from .associations import tenant_to_users
+        from .students import StudentData
+        from .users import User
+
+        user_tenant_ids = [t.id for t in user.tenants]
+        if not user_tenant_ids:
+            return result
+
+        student_ids = [
+            sid
+            for (sid,) in db.session.query(StudentData.id)
+            .join(User, User.id == StudentData.id)
+            .join(tenant_to_users, tenant_to_users.c.user_id == User.id)
+            .filter(StudentData.id.in_(student_ids), tenant_to_users.c.tenant_id.in_(user_tenant_ids))
+            .distinct()
+            .all()
+        ]
+        if not student_ids:
+            return result
+    else:
+        faculty_data = getattr(user, "faculty_data", None)
+        if faculty_data is None or not faculty_data.is_convenor:
+            return result
+
+        convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_list]
+
+        restricted_visible_ids = db.session.query(journal_entry_to_pclass_config.c.entry_id)
+        if convenor_pclass_ids:
+            from .project_class import ProjectClassConfig
+
+            restricted_visible_ids = restricted_visible_ids.join(
+                ProjectClassConfig, ProjectClassConfig.id == journal_entry_to_pclass_config.c.config_id
+            ).filter(ProjectClassConfig.pclass_id.in_(convenor_pclass_ids))
+        else:
+            restricted_visible_ids = restricted_visible_ids.filter(False)
+
+        visibility = db.or_(
+            entry.restricted.is_(False),
+            entry.owner_id == user.id,
+            entry.id.in_(restricted_visible_ids),
+        )
+
+    def _counted(*extra_filters):
+        query = db.session.query(entry.student_id, func.count(entry.id)).filter(entry.student_id.in_(student_ids), *extra_filters)
+        if visibility is not None:
+            query = query.filter(visibility)
+        return query.group_by(entry.student_id).all()
+
+    for sid, count in _counted():
+        result[sid]["visible"] = count
+
+    read_entry_ids = db.session.query(student_journal_entry_read.c.entry_id).filter(student_journal_entry_read.c.user_id == user.id)
+
+    for sid, count in _counted(~entry.id.in_(read_entry_ids)):
+        result[sid]["unread"] = count
+
+    return result

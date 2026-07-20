@@ -928,6 +928,11 @@ p.copyright {
     border: 2px solid var(--bs-body-bg);
 }
 
+.jchip.jquick-add {
+    color: var(--bs-success-text-emphasis);
+    border-color: var(--bs-success-border-subtle);
+}
+
 .recent-tag {
     font-size: 0.68rem;
     font-weight: 700;

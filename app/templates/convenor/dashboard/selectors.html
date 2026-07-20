@@ -11,9 +11,15 @@
 {% block scripts %}
     {{ super() }}
 
+    {% from "select2.html" import import_select2 %}
+    {{ import_select2() }}
+
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+    <script src="{{ url_for('static', filename='js/convenor/journal.js') }}"></script>
 
+    <script>
         $(document).ready(function () {
             $('#selectors-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
@@ -45,6 +51,7 @@
                         type: 'value'
                       } },
                     { data: 'submitted' },
+                    { data: 'journal', orderable: false, searchable: false },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -215,15 +222,30 @@
             <table id="selectors-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="15%"> Name</th>
-                    <th width="26%"> Programme</th>
-                    <th width="22%"> Confirmations</th>
-                    <th width="11%"> Bookmarks</th>
-                    <th width="11%"> Submitted</th>
-                    <th width="15%"> Actions</th>
+                    <th width="14%"> Name</th>
+                    <th width="24%"> Programme</th>
+                    <th width="20%"> Confirmations</th>
+                    <th width="10%"> Bookmarks</th>
+                    <th width="10%"> Submitted</th>
+                    <th width="10%" class="text-center"> Journal</th>
+                    <th width="12%"> Actions</th>
                 </tr>
                 </thead>
             </table>
+            <div class="d-flex justify-content-end">
+                <span class="small text-secondary">
+                    <span class="jchip muted" style="cursor: default;"><i class="fas fa-book"></i></span>
+                    = no entries visible to you
+                    &nbsp;&middot;&nbsp;
+                    <span class="jdot" style="position: static; display: inline-block;"></span>
+                    = unread
+                </span>
+            </div>
         </div>
     </div>
+
+    {% include "convenor/journal/_drawer.html" %}
+    {% with form = quick_add_form %}
+        {% include "convenor/journal/_add_modal.html" %}
+    {% endwith %}
 {% endblock %}

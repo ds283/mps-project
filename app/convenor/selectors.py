@@ -39,6 +39,7 @@ from ..models import (
     StudentData,
     StudentJournalEntry,
     User,
+    batch_journal_counts,
 )
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
@@ -65,7 +66,7 @@ from ..shared.journal import create_auto_journal_entry
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideInMemoryHandler
-from .forms import ConfirmDeleteWithReasonForm
+from .forms import AddJournalEntryFormFactory, ConfirmDeleteWithReasonForm
 
 
 @convenor.route("/selectors/<int:id>")
@@ -226,6 +227,8 @@ def selectors(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
+    JournalForm = AddJournalEntryFormFactory(current_user)
+
     return render_template_context(
         "convenor/dashboard/selectors.html",
         pane="selectors",
@@ -246,6 +249,7 @@ def selectors(id):
         state_filter=state_filter,
         year_filter=year_filter,
         convert_filter=convert_filter,
+        quick_add_form=JournalForm(),
     )
 
 
@@ -320,7 +324,9 @@ def selectors_ajax(id):
             },
         }
 
-    return ajax.convenor.selectors_data(data, config, quickfix_factory=_quickfixes)
+    journal_counts = batch_journal_counts(current_user, [s.student_id for s in data])
+
+    return ajax.convenor.selectors_data(data, config, quickfix_factory=_quickfixes, journal_counts=journal_counts)
 
 
 def _build_selector_data(

@@ -179,16 +179,12 @@ def create_assessment_schedule(id):
         offline = False
 
         if form.submit.data:
-            task_name = 'Perform optimal scheduling for "{name}"'.format(
-                name=form.name.data
-            )
+            task_name = 'Perform optimal scheduling for "{name}"'.format(name=form.name.data)
             desc = "Automated assessment scheduling task"
 
         elif form.offline.data:
             offline = True
-            task_name = 'Generate file for offline scheduling for "{name}"'.format(
-                name=form.name.data
-            )
+            task_name = 'Generate file for offline scheduling for "{name}"'.format(name=form.name.data)
             desc = "Produce .LP file for download and offline scheduling"
 
         else:
@@ -326,20 +322,14 @@ def adjust_assessment_schedule(id):
             while suffix < 100:
                 new_name = "{name} #{suffix}".format(name=schedule.name, suffix=suffix)
 
-                if (
-                    ScheduleAttempt.query.filter_by(
-                        name=new_name, owner_id=schedule.owner_id
-                    ).first()
-                    is None
-                ):
+                if ScheduleAttempt.query.filter_by(name=new_name, owner_id=schedule.owner_id).first() is None:
                     break
 
                 suffix += 1
 
             if suffix > 100:
                 flash(
-                    'Can not adjust schedule "{name}" because a new unique tag could not '
-                    "be generated.".format(name=schedule.name),
+                    'Can not adjust schedule "{name}" because a new unique tag could not be generated.'.format(name=schedule.name),
                     "error",
                 )
                 return redirect(redirect_url())
@@ -351,9 +341,7 @@ def adjust_assessment_schedule(id):
 
             form.tag.data = new_tag
 
-    return render_template_context(
-        "admin/presentations/scheduling/adjust_options.html", record=schedule, form=form
-    )
+    return render_template_context("admin/presentations/scheduling/adjust_options.html", record=schedule, form=form)
 
 
 @admin.route("/perform_adjust_assessment_schedule/<int:id>")
@@ -462,9 +450,7 @@ def perform_adjust_assessment_schedule(id):
     celery = current_app.extensions["celery"]
     schedule_task = celery.tasks["app.tasks.scheduling.recompute_schedule"]
 
-    schedule_task.apply_async(
-        args=(new_schedule.id, old_schedule.id, allow_new_slots), task_id=uuid
-    )
+    schedule_task.apply_async(args=(new_schedule.id, old_schedule.id, allow_new_slots), task_id=uuid)
 
     return redirect(url_for("admin.assessment_schedules", id=old_schedule.owner.id))
 
@@ -476,9 +462,7 @@ def terminate_schedule(id):
 
     if record.finished:
         flash(
-            'Can not terminate scheduling task "{name}" because it has finished.'.format(
-                name=record.name
-            ),
+            'Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -486,13 +470,11 @@ def terminate_schedule(id):
     title = "Terminate schedule"
     panel_title = "Terminate schedule <strong>{name}</strong>".format(name=record.name)
 
-    action_url = url_for(
-        "admin.perform_terminate_schedule", id=id, url=request.referrer
-    )
+    action_url = url_for("admin.perform_terminate_schedule", id=id, url=request.referrer)
     message = (
-        "<p>Please confirm that you wish to terminate the scheduling job "
-        "<strong>{name}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=record.name)
+        "<p>Please confirm that you wish to terminate the scheduling job <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+            name=record.name
+        )
     )
     submit_label = "Terminate job"
 
@@ -519,9 +501,7 @@ def perform_terminate_schedule(id):
 
     if record.finished:
         flash(
-            'Can not terminate scheduling task "{name}" because it has finished.'.format(
-                name=record.name
-            ),
+            'Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),
             "error",
         )
         return redirect(url)
@@ -558,8 +538,7 @@ def perform_terminate_schedule(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not terminate scheduling task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not terminate scheduling task "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -580,18 +559,14 @@ def delete_schedule(id):
 
     if not record.finished:
         flash(
-            'Can not delete schedule "{name}" because it has not terminated.'.format(
-                name=record.name
-            ),
+            'Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
 
     if record.deployed:
         flash(
-            'Can not delete schedule "{name}" because it has been deployed.'.format(
-                name=record.name
-            ),
+            'Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -616,10 +591,8 @@ def delete_schedule(id):
             "<p>This action cannot be undone.</p>".format(name=record.name)
         )
     else:
-        message = (
-            "<p>Please confirm that you wish to delete the schedule "
-            "<strong>{name}</strong>.</p>"
-            "<p>This action cannot be undone.</p>".format(name=record.name)
+        message = "<p>Please confirm that you wish to delete the schedule <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+            name=record.name
         )
 
     submit_label = "Delete schedule"
@@ -653,18 +626,14 @@ def perform_delete_schedule(id):
 
     if not record.finished:
         flash(
-            'Can not delete schedule "{name}" because it has not terminated.'.format(
-                name=record.name
-            ),
+            'Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
             "info",
         )
         return redirect(url)
 
     if record.deployed:
         flash(
-            'Can not delete schedule "{name}" because it has been deployed.'.format(
-                name=record.name
-            ),
+            'Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name),
             "info",
         )
         return redirect(url)
@@ -698,8 +667,7 @@ def perform_delete_schedule(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not delete schedule "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not delete schedule "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -721,24 +689,19 @@ def revert_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Can not revert schedule "{name}" because it is still awaiting '
-                "manual upload".format(name=record.name),
+                'Can not revert schedule "{name}" because it is still awaiting manual upload'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Can not revert schedule "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -785,24 +748,19 @@ def perform_revert_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Can not revert schedule "{name}" because it is still awaiting '
-                "manual upload".format(name=record.name),
+                'Can not revert schedule "{name}" because it is still awaiting manual upload'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Can not revert schedule "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -844,25 +802,22 @@ def duplicate_schedule(id):
         if record.awaiting_upload:
             if not record.celery_finished:
                 flash(
-                    'Can not duplicate schedule "{name}" because the files for offline processing '
-                    "are still being generated.".format(name=record.name),
+                    'Can not duplicate schedule "{name}" because the files for offline processing are still being generated.'.format(
+                        name=record.name
+                    ),
                     "error",
                 )
                 return redirect(redirect_url())
         else:
             flash(
-                'Can not duplicate schedule "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
             return redirect(redirect_url())
 
     if record.finished and not record.solution_usable:
         flash(
-            'Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -878,8 +833,7 @@ def duplicate_schedule(id):
 
     if suffix >= 100:
         flash(
-            'Can not duplicate schedule "{name}" because a new unique tag could not '
-            "be generated.".format(name=record.name),
+            'Can not duplicate schedule "{name}" because a new unique tag could not be generated.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -937,17 +891,14 @@ def rename_schedule(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
-                'Could not rename schedule "{name}" due to a database error. '
-                "Please contact a system administrator.".format(name=record.name),
+                'Could not rename schedule "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
                 "error",
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
-    return render_template_context(
-        "admin/presentations/scheduling/rename.html", form=form, record=record, url=url
-    )
+    return render_template_context("admin/presentations/scheduling/rename.html", form=form, record=record, url=url)
 
 
 @admin.route("/compare_schedule/<int:id>", methods=["GET", "POST"])
@@ -964,22 +915,21 @@ def compare_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it has not yet '
-                "terminated.".format(name=record.name),
+                'Schedule "{name}" is not yet available for comparison because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for comparison.".format(name=record.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for comparison.'.format(
+                name=record.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -987,9 +937,7 @@ def compare_schedule(id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    CompareScheduleForm = CompareScheduleFormFactory(
-        record.owner_id, record.id, current_user.has_role("root")
-    )
+    CompareScheduleForm = CompareScheduleFormFactory(record.owner_id, record.id, current_user.has_role("root"))
     form = CompareScheduleForm(request.form)
 
     if form.validate_on_submit():
@@ -1026,9 +974,7 @@ def do_schedule_compare(id1, id2):
     if url is None:
         url = redirect_url()
 
-    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(
-        record2
-    ):
+    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
         return redirect(url)
 
     if record1.owner_id != record2.owner_id:
@@ -1050,22 +996,21 @@ def do_schedule_compare(id1, id2):
     if not record1.finished:
         if record1.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
-                "manual upload.".format(name=record1.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting manual upload.'.format(name=record1.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it has not yet '
-                "terminated.".format(name=record1.name),
+                'Schedule "{name}" is not yet available for comparison because it has not yet terminated.'.format(name=record1.name),
                 "error",
             )
         return redirect(url)
 
     if not record1.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for comparison.".format(name=record1.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for comparison.'.format(
+                name=record1.name
+            ),
             "info",
         )
         return redirect(url)
@@ -1073,22 +1018,21 @@ def do_schedule_compare(id1, id2):
     if not record2.finished:
         if record2.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
-                "manual upload.".format(name=record2.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting manual upload.'.format(name=record2.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it has not yet '
-                "terminated.".format(name=record2.name),
+                'Schedule "{name}" is not yet available for comparison because it has not yet terminated.'.format(name=record2.name),
                 "error",
             )
         return redirect(url)
 
     if not record2.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for comparison.".format(name=record2.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for comparison.'.format(
+                name=record2.name
+            ),
             "info",
         )
         return redirect(url)
@@ -1116,9 +1060,7 @@ def do_schedule_compare_ajax(id1, id2):
     record1: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id1)
     record2: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id2)
 
-    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(
-        record2
-    ):
+    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
         return jsonify({})
 
     if record1.owner_id != record2.owner_id:
@@ -1140,22 +1082,21 @@ def do_schedule_compare_ajax(id1, id2):
     if not record1.finished:
         if record1.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
-                "manual upload.".format(name=record1.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting manual upload.'.format(name=record1.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it has not yet '
-                "terminated.".format(name=record1.name),
+                'Schedule "{name}" is not yet available for comparison because it has not yet terminated.'.format(name=record1.name),
                 "error",
             )
         return jsonify({})
 
     if not record1.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for comparison.".format(name=record1.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for comparison.'.format(
+                name=record1.name
+            ),
             "info",
         )
         return jsonify({})
@@ -1163,22 +1104,21 @@ def do_schedule_compare_ajax(id1, id2):
     if not record2.finished:
         if record2.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
-                "manual upload.".format(name=record2.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting manual upload.'.format(name=record2.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it has not yet '
-                "terminated.".format(name=record2.name),
+                'Schedule "{name}" is not yet available for comparison because it has not yet terminated.'.format(name=record2.name),
                 "error",
             )
         return jsonify({})
 
     if not record2.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for comparison.".format(name=record2.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for comparison.'.format(
+                name=record2.name
+            ),
             "info",
         )
         return jsonify({})
@@ -1205,33 +1145,28 @@ def publish_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for publication because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" is not yet available for publication because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for publication because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" is not yet available for publication because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared with convenors.".format(name=record.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be shared with convenors.'.format(
+                name=record.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     if record.deployed:
         flash(
-            'Schedule "{name}" is deployed and is not available to be published.'.format(
-                name=record.name
-            ),
+            'Schedule "{name}" is deployed and is not available to be published.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1246,8 +1181,7 @@ def publish_schedule(id):
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            f'Could not publish schedule "{record.name}" because of a database error. '
-            "Please contact a system administrator",
+            f'Could not publish schedule "{record.name}" because of a database error. Please contact a system administrator',
             "error",
         )
 
@@ -1268,22 +1202,19 @@ def unpublish_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                f'Schedule "{record.name}" is not yet available for unpublication because it is still awaiting '
-                "manual upload.",
+                f'Schedule "{record.name}" is not yet available for unpublication because it is still awaiting manual upload.',
                 "error",
             )
         else:
             flash(
-                f'Schedule "{record.name}" is not yet available for unpublication because it has not yet '
-                "terminated.",
+                f'Schedule "{record.name}" is not yet available for unpublication because it has not yet terminated.',
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            f'Schedule "{record.name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared with convenors.",
+            f'Schedule "{record.name}" did not yield an optimal solution and is not available for use. It cannot be shared with convenors.',
             "info",
         )
         return redirect(redirect_url())
@@ -1298,8 +1229,7 @@ def unpublish_schedule(id):
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            f'Could not unpublish schedule "{record.name}" because of a database error. '
-            "Please contact a system administrator",
+            f'Could not unpublish schedule "{record.name}" because of a database error. Please contact a system administrator',
             "error",
         )
 
@@ -1320,22 +1250,23 @@ def publish_schedule_submitters(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for sharing with submitters because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with submitters because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for sharing with submitters because it has not yet '
-                "terminated.".format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with submitters because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared by email.".format(name=record.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be shared by email.'.format(
+                name=record.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1405,17 +1336,16 @@ def publish_schedule_assessors(id):
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for sharing with assessors because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" is not yet available for sharing with assessors because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared by email.".format(name=record.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be shared by email.'.format(
+                name=record.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1528,8 +1458,7 @@ def deploy_schedule(id):
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            f'Could not deploy schedule "{record.name}" because of a database error. '
-            "Please contact a system administrator",
+            f'Could not deploy schedule "{record.name}" because of a database error. Please contact a system administrator',
             "error",
         )
         return redirect(redirect_url())
@@ -1631,8 +1560,7 @@ def undeploy_schedule(id):
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            f'Could not revoke deployment of schedule "{record.name}" because of a database error. '
-            "Please contact a system administrator",
+            f'Could not revoke deployment of schedule "{record.name}" because of a database error. Please contact a system administrator',
             "error",
         )
         return redirect(redirect_url())
@@ -1698,9 +1626,7 @@ def schedule_view_sessions(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    building_filter, pclass_filter, room_filter, session_filter = (
-        _store_schedule_filters()
-    )
+    building_filter, pclass_filter, room_filter, session_filter = _store_schedule_filters()
 
     pclasses = record.available_pclasses
     buildings = record.available_buildings
@@ -1765,9 +1691,7 @@ def schedule_view_faculty(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    building_filter, pclass_filter, room_filter, session_filter = (
-        _store_schedule_filters()
-    )
+    building_filter, pclass_filter, room_filter, session_filter = _store_schedule_filters()
 
     pclasses = record.available_pclasses
     buildings = record.available_buildings
@@ -1866,9 +1790,7 @@ def schedule_view_sessions_ajax(id):
 
     flag, building_value = is_integer(building_filter)
     if flag:
-        slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(
-            Room.building_id == building_value
-        )
+        slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(Room.building_id == building_value)
         joined_room = True
 
     flag, room_value = is_integer(room_filter)
@@ -1928,9 +1850,7 @@ def schedule_view_faculty_ajax(id):
 
         flag, building_value = is_integer(building_filter)
         if flag:
-            slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(
-                Room.building_id == building_value
-            )
+            slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(Room.building_id == building_value)
             joined_room = True
 
         flag, room_value = is_integer(room_filter)
@@ -1979,8 +1899,7 @@ def schedule_delete_slot(id):
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            "Could not remove this session because of a database error. "
-            "Please contact a system administrator",
+            "Could not remove this session because of a database error. Please contact a system administrator",
             "error",
         )
 
@@ -2064,19 +1983,13 @@ def schedule_assign_assessors_ajax(id):
     for assessor in record.owner.ordered_assessors:
         assessor: AssessorAttendanceData
         # candidate assessors should be available in this slot
-        if slot.session.faculty_available(
-            assessor.faculty_id
-        ) or slot.session.faculty_ifneeded(assessor.faculty_id):
+        if slot.session.faculty_available(assessor.faculty_id) or slot.session.faculty_ifneeded(assessor.faculty_id):
             is_candidate = True
 
             if pclass is not None:
                 # assessors should also be enrolled for the project class corresponding to this slot
                 enrolment = assessor.faculty.get_enrollment_record(pclass.id)
-                available = (
-                    enrolment is not None
-                    and enrolment.presentations_state
-                    == EnrollmentRecord.PRESENTATIONS_ENROLLED
-                )
+                available = enrolment is not None and enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
 
                 if not available:
                     is_candidate = False
@@ -2095,9 +2008,7 @@ def schedule_assign_assessors_ajax(id):
                 is_candidate = False
 
             if is_candidate:
-                slots: List[ScheduleSlot] = record.get_faculty_slots(
-                    assessor.faculty_id
-                ).all()
+                slots: List[ScheduleSlot] = record.get_faculty_slots(assessor.faculty_id).all()
 
                 score = len(slots)
 
@@ -2127,25 +2038,19 @@ def schedule_attach_assessor(slot_id, fac_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(
-                name=record.name
-            ),
+            'Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2154,14 +2059,10 @@ def schedule_attach_assessor(slot_id, fac_id):
         return redirect(redirect_url())
 
     if not record.owner.includes_faculty(fac_id):
-        flash(
-            "The specified faculty member is not attached to this assessment", "error"
-        )
+        flash("The specified faculty member is not attached to this assessment", "error")
         return redirect(redirect_url())
 
-    item: AssessorAttendanceData = record.owner.assessors_query.filter(
-        AssessorAttendanceData.faculty_id == fac_id
-    ).first()
+    item: AssessorAttendanceData = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
 
     if item is None:
         flash("Could not attach this faculty member due to a database error", "error")
@@ -2207,25 +2108,19 @@ def schedule_remove_assessor(slot_id, fac_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
-                name=record.name
-            ),
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2234,14 +2129,10 @@ def schedule_remove_assessor(slot_id, fac_id):
         return redirect(redirect_url())
 
     if not record.owner.includes_faculty(fac_id):
-        flash(
-            "The specified faculty member is not attached to this assessment", "error"
-        )
+        flash("The specified faculty member is not attached to this assessment", "error")
         return redirect(redirect_url())
 
-    item = record.owner.assessors_query.filter(
-        AssessorAttendanceData.faculty_id == fac_id
-    ).first()
+    item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
 
     if item is None:
         flash("Could not attach this faculty member due to a database error", "error")
@@ -2276,25 +2167,19 @@ def schedule_adjust_submitter(slot_id, talk_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
-                name=record.name
-            ),
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2380,25 +2265,19 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
-                name=record.name
-            ),
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2457,25 +2336,19 @@ def schedule_move_room(slot_id, room_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
-                name=record.name
-            ),
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2493,8 +2366,7 @@ def schedule_move_room(slot_id, room_id):
 
     else:
         flash(
-            'Cannot assign venue "{room}" to this slot because it is unavailable, or does not meet '
-            "the required criteria.".format(room=room.full_name)
+            'Cannot assign venue "{room}" to this slot because it is unavailable, or does not meet the required criteria.'.format(room=room.full_name)
         )
 
     return redirect(redirect_url())
@@ -2543,9 +2415,7 @@ def assessment_manage_attendees(id):
     )
 
 
-@admin.route(
-    "/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>"
-)
+@admin.route("/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>")
 @roles_accepted("root", "faculty", "admin")
 def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     """
@@ -2567,9 +2437,7 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     source_schedule = ScheduleAttempt.query.get_or_404(source_sched)
     target_schedule = ScheduleAttempt.query.get_or_404(target_sched)
 
-    if not validate_schedule_inspector(
-        source_schedule
-    ) or not validate_schedule_inspector(target_schedule):
+    if not validate_schedule_inspector(source_schedule) or not validate_schedule_inspector(target_schedule):
         return redirect(redirect_url())
 
     # check that source and target schedules are owned by the same assessent
@@ -2592,24 +2460,21 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     if not source_schedule.finished:
         if source_schedule.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(
-                    name=source_schedule.name
-                ),
+                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(name=source_schedule.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(
-                    name=source_schedule.name
-                ),
+                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=source_schedule.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not source_schedule.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for merging.".format(name=source_schedule.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for merging.'.format(
+                name=source_schedule.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -2617,24 +2482,21 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     if target_schedule is not None and not target_schedule.finished:
         if target_schedule.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(
-                    name=target_schedule.name
-                ),
+                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(name=target_schedule.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(
-                    name=target_schedule.name
-                ),
+                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=target_schedule.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if target_schedule is not None and not target_schedule.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be used for merging.".format(name=target_schedule.name),
+            'Schedule "{name}" did not yield an optimal solution and is not available for use. It cannot be used for merging.'.format(
+                name=target_schedule.name
+            ),
             "info",
         )
         return redirect(redirect_url())

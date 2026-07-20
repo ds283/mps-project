@@ -44,7 +44,6 @@ from ..database import db
 from ..faculty.forms import ProjectMixinFactory
 from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
-
     DEFAULT_STRING_LENGTH,
     AlternativesPriorityMixin,
     ConvenorGenericTask,
@@ -130,9 +129,7 @@ def GoLiveFormFactory(
             live_and_close = SubmitField(live_and_close_label)
 
         # deadline field
-        live_deadline = DateTimeField(
-            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
-        )
+        live_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
 
         # notify faculty checkbox
         notify_faculty = BooleanField("Send e-mail notifications to faculty")
@@ -205,14 +202,10 @@ def ChangeDeadlineFormFactory(
         change = SubmitField(change_label)
 
         # deadline field
-        live_deadline = DateTimeField(
-            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
-        )
+        live_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
 
         # send email notifications to convenor and office contacts?
-        notify_convenor = BooleanField(
-            "On closure, send e-mail notification to convenor and office staff"
-        )
+        notify_convenor = BooleanField("On closure, send e-mail notification to convenor and office staff")
 
     return ChangeDeadlineForm
 
@@ -224,9 +217,7 @@ def IssueFacultyConfirmRequestFormFactory(
 ):
     class IssueFacultyConfirmRequestForm(Form):
         # deadline for confirmation responses
-        request_deadline = DateTimeField(
-            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
-        )
+        request_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
 
         # skip button, if used
         if skip_label is not None:
@@ -287,11 +278,7 @@ def TestMarkingEventFormFactory(pclass):
             query_factory=get_test_targets,
             get_label=lambda u: f"{u.name} <{u.email}>",
             allow_blank=False,
-            validators=[
-                DataRequired(
-                    message="Please select a recipient for the test notification."
-                )
-            ],
+            validators=[DataRequired(message="Please select a recipient for the test notification.")],
             description="Select a recipient for the test notification emails.",
         )
 
@@ -340,11 +327,7 @@ def TestMarkingReminderFormFactory(pclass):
             query_factory=get_test_targets,
             get_label=lambda u: f"{u.name} <{u.email}>",
             allow_blank=False,
-            validators=[
-                DataRequired(
-                    message="Please select a recipient for the test reminder."
-                )
-            ],
+            validators=[DataRequired(message="Please select a recipient for the test reminder.")],
             description="Select a recipient for the test reminder emails.",
         )
 
@@ -355,29 +338,19 @@ def TestMarkingReminderFormFactory(pclass):
 
 class CustomCATSLimitForm(Form, SaveChangesMixin):
     # custom CATS limit for supervision
-    CATS_supervision = IntegerField(
-        "Maximum CATS allocation for supervision", validators=[Optional()]
-    )
+    CATS_supervision = IntegerField("Maximum CATS allocation for supervision", validators=[Optional()])
 
     # custom CATS limit for marking
-    CATS_marking = IntegerField(
-        "Maximum CATS allocation for marking", validators=[Optional()]
-    )
+    CATS_marking = IntegerField("Maximum CATS allocation for marking", validators=[Optional()])
 
     # custom CATS limit for moderation
-    CATS_moderation = IntegerField(
-        "Maximum CATS allocation for moderation", validators=[Optional()]
-    )
+    CATS_moderation = IntegerField("Maximum CATS allocation for moderation", validators=[Optional()])
 
     # custom CATS limit for presentations
-    CATS_presentation = IntegerField(
-        "Maximum CATS allocation for presentation assessment", validators=[Optional()]
-    )
+    CATS_presentation = IntegerField("Maximum CATS allocation for presentation assessment", validators=[Optional()])
 
 
-class EditSubmissionPeriodRecordPresentationsForm(
-    Form, PeriodPresentationsMixin, SaveChangesMixin
-):
+class EditSubmissionPeriodRecordPresentationsForm(Form, PeriodPresentationsMixin, SaveChangesMixin):
     pass
 
 
@@ -494,8 +467,7 @@ def EditConfigAIRubricFormFactory(config: ProjectClassConfig):
             allow_blank=True,
             blank_text="— None (opt out of AI grading for this cycle) —",
             get_label="label",
-            description="Select the grading rubric to use for AI-assisted assessment. "
-            "Choose 'None' to disable AI grading for this academic year.",
+            description="Select the grading rubric to use for AI-assisted assessment. Choose 'None' to disable AI grading for this academic year.",
         )
 
     return EditConfigAIRubricForm
@@ -549,8 +521,7 @@ def EditPeriodDatesFormFactory(config: ProjectClassConfig):
 
         name = StringField(
             "Name",
-            description="Optional. Enter a textual name for this submission "
-            'period, such as "Autumn Term". Leave blank to use the default name.',
+            description='Optional. Enter a textual name for this submission period, such as "Autumn Term". Leave blank to use the default name.',
             validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
         )
 
@@ -565,8 +536,7 @@ def EditPeriodDatesFormFactory(config: ProjectClassConfig):
             "Hand-in date",
             format="%d/%m/%Y",
             validators=[Optional()],
-            description="Enter an optional hand-in date for this submission period. If present, "
-            "this is used to show students how much time remains.",
+            description="Enter an optional hand-in date for this submission period. If present, this is used to show students how much time remains.",
         )
 
     return EditPeriodDatesForm
@@ -580,7 +550,7 @@ def EditPeriodMarkersFormFactory(config: ProjectClassConfig):
             "Number of markers",
             default=DEFAULT_ASSIGNED_MARKERS,
             description="Number of markers that should be assigned to each project. "
-                        "If set to zero, no markers are assigned and the report grade will not be tracked.",
+            "If set to zero, no markers are assigned and the report grade will not be tracked.",
             validators=[
                 InputRequired("Please enter the required number of markers"),
                 NumberRange(
@@ -593,16 +563,14 @@ def EditPeriodMarkersFormFactory(config: ProjectClassConfig):
         uses_supervision_grade = BooleanField(
             "Track a supervision grade for this period",
             description="Enable if a separate supervision mark will be recorded for this period "
-                        "and copied into submission records via the marking workflow. If disabled, "
-                        "the supervision grade column is suppressed in the student inspector and exports.",
+            "and copied into submission records via the marking workflow. If disabled, "
+            "the supervision grade column is suppressed in the student inspector and exports.",
         )
 
         @staticmethod
         def validate_number_markers(form, field):
             if form._config.uses_marker and field.data == 0:
-                raise ValidationError(
-                    "This project class uses markers. The number of markers should be 1 or greater."
-                )
+                raise ValidationError("This project class uses markers. The number of markers should be 1 or greater.")
 
     return EditPeriodMarkersForm
 
@@ -688,13 +656,9 @@ class ConvenorTaskMixin:
 class ConvenorGenericTaskMixin:
     repeat = BooleanField("Repeat task")
 
-    repeat_interval = SelectField(
-        "Repeat interval", choices=ConvenorGenericTask.repeat_options, coerce=int
-    )
+    repeat_interval = SelectField("Repeat interval", choices=ConvenorGenericTask.repeat_options, coerce=int)
 
-    repeat_frequency = IntegerField(
-        "Repeat frequency", validators=[NotOptionalIf("repeat")]
-    )
+    repeat_frequency = IntegerField("Repeat frequency", validators=[NotOptionalIf("repeat")])
 
     repeat_from_due_date = BooleanField(
         "Repeat from due date",
@@ -722,14 +686,13 @@ class AddConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin):
     submit = SubmitField("Create new task")
 
 
-class EditConvenorGenericTask(
-    Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin
-):
+class EditConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin):
     pass
 
 
 class EditSubmissionRoleForm(Form, SaveChangesMixin):
     role = SelectField("Role type", choices=SubmissionRole.role_choices, coerce=int)
+
 
 class AddSubmitterRoleForm(Form):
     role = SelectField("Role type", choices=SubmissionRole.role_choices, coerce=int)
@@ -816,9 +779,7 @@ def EditProjectSupervisorsFactory(project: Project):
             "Supervisors",
             query_factory=GetAllPossibleSupervisors,
             get_label=BuildSupervisorName,
-            validators=[
-                InputRequired(message="Please specify at least one supervisor")
-            ],
+            validators=[InputRequired(message="Please specify at least one supervisor")],
         )
 
     return EditProjectSupervisors
@@ -830,9 +791,7 @@ def EditLiveProjectSupervisorsFactory(project: LiveProject):
             "Supervisors",
             query_factory=partial(GetPossibleSupervisors, project.config.pclass_id),
             get_label=BuildSupervisorName,
-            validators=[
-                InputRequired(message="Please specify at least one supervisor")
-            ],
+            validators=[InputRequired(message="Please specify at least one supervisor")],
         )
 
     return EditLiveProjectSupervisors
@@ -870,11 +829,7 @@ def _CustomOfferFormMixinFactory(pclass: ProjectClassConfig, year: int):
             "Comment",
             render_kw={"rows": 3},
             description="Please enter a brief explanation or justification for this offer",
-            validators=[
-                InputRequired(
-                    message="A brief comment is required to help document the reason this offer has been made"
-                )
-            ],
+            validators=[InputRequired(message="A brief comment is required to help document the reason this offer has been made")],
         )
 
         if pclass.number_submissions > 1:
@@ -944,9 +899,7 @@ def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
 def EditSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
     unique_name = partial(unique_or_original_submission_unit, period.id)
 
-    class EditSubmissionPeriodUnitForm(
-        Form, SubmissionPeriodUnitMixin, SaveChangesMixin
-    ):
+    class EditSubmissionPeriodUnitForm(Form, SubmissionPeriodUnitMixin, SaveChangesMixin):
         name = StringField(
             "Name",
             validators=[
@@ -1003,9 +956,7 @@ def AddSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
 def EditSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
     unique_name = partial(unique_or_original_supervision_event_template, unit.id)
 
-    class EditSupervisionEventTemplateForm(
-        Form, SupervisionEventTemplateMixin, SaveChangesMixin
-    ):
+    class EditSupervisionEventTemplateForm(Form, SupervisionEventTemplateMixin, SaveChangesMixin):
         name = StringField(
             "Name",
             validators=[
@@ -1205,7 +1156,7 @@ class CanvasPushForm(Form):
     grade_target = SelectField(
         "Grade target",
         description="Select which conflated grade value to post to the Canvas gradebook. "
-                    "The feedback PDF will be uploaded separately in a second step.",
+        "The feedback PDF will be uploaded separately in a second step.",
         validators=[DataRequired()],
     )
 
@@ -1276,11 +1227,7 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
     """
 
     def get_schemes():
-        return (
-            MarkingScheme.query.filter_by(pclass_id=pclass.id)
-            .order_by(MarkingScheme.name)
-            .all()
-        )
+        return MarkingScheme.query.filter_by(pclass_id=pclass.id).order_by(MarkingScheme.name).all()
 
     # Pre-compute the set of convenor/co-convenor user IDs for this pclass
     _convenor_ids = set()
@@ -1343,7 +1290,7 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
             ),
         )
 
-    _event = event                  # capture for use in validators
+    _event = event  # capture for use in validators
     _scheme_locked = scheme_locked  # capture for use in edit-form validator
     _config = event.config if event is not None else None  # ProjectClassConfig
 
@@ -1351,18 +1298,16 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
     # Roles absent from this dict (ROLE_EXAM_BOARD, ROLE_EXTERNAL_EXAMINER,
     # ROLE_RESPONSIBLE_SUPERVISOR) are unconditionally permitted.
     _ROLE_CONFIG_FLAGS = {
-        MarkingWorkflow.ROLE_SUPERVISOR:            "uses_supervisor",
-        MarkingWorkflow.ROLE_MARKER:                "uses_marker",
+        MarkingWorkflow.ROLE_SUPERVISOR: "uses_supervisor",
+        MarkingWorkflow.ROLE_MARKER: "uses_marker",
         MarkingWorkflow.ROLE_PRESENTATION_ASSESSOR: "uses_presentations",
-        MarkingWorkflow.ROLE_MODERATOR:             "uses_moderator",
+        MarkingWorkflow.ROLE_MODERATOR: "uses_moderator",
     }
 
     _valid_role_choices = [
         (role, label)
         for role, label in WORKFLOW_ROLE_CHOICES
-        if _config is None
-        or role not in _ROLE_CONFIG_FLAGS
-        or getattr(_config, _ROLE_CONFIG_FLAGS[role], True)
+        if _config is None or role not in _ROLE_CONFIG_FLAGS or getattr(_config, _ROLE_CONFIG_FLAGS[role], True)
     ]
 
     def _check_scheme_tolerance(scheme):
@@ -1371,19 +1316,12 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
         if not scheme.uses_tolerance:
             return None
         if _config is not None and not _config.uses_moderator:
-            return (
-                "This scheme uses tolerance-based moderation, but moderator roles are "
-                "not enabled for this project class."
-            )
+            return "This scheme uses tolerance-based moderation, but moderator roles are not enabled for this project class."
         if _event is not None and _event.period is not None:
             n = _event.period.number_markers
             if n <= 1:
                 marker_word = "marker" if n == 1 else "markers"
-                return (
-                    f"Tolerance-based moderation requires at least 2 markers per "
-                    f"submission, but this period is configured with "
-                    f"{n} {marker_word}."
-                )
+                return f"Tolerance-based moderation requires at least 2 markers per submission, but this period is configured with {n} {marker_word}."
         return None
 
     class MarkingWorkflowMixin:
@@ -1440,15 +1378,10 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
         )
 
         def validate_deadline(self, field):
-            if (
-                field.data is not None
-                and _event is not None
-                and _event.deadline is not None
-            ):
+            if field.data is not None and _event is not None and _event.deadline is not None:
                 if field.data > _event.deadline:
                     raise ValidationError(
-                        "Workflow deadline cannot be later than the event deadline "
-                        f"({_event.deadline.strftime('%Y-%m-%d %H:%M')})."
+                        f"Workflow deadline cannot be later than the event deadline ({_event.deadline.strftime('%Y-%m-%d %H:%M')})."
                     )
 
     class AddMarkingWorkflowForm(Form, MarkingWorkflowMixin):
@@ -1522,9 +1455,7 @@ def _build_journal_pclass_config_query(user):
     else:
         # convenor: only pclasses they manage (convenor or co-convenor)
         faculty_data = user.faculty_data
-        convenor_pclass_ids = (
-            [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
-        )
+        convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
 
         def query_factory():
             if not convenor_pclass_ids:
@@ -1630,14 +1561,8 @@ def AssignModeratorFormFactory(pclass_id):
                 (EnrollmentRecord.owner_id == User.id)
                 & (EnrollmentRecord.pclass_id == pclass_id)
                 & (
-                    (
-                        EnrollmentRecord.supervisor_state
-                        == EnrollmentRecord.SUPERVISOR_ENROLLED
-                    )
-                    | (
-                        EnrollmentRecord.marker_state
-                        == EnrollmentRecord.MARKER_ENROLLED
-                    )
+                    (EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+                    | (EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
                 ),
             )
             .filter(User.active.is_(True))
@@ -1741,9 +1666,7 @@ def build_resolve_risk_factors_form():
 
     fields = {}
     for factor_type in SubmissionRecord.ALL_RISK_TYPES:
-        fields[f"resolve_{factor_type}"] = BooleanField(
-            factor_type.replace("_", " ").title(), default=False
-        )
+        fields[f"resolve_{factor_type}"] = BooleanField(factor_type.replace("_", " ").title(), default=False)
         fields[f"annotation_{factor_type}"] = TextAreaField("Annotation", validators=[Optional()])
     return type("ResolveRiskFactorsForm", (Form,), fields)
 

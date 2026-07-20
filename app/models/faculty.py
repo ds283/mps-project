@@ -43,9 +43,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     # primary key is same as users.id for this faculty member
     id = db.Column(db.Integer(), db.ForeignKey("users.id"), primary_key=True)
-    user = db.relationship(
-        "User", foreign_keys=[id], backref=db.backref("faculty_data", uselist=False)
-    )
+    user = db.relationship("User", foreign_keys=[id], backref=db.backref("faculty_data", uselist=False))
 
     # research group affiliations for this faculty member
     affiliations = db.relationship(
@@ -126,11 +124,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         elif isinstance(pclass, int):
             pclass_id = pclass
         else:
-            raise RuntimeError(
-                "Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(
-                    typ=type(pclass)
-                )
-            )
+            raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
 
         return db.session.query(Project).filter(
             Project.active.is_(True),
@@ -159,11 +153,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         elif isinstance(pclass, int):
             pclass_id = pclass
         else:
-            raise RuntimeError(
-                "Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(
-                    typ=type(pclass)
-                )
-            )
+            raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
 
         # TODO: possibly needs revisiting if we continue decoupling the concept of supervisors from project owners
         return db.session.query(Project).filter(
@@ -198,11 +188,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         elif isinstance(pclass, int):
             pclass_id = pclass
         else:
-            raise RuntimeError(
-                "Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(
-                    typ=type(pclass)
-                )
-            )
+            raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
 
         return db.session.query(Project).filter(
             Project.active.is_(True),
@@ -233,11 +219,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         elif isinstance(pclass, int):
             pclass_id = pclass
         else:
-            raise RuntimeError(
-                "Could not interpret pclass parameter of type {typ} in FacultyData._variants_offered_query".format(
-                    typ=type(pclass)
-                )
-            )
+            raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._variants_offered_query".format(typ=type(pclass)))
 
         # get variants that are explicitly marked as attached to the specified project class
         explicit_variants = (
@@ -277,9 +259,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
                     vs = [v for v in vs if v.has_warning(w)]
             else:
                 raise RuntimeError(
-                    "Could not interpret parameter filter_warnings of type {typ} in FacultyData.variants_offered".format(
-                        typ=type(filter_warnings)
-                    )
+                    "Could not interpret parameter filter_warnings of type {typ} in FacultyData.variants_offered".format(typ=type(filter_warnings))
                 )
 
         if filter_errors is not None:
@@ -290,9 +270,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
                     vs = [v for v in vs if v.has_error(e)]
             else:
                 raise RuntimeError(
-                    "Could not interpret parameter filter_errors of type {typ} in FacultyData.variants_offered".format(
-                        typ=type(filter_errors)
-                    )
+                    "Could not interpret parameter filter_errors of type {typ} in FacultyData.variants_offered".format(typ=type(filter_errors))
                 )
 
         return vs
@@ -386,9 +364,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.delete(record)
 
         # remove this project class from any projects owned by this faculty member
-        ps = Project.query.filter(
-            Project.owner_id == self.id, Project.project_classes.any(id=pclass.id)
-        )
+        ps = Project.query.filter(Project.owner_id == self.id, Project.project_classes.any(id=pclass.id))
 
         for proj in ps.all():
             proj.remove_project_class(pclass)
@@ -472,9 +448,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
     def ordered_enrollments(self):
         from .project_class import ProjectClass
 
-        return self.enrollments.join(
-            ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id
-        ).order_by(ProjectClass.name)
+        return self.enrollments.join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id).order_by(ProjectClass.name)
 
     @property
     def is_convenor(self):
@@ -505,10 +479,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         """
         from .project_class import ProjectClass
 
-        pcls = (
-            self.convenor_for.order_by(ProjectClass.name).all()
-            + self.coconvenor_for.order_by(ProjectClass.name).all()
-        )
+        pcls = self.convenor_for.order_by(ProjectClass.name).all() + self.coconvenor_for.order_by(ProjectClass.name).all()
         pcl_set = set(pcls)
         return pcl_set
 
@@ -586,9 +557,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         """
         from .submissions import SubmissionRole
 
-        return self._apply_role_assignment_filters(
-            SubmissionRole.ROLE_MARKER, config=config, pclass=pclass, period=period
-        )
+        return self._apply_role_assignment_filters(SubmissionRole.ROLE_MARKER, config=config, pclass=pclass, period=period)
 
     def moderator_assignments(self, config=None, pclass=None, period=None):
         """
@@ -597,9 +566,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         """
         from .submissions import SubmissionRole
 
-        return self._apply_role_assignment_filters(
-            SubmissionRole.ROLE_MODERATOR, config=config, pclass=pclass, period=period
-        )
+        return self._apply_role_assignment_filters(SubmissionRole.ROLE_MODERATOR, config=config, pclass=pclass, period=period)
 
     def presentation_assignments(self, config=None, pclass=None, period=None):
         """
@@ -650,21 +617,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
             elif isinstance(config, ProjectClassConfig):
                 query = query.filter(SubmittingStudent.config_id == config.id)
             else:
-                raise ValueError(
-                    f"Unexpected type for config parameter: {type(config)}"
-                )
+                raise ValueError(f"Unexpected type for config parameter: {type(config)}")
         elif pclass is not None:
-            query = query.join(
-                ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id
-            )
+            query = query.join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
             if isinstance(pclass, int):
                 query = query.filter(ProjectClassConfig.pclass_id == pclass)
             elif isinstance(pclass, ProjectClass):
                 query = query.filter(ProjectClassConfig.pclass_id == pclass.id)
             else:
-                raise ValueError(
-                    f"Unexpected type for pclass parameter: {type(pclass)}"
-                )
+                raise ValueError(f"Unexpected type for pclass parameter: {type(pclass)}")
 
         if period is None:
             query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
@@ -767,11 +728,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
     def editable_availability_requests(self):
         from .assessment import AssessorAttendanceData, PresentationAssessment
 
-        query = (
-            db.session.query(AssessorAttendanceData.assessment_id)
-            .filter(AssessorAttendanceData.faculty_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(AssessorAttendanceData.assessment_id).filter(AssessorAttendanceData.faculty_id == self.id).subquery()
 
         return (
             db.session.query(PresentationAssessment)
@@ -828,11 +785,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
                 config_cache[pcl.id] = config
 
             if config is not None:
-                if (
-                    config.uses_supervisor
-                    and config.CATS_supervision is not None
-                    and config.CATS_supervision > 0
-                ):
+                if config.uses_supervisor and config.CATS_supervision is not None and config.CATS_supervision > 0:
                     if max_CATS is None or config.CATS_supervision > max_CATS:
                         max_CATS = float(config.CATS_supervision)
 
@@ -840,11 +793,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             record: EnrollmentRecord
 
             if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
-                if (
-                    record.pclass.active
-                    and record.pclass.publish
-                    and record.pclass.include_available
-                ):
+                if record.pclass.active and record.pclass.publish and record.pclass.include_available:
                     if record.pclass_id in config_cache:
                         config: ProjectClassConfig = config_cache[record.pclass_id]
                     else:
@@ -852,24 +801,18 @@ class FacultyData(db.Model, EditingMetadataMixin):
                         config_cache[record.pclass_id] = config
 
                     if config is not None:
-                        projects = self.projects.filter(
-                            Project.project_classes.any(id=record.pclass_id)
-                        ).all()
+                        projects = self.projects.filter(Project.project_classes.any(id=record.pclass_id)).all()
 
                         for p in projects:
                             p: Project
 
                             if p.enforce_capacity:
-                                desc: ProjectDescription = p.get_description(
-                                    record.pclass_id
-                                )
+                                desc: ProjectDescription = p.get_description(record.pclass_id)
                                 if desc is not None and desc.capacity > 0:
                                     if max_CATS is not None:
                                         supv_CATS = desc.CATS_supervision(config)
                                         if supv_CATS is not None:
-                                            total += (
-                                                float(supv_CATS) / max_CATS
-                                            ) * float(desc.capacity)
+                                            total += (float(supv_CATS) / max_CATS) * float(desc.capacity)
                                     else:
                                         total += float(desc.capacity)
                             else:
@@ -1020,9 +963,7 @@ class FacultyBatchItem(db.Model):
         "FacultyBatch",
         foreign_keys=[parent_id],
         uselist=False,
-        backref=db.backref(
-            "items", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("items", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # optional link to an existing FacultyData instance
@@ -1075,68 +1016,35 @@ class FacultyBatchItem(db.Model):
         if self.existing_record is None:
             return w
 
-        if (
-            self.first_name is not None
-            and self.existing_record.user.first_name != self.first_name
-        ):
-            w.append(
-                f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")'
-            )
+        if self.first_name is not None and self.existing_record.user.first_name != self.first_name:
+            w.append(f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")')
 
-        if (
-            self.last_name is not None
-            and self.existing_record.user.last_name != self.last_name
-        ):
-            w.append(
-                f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")'
-            )
+        if self.last_name is not None and self.existing_record.user.last_name != self.last_name:
+            w.append(f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")')
 
-        if (
-            self.user_id is not None
-            and self.existing_record.user.username != self.user_id
-        ):
-            w.append(
-                f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")'
-            )
+        if self.user_id is not None and self.existing_record.user.username != self.user_id:
+            w.append(f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")')
 
         if self.email is not None and self.existing_record.user.email != self.email:
-            w.append(
-                f'Current email "{self.existing_record.user.email}" (imported "{self.email}")'
-            )
+            w.append(f'Current email "{self.existing_record.user.email}" (imported "{self.email}")')
 
         if self.office is not None and self.existing_record.office != self.office:
-            w.append(
-                f'Current office "{self.existing_record.office}" (imported "{self.office}")'
-            )
+            w.append(f'Current office "{self.existing_record.office}" (imported "{self.office}")')
 
-        if (
-            self.CATS_supervision is not None
-            and self.existing_record.CATS_supervision != self.CATS_supervision
-        ):
+        if self.CATS_supervision is not None and self.existing_record.CATS_supervision != self.CATS_supervision:
             w.append(
                 f"Current supervision CATS {' = default' if self.existing_record.CATS_supervision is None else self.existing_record.CATS_supervision}"
             )
 
-        if (
-            self.CATS_marking is not None
-            and self.existing_record.CATS_marking != self.CATS_marking
-        ):
-            w.append(
-                f"Current marking CATS {' = default' if self.existing_record.CATS_marking is None else self.existing_record.CATS_marking}"
-            )
+        if self.CATS_marking is not None and self.existing_record.CATS_marking != self.CATS_marking:
+            w.append(f"Current marking CATS {' = default' if self.existing_record.CATS_marking is None else self.existing_record.CATS_marking}")
 
-        if (
-            self.CATS_moderation is not None
-            and self.existing_record.CATS_moderation != self.CATS_moderation
-        ):
+        if self.CATS_moderation is not None and self.existing_record.CATS_moderation != self.CATS_moderation:
             w.append(
                 f"Current moderation CATS {' = default' if self.existing_record.CATS_moderation is None else self.existing_record.CATS_moderation}"
             )
 
-        if (
-            self.CATS_presentation is not None
-            and self.existing_record.CATS_presentation != self.CATS_presentation
-        ):
+        if self.CATS_presentation is not None and self.existing_record.CATS_presentation != self.CATS_presentation:
             w.append(
                 f"Current presentation CATS {' = default' if self.existing_record.CATS_presentation is None else self.existing_record.CATS_presentation}"
             )
@@ -1159,9 +1067,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
         "ProjectClass",
         uselist=False,
         foreign_keys=[pclass_id],
-        backref=db.backref(
-            "enrollments", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("enrollments", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # pointer to faculty member this record is associated with
@@ -1170,9 +1076,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
         "FacultyData",
         uselist=False,
         foreign_keys=[owner_id],
-        backref=db.backref(
-            "enrollments", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("enrollments", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # SUPERVISOR STATUS
@@ -1189,9 +1093,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
     supervisor_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemptions)
-    supervisor_comment = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    supervisor_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # sabbatical auto re-enrol year (after sabbatical)
     supervisor_reenroll = db.Column(db.Integer())
@@ -1229,9 +1131,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
     moderator_state = db.Column(db.Integer(), index=True)
 
     # comment (e.g. can be used to note circumstances of exemption)
-    moderator_comment = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    moderator_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # moderator auto re-enrol year (after sabbatical)
     moderator_reenroll = db.Column(db.Integer())
@@ -1250,9 +1150,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
     presentations_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemption)
-    presentations_comment = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    presentations_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # marker auto re-enrol year (after sabbatical)
     presentations_reenroll = db.Column(db.Integer())
@@ -1282,9 +1180,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
         if self.presentations_state is None:
             self.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
 
-    def _generic_label(
-        self, label, state, reenroll, comment, enrolled, sabbatical, exempt
-    ):
+    def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         data = {"label": label}
 
         if state == enrolled:
@@ -1467,14 +1363,10 @@ class Supervisor(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # role name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # role abbreviation
-    abbreviation = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # active flag
     active = db.Column(db.Boolean())

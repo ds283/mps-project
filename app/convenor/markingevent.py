@@ -105,9 +105,7 @@ _SEVERITY_ORDER = {"danger": 0, "warning": 1, "info": 2, "success": 3, "secondar
 
 
 @convenor.route("/marking_events_inspector/<int:pclass_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_events_inspector(pclass_id):
     """
     View MarkingEvent instances associated with closed SubmissionPeriodRecords
@@ -116,9 +114,7 @@ def marking_events_inspector(pclass_id):
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     # get current configuration record for this project class
@@ -142,9 +138,7 @@ def marking_events_inspector(pclass_id):
 
 
 @convenor.route("/marking_events_ajax/<int:pclass_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_events_ajax(pclass_id):
     """
     AJAX endpoint for MarkingEvent inspector DataTable
@@ -152,17 +146,13 @@ def marking_events_ajax(pclass_id):
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     # Build base query: MarkingEvents for closed SubmissionPeriodRecords belonging to this ProjectClass
     base_query = (
         db.session.query(MarkingEvent)
-        .join(
-            SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id
-        )
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
         .join(
             ProjectClassConfig,
             ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
@@ -192,9 +182,7 @@ def marking_events_ajax(pclass_id):
 
 
 @convenor.route("/marking_event_feedback_jobs_status/<int:event_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_event_feedback_jobs_status(event_id):
     """
     AJAX polling endpoint for live progress updates on FeedbackOrchestrationJob
@@ -203,9 +191,7 @@ def marking_event_feedback_jobs_status(event_id):
     """
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.period.config.project_class
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     watched_ids_param = request.args.get("ids", "")
@@ -215,9 +201,7 @@ def marking_event_feedback_jobs_status(event_id):
         db.session.query(FeedbackOrchestrationJob)
         .filter(
             FeedbackOrchestrationJob.event_id == event_id,
-            FeedbackOrchestrationJob.status.in_(
-                FeedbackOrchestrationJob.ACTIVE_STATUSES
-            ),
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
         )
         .all()
     )
@@ -246,9 +230,7 @@ def marking_event_feedback_jobs_status(event_id):
 @convenor.route("/feedback_job_pause/<string:uuid>")
 @roles_accepted("faculty", "admin", "root", "convenor")
 def feedback_job_pause(uuid):
-    job: FeedbackOrchestrationJob = (
-        db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
+    job: FeedbackOrchestrationJob = db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
     event: MarkingEvent = job.event
     if event is None:
         flash("Could not determine the MarkingEvent for this job.", "error")
@@ -266,17 +248,13 @@ def feedback_job_pause(uuid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-    return redirect(
-        url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
 
 @convenor.route("/feedback_job_resume/<string:uuid>")
 @roles_accepted("faculty", "admin", "root", "convenor")
 def feedback_job_resume(uuid):
-    job: FeedbackOrchestrationJob = (
-        db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
+    job: FeedbackOrchestrationJob = db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
     event: MarkingEvent = job.event
     if event is None:
         flash("Could not determine the MarkingEvent for this job.", "error")
@@ -296,21 +274,15 @@ def feedback_job_resume(uuid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         # Kick the coordinator so it picks up the resumed job immediately.
         celery = current_app.extensions["celery"]
-        t = celery.tasks[
-            "app.tasks.feedback_orchestration.global_feedback_orchestration_step"
-        ]
+        t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
         t.apply_async(queue="default")
-    return redirect(
-        url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
 
 @convenor.route("/feedback_job_cancel/<string:uuid>")
 @roles_accepted("faculty", "admin", "root", "convenor")
 def feedback_job_cancel(uuid):
-    job: FeedbackOrchestrationJob = (
-        db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
+    job: FeedbackOrchestrationJob = db.session.query(FeedbackOrchestrationJob).filter_by(uuid=uuid).first_or_404()
     event: MarkingEvent = job.event
     if event is None:
         flash("Could not determine the MarkingEvent for this job.", "error")
@@ -330,18 +302,12 @@ def feedback_job_cancel(uuid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         # Dispatch coordinator so it cleans up the Redis keys.
         celery = current_app.extensions["celery"]
-        t = celery.tasks[
-            "app.tasks.feedback_orchestration.global_feedback_orchestration_step"
-        ]
+        t = celery.tasks["app.tasks.feedback_orchestration.global_feedback_orchestration_step"]
         t.apply_async(queue="default")
-    return redirect(
-        url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
 
-@convenor.route(
-    "/generate_marking_event_feedback/<int:event_id>", methods=["GET", "POST"]
-)
+@convenor.route("/generate_marking_event_feedback/<int:event_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root", "convenor")
 def generate_marking_event_feedback(event_id):
     """
@@ -375,9 +341,7 @@ def generate_marking_event_feedback(event_id):
         )
         return redirect(url)
 
-    fill_missing = (
-        event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
-    )
+    fill_missing = event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
     all_crs = event.conflation_reports.all()
     cr_count = len(all_crs)
 
@@ -451,9 +415,7 @@ def generate_marking_event_feedback(event_id):
 
 
 @convenor.route("/marking_event_conflation_reports/<int:event_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_event_conflation_reports(event_id):
     """
     ConflationReport inspector for a MarkingEvent.
@@ -462,9 +424,7 @@ def marking_event_conflation_reports(event_id):
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     url = url_for("convenor.period_marking_events_inspector", period_id=event.period_id)
@@ -474,9 +434,7 @@ def marking_event_conflation_reports(event_id):
         db.session.query(FeedbackOrchestrationJob)
         .filter(
             FeedbackOrchestrationJob.event_id == event.id,
-            FeedbackOrchestrationJob.status.in_(
-                FeedbackOrchestrationJob.ACTIVE_STATUSES
-            ),
+            FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES),
         )
         .order_by(FeedbackOrchestrationJob.created_at.desc())
         .all()
@@ -497,9 +455,7 @@ def marking_event_conflation_reports(event_id):
     canvas_pushable_count = sum(1 for cr in all_crs if cr.canvas_push_ready and not cr.canvas_grade_pushed)
     canvas_pushed_count = sum(1 for cr in all_crs if cr.canvas_grade_pushed)
     canvas_feedback_pushable_count = sum(
-        1
-        for cr in all_crs
-        if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed and cr.feedback_reports.count() > 0
+        1 for cr in all_crs if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed and cr.feedback_reports.count() > 0
     )
     targets = event.targets_as_dict or {}
     any_stale = stale_count > 0
@@ -631,17 +587,13 @@ def marking_event_conflation_reports(event_id):
 
 
 @convenor.route("/conflation_reports_ajax/<int:event_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def conflation_reports_ajax(event_id):
     """AJAX endpoint for ConflationReport inspector DataTable"""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     base_query = (
@@ -667,9 +619,7 @@ def conflation_reports_ajax(event_id):
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.conflation_report_data, event_id)
-        )
+        return handler.build_payload(partial(ajax.convenor.conflation_report_data, event_id))
 
 
 # ---------------------------------------------------------------------------
@@ -705,17 +655,9 @@ def _delete_feedback_for_cr(cr: ConflationReport, audit_suffix: str = "") -> Non
 
     if report_ids:
         db.session.execute(
-            sa_delete(conflation_report_to_feedback_report).where(
-                conflation_report_to_feedback_report.c.feedback_report_id.in_(
-                    report_ids
-                )
-            )
+            sa_delete(conflation_report_to_feedback_report).where(conflation_report_to_feedback_report.c.feedback_report_id.in_(report_ids))
         )
-        db.session.execute(
-            sa_delete(submission_record_to_feedback_report).where(
-                submission_record_to_feedback_report.c.report_id.in_(report_ids)
-            )
-        )
+        db.session.execute(sa_delete(submission_record_to_feedback_report).where(submission_record_to_feedback_report.c.report_id.in_(report_ids)))
     # Flush the association-table DELETEs before removing the FeedbackReport rows.
     db.session.flush()
 
@@ -802,11 +744,7 @@ def reconflate_conflation_report(cr_id):
 
     grades = {}
     for wf in workflows:
-        sr = (
-            db.session.query(SubmitterReport)
-            .filter_by(record_id=record.id, workflow_id=wf.id)
-            .first()
-        )
+        sr = db.session.query(SubmitterReport).filter_by(record_id=record.id, workflow_id=wf.id).first()
         if sr is None or sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
             continue
         if sr.grade is not None:
@@ -831,19 +769,14 @@ def reconflate_conflation_report(cr_id):
         cr.generated_timestamp = datetime.now()
         cr.is_stale = False
         log_db_commit(
-            f"Reconflated ConflationReport for student "
-            f"'{record.owner.student.user.name}' in event '{event.name}' ({pclass.name})",
+            f"Reconflated ConflationReport for student '{record.owner.student.user.name}' in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
-        flash(
-            f"Reconflation complete for '{record.owner.student.user.name}'.", "success"
-        )
+        flash(f"Reconflation complete for '{record.owner.student.user.name}'.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in reconflate_conflation_report", exc_info=e
-        )
+        current_app.logger.exception("SQLAlchemyError in reconflate_conflation_report", exc_info=e)
         flash("Could not reconflate due to a database error.", "error")
 
     return redirect(url)
@@ -893,33 +826,24 @@ def delete_conflation_report_feedback(cr_id):
         # If no ConflationReport in this event now has any feedback, regress the event state
         all_crs = event.conflation_reports.all()
         any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
-        if (
-            not any_with_feedback
-            and event.workflow_state
-            == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
-        ):
+        if not any_with_feedback and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
             event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
 
         log_db_commit(
-            f"Deleted feedback report(s) for student '{student_name}' "
-            f"in event '{event.name}' ({pclass.name})",
+            f"Deleted feedback report(s) for student '{student_name}' in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
         flash("Feedback reports deleted.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in delete_conflation_report_feedback", exc_info=e
-        )
+        current_app.logger.exception("SQLAlchemyError in delete_conflation_report_feedback", exc_info=e)
         flash("Could not delete feedback due to a database error.", "error")
 
     return redirect(url)
 
 
-@convenor.route(
-    "/regenerate_conflation_report_feedback/<int:cr_id>", methods=["GET", "POST"]
-)
+@convenor.route("/regenerate_conflation_report_feedback/<int:cr_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root", "convenor")
 def regenerate_conflation_report_feedback(cr_id):
     """
@@ -957,9 +881,7 @@ def regenerate_conflation_report_feedback(cr_id):
 
         try:
             if cr.feedback_reports.count() > 0:
-                _delete_feedback_for_cr(
-                    cr, audit_suffix=f" (cr id #{cr.id}, regenerate)"
-                )
+                _delete_feedback_for_cr(cr, audit_suffix=f" (cr id #{cr.id}, regenerate)")
                 db.session.flush()
 
             launch_feedback_job(
@@ -972,9 +894,7 @@ def regenerate_conflation_report_feedback(cr_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash(
-                "A database error occurred while queuing the regeneration job.", "error"
-            )
+            flash("A database error occurred while queuing the regeneration job.", "error")
             return redirect(url)
 
         flash(
@@ -1002,9 +922,7 @@ def regenerate_conflation_report_feedback(cr_id):
 
 
 @convenor.route("/view_conflation_report_emails/<int:cr_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def view_conflation_report_emails(cr_id):
     """
     List the EmailLog entries attached to a ConflationReport (feedback-push emails).
@@ -1013,9 +931,7 @@ def view_conflation_report_emails(cr_id):
     event: MarkingEvent = cr.marking_event
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     url = request.args.get(
@@ -1097,15 +1013,11 @@ def push_single_cr_feedback(cr_id):
         notify_markers = form.notify_markers.data
         notify_moderators = form.notify_moderators.data
         defer = _td(hours=delay_hours)
-        target_roles = _build_target_roles(
-            notify_supervisors, notify_markers, notify_moderators
-        )
+        target_roles = _build_target_roles(notify_supervisors, notify_markers, notify_moderators)
 
         try:
             # ---- Student feedback email ----
-            student_template = EmailTemplate.find_template_(
-                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
-            )
+            student_template = EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass)
             if student_template is not None:
                 student_workflow = EmailWorkflow.build_(
                     name=f"Push student feedback: {pclass.name} — {student_name}",
@@ -1118,9 +1030,7 @@ def push_single_cr_feedback(cr_id):
                 db.session.add(student_workflow)
                 db.session.flush()
 
-                student_item = _build_student_email_item(
-                    cr, current_user.id, defer, test_email
-                )
+                student_item = _build_student_email_item(cr, current_user.id, defer, test_email)
                 if student_item is not None:
                     student_item.workflow = student_workflow
                     db.session.add(student_item)
@@ -1129,9 +1039,7 @@ def push_single_cr_feedback(cr_id):
             if target_roles:
                 faculty_template = EmailTemplate.find_template_(
                     EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass
-                ) or EmailTemplate.find_template_(
-                    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
-                )
+                ) or EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass)
                 if faculty_template is not None:
                     faculty_workflow = EmailWorkflow.build_(
                         name=f"Push faculty feedback: {pclass.name} — {student_name}",
@@ -1144,9 +1052,7 @@ def push_single_cr_feedback(cr_id):
                     db.session.add(faculty_workflow)
                     db.session.flush()
 
-                    fac_items = _build_faculty_email_items_for_cr(
-                        cr, defer, test_email, target_roles
-                    )
+                    fac_items = _build_faculty_email_items_for_cr(cr, defer, test_email, target_roles)
                     for item in fac_items:
                         item.workflow = faculty_workflow
                         db.session.add(item)
@@ -1159,16 +1065,10 @@ def push_single_cr_feedback(cr_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash(
-                "A database error occurred while queuing the feedback email.", "error"
-            )
+            flash("A database error occurred while queuing the feedback email.", "error")
             return redirect(url)
 
-        delay_desc = (
-            f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}"
-            if delay_hours > 0
-            else "immediately"
-        )
+        delay_desc = f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}" if delay_hours > 0 else "immediately"
         test_note = f" (test mode: {test_email})" if test_email else ""
         flash(
             f'Queued feedback email for "{student_name}", to be dispatched {delay_desc}{test_note}.',
@@ -1354,16 +1254,14 @@ def push_cr_feedback_to_canvas(cr_id):
 
     if not cr.canvas_grade_pushed:
         flash(
-            "The grade must be pushed to Canvas before the feedback PDF can be uploaded. "
-            "Please push the grade first.",
+            "The grade must be pushed to Canvas before the feedback PDF can be uploaded. Please push the grade first.",
             "warning",
         )
         return redirect(url)
 
     if cr.canvas_feedback_pushed:
         flash(
-            f"The feedback PDF has already been uploaded to Canvas for this student "
-            f"(pushed: {cr.canvas_feedback_push_timestamp:%Y-%m-%d %H:%M}).",
+            f"The feedback PDF has already been uploaded to Canvas for this student (pushed: {cr.canvas_feedback_push_timestamp:%Y-%m-%d %H:%M}).",
             "info",
         )
         return redirect(url)
@@ -1424,9 +1322,7 @@ def push_marking_event_feedback(event_id):
             "Feedback can only be pushed when the event is in the 'Ready to push feedback' state.",
             "warning",
         )
-        return redirect(
-            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-        )
+        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
 
     url = request.args.get(
         "url",
@@ -1448,14 +1344,10 @@ def push_marking_event_feedback(event_id):
 
         if unsent_count == 0:
             flash("All students have already had feedback sent. Nothing to do.", "info")
-            return redirect(
-                url_for("convenor.marking_event_conflation_reports", event_id=event_id)
-            )
+            return redirect(url_for("convenor.marking_event_conflation_reports", event_id=event_id))
 
         celery = current_app.extensions["celery"]
-        push_task = celery.tasks.get(
-            "app.tasks.push_feedback.push_marking_event_feedback_task"
-        )
+        push_task = celery.tasks.get("app.tasks.push_feedback.push_marking_event_feedback_task")
         if push_task is None:
             flash(
                 "Feedback push task is not registered. Please contact a system administrator.",
@@ -1475,21 +1367,14 @@ def push_marking_event_feedback(event_id):
             ]
         )
 
-        delay_desc = (
-            f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}"
-            if delay_hours > 0
-            else "immediately"
-        )
+        delay_desc = f"in {delay_hours} hour{'s' if delay_hours != 1 else ''}" if delay_hours > 0 else "immediately"
         test_note = f" (test mode: {test_email})" if test_email else ""
         plural = "s" if unsent_count != 1 else ""
         flash(
-            f"Queued feedback email{plural} for {unsent_count} student{plural}, "
-            f"to be dispatched {delay_desc}{test_note}.",
+            f"Queued feedback email{plural} for {unsent_count} student{plural}, to be dispatched {delay_desc}{test_note}.",
             "success",
         )
-        return redirect(
-            url_for("convenor.marking_event_conflation_reports", event_id=event_id)
-        )
+        return redirect(url_for("convenor.marking_event_conflation_reports", event_id=event_id))
 
     return render_template_context(
         "convenor/feedback/push_feedback_form.html",
@@ -1505,9 +1390,7 @@ def push_marking_event_feedback(event_id):
     )
 
 
-@convenor.route(
-    "/delete_all_conflation_report_feedback/<int:event_id>", methods=["POST"]
-)
+@convenor.route("/delete_all_conflation_report_feedback/<int:event_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root", "convenor")
 def delete_all_conflation_report_feedback(event_id):
     """
@@ -1530,11 +1413,7 @@ def delete_all_conflation_report_feedback(event_id):
         flash("Invalid request.", "error")
         return redirect(url)
 
-    eligible_crs = [
-        cr
-        for cr in event.conflation_reports.all()
-        if _conflation_report_editable(cr) and cr.feedback_reports.count() > 0
-    ]
+    eligible_crs = [cr for cr in event.conflation_reports.all() if _conflation_report_editable(cr) and cr.feedback_reports.count() > 0]
 
     if not eligible_crs:
         flash("No unsent feedback reports found to delete.", "info")
@@ -1542,41 +1421,30 @@ def delete_all_conflation_report_feedback(event_id):
 
     try:
         for cr in eligible_crs:
-            _delete_feedback_for_cr(
-                cr, audit_suffix=f" (batch delete, event id #{event_id})"
-            )
+            _delete_feedback_for_cr(cr, audit_suffix=f" (batch delete, event id #{event_id})")
 
         all_crs = event.conflation_reports.all()
         any_with_feedback = any(c.feedback_reports.count() > 0 for c in all_crs)
-        if (
-            not any_with_feedback
-            and event.workflow_state
-            == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK
-        ):
+        if not any_with_feedback and event.workflow_state == MarkingEventWorkflowStates.READY_TO_PUSH_FEEDBACK:
             event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
 
         n = len(eligible_crs)
         plural = "s" if n != 1 else ""
         log_db_commit(
-            f"Batch-deleted feedback report{plural} for {n} student{plural} "
-            f"in event '{event.name}' ({pclass.name})",
+            f"Batch-deleted feedback report{plural} for {n} student{plural} in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
         flash(f"Deleted feedback for {n} student{plural}.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in delete_all_conflation_report_feedback", exc_info=e
-        )
+        current_app.logger.exception("SQLAlchemyError in delete_all_conflation_report_feedback", exc_info=e)
         flash("Could not delete feedback due to a database error.", "error")
 
     return redirect(url)
 
 
-@convenor.route(
-    "/regenerate_all_conflation_report_feedback/<int:event_id>", methods=["GET", "POST"]
-)
+@convenor.route("/regenerate_all_conflation_report_feedback/<int:event_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root", "convenor")
 def regenerate_all_conflation_report_feedback(event_id):
     """
@@ -1631,9 +1499,7 @@ def regenerate_all_conflation_report_feedback(event_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash(
-                "A database error occurred while queuing the regeneration job.", "error"
-            )
+            flash("A database error occurred while queuing the regeneration job.", "error")
             return redirect(url)
 
         n = len(cr_ids)
@@ -1669,9 +1535,7 @@ def regenerate_all_conflation_report_feedback(event_id):
 
 
 @convenor.route("/submitter_reports_inspector/<int:workflow_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def submitter_reports_inspector(workflow_id):
     """
     View SubmitterReport instances associated with a MarkingWorkflow
@@ -1683,21 +1547,15 @@ def submitter_reports_inspector(workflow_id):
     convenor_data = get_convenor_dashboard_data(pclass, config)
 
     # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     # Get return URL and text from request args
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
     text = request.args.get("text", "Marking workflows")
 
     filter_state = request.args.get("filter_state")
-    if filter_state is None and session.get(
-        "convenor_submitter_reports_inspector_filter_state"
-    ):
+    if filter_state is None and session.get("convenor_submitter_reports_inspector_filter_state"):
         filter_state = session["convenor_submitter_reports_inspector_filter_state"]
     if filter_state not in (
         "all",
@@ -1716,50 +1574,34 @@ def submitter_reports_inspector(workflow_id):
     session["convenor_submitter_reports_inspector_filter_state"] = filter_state
 
     filter_risk = request.args.get("filter_risk")
-    if filter_risk is None and session.get(
-        "convenor_submitter_reports_inspector_filter_risk"
-    ):
+    if filter_risk is None and session.get("convenor_submitter_reports_inspector_filter_risk"):
         filter_risk = session["convenor_submitter_reports_inspector_filter_risk"]
     if filter_risk not in ("all", "any_risk", "no_risk"):
         filter_risk = "all"
     session["convenor_submitter_reports_inspector_filter_risk"] = filter_risk
 
     filter_tolerance = request.args.get("filter_tolerance")
-    if filter_tolerance is None and session.get(
-        "convenor_submitter_reports_inspector_filter_tolerance"
-    ):
-        filter_tolerance = session[
-            "convenor_submitter_reports_inspector_filter_tolerance"
-        ]
+    if filter_tolerance is None and session.get("convenor_submitter_reports_inspector_filter_tolerance"):
+        filter_tolerance = session["convenor_submitter_reports_inspector_filter_tolerance"]
     if filter_tolerance not in ("all", "out_of_tolerance", "in_tolerance"):
         filter_tolerance = "all"
     session["convenor_submitter_reports_inspector_filter_tolerance"] = filter_tolerance
 
     filter_grade = request.args.get("filter_grade")
-    if filter_grade is None and session.get(
-        "convenor_submitter_reports_inspector_filter_grade"
-    ):
+    if filter_grade is None and session.get("convenor_submitter_reports_inspector_filter_grade"):
         filter_grade = session["convenor_submitter_reports_inspector_filter_grade"]
     if filter_grade not in ("all", "graded", "not_graded"):
         filter_grade = "all"
     session["convenor_submitter_reports_inspector_filter_grade"] = filter_grade
 
     filter_completion = request.args.get("filter_completion")
-    if filter_completion is None and session.get(
-        "convenor_submitter_reports_inspector_filter_completion"
-    ):
-        filter_completion = session[
-            "convenor_submitter_reports_inspector_filter_completion"
-        ]
+    if filter_completion is None and session.get("convenor_submitter_reports_inspector_filter_completion"):
+        filter_completion = session["convenor_submitter_reports_inspector_filter_completion"]
     if filter_completion not in ("all", "completed", "not_completed"):
         filter_completion = "all"
-    session["convenor_submitter_reports_inspector_filter_completion"] = (
-        filter_completion
-    )
+    session["convenor_submitter_reports_inspector_filter_completion"] = filter_completion
 
-    workflow_uses_tolerance = (
-        workflow.scheme is not None and workflow.scheme.uses_tolerance
-    )
+    workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
 
     if not workflow_uses_tolerance and filter_tolerance != "all":
         filter_tolerance = "all"
@@ -1809,9 +1651,7 @@ def submitter_reports_inspector(workflow_id):
     total = workflow.submitter_reports.count()
     ready_to_sign_off_count = state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0)
     all_ready_to_sign_off = can_edit and (total > 0 and ready_to_sign_off_count == total)
-    any_completed = (
-        can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
-    )
+    any_completed = can_edit and state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
 
     awaiting_mod_with_report = (
         db.session.query(func.count(distinct(SubmitterReport.id)))
@@ -1834,8 +1674,7 @@ def submitter_reports_inspector(workflow_id):
         .join(MarkingReport, MarkingReport.submitter_report_id == SubmitterReport.id)
         .filter(
             SubmitterReport.workflow_id == workflow_id,
-            SubmitterReport.workflow_state
-            == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
             ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
         )
         .scalar()
@@ -1853,9 +1692,7 @@ def submitter_reports_inspector(workflow_id):
 
     multi_mr_count = 0
     if wf_role in _supervisor_role_types:
-        multi_mr_count = sum(
-            1 for sr in workflow.submitter_reports if sr.marking_reports.count() > 1
-        )
+        multi_mr_count = sum(1 for sr in workflow.submitter_reports if sr.marking_reports.count() > 1)
 
     wrong_weight_count = 0
     if wf_role == SubmissionRoleTypesMixin.ROLE_MARKER:
@@ -1863,15 +1700,7 @@ def submitter_reports_inspector(workflow_id):
         wrong_weight_count = sum(
             1
             for sr in workflow.submitter_reports
-            if abs(
-                sum(
-                    float(mr.weight)
-                    for mr in sr.marking_reports
-                    if mr.weight is not None
-                )
-                - expected
-            )
-            > 0.001
+            if abs(sum(float(mr.weight) for mr in sr.marking_reports if mr.weight is not None) - expected) > 0.001
         )
 
     is_privileged = current_user.has_role("root") or current_user.has_role("admin")
@@ -1998,9 +1827,7 @@ def submitter_reports_inspector(workflow_id):
                 )
             )
 
-        needs_moderator = state_counts.get(
-            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0
-        )
+        needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0)
         if needs_moderator > 0:
             n = needs_moderator
             banners.append(
@@ -2028,9 +1855,7 @@ def submitter_reports_inspector(workflow_id):
                 )
             )
 
-        needs_intervention = state_counts.get(
-            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0
-        )
+        needs_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0)
         if needs_intervention > 0:
             n = needs_intervention
             banners.append(
@@ -2225,9 +2050,7 @@ def submitter_reports_inspector(workflow_id):
 
 
 @convenor.route("/submitter_reports_ajax/<int:workflow_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def submitter_reports_ajax(workflow_id):
     """
     AJAX endpoint for SubmitterReport inspector DataTable
@@ -2237,9 +2060,7 @@ def submitter_reports_ajax(workflow_id):
     pclass: ProjectClass = event.period.config.project_class
 
     # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     filter_state = request.args.get("filter_state", "all")
@@ -2248,9 +2069,7 @@ def submitter_reports_ajax(workflow_id):
     filter_grade = request.args.get("filter_grade", "all")
     filter_completion = request.args.get("filter_completion", "all")
 
-    workflow_uses_tolerance = (
-        workflow.scheme is not None and workflow.scheme.uses_tolerance
-    )
+    workflow_uses_tolerance = workflow.scheme is not None and workflow.scheme.uses_tolerance
     if not workflow_uses_tolerance:
         filter_tolerance = "all"
 
@@ -2296,13 +2115,9 @@ def submitter_reports_ajax(workflow_id):
         if filter_state != "all" and filter_state in _state_map:
             states = _state_map[filter_state]
             if len(states) == 1:
-                base_query = base_query.filter(
-                    SubmitterReport.workflow_state == states[0]
-                )
+                base_query = base_query.filter(SubmitterReport.workflow_state == states[0])
             else:
-                base_query = base_query.filter(
-                    SubmitterReport.workflow_state.in_(states)
-                )
+                base_query = base_query.filter(SubmitterReport.workflow_state.in_(states))
 
     if filter_tolerance == "out_of_tolerance":
         base_query = base_query.filter(SubmitterReport.out_of_tolerance.is_(True))
@@ -2334,9 +2149,7 @@ def submitter_reports_ajax(workflow_id):
             # COALESCE turns NULL (path absent or risk_factors IS NULL) into 0,
             # ensuring ~or_(...) correctly includes null-risk-factor rows in "no_risk".
             present = func.coalesce(
-                func.json_contains(
-                    SubmissionRecord.risk_factors, '{"present": true}', f"$.{risk_type}"
-                ),
+                func.json_contains(SubmissionRecord.risk_factors, '{"present": true}', f"$.{risk_type}"),
                 0,
             )
             resolved_true = func.coalesce(
@@ -2367,14 +2180,10 @@ def submitter_reports_ajax(workflow_id):
     }
 
     def _marker_name_collection(search_expr):
-        return SubmitterReport.marking_reports.any(
-            MarkingReport.role.has(SubmissionRole.user.has(search_expr))
-        )
+        return SubmitterReport.marking_reports.any(MarkingReport.role.has(SubmissionRole.user.has(search_expr)))
 
     def _moderator_name_collection(search_expr):
-        return SubmitterReport.moderator_reports.any(
-            ModeratorReport.role.has(SubmissionRole.user.has(search_expr))
-        )
+        return SubmitterReport.moderator_reports.any(ModeratorReport.role.has(SubmissionRole.user.has(search_expr)))
 
     columns = {
         "student": student_col,
@@ -2449,9 +2258,7 @@ def resolve_risk_factors(record_id):
             # Process each risk factor type: resolve if the corresponding checkbox is checked
             for factor_type in SubmissionRecord.ALL_RISK_TYPES:
                 if getattr(form, f"resolve_{factor_type}").data:
-                    annotation = (
-                        getattr(form, f"annotation_{factor_type}").data or ""
-                    ).strip() or None
+                    annotation = (getattr(form, f"annotation_{factor_type}").data or "").strip() or None
                     record.resolve_risk_factor(factor_type, current_user, annotation)
 
             log_db_commit(
@@ -2461,9 +2268,7 @@ def resolve_risk_factors(record_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in resolve_risk_factors", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError in resolve_risk_factors", exc_info=e)
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
@@ -2489,9 +2294,7 @@ def resolve_risk_factors(record_id):
     display_items = record.risk_factor_display_items()
 
     # Collect open similarity concerns for the similarity_flagged risk factor card
-    sim_factor = (record.risk_factors_data or {}).get(
-        SubmissionRecord.RISK_SIMILARITY_FLAGGED, {}
-    )
+    sim_factor = (record.risk_factors_data or {}).get(SubmissionRecord.RISK_SIMILARITY_FLAGGED, {})
     similarity_open_concerns = []
     if sim_factor.get("present", False):
         similarity_open_concerns = (
@@ -2507,9 +2310,7 @@ def resolve_risk_factors(record_id):
             .all()
         )
 
-    chunking_factor = (record.risk_factors_data or {}).get(
-        SubmissionRecord.RISK_SIMILARITY_CHUNKING_FAILED, {}
-    )
+    chunking_factor = (record.risk_factors_data or {}).get(SubmissionRecord.RISK_SIMILARITY_CHUNKING_FAILED, {})
 
     return render_template_context(
         "convenor/markingevent/resolve_risk_factors.html",
@@ -2541,14 +2342,10 @@ def refetch_turnitin_from_canvas(record_id):
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id))
 
     if not record.canvas_turnitin_refetchable:
-        flash(
-            "Canvas integration is not available for this submission record.", "warning"
-        )
+        flash("Canvas integration is not available for this submission record.", "warning")
         return redirect(url)
 
     try:
@@ -2557,9 +2354,7 @@ def refetch_turnitin_from_canvas(record_id):
         task.apply_async(args=[record_id])
         flash("Turnitin re-fetch from Canvas has been queued.", "success")
     except Exception as e:
-        current_app.logger.exception(
-            "Error queuing fetch_turnitin_data_for_record", exc_info=e
-        )
+        current_app.logger.exception("Error queuing fetch_turnitin_data_for_record", exc_info=e)
         flash(
             "Could not queue Turnitin re-fetch. Please contact a system administrator.",
             "error",
@@ -2581,9 +2376,7 @@ def enter_turnitin_score(record_id):
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id))
     text = request.args.get("text", "Marking events")
 
     form = EnterTurnitinScoreForm(request.form)
@@ -2643,15 +2436,12 @@ def enter_turnitin_score(record_id):
                 )
 
             log_db_commit(
-                f"Convenor manually entered Turnitin score={record.turnitin_score} "
-                f"for SubmissionRecord id={record.id}",
+                f"Convenor manually entered Turnitin score={record.turnitin_score} for SubmissionRecord id={record.id}",
                 project_classes=pclass,
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in enter_turnitin_score", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError in enter_turnitin_score", exc_info=e)
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
@@ -2695,9 +2485,7 @@ def enter_turnitin_score(record_id):
 
 
 @convenor.route("/marking_reports_inspector/<int:workflow_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_reports_inspector(workflow_id):
     """
     View MarkingReport instances associated with a MarkingWorkflow
@@ -2709,57 +2497,43 @@ def marking_reports_inspector(workflow_id):
     convenor_data = get_convenor_dashboard_data(pclass, config)
 
     # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     # Get return URL and text from request args
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
     text = request.args.get("text", "Marking workflows")
 
     filter_dist = request.args.get("filter_dist")
-    if filter_dist is None and session.get(
-        "convenor_marking_reports_inspector_filter_dist"
-    ):
+    if filter_dist is None and session.get("convenor_marking_reports_inspector_filter_dist"):
         filter_dist = session["convenor_marking_reports_inspector_filter_dist"]
     if filter_dist not in ("all", "distributable", "distributed", "not_distributed"):
         filter_dist = "all"
     session["convenor_marking_reports_inspector_filter_dist"] = filter_dist
 
     filter_sub = request.args.get("filter_sub")
-    if filter_sub is None and session.get(
-        "convenor_marking_reports_inspector_filter_sub"
-    ):
+    if filter_sub is None and session.get("convenor_marking_reports_inspector_filter_sub"):
         filter_sub = session["convenor_marking_reports_inspector_filter_sub"]
     if filter_sub not in ("all", "submitted", "awaiting", "not_submitted"):
         filter_sub = "all"
     session["convenor_marking_reports_inspector_filter_sub"] = filter_sub
 
     filter_fb = request.args.get("filter_fb")
-    if filter_fb is None and session.get(
-        "convenor_marking_reports_inspector_filter_fb"
-    ):
+    if filter_fb is None and session.get("convenor_marking_reports_inspector_filter_fb"):
         filter_fb = session["convenor_marking_reports_inspector_filter_fb"]
     if filter_fb not in ("all", "submitted", "pending", "not_submitted"):
         filter_fb = "all"
     session["convenor_marking_reports_inspector_filter_fb"] = filter_fb
 
     filter_ready = request.args.get("filter_ready")
-    if filter_ready is None and session.get(
-        "convenor_marking_reports_inspector_filter_ready"
-    ):
+    if filter_ready is None and session.get("convenor_marking_reports_inspector_filter_ready"):
         filter_ready = session["convenor_marking_reports_inspector_filter_ready"]
     if filter_ready not in ("all", "ready", "not_ready"):
         filter_ready = "all"
     session["convenor_marking_reports_inspector_filter_ready"] = filter_ready
 
     filter_signoff = request.args.get("filter_signoff")
-    if filter_signoff is None and session.get(
-        "convenor_marking_reports_inspector_filter_signoff"
-    ):
+    if filter_signoff is None and session.get("convenor_marking_reports_inspector_filter_signoff"):
         filter_signoff = session["convenor_marking_reports_inspector_filter_signoff"]
     if filter_signoff not in ("all", "signed_off", "awaiting_signoff"):
         filter_signoff = "all"
@@ -2786,8 +2560,7 @@ def marking_reports_inspector(workflow_id):
         .filter(
             SubmitterReport.workflow_id == workflow_id,
             ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
-            SubmitterReport.workflow_state
-            == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
         )
         .scalar()
         or 0
@@ -2956,9 +2729,7 @@ def marking_reports_inspector(workflow_id):
 
 
 @convenor.route("/marking_reports_ajax/<int:workflow_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_reports_ajax(workflow_id):
     """
     AJAX endpoint for MarkingReport inspector DataTable
@@ -2968,9 +2739,7 @@ def marking_reports_ajax(workflow_id):
     pclass: ProjectClass = event.period.config.project_class
 
     # validate that the user has convenor access privileges
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     filter_dist = request.args.get("filter_dist", "all")
@@ -2997,18 +2766,13 @@ def marking_reports_ajax(workflow_id):
         base_query = base_query.filter(
             and_(
                 ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)),
-                SubmitterReport.workflow_state
-                == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
+                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE,
             )
         )
     elif filter_dist == "distributed":
-        base_query = base_query.filter(
-            MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
-        )
+        base_query = base_query.filter(MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)))
     elif filter_dist == "not_distributed":
-        base_query = base_query.filter(
-            ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
-        )
+        base_query = base_query.filter(~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES)))
 
     if filter_sub == "submitted":
         base_query = base_query.filter(MarkingReport.report_submitted.is_(True))
@@ -3035,13 +2799,9 @@ def marking_reports_ajax(workflow_id):
         base_query = base_query.filter(MarkingReport.feedback_submitted.is_(False))
 
     if filter_ready == "ready":
-        base_query = base_query.filter(
-            SubmitterReport.workflow_state != SubmitterReportWorkflowStates.NOT_READY
-        )
+        base_query = base_query.filter(SubmitterReport.workflow_state != SubmitterReportWorkflowStates.NOT_READY)
     elif filter_ready == "not_ready":
-        base_query = base_query.filter(
-            SubmitterReport.workflow_state == SubmitterReportWorkflowStates.NOT_READY
-        )
+        base_query = base_query.filter(SubmitterReport.workflow_state == SubmitterReportWorkflowStates.NOT_READY)
 
     if filter_signoff == "signed_off":
         base_query = base_query.filter(MarkingReport.signed_off_id.isnot(None))
@@ -3070,18 +2830,14 @@ def marking_reports_ajax(workflow_id):
 
 
 @convenor.route("/marking_schemes_inspector/<int:pclass_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def inspect_marking_schemes(pclass_id):
     """
     View MarkingScheme instances attached to a given ProjectClass
     """
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     config: ProjectClassConfig = pclass.most_recent_config
@@ -3108,23 +2864,17 @@ def inspect_marking_schemes(pclass_id):
 
 
 @convenor.route("/marking_schemes_ajax/<int:pclass_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def marking_schemes_ajax(pclass_id):
     """
     AJAX endpoint for MarkingScheme inspector DataTable
     """
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
-    base_query = db.session.query(MarkingScheme).filter(
-        MarkingScheme.pclass_id == pclass_id
-    )
+    base_query = db.session.query(MarkingScheme).filter(MarkingScheme.pclass_id == pclass_id)
 
     columns = {
         "name": {"order": MarkingScheme.name, "search": MarkingScheme.name},
@@ -3134,9 +2884,7 @@ def marking_schemes_ajax(pclass_id):
     text = "Marking schemes"
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.marking_scheme_data, url, text)
-        )
+        return handler.build_payload(partial(ajax.convenor.marking_scheme_data, url, text))
 
 
 @convenor.route("/add_marking_scheme/<int:pclass_id>", methods=["GET", "POST"])
@@ -3156,16 +2904,12 @@ def add_marking_scheme(pclass_id):
         return redirect(url_for("convenor.overview"))
     convenor_data = get_convenor_dashboard_data(pclass, config)
 
-    url = request.args.get(
-        "url", url_for("convenor.inspect_marking_schemes", pclass_id=pclass_id)
-    )
+    url = request.args.get("url", url_for("convenor.inspect_marking_schemes", pclass_id=pclass_id))
     text = request.args.get("text", "Marking schemes")
 
     form = AddMarkingSchemeForm(request.form)
 
-    if form.validate_on_submit(
-        extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass_id)]}
-    ):
+    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass_id)]}):
         scheme = MarkingScheme(
             pclass_id=pclass_id,
             name=form.name.data,
@@ -3194,9 +2938,7 @@ def add_marking_scheme(pclass_id):
                 "error",
             )
 
-        return redirect(
-            url_for("convenor.inspect_marking_schemes", pclass_id=pclass_id)
-        )
+        return redirect(url_for("convenor.inspect_marking_schemes", pclass_id=pclass_id))
 
     return render_template_context(
         "convenor/markingevent/edit_marking_scheme.html",
@@ -3224,22 +2966,12 @@ def edit_marking_scheme(scheme_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.inspect_marking_schemes", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.inspect_marking_schemes", pclass_id=pclass.id))
     text = request.args.get("text", "Marking schemes")
 
     form = EditMarkingSchemeForm(obj=scheme)
 
-    if form.validate_on_submit(
-        extra_validators={
-            "name": [
-                make_unique_marking_scheme_in_pclass(
-                    pclass.id, name=scheme.name, exclude_id=scheme.id
-                )
-            ]
-        }
-    ):
+    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name, exclude_id=scheme.id)]}):
         scheme.name = form.name.data
         scheme.title = form.title.data
         scheme.rubric = form.rubric.data
@@ -3264,9 +2996,7 @@ def edit_marking_scheme(scheme_id):
                 "error",
             )
 
-        return redirect(
-            url_for("convenor.inspect_marking_schemes", pclass_id=pclass.id)
-        )
+        return redirect(url_for("convenor.inspect_marking_schemes", pclass_id=pclass.id))
 
     config = pclass.most_recent_config
     convenor_data = get_convenor_dashboard_data(pclass, config)
@@ -3302,9 +3032,7 @@ def _can_delete_marking_event(pclass: ProjectClass) -> bool:
 
 
 @convenor.route("/period_marking_events_inspector/<int:period_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def period_marking_events_inspector(period_id):
     """
     Inspector for MarkingEvent instances associated with a specific SubmissionPeriodRecord.
@@ -3315,9 +3043,7 @@ def period_marking_events_inspector(period_id):
     pclass: ProjectClass = config.project_class
     convenor_data = get_convenor_dashboard_data(pclass, config)
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     url = request.args.get("url", url_for("convenor.status", id=pclass.id))
@@ -3352,35 +3078,27 @@ def period_marking_events_inspector(period_id):
 
 
 @convenor.route("/period_marking_events_ajax/<int:period_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def period_marking_events_ajax(period_id):
     """AJAX endpoint for MarkingEvent CRUD inspector DataTable"""
     period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
     pclass: ProjectClass = period.config.project_class
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     url = request.args.get("url", url_for("convenor.status", id=pclass.id))
     text = request.args.get("text", "Submission periods")
     can_delete = _can_delete_marking_event(pclass)
 
-    base_query = db.session.query(MarkingEvent).filter(
-        MarkingEvent.period_id == period_id
-    )
+    base_query = db.session.query(MarkingEvent).filter(MarkingEvent.period_id == period_id)
 
     columns = {
         "name": {"order": MarkingEvent.name, "search": MarkingEvent.name},
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.period_marking_event_data, url, text, can_delete)
-        )
+        return handler.build_payload(partial(ajax.convenor.period_marking_event_data, url, text, can_delete))
 
 
 @convenor.route("/export_period_to_box/<int:period_id>", methods=["GET", "POST"])
@@ -3460,9 +3178,7 @@ def export_period_to_box(period_id):
         folder_id: str = form.folder_id.data.strip()
 
         celery = current_app.extensions["celery"]
-        export_task = celery.tasks[
-            "app.tasks.cloud_export_period_marking.export_period_marking"
-        ]
+        export_task = celery.tasks["app.tasks.cloud_export_period_marking.export_period_marking"]
 
         abbr = getattr(config, "abbreviation", None) or "period"
         tk_name = f'Export "{abbr}: {period.display_name}" to Box'
@@ -3482,13 +3198,10 @@ def export_period_to_box(period_id):
         )
 
         flash(
-            f'Box export for "{period.display_name}" has been queued. '
-            "You will be notified when it completes.",
+            f'Box export for "{period.display_name}" has been queued. You will be notified when it completes.',
             "success",
         )
-        return redirect(
-            url_for("convenor.period_marking_events_inspector", period_id=period_id)
-        )
+        return redirect(url_for("convenor.period_marking_events_inspector", period_id=period_id))
 
     return render_template_context(
         "convenor/markingevent/export_period_to_box.html",
@@ -3513,16 +3226,12 @@ def add_marking_event(period_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=period_id)
-    )
+    url = request.args.get("url", url_for("convenor.period_marking_events_inspector", period_id=period_id))
     text = request.args.get("text", "Marking events")
 
     form = AddMarkingEventForm(request.form)
 
-    if form.validate_on_submit(
-        extra_validators={"name": [make_unique_marking_event_in_period(period_id)]}
-    ):
+    if form.validate_on_submit(extra_validators={"name": [make_unique_marking_event_in_period(period_id)]}):
         event = MarkingEvent(
             period_id=period_id,
             name=form.name.data,
@@ -3535,8 +3244,7 @@ def add_marking_event(period_id):
         try:
             db.session.add(event)
             log_db_commit(
-                f'Added marking event "{event.name}" for period "{period.display_name}" '
-                f'in project class "{pclass.name}"',
+                f'Added marking event "{event.name}" for period "{period.display_name}" in project class "{pclass.name}"',
                 user=current_user,
                 project_classes=pclass,
             )
@@ -3548,9 +3256,7 @@ def add_marking_event(period_id):
                 "error",
             )
 
-        return redirect(
-            url_for("convenor.period_marking_events_inspector", period_id=period_id)
-        )
+        return redirect(url_for("convenor.period_marking_events_inspector", period_id=period_id))
 
     config = period.config
     convenor_data = get_convenor_dashboard_data(pclass, config)
@@ -3581,9 +3287,7 @@ def edit_marking_event(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=period.id)
-    )
+    url = request.args.get("url", url_for("convenor.period_marking_events_inspector", period_id=period.id))
     text = request.args.get("text", "Marking events")
 
     # build fiducial list of key->value assignments used to test the conflation rules for each target
@@ -3593,11 +3297,7 @@ def edit_marking_event(event_id):
 
     if form.validate_on_submit(
         extra_validators={
-            "name": [
-                make_unique_marking_event_in_period(
-                    period.id, name=event.name, exclude_id=event.id
-                )
-            ],
+            "name": [make_unique_marking_event_in_period(period.id, name=event.name, exclude_id=event.id)],
             "targets": [make_valid_marking_targets(fiducial)],
         }
     ):
@@ -3609,8 +3309,7 @@ def edit_marking_event(event_id):
 
         try:
             log_db_commit(
-                f'Saved changes to marking event "{event.name}" for period "{period.display_name}" '
-                f'in project class "{pclass.name}"',
+                f'Saved changes to marking event "{event.name}" for period "{period.display_name}" in project class "{pclass.name}"',
                 user=current_user,
                 project_classes=pclass,
             )
@@ -3622,9 +3321,7 @@ def edit_marking_event(event_id):
                 "error",
             )
 
-        return redirect(
-            url_for("convenor.period_marking_events_inspector", period_id=period.id)
-        )
+        return redirect(url_for("convenor.period_marking_events_inspector", period_id=period.id))
 
     config = event.period.config
     convenor_data = get_convenor_dashboard_data(pclass, config)
@@ -3693,9 +3390,7 @@ def confirm_delete_marking_event(event_id):
         flash("You do not have permission to delete marking events.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=period_id)
-    )
+    url = request.args.get("url", url_for("convenor.period_marking_events_inspector", period_id=period_id))
 
     event_name = event.name
     period_name = event.period.display_name
@@ -3711,8 +3406,7 @@ def confirm_delete_marking_event(event_id):
         db.session.delete(event)
 
         log_db_commit(
-            f'Deleted marking event "{event_name}" from period "{period_name}" '
-            f'in project class "{pclass.name}"',
+            f'Deleted marking event "{event_name}" from period "{period_name}" in project class "{pclass.name}"',
             user=current_user,
             project_classes=pclass,
         )
@@ -3780,9 +3474,7 @@ def close_marking_event(event_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=period_id)
-    )
+    url = request.args.get("url", url_for("convenor.period_marking_events_inspector", period_id=period_id))
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("This marking event is already closed.", "info")
@@ -3808,8 +3500,7 @@ def close_marking_event(event_id):
         event.last_edit_timestamp = now
 
         log_db_commit(
-            f'Closed marking event "{event.name}" for period "{event.period.display_name}" '
-            f'in project class "{pclass.name}"',
+            f'Closed marking event "{event.name}" for period "{event.period.display_name}" in project class "{pclass.name}"',
             user=current_user,
             project_classes=pclass,
         )
@@ -3831,9 +3522,7 @@ def close_marking_event(event_id):
 
 
 @convenor.route("/event_marking_workflows_inspector/<int:event_id>")
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def event_marking_workflows_inspector(event_id):
     """
     CRUD inspector for MarkingWorkflow instances belonging to an active (non-archive) MarkingEvent.
@@ -3843,9 +3532,7 @@ def event_marking_workflows_inspector(event_id):
     config = event.period.config
     convenor_data = get_convenor_dashboard_data(pclass, config)
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"]
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
         return redirect(redirect_url())
 
     url = request.args.get(
@@ -3856,14 +3543,8 @@ def event_marking_workflows_inspector(event_id):
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
 
-    send_emails_url = url_for(
-        "convenor.send_marking_emails_for_event", event_id=event_id
-    )
-    open_event_url = (
-        url_for("convenor.open_marking_event", event_id=event_id)
-        if event.workflow_state == MarkingEventWorkflowStates.WAITING
-        else None
-    )
+    send_emails_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
+    open_event_url = url_for("convenor.open_marking_event", event_id=event_id) if event.workflow_state == MarkingEventWorkflowStates.WAITING else None
     generate_feedback_url = (
         url_for("convenor.generate_marking_event_feedback", event_id=event_id)
         if event.workflow_state
@@ -3874,9 +3555,7 @@ def event_marking_workflows_inspector(event_id):
         else None
     )
     conflation_url = (
-        url_for("convenor.calculate_conflation", event_id=event_id)
-        if event.workflow_state == MarkingEventWorkflowStates.READY_TO_CONFLATE
-        else None
+        url_for("convenor.calculate_conflation", event_id=event_id) if event.workflow_state == MarkingEventWorkflowStates.READY_TO_CONFLATE else None
     )
     actions = event.get_convenor_actions(
         open_event_url=open_event_url,
@@ -3893,22 +3572,17 @@ def event_marking_workflows_inspector(event_id):
             workflow_url = url_for(
                 "convenor.submitter_reports_inspector",
                 workflow_id=workflow.id,
-                url=url_for(
-                    "convenor.event_marking_workflows_inspector", event_id=event_id
-                ),
+                url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
                 text="Marking workflows",
             )
 
             # CTA for unresolved risk factors
             unresolved = (
                 db.session.query(SubmitterReport)
-                .join(
-                    SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id
-                )
+                .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
-                    SubmitterReport.workflow_state
-                    == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                    SubmitterReport.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
                 )
                 .count()
             )
@@ -3919,9 +3593,7 @@ def event_marking_workflows_inspector(event_id):
                     workflow_id=workflow.id,
                     filter_state="intervention",
                     filter_risk="any_risk",
-                    url=url_for(
-                        "convenor.event_marking_workflows_inspector", event_id=event_id
-                    ),
+                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
                     text="Marking workflows",
                 )
                 actions.append(
@@ -3947,12 +3619,7 @@ def event_marking_workflows_inspector(event_id):
                 )
 
             # CTA for reports awaiting moderator assignment
-            needs_mod = sum(
-                1
-                for sr in workflow.submitter_reports
-                if sr.workflow_state
-                == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED
-            )
+            needs_mod = sum(1 for sr in workflow.submitter_reports if sr.workflow_state == SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED)
             if needs_mod > 0:
                 n = needs_mod
                 mod_url = url_for(
@@ -3960,9 +3627,7 @@ def event_marking_workflows_inspector(event_id):
                     workflow_id=workflow.id,
                     filter_state="intervention",
                     filter_tolerance="out_of_tolerance",
-                    url=url_for(
-                        "convenor.event_marking_workflows_inspector", event_id=event_id
-                    ),
+                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
                     text="Marking workflows",
                 )
                 actions.append(
@@ -3970,10 +3635,7 @@ def event_marking_workflows_inspector(event_id):
                         severity="danger",
                         icon="exclamation-circle",
                         title=f"Moderator{'s' if n != 1 else ''} need assigning: {workflow.name}",
-                        description=(
-                            f"{n} report{'s' if n != 1 else ''} in this workflow "
-                            f"cannot proceed until a moderator is assigned."
-                        ),
+                        description=(f"{n} report{'s' if n != 1 else ''} in this workflow cannot proceed until a moderator is assigned."),
                         buttons=[
                             ConvenorActionButton(
                                 label="Review reports",
@@ -3988,9 +3650,7 @@ def event_marking_workflows_inspector(event_id):
             # CTA for missing Turnitin data
             missing = (
                 db.session.query(SubmitterReport)
-                .join(
-                    SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id
-                )
+                .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
                     SubmissionRecord.turnitin_score == None,  # noqa: E711
@@ -4026,8 +3686,7 @@ def event_marking_workflows_inspector(event_id):
                 db.session.query(func.count())
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
-                    SubmitterReport.workflow_state
-                    == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+                    SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
                 )
                 .scalar()
             )
@@ -4063,8 +3722,7 @@ def event_marking_workflows_inspector(event_id):
                     db.session.query(func.count())
                     .filter(
                         SubmitterReport.workflow_id == workflow.id,
-                        SubmitterReport.workflow_state
-                        == SubmitterReportWorkflowStates.COMPLETED,
+                        SubmitterReport.workflow_state == SubmitterReportWorkflowStates.COMPLETED,
                     )
                     .scalar()
                 )
@@ -4113,17 +3771,13 @@ def event_marking_workflows_inspector(event_id):
 
 
 @convenor.route("/event_marking_workflows_ajax/<int:event_id>", methods=["POST"])
-@roles_accepted(
-    "faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner"
-)
+@roles_accepted("faculty", "admin", "root", "office", "convenor", "exam_board", "external_examiner")
 def event_marking_workflows_ajax(event_id):
     """AJAX endpoint for MarkingWorkflow CRUD inspector DataTable"""
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(
-        pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
-    ):
+    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False):
         return jsonify({"error": "Access denied"}), 403
 
     can_edit = event.workflow_state != MarkingEventWorkflowStates.CLOSED
@@ -4132,18 +3786,14 @@ def event_marking_workflows_ajax(event_id):
     url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
     text = "Marking workflows"
 
-    base_query = db.session.query(MarkingWorkflow).filter(
-        MarkingWorkflow.event_id == event_id
-    )
+    base_query = db.session.query(MarkingWorkflow).filter(MarkingWorkflow.event_id == event_id)
 
     columns = {
         "name": {"order": MarkingWorkflow.name, "search": MarkingWorkflow.name},
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.event_marking_workflow_data, url, text, can_edit)
-        )
+        return handler.build_payload(partial(ajax.convenor.event_marking_workflow_data, url, text, can_edit))
 
 
 @convenor.route("/add_marking_workflow/<int:event_id>", methods=["GET", "POST"])
@@ -4162,14 +3812,10 @@ def add_marking_workflow(event_id):
         flash("Cannot add workflows to a closed marking event.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
     text = request.args.get("text", "Marking workflows")
 
-    AddWorkflowForm, _ = MarkingWorkflowFormFactory(
-        pclass, scheme_locked=False, event=event
-    )
+    AddWorkflowForm, _ = MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=event)
     form = AddWorkflowForm(request.form)
 
     if form.validate_on_submit(
@@ -4211,29 +3857,22 @@ def add_marking_workflow(event_id):
                 creator_id=current_user.id,
                 creation_timestamp=datetime.now(),
             )
-            workflow.notify_on_moderation_required = list(
-                form.notify_on_moderation_required.data
-            )
-            workflow.notify_on_validation_failure = list(
-                form.notify_on_validation_failure.data
-            )
+            workflow.notify_on_moderation_required = list(form.notify_on_moderation_required.data)
+            workflow.notify_on_validation_failure = list(form.notify_on_validation_failure.data)
 
             db.session.add(workflow)
             db.session.flush()
             workflow_id = workflow.id
 
             log_db_commit(
-                f'Added marking workflow "{workflow.name}" to event "{event.name}" '
-                f'in project class "{pclass.name}"',
+                f'Added marking workflow "{workflow.name}" to event "{event.name}" in project class "{pclass.name}"',
                 user=current_user,
                 project_classes=pclass,
             )
 
             # Dispatch Celery task to create SubmitterReport/MarkingReport instances
             celery = current_app.extensions["celery"]
-            init_task = celery.tasks[
-                "app.tasks.markingevent.initialize_marking_workflow"
-            ]
+            init_task = celery.tasks["app.tasks.markingevent.initialize_marking_workflow"]
             init_task.apply_async(args=(workflow_id,))
 
         except SQLAlchemyError as e:
@@ -4244,9 +3883,7 @@ def add_marking_workflow(event_id):
                 "error",
             )
 
-        return redirect(
-            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-        )
+        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
 
     return render_template_context(
         "convenor/markingevent/edit_marking_workflow.html",
@@ -4281,21 +3918,15 @@ def edit_marking_workflow(workflow_id):
         flash("Cannot edit workflows in a closed marking event.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
     text = request.args.get("text", "Marking workflows")
 
     # Lock the scheme field if any MarkingReport has been distributed or has a non-empty report
     scheme_locked = any(
-        mr.distributed or (mr.report and mr.report != "{}")
-        for sr in workflow.submitter_reports.all()
-        for mr in sr.marking_reports.all()
+        mr.distributed or (mr.report and mr.report != "{}") for sr in workflow.submitter_reports.all() for mr in sr.marking_reports.all()
     )
 
-    _, EditWorkflowForm = MarkingWorkflowFormFactory(
-        pclass, scheme_locked=scheme_locked, event=event
-    )
+    _, EditWorkflowForm = MarkingWorkflowFormFactory(pclass, scheme_locked=scheme_locked, event=event)
     form = EditWorkflowForm(obj=workflow)
 
     # Don't validate `scheme` if the mark scheme is locked
@@ -4311,16 +3942,8 @@ def edit_marking_workflow(workflow_id):
 
     if form.validate_on_submit(
         extra_validators={
-            "name": [
-                make_unique_marking_workflow_in_event(
-                    event.id, name=workflow.name, exclude_id=workflow.id
-                )
-            ],
-            "key": [
-                make_unique_marking_workflow_key_in_event(
-                    event.id, key=workflow.key, exclude_id=workflow.id
-                )
-            ],
+            "name": [make_unique_marking_workflow_in_event(event.id, name=workflow.name, exclude_id=workflow.id)],
+            "key": [make_unique_marking_workflow_key_in_event(event.id, key=workflow.key, exclude_id=workflow.id)],
         }
     ):
         try:
@@ -4334,10 +3957,7 @@ def edit_marking_workflow(workflow_id):
             if not scheme_locked:
                 new_scheme = form.scheme.data  # a MarkingScheme or None
                 if new_scheme is not None:
-                    if (
-                        workflow.scheme is None
-                        or new_scheme.id != workflow.scheme.parent_id
-                    ):
+                    if workflow.scheme is None or new_scheme.id != workflow.scheme.parent_id:
                         # Scheme has changed — replace the LiveMarkingScheme snapshot.
                         # Delete the old snapshot first to avoid a unique-constraint violation
                         # on scheme_id and to prevent orphaned rows.
@@ -4367,16 +3987,11 @@ def edit_marking_workflow(workflow_id):
                     if old_live is not None:
                         db.session.delete(old_live)
 
-            workflow.notify_on_moderation_required = list(
-                form.notify_on_moderation_required.data
-            )
-            workflow.notify_on_validation_failure = list(
-                form.notify_on_validation_failure.data
-            )
+            workflow.notify_on_moderation_required = list(form.notify_on_moderation_required.data)
+            workflow.notify_on_validation_failure = list(form.notify_on_validation_failure.data)
 
             log_db_commit(
-                f'Saved changes to marking workflow "{workflow.name}" in event "{event.name}" '
-                f'in project class "{pclass.name}"',
+                f'Saved changes to marking workflow "{workflow.name}" in event "{event.name}" in project class "{pclass.name}"',
                 user=current_user,
                 project_classes=pclass,
             )
@@ -4388,9 +4003,7 @@ def edit_marking_workflow(workflow_id):
                 "error",
             )
 
-        return redirect(
-            url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-        )
+        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
 
     return render_template_context(
         "convenor/markingevent/edit_marking_workflow.html",
@@ -4423,9 +4036,7 @@ def delete_marking_workflow(workflow_id):
         flash("Cannot delete workflows from a closed marking event.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
     text = request.args.get("text", "Marking workflows")
 
     form = ConfirmActionForm()
@@ -4464,9 +4075,7 @@ def confirm_delete_marking_workflow(workflow_id):
         flash("Cannot delete workflows from a closed marking event.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
 
     workflow_name = workflow.name
 
@@ -4479,8 +4088,7 @@ def confirm_delete_marking_workflow(workflow_id):
         db.session.delete(workflow)
 
         log_db_commit(
-            f'Deleted marking workflow "{workflow_name}" from event "{event.name}" '
-            f'in project class "{pclass.name}"',
+            f'Deleted marking workflow "{workflow_name}" from event "{event.name}" in project class "{pclass.name}"',
             user=current_user,
             project_classes=pclass,
         )
@@ -4512,16 +4120,12 @@ def add_workflow_attachment(workflow_id):
         flash("Cannot modify attachments in a closed marking event.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.edit_marking_workflow", workflow_id=workflow_id)
-    )
+    url = request.args.get("url", url_for("convenor.edit_marking_workflow", workflow_id=workflow_id))
     text = request.args.get("text", "Edit workflow")
 
     # Get period attachments not already attached to this workflow
     already_attached_ids = {a.id for a in workflow.attachments}
-    available = [
-        a for a in event.period.attachments.all() if a.id not in already_attached_ids
-    ]
+    available = [a for a in event.period.attachments.all() if a.id not in already_attached_ids]
 
     return render_template_context(
         "convenor/markingevent/add_workflow_attachment.html",
@@ -4536,9 +4140,7 @@ def add_workflow_attachment(workflow_id):
     )
 
 
-@convenor.route(
-    "/confirm_add_workflow_attachment/<int:workflow_id>/<int:attachment_id>"
-)
+@convenor.route("/confirm_add_workflow_attachment/<int:workflow_id>/<int:attachment_id>")
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def confirm_add_workflow_attachment(workflow_id, attachment_id):
     """Add a PeriodAttachment to a MarkingWorkflow"""
@@ -4557,14 +4159,10 @@ def confirm_add_workflow_attachment(workflow_id, attachment_id):
 
     # Verify the attachment belongs to the same period
     if attachment.parent_id != event.period_id:
-        flash(
-            "This attachment does not belong to the correct submission period.", "error"
-        )
+        flash("This attachment does not belong to the correct submission period.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.edit_marking_workflow", workflow_id=workflow_id)
-    )
+    url = request.args.get("url", url_for("convenor.edit_marking_workflow", workflow_id=workflow_id))
 
     if attachment in workflow.attachments:
         flash("This attachment is already associated with this workflow.", "info")
@@ -4606,9 +4204,7 @@ def remove_workflow_attachment(workflow_id, attachment_id):
         flash("Cannot modify attachments in a closed marking event.", "error")
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.edit_marking_workflow", workflow_id=workflow_id)
-    )
+    url = request.args.get("url", url_for("convenor.edit_marking_workflow", workflow_id=workflow_id))
 
     if attachment not in workflow.attachments:
         flash("This attachment is not associated with this workflow.", "info")
@@ -4617,8 +4213,7 @@ def remove_workflow_attachment(workflow_id, attachment_id):
     try:
         workflow.attachments.remove(attachment)
         log_db_commit(
-            f'Removed attachment from workflow "{workflow.name}" in event "{event.name}" '
-            f'in project class "{pclass.name}"',
+            f'Removed attachment from workflow "{workflow.name}" in event "{event.name}" in project class "{pclass.name}"',
             user=current_user,
             project_classes=pclass,
         )
@@ -4743,17 +4338,13 @@ def dispatch_marking_report(report_id):
                 "success",
             )
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching dispatch_single_email", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching dispatch_single_email", exc_info=e)
         flash(
             "Could not dispatch marking notification. Please contact a system administrator.",
             "error",
         )
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
-    )
+    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
     return redirect(url)
 
 
@@ -4779,11 +4370,7 @@ def force_close_marking_window(report_id):
 
     from ..sqlalchemy_scheduler import DatabaseSchedulerEntry
 
-    entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report_id}_%"))
-        .first()
-    )
+    entry = db.session.query(DatabaseSchedulerEntry).filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report_id}_%")).first()
     scheduler_entry_id = entry.id if entry is not None else None
 
     try:
@@ -4791,8 +4378,7 @@ def force_close_marking_window(report_id):
         task = celery.tasks["app.tasks.markingevent.close_marking_window"]
         task.apply_async(args=[report_id, scheduler_entry_id])
         flash(
-            f"Sign-off for {report.user.name}'s marking report has been dispatched. "
-            "The report will be locked shortly.",
+            f"Sign-off for {report.user.name}'s marking report has been dispatched. The report will be locked shortly.",
             "success",
         )
     except Exception as e:
@@ -4845,9 +4431,7 @@ def send_marking_emails_for_workflow(workflow_id):
             "success",
         )
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching send_marking_emails", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching send_marking_emails", exc_info=e)
         flash(
             "Could not dispatch marking notifications. Please contact a system administrator.",
             "error",
@@ -4893,9 +4477,7 @@ def distribute_for_submitter_report(sr_id):
                 task.apply_async(args=[mr.id, True, 10, None, deadline_str, False])
                 queued += 1
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching distribute_for_submitter_report", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching distribute_for_submitter_report", exc_info=e)
         flash(
             "Could not dispatch marking notifications. Please contact a system administrator.",
             "error",
@@ -4908,9 +4490,7 @@ def distribute_for_submitter_report(sr_id):
             "success",
         )
     else:
-        flash(
-            "No distributable marking reports found for this submitter report.", "info"
-        )
+        flash("No distributable marking reports found for this submitter report.", "info")
 
     return redirect(redirect_url())
 
@@ -4950,9 +4530,7 @@ def send_reminders_for_submitter_report(sr_id):
         )
         flash("Reminder emails for this submitter report have been queued.", "success")
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching send_reminders_for_submitter_report", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching send_reminders_for_submitter_report", exc_info=e)
         flash(
             "Could not dispatch reminder emails. Please contact a system administrator.",
             "error",
@@ -4997,9 +4575,7 @@ def send_reminder_for_marking_report(report_id):
         )
         flash(f"Reminder email for {report.user.name} has been queued.", "success")
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching send_reminder_for_marking_report", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching send_reminder_for_marking_report", exc_info=e)
         flash(
             "Could not dispatch reminder email. Please contact a system administrator.",
             "error",
@@ -5043,9 +4619,7 @@ def send_marking_emails_for_event(event_id):
             "success",
         )
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching send_marking_event_emails", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching send_marking_event_emails", exc_info=e)
         flash(
             "Could not dispatch marking notifications. Please contact a system administrator.",
             "error",
@@ -5082,9 +4656,9 @@ def open_marking_event(event_id):
     test_url = url_for("convenor.test_marking_event", event_id=event_id, url=url)
 
     # Classify each workflow by what will happen when the event is opened.
-    no_email = []    # role has no associated email template; reports marked NOT_REQUIRED automatically
-    immediate = []   # email template exists and requires_report=False; emails dispatched immediately
-    on_upload = []   # email template exists and requires_report=True; emails deferred until report uploaded
+    no_email = []  # role has no associated email template; reports marked NOT_REQUIRED automatically
+    immediate = []  # email template exists and requires_report=False; emails dispatched immediately
+    on_upload = []  # email template exists and requires_report=True; emails deferred until report uploaded
     for wf in event.workflows:
         if wf.resolve_email_template() is None:
             no_email.append(wf)
@@ -5122,14 +4696,8 @@ def open_marking_event(event_id):
             )
         if no_email:
             n = len(no_email)
-            message += (
-                f"<p>{n} workflow{'s' if n != 1 else ''} require no email notification and will "
-                f"be marked as distributed automatically.</p>"
-            )
-        message += (
-            f'<p>To send a test distribution first, <a href="{test_url}">click here to run a test</a>.</p>'
-            f"<p>This action cannot be undone.</p>"
-        )
+            message += f"<p>{n} workflow{'s' if n != 1 else ''} require no email notification and will be marked as distributed automatically.</p>"
+        message += f'<p>To send a test distribution first, <a href="{test_url}">click here to run a test</a>.</p><p>This action cannot be undone.</p>'
         submit_label = "Open event and send notifications"
 
     form = ConfirmActionForm()
@@ -5202,9 +4770,7 @@ def do_open_marking_event(event_id):
             "success",
         )
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching send_marking_event_emails", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching send_marking_event_emails", exc_info=e)
         flash(
             "Marking event was opened but notifications could not be dispatched. Please contact a system administrator.",
             "error",
@@ -5249,14 +4815,11 @@ def test_marking_event(event_id):
                 }
             )
             flash(
-                f'Test notifications for marking event "{event.name}" have been queued '
-                f"to {form.test_target.data.name}.",
+                f'Test notifications for marking event "{event.name}" have been queued to {form.test_target.data.name}.',
                 "success",
             )
         except Exception as e:
-            current_app.logger.exception(
-                "Error dispatching test send_marking_event_emails", exc_info=e
-            )
+            current_app.logger.exception("Error dispatching test send_marking_event_emails", exc_info=e)
             flash(
                 "Could not dispatch test notifications. Please contact a system administrator.",
                 "error",
@@ -5321,10 +4884,7 @@ def send_reminder_for_workflow(workflow_id):
                 continue
             if not mr.report_submitted:
                 eligible_count += 1
-            elif mr.role.role in _supervisor_roles and (
-                sr.workflow_state
-                == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
-            ):
+            elif mr.role.role in _supervisor_roles and (sr.workflow_state == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF):
                 eligible_count += mr.responsible_supervisors.count()
 
     test_url = url_for(
@@ -5333,14 +4893,10 @@ def send_reminder_for_workflow(workflow_id):
         url=url,
         text=text,
     )
-    action_url = url_for(
-        "convenor.do_send_reminder_for_workflow", workflow_id=workflow_id, url=url
-    )
+    action_url = url_for("convenor.do_send_reminder_for_workflow", workflow_id=workflow_id, url=url)
 
     title = f'Send reminders for workflow "{workflow.name}"'
-    panel_title = (
-        f"Send marking reminders for workflow <strong>{workflow.name}</strong>"
-    )
+    panel_title = f"Send marking reminders for workflow <strong>{workflow.name}</strong>"
     message = (
         f"<p>Are you sure you wish to send reminder emails for the workflow "
         f"<strong>{workflow.name}</strong>?</p>"
@@ -5404,9 +4960,7 @@ def do_send_reminder_for_workflow(workflow_id):
             "success",
         )
     except Exception as e:
-        current_app.logger.exception(
-            "Error dispatching send_marking_reminders", exc_info=e
-        )
+        current_app.logger.exception("Error dispatching send_marking_reminders", exc_info=e)
         flash(
             "Could not dispatch marking reminders. Please contact a system administrator.",
             "error",
@@ -5415,9 +4969,7 @@ def do_send_reminder_for_workflow(workflow_id):
     return redirect(url)
 
 
-@convenor.route(
-    "/test_send_reminder_for_workflow/<int:workflow_id>", methods=["GET", "POST"]
-)
+@convenor.route("/test_send_reminder_for_workflow/<int:workflow_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def test_send_reminder_for_workflow(workflow_id):
     """Show a form to select a test recipient, then dispatch a test reminder for a workflow."""
@@ -5456,14 +5008,11 @@ def test_send_reminder_for_workflow(workflow_id):
                 }
             )
             flash(
-                f'Test reminders for workflow "{workflow.name}" have been queued '
-                f"to {form.test_target.data.name}.",
+                f'Test reminders for workflow "{workflow.name}" have been queued to {form.test_target.data.name}.',
                 "success",
             )
         except Exception as e:
-            current_app.logger.exception(
-                "Error dispatching test send_marking_reminders", exc_info=e
-            )
+            current_app.logger.exception("Error dispatching test send_marking_reminders", exc_info=e)
             flash(
                 "Could not dispatch test reminders. Please contact a system administrator.",
                 "error",
@@ -5503,9 +5052,7 @@ def clear_marking_grade(report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
-    )
+    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify reports in a closed marking event.", "error")
@@ -5532,11 +5079,7 @@ def clear_marking_grade(report_id):
     from ..sqlalchemy_scheduler import CrontabSchedule, DatabaseSchedulerEntry
 
     existing_entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter(
-            DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report.id}_%")
-        )
-        .first()
+        db.session.query(DatabaseSchedulerEntry).filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{report.id}_%")).first()
     )
     if existing_entry is not None:
         crontab_id = existing_entry.crontab_id
@@ -5582,9 +5125,7 @@ def marking_report_properties(report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
-    )
+    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify reports in a closed marking event.", "error")
@@ -5597,8 +5138,7 @@ def marking_report_properties(report_id):
 
         try:
             log_db_commit(
-                f"Updated properties for MarkingReport #{report.id} (workflow: {workflow.name}): "
-                f"weight={report.weight}",
+                f"Updated properties for MarkingReport #{report.id} (workflow: {workflow.name}): weight={report.weight}",
                 user=current_user,
                 project_classes=pclass,
             )
@@ -5644,9 +5184,7 @@ def reassign_marking_report(report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
-    )
+    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot reassign reports in a closed marking event.", "error")
@@ -5749,11 +5287,7 @@ def assign_moderator(submitter_report_id):
     from ..models.submissions import SubmissionRoleTypesMixin
     from ..tasks.markingevent import _assign_moderator
 
-    sr = (
-        db.session.query(SubmitterReport)
-        .filter_by(id=submitter_report_id)
-        .first_or_404()
-    )
+    sr = db.session.query(SubmitterReport).filter_by(id=submitter_report_id).first_or_404()
     workflow = sr.workflow
     event = workflow.event
     pclass = event.pclass
@@ -5763,9 +5297,7 @@ def assign_moderator(submitter_report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
-    )
+    url = request.args.get("url", url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id))
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
         flash("Cannot modify reports in a closed marking event.", "error")
@@ -5789,8 +5321,7 @@ def assign_moderator(submitter_report_id):
 
         try:
             log_db_commit(
-                f"Assigned moderator {user.name} to SubmitterReport #{sr.id} "
-                f"(workflow: {workflow.name}, student: {sr.student.user.name})",
+                f"Assigned moderator {user.name} to SubmitterReport #{sr.id} (workflow: {workflow.name}, student: {sr.student.user.name})",
                 user=current_user,
                 project_classes=pclass,
             )
@@ -5815,18 +5346,14 @@ def assign_moderator(submitter_report_id):
     )
 
 
-@convenor.route(
-    "/accept-moderator-grade/<int:mod_report_id>/<int:workflow_id>", methods=["POST"]
-)
+@convenor.route("/accept-moderator-grade/<int:mod_report_id>/<int:workflow_id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def accept_moderator_grade(mod_report_id, workflow_id):
     from datetime import datetime
 
     from ..models.markingevent import ModeratorReport, SubmitterReportWorkflowStates
 
-    mod_report = (
-        db.session.query(ModeratorReport).filter_by(id=mod_report_id).first_or_404()
-    )
+    mod_report = db.session.query(ModeratorReport).filter_by(id=mod_report_id).first_or_404()
     sr = mod_report.submitter_report
     workflow = sr.workflow
     pclass = workflow.event.pclass
@@ -5846,8 +5373,7 @@ def accept_moderator_grade(mod_report_id, workflow_id):
 
     try:
         log_db_commit(
-            f"Accepted moderator grade {mod_report.grade} for SubmitterReport #{sr.id} "
-            f"(workflow: {workflow.name}, student: {sr.student.user.name})",
+            f"Accepted moderator grade {mod_report.grade} for SubmitterReport #{sr.id} (workflow: {workflow.name}, student: {sr.student.user.name})",
             user=current_user,
             project_classes=pclass,
         )
@@ -5898,8 +5424,7 @@ def complete_submitter_report(sr_id):
 
     try:
         log_db_commit(
-            f"Completed SubmitterReport #{sr.id} for student {sr.student.user.name} "
-            f"in workflow '{workflow.name}' (event: {event.name})",
+            f"Completed SubmitterReport #{sr.id} for student {sr.student.user.name} in workflow '{workflow.name}' (event: {event.name})",
             user=current_user,
             project_classes=pclass,
         )
@@ -5912,9 +5437,7 @@ def complete_submitter_report(sr_id):
     return redirect(url)
 
 
-@convenor.route(
-    "/complete-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"]
-)
+@convenor.route("/complete-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def complete_all_submitter_reports(workflow_id):
     """
@@ -5930,9 +5453,7 @@ def complete_all_submitter_reports(workflow_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
     text = request.args.get("text", "Marking workflows")
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
@@ -5941,16 +5462,10 @@ def complete_all_submitter_reports(workflow_id):
 
     # Count reports eligible for completion
     ready_reports = [
-        sr
-        for sr in workflow.submitter_reports.all()
-        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
-        and sr.grade is not None
+        sr for sr in workflow.submitter_reports.all() if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF and sr.grade is not None
     ]
     no_grade_reports = [
-        sr
-        for sr in workflow.submitter_reports.all()
-        if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
-        and sr.grade is None
+        sr for sr in workflow.submitter_reports.all() if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF and sr.grade is None
     ]
 
     form = ActionForm(request.form)
@@ -6002,8 +5517,7 @@ def complete_all_submitter_reports(workflow_id):
                 msg += f"; skipped {skipped_count} without a grade"
             log_db_commit(msg, user=current_user, project_classes=pclass)
             flash(
-                f"{completed_count} report(s) signed off."
-                + (f" {skipped_count} skipped (no grade)." if skipped_count else ""),
+                f"{completed_count} report(s) signed off." + (f" {skipped_count} skipped (no grade)." if skipped_count else ""),
                 "success",
             )
         else:
@@ -6041,9 +5555,7 @@ def drop_submitter_report(sr_id):
     }
 
     if request.method == "GET":
-        student_name = (
-            sr.student.user.name if sr.student else f"SubmitterReport #{sr_id}"
-        )
+        student_name = sr.student.user.name if sr.student else f"SubmitterReport #{sr_id}"
         form = ActionForm()
         return render_template_context(
             "admin/danger_confirm.html",
@@ -6092,8 +5604,7 @@ def drop_submitter_report(sr_id):
     try:
         student_name = sr.student.user.name if sr.student else f"#{sr_id}"
         log_db_commit(
-            f"Withdrew SubmitterReport #{sr.id} for student {student_name} from "
-            f"workflow '{workflow.name}' (event: {event.name})",
+            f"Withdrew SubmitterReport #{sr.id} for student {student_name} from workflow '{workflow.name}' (event: {event.name})",
             user=current_user,
             project_classes=pclass,
         )
@@ -6169,9 +5680,7 @@ def return_submitter_report_to_convenor(sr_id):
     return redirect(url)
 
 
-@convenor.route(
-    "/return-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"]
-)
+@convenor.route("/return-all-submitter-reports/<int:workflow_id>", methods=["GET", "POST"])
 @roles_accepted("admin", "root")
 def return_all_submitter_reports(workflow_id):
     """
@@ -6187,9 +5696,7 @@ def return_all_submitter_reports(workflow_id):
     if not validate_is_convenor(pclass, allow_roles=["admin", "root"]):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
-    )
+    url = request.args.get("url", url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
     text = request.args.get("text", "Marking workflows")
 
     if event.workflow_state == MarkingEventWorkflowStates.CLOSED:
@@ -6200,11 +5707,7 @@ def return_all_submitter_reports(workflow_id):
         SubmitterReportWorkflowStates.COMPLETED,
         SubmitterReportWorkflowStates.DROPPED,
     }
-    returnable_reports = [
-        sr
-        for sr in workflow.submitter_reports.all()
-        if sr.workflow_state in _returnable
-    ]
+    returnable_reports = [sr for sr in workflow.submitter_reports.all() if sr.workflow_state in _returnable]
 
     form = ActionForm(request.form)
 
@@ -6323,8 +5826,7 @@ def calculate_conflation(event_id):
         )
         if active_jobs > 0:
             flash(
-                "Cannot reconflate: a feedback PDF generation job is currently running. "
-                "Wait for it to finish before reconflating.",
+                "Cannot reconflate: a feedback PDF generation job is currently running. Wait for it to finish before reconflating.",
                 "error",
             )
             return redirect(url)
@@ -6366,8 +5868,7 @@ def calculate_conflation(event_id):
     )
     if active_jobs > 0:
         flash(
-            "Cannot reconflate: a feedback PDF generation job is currently running. "
-            "Wait for it to finish before reconflating.",
+            "Cannot reconflate: a feedback PDF generation job is currently running. Wait for it to finish before reconflating.",
             "error",
         )
         return redirect(url)
@@ -6429,11 +5930,7 @@ def calculate_conflation(event_id):
                 continue
 
             # Build the grades namespace from workflows that have a usable grade.
-            grades = {
-                wf.key: sr_grade_lookup[(wf.id, record.id)]
-                for wf in workflows
-                if (wf.id, record.id) in sr_grade_lookup
-            }
+            grades = {wf.key: sr_grade_lookup[(wf.id, record.id)] for wf in workflows if (wf.id, record.id) in sr_grade_lookup}
 
             # Evaluate each target expression.  A failed evaluation (missing grade,
             # NameError, etc.) sets that target to None rather than aborting the run.
@@ -6451,9 +5948,7 @@ def calculate_conflation(event_id):
                 conflation_report=json.dumps(
                     {
                         "targets": result,
-                        "metadata": {
-                            "rounding_policy": ACTIVE_ROUNDING_POLICY.identifier
-                        },
+                        "metadata": {"rounding_policy": ACTIVE_ROUNDING_POLICY.identifier},
                     }
                 ),
                 generated_by_id=current_user.id,
@@ -6465,8 +5960,7 @@ def calculate_conflation(event_id):
 
         event.workflow_state = MarkingEventWorkflowStates.READY_TO_GENERATE_FEEDBACK
         log_db_commit(
-            f"Calculated conflation for {generated_count} SubmissionRecord(s) in event "
-            f"'{event.name}' ({pclass.name})",
+            f"Calculated conflation for {generated_count} SubmissionRecord(s) in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
@@ -6478,9 +5972,7 @@ def calculate_conflation(event_id):
             )
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in calculate_conflation", exc_info=e
-        )
+        current_app.logger.exception("SQLAlchemyError in calculate_conflation", exc_info=e)
         flash("Could not calculate conflation due to a database error.", "error")
 
     return redirect(url)
@@ -6623,8 +6115,7 @@ def propagate_report_grade(event_id):
 
     if not period.report_grade_available:
         flash(
-            "The report grade is not available for this submission period "
-            "(number of markers is zero).",
+            "The report grade is not available for this submission period (number of markers is zero).",
             "warning",
         )
         return redirect(url)
@@ -6643,17 +6134,14 @@ def propagate_report_grade(event_id):
             flash(err, "error")
             return redirect(url)
         log_db_commit(
-            f"Propagated 'report' grades from conflation to {count} SubmissionRecord(s) "
-            f"in event '{event.name}' ({pclass.name})",
+            f"Propagated 'report' grades from conflation to {count} SubmissionRecord(s) in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
         flash(f"Report grades copied to {count} submission record(s).", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in propagate_report_grade", exc_info=e
-        )
+        current_app.logger.exception("SQLAlchemyError in propagate_report_grade", exc_info=e)
         flash("Could not propagate report grades due to a database error.", "error")
 
     return redirect(url)
@@ -6679,8 +6167,7 @@ def propagate_supervision_grade(event_id):
 
     if not period.supervision_grade_available:
         flash(
-            "The supervision grade is not available for this submission period. "
-            "Enable it in the period configuration before copying grades.",
+            "The supervision grade is not available for this submission period. Enable it in the period configuration before copying grades.",
             "warning",
         )
         return redirect(url)
@@ -6699,20 +6186,15 @@ def propagate_supervision_grade(event_id):
             flash(err, "error")
             return redirect(url)
         log_db_commit(
-            f"Propagated 'supervisor' grades from conflation to {count} SubmissionRecord(s) "
-            f"in event '{event.name}' ({pclass.name})",
+            f"Propagated 'supervisor' grades from conflation to {count} SubmissionRecord(s) in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
         flash(f"Supervision grades copied to {count} submission record(s).", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in propagate_supervision_grade", exc_info=e
-        )
-        flash(
-            "Could not propagate supervision grades due to a database error.", "error"
-        )
+        current_app.logger.exception("SQLAlchemyError in propagate_supervision_grade", exc_info=e)
+        flash("Could not propagate supervision grades due to a database error.", "error")
 
     return redirect(url)
 
@@ -6737,8 +6219,7 @@ def propagate_presentation_grade(event_id):
 
     if not period.presentation_grade_available:
         flash(
-            "The presentation grade is not available for this submission period "
-            "(no presentation assessment is configured).",
+            "The presentation grade is not available for this submission period (no presentation assessment is configured).",
             "warning",
         )
         return redirect(url)
@@ -6757,20 +6238,15 @@ def propagate_presentation_grade(event_id):
             flash(err, "error")
             return redirect(url)
         log_db_commit(
-            f"Propagated 'presentation' grades from conflation to {count} SubmissionRecord(s) "
-            f"in event '{event.name}' ({pclass.name})",
+            f"Propagated 'presentation' grades from conflation to {count} SubmissionRecord(s) in event '{event.name}' ({pclass.name})",
             user=current_user,
             project_classes=pclass,
         )
         flash(f"Presentation grades copied to {count} submission record(s).", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError in propagate_presentation_grade", exc_info=e
-        )
-        flash(
-            "Could not propagate presentation grades due to a database error.", "error"
-        )
+        current_app.logger.exception("SQLAlchemyError in propagate_presentation_grade", exc_info=e)
+        flash("Could not propagate presentation grades due to a database error.", "error")
 
     return redirect(url)
 
@@ -6904,11 +6380,7 @@ def push_event_feedback_to_canvas(event_id):
     url = url_for("convenor.marking_event_conflation_reports", event_id=event_id)
 
     all_crs = event.conflation_reports.all()
-    canvas_feedback_pushable_count = sum(
-        1
-        for cr in all_crs
-        if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed
-    )
+    canvas_feedback_pushable_count = sum(1 for cr in all_crs if cr.canvas_push_ready and cr.canvas_grade_pushed and not cr.canvas_feedback_pushed)
 
     if canvas_feedback_pushable_count == 0:
         flash("There are no students with feedback PDFs ready to upload to Canvas at this time.", "info")
@@ -6983,8 +6455,7 @@ def propagate_cr_grade(cr_id, target):
     }
     if target not in _CV_FIELDS:
         flash(
-            f"Grade target '{target}' is not a controlled-vocabulary target "
-            f"(expected 'report', 'supervisor', or 'presentation').",
+            f"Grade target '{target}' is not a controlled-vocabulary target (expected 'report', 'supervisor', or 'presentation').",
             "warning",
         )
         return redirect(url)
@@ -6997,14 +6468,12 @@ def propagate_cr_grade(cr_id, target):
 
     try:
         log_db_commit(
-            f"Propagated '{target}' grade ({grade_value}) from ConflationReport "
-            f"for '{record.owner.student.user.name}' in event '{event.name}'",
+            f"Propagated '{target}' grade ({grade_value}) from ConflationReport for '{record.owner.student.user.name}' in event '{event.name}'",
             user=current_user,
             project_classes=pclass,
         )
         flash(
-            f"Copied '{target}' grade ({grade_value:.1f}) to submission record "
-            f"for {record.owner.student.user.name}.",
+            f"Copied '{target}' grade ({grade_value:.1f}) to submission record for {record.owner.student.user.name}.",
             "success",
         )
     except SQLAlchemyError as e:

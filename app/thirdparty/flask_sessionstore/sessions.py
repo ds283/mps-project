@@ -148,9 +148,7 @@ class RedisSessionInterface(SessionInterface):
         if not session:
             if session.modified:
                 self.redis.delete(self.key_prefix + session.sid)
-                response.delete_cookie(
-                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
-                )
+                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
             return
 
         # Modification case.  There are upsides and downsides to
@@ -283,15 +281,11 @@ class MemcachedSessionInterface(SessionInterface):
     def save_session(self, app, session, response):
         domain = self.get_cookie_domain(app)
         path = self.get_cookie_path(app)
-        full_session_key = self._encode_key(self.key_prefix) + self._encode_key(
-            session.sid
-        )
+        full_session_key = self._encode_key(self.key_prefix) + self._encode_key(session.sid)
         if not session:
             if session.modified:
                 self.client.delete(full_session_key)
-                response.delete_cookie(
-                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
-                )
+                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
             return
 
         httponly = self.get_cookie_httponly(app)
@@ -337,9 +331,7 @@ class MongoDBSessionInterface(SessionInterface):
 
     session_class = MongoDBSession
 
-    def __init__(
-            self, client, db, collection, key_prefix, use_signer=False, permanent=True
-    ):
+    def __init__(self, client, db, collection, key_prefix, use_signer=False, permanent=True):
         if client is None:
             from pymongo import MongoClient
 
@@ -409,9 +401,7 @@ class MongoDBSessionInterface(SessionInterface):
         if not session:
             if session.modified:
                 self.store.remove({"id": store_id})
-                response.delete_cookie(
-                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
-                )
+                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
             return
 
         httponly = self.get_cookie_httponly(app)
@@ -421,9 +411,7 @@ class MongoDBSessionInterface(SessionInterface):
         # serialize contents of session object and store as the 'val' field
         # in the Mongo backend database
         val = self.serializer.dumps(dict(session))
-        self.store.update_one(
-            {"id": store_id}, {"$set": {"val": val, "expiration": expires}}, True
-        )
+        self.store.update_one({"id": store_id}, {"$set": {"val": val, "expiration": expires}}, True)
 
         # if using signer, sign SID
         if self.use_signer:
@@ -503,12 +491,8 @@ class SqlAlchemySessionInterface(SessionInterface):
                 return self.session_class(sid=sid, permanent=self.permanent)
 
         store_id = self.key_prefix + sid
-        saved_session = self.sql_session_model.query.filter_by(
-            session_id=store_id
-        ).first()
-        if saved_session and (
-                not saved_session.expiry or saved_session.expiry <= datetime.utcnow()
-        ):
+        saved_session = self.sql_session_model.query.filter_by(session_id=store_id).first()
+        if saved_session and (not saved_session.expiry or saved_session.expiry <= datetime.utcnow()):
             # Delete expired session
             self.db.session.delete(saved_session)
             self.db.session.commit()
@@ -526,17 +510,13 @@ class SqlAlchemySessionInterface(SessionInterface):
         domain = self.get_cookie_domain(app)
         path = self.get_cookie_path(app)
         store_id = self.key_prefix + session.sid
-        saved_session = self.sql_session_model.query.filter_by(
-            session_id=store_id
-        ).first()
+        saved_session = self.sql_session_model.query.filter_by(session_id=store_id).first()
         if not session:
             if session.modified:
                 if saved_session:
                     self.db.session.delete(saved_session)
                     self.db.session.commit()
-                response.delete_cookie(
-                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
-                )
+                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
             return
 
         httponly = self.get_cookie_httponly(app)
@@ -605,9 +585,7 @@ class DynamoDBSessionInterface(SessionInterface):
         if table_name not in self.client.list_tables().get("TableNames"):
             raise RuntimeError(
                 "The table {0!s} does not exist in DynamoDB for the requested region of {1!s}. Please "
-                'ensure that the table has a PrimaryKey of "SessionID"'.format(
-                    table_name, session.region_name
-                )
+                'ensure that the table has a PrimaryKey of "SessionID"'.format(table_name, session.region_name)
             )
 
         self.table_name = table_name
@@ -631,9 +609,7 @@ class DynamoDBSessionInterface(SessionInterface):
         if not PY2 and not isinstance(sid, text_type):
             sid = sid.decode("utf-8", "strict")
 
-        response = self.client.get_item(
-            TableName=self.table_name, Key={"SessionId": {"S": self.key_prefix + sid}}
-        )
+        response = self.client.get_item(TableName=self.table_name, Key={"SessionId": {"S": self.key_prefix + sid}})
 
         val = response.get("Item", {}).get("Session", {}).get("S")
         if val is not None:
@@ -653,9 +629,7 @@ class DynamoDBSessionInterface(SessionInterface):
                     TableName=self.table_name,
                     Key={"SessionId": {"S": self.key_prefix + session.sid}},
                 )
-                response.delete_cookie(
-                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
-                )
+                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
             return
 
         httponly = self.get_cookie_httponly(app)

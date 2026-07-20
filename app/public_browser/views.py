@@ -40,9 +40,7 @@ def browse():
     else:
         pclass_id = form.selector.data.id
 
-    return render_template(
-        "public_browser/browser.html", form=form, pclass_id=pclass_id
-    )
+    return render_template("public_browser/browser.html", form=form, pclass_id=pclass_id)
 
 
 @public_browser.route("/browse_ajax", methods=["POST"])

@@ -244,11 +244,8 @@ def project_offer_data(proj: LiveProject, items: List[CustomOffer]):
     data = [
         {
             "student": {
-                "display": render_template_string(
-                    _student, offer=item, sel=item.selector
-                ),
-                "sortvalue": item.selector.student.user.last_name
-                + item.selector.student.user.first_name,
+                "display": render_template_string(_student, offer=item, sel=item.selector),
+                "sortvalue": item.selector.student.user.last_name + item.selector.student.user.first_name,
             },
             "timestamp": {
                 "display": render_template_string(_timestamp, offer=item),
@@ -258,9 +255,7 @@ def project_offer_data(proj: LiveProject, items: List[CustomOffer]):
                 "display": render_template_string(_status, offer=item),
                 "sortvalue": "{x}_{y}".format(
                     x=item.status,
-                    y=item.last_edit_timestamp.timestamp()
-                    if item.last_edit_timestamp is not None
-                    else 0,
+                    y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0,
                 ),
             },
             "menu": render_template_string(
@@ -280,19 +275,14 @@ def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
 
     data = [
         {
-            "project": render_template_string(
-                _project, offer=item, sel=item.selector, proj=item.liveproject
-            ),
+            "project": render_template_string(_project, offer=item, sel=item.selector, proj=item.liveproject),
             "owner": {
-                "display": render_template_string(
-                    _owner, project=item.liveproject, simple_label=simple_label
-                ),
+                "display": render_template_string(_owner, project=item.liveproject, simple_label=simple_label),
                 "sortvalue": "Pool"
                 if item.liveproject.use_supervisor_pool
                 else "None"
                 if item.liveproject.owner is None
-                else item.liveproject.owner.user.last_name
-                + item.liveproject.owner.user.first_name,
+                else item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name,
             },
             "timestamp": {
                 "display": render_template_string(_timestamp, offer=item),
@@ -302,9 +292,7 @@ def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
                 "display": render_template_string(_status, offer=item),
                 "sortvalue": "{x}_{y}".format(
                     x=item.status,
-                    y=item.last_edit_timestamp.timestamp()
-                    if item.last_edit_timestamp is not None
-                    else 0,
+                    y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0,
                 ),
             },
             "menu": render_template_string(
@@ -342,9 +330,7 @@ def new_student_offer_projects(projects, sel):
         {
             "project": render_template_string(_project, sel=sel, proj=project),
             "owner": {
-                "display": render_template_string(
-                    _owner, project=project, simple_label=simple_label
-                ),
+                "display": render_template_string(_owner, project=project, simple_label=simple_label),
                 "sortvalue": "Pool"
                 if project.use_supervisor_pool
                 else "None"

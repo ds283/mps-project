@@ -50,9 +50,7 @@ class EditingMetadataMixin:
 
     @declared_attr
     def created_by(cls):
-        return db.relationship(
-            "User", foreign_keys=lambda: [cls.creator_id], uselist=False
-        )
+        return db.relationship("User", foreign_keys=lambda: [cls.creator_id], uselist=False)
 
     # creation timestamp
     creation_timestamp = db.Column(db.DateTime())
@@ -64,9 +62,7 @@ class EditingMetadataMixin:
 
     @declared_attr
     def last_edited_by(cls):
-        return db.relationship(
-            "User", foreign_keys=lambda: [cls.last_edit_id], uselist=False
-        )
+        return db.relationship("User", foreign_keys=lambda: [cls.last_edit_id], uselist=False)
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
@@ -80,9 +76,7 @@ class ColouredLabelMixin:
         if self.colour is None:
             return None
 
-        return "background-color:{bg}!important; color:{fg}!important;".format(
-            bg=self.colour, fg=get_text_colour(self.colour)
-        )
+        return "background-color:{bg}!important; color:{fg}!important;".format(bg=self.colour, fg=get_text_colour(self.colour))
 
     def _make_label(self, text, popover_text=None):
         """
@@ -125,9 +119,7 @@ class WorkflowMixin(WorkflowStatesMixin):
     """
 
     # workflow status
-    workflow_state = db.Column(
-        db.Integer(), default=WorkflowStatesMixin.WORKFLOW_APPROVAL_QUEUED
-    )
+    workflow_state = db.Column(db.Integer(), default=WorkflowStatesMixin.WORKFLOW_APPROVAL_QUEUED)
 
     # who validated this record, if it is validated?
     @declared_attr
@@ -136,9 +128,7 @@ class WorkflowMixin(WorkflowStatesMixin):
 
     @declared_attr
     def validated_by(cls):
-        return db.relationship(
-            "User", foreign_keys=lambda: [cls.validator_id], uselist=False
-        )
+        return db.relationship("User", foreign_keys=lambda: [cls.validator_id], uselist=False)
 
     # validator timestamp
     validated_timestamp = db.Column(db.DateTime())
@@ -196,9 +186,7 @@ class WorkflowHistoryMixin(WorkflowStatesMixin):
 
     @declared_attr
     def user(cls):
-        return db.relationship(
-            "User", foreign_keys=lambda: [cls.user_id], uselist=False
-        )
+        return db.relationship("User", foreign_keys=lambda: [cls.user_id], uselist=False)
 
     # workflow timestamp
     timestamp = db.Column(db.DateTime(), index=True)
@@ -215,9 +203,7 @@ class WorkflowHistoryMixin(WorkflowStatesMixin):
         return "{event} by {name} at {time}".format(
             event=self._text_event,
             name="unknown user" if self.user is None else self.user.name,
-            time="unknown time"
-            if self.timestamp is None
-            else self.timestamp.strftime("%a %d %b %Y %H:%M:%S"),
+            time="unknown time" if self.timestamp is None else self.timestamp.strftime("%a %d %b %Y %H:%M:%S"),
         )
 
 
@@ -311,17 +297,9 @@ def ProjectConfigurationMixinFactory(
         def ordered_tags(self):
             from .projects import ProjectTag
 
-            query = (
-                db.session.query(tags_mapped_column.label("tag_id"))
-                .filter(tags_self_column == self.id)
-                .subquery()
-            )
+            query = db.session.query(tags_mapped_column.label("tag_id")).filter(tags_self_column == self.id).subquery()
 
-            return (
-                db.session.query(ProjectTag)
-                .join(query, query.c.tag_id == ProjectTag.id)
-                .order_by(ProjectTag.name.asc())
-            )
+            return db.session.query(ProjectTag).join(query, query.c.tag_id == ProjectTag.id).order_by(ProjectTag.name.asc())
 
         # which research group is associated with this project?
         @declared_attr
@@ -363,11 +341,7 @@ def ProjectConfigurationMixinFactory(
         def ordered_skills(self):
             from .academic import SkillGroup, TransferableSkill
 
-            query = (
-                db.session.query(skills_mapped_column.label("skill_id"))
-                .filter(skills_self_column == self.id)
-                .subquery()
-            )
+            query = db.session.query(skills_mapped_column.label("skill_id")).filter(skills_self_column == self.id).subquery()
 
             return (
                 db.session.query(TransferableSkill)
@@ -398,11 +372,7 @@ def ProjectConfigurationMixinFactory(
         def ordered_programmes(self):
             from .academic import DegreeProgramme, DegreeType
 
-            query = (
-                db.session.query(programmes_mapped_column.label("programme_id"))
-                .filter(programmes_self_column == self.id)
-                .subquery()
-            )
+            query = db.session.query(programmes_mapped_column.label("programme_id")).filter(programmes_self_column == self.id).subquery()
 
             return (
                 db.session.query(DegreeProgramme)
@@ -454,9 +424,7 @@ def ProjectConfigurationMixinFactory(
                 :param faculty:
                 :return:
                 """
-                if (
-                    not faculty in self.assessors
-                ):  # no need to check carefully, just remove
+                if not faculty in self.assessors:  # no need to check carefully, just remove
                     return
 
                 self.assessors.remove(faculty)
@@ -475,16 +443,10 @@ def ProjectConfigurationMixinFactory(
                 pclass_id = pclass.id
             else:
                 raise RuntimeError(
-                    "Could not interpret parameter pclass of type {typ} in ProjectConfigurationMixin._assessor_list_query".format(
-                        typ=type(pclass)
-                    )
+                    "Could not interpret parameter pclass of type {typ} in ProjectConfigurationMixin._assessor_list_query".format(typ=type(pclass))
                 )
 
-            fac_ids = (
-                db.session.query(assessor_mapped_column.label("faculty_id"))
-                .filter(assessor_self_column == self.id)
-                .subquery()
-            )
+            fac_ids = db.session.query(assessor_mapped_column.label("faculty_id")).filter(assessor_self_column == self.id).subquery()
 
             query = (
                 db.session.query(FacultyData)
@@ -498,13 +460,11 @@ def ProjectConfigurationMixinFactory(
                     or_(
                         and_(
                             ProjectClass.uses_marker.is_(True),
-                            EnrollmentRecord.marker_state
-                            == EnrollmentRecord.MARKER_ENROLLED,
+                            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
                         ),
                         and_(
                             ProjectClass.uses_presentations.is_(True),
-                            EnrollmentRecord.presentations_state
-                            == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
                         ),
                     )
                 )
@@ -527,26 +487,20 @@ def ProjectConfigurationMixinFactory(
 
             pclasses = self.project_classes.subquery()
 
-            query = faculty.enrollments.join(
-                pclasses, pclasses.c.id == EnrollmentRecord.pclass_id
-            ).filter(
+            query = faculty.enrollments.join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id).filter(
                 or_(
                     and_(
                         pclasses.c.uses_marker.is_(True),
                         or_(
-                            EnrollmentRecord.marker_state
-                            == EnrollmentRecord.MARKER_ENROLLED,
-                            EnrollmentRecord.marker_state
-                            == EnrollmentRecord.MARKER_SABBATICAL,
+                            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
+                            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL,
                         ),
                     ),
                     and_(
                         pclasses.c.uses_presentations.is_(True),
                         or_(
-                            EnrollmentRecord.presentations_state
-                            == EnrollmentRecord.PRESENTATIONS_ENROLLED,
-                            EnrollmentRecord.presentations_state
-                            == EnrollmentRecord.PRESENTATIONS_SABBATICAL,
+                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL,
                         ),
                     ),
                 )
@@ -562,21 +516,12 @@ def ProjectConfigurationMixinFactory(
             when they come back from sabbatical
             :return:
             """
-            removed = [
-                f
-                for f in self.assessors
-                if not self._is_assessor_for_at_least_one_pclass(f)
-            ]
-            self.assessors = [
-                f
-                for f in self.assessors
-                if self._is_assessor_for_at_least_one_pclass(f)
-            ]
+            removed = [f for f in self.assessors if not self._is_assessor_for_at_least_one_pclass(f)]
+            self.assessors = [f for f in self.assessors if self._is_assessor_for_at_least_one_pclass(f)]
 
             for f in removed:
                 current_app.logger.info(
-                    'Regular maintenance: pruned assessor "{name}" from project "{proj}" since '
-                    "they no longer meet eligibility criteria".format(
+                    'Regular maintenance: pruned assessor "{name}" from project "{proj}" since they no longer meet eligibility criteria'.format(
                         name=f.user.name, proj=self.name
                     )
                 )
@@ -600,8 +545,7 @@ def ProjectConfigurationMixinFactory(
                 if count > 1:
                     f = self.assessors.filter_by(id=assessor_id).first()
                     current_app.logger.info(
-                        'Regular maintenance: assessor "{name}" from project "{proj}" occurs '
-                        "multiple times (multiplicity = {count})".format(
+                        'Regular maintenance: assessor "{name}" from project "{proj}" occurs multiple times (multiplicity = {count})'.format(
                             name=f.user.name, proj=self.name, count=count
                         )
                     )
@@ -677,16 +621,10 @@ def ProjectConfigurationMixinFactory(
                 pclass_id = pclass.id
             else:
                 raise RuntimeError(
-                    "Could not interpret parameter pclass of type {typ} in ProjectConfigurationMixin._supervisor_list_query".format(
-                        typ=type(pclass)
-                    )
+                    "Could not interpret parameter pclass of type {typ} in ProjectConfigurationMixin._supervisor_list_query".format(typ=type(pclass))
                 )
 
-            fac_ids = (
-                db.session.query(supervisor_mapped_column.label("faculty_id"))
-                .filter(supervisor_self_column == self.id)
-                .subquery()
-            )
+            fac_ids = db.session.query(supervisor_mapped_column.label("faculty_id")).filter(supervisor_self_column == self.id).subquery()
 
             query = (
                 db.session.query(FacultyData)
@@ -700,8 +638,7 @@ def ProjectConfigurationMixinFactory(
                     or_(
                         and_(
                             ProjectClass.uses_supervisor.is_(True),
-                            EnrollmentRecord.supervisor_state
-                            == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                         )
                     )
                 )
@@ -724,16 +661,12 @@ def ProjectConfigurationMixinFactory(
 
             pclasses = self.project_classes.subquery()
 
-            query = faculty.enrollments.join(
-                pclasses, pclasses.c.id == EnrollmentRecord.pclass_id
-            ).filter(
+            query = faculty.enrollments.join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id).filter(
                 and_(
                     pclasses.c.uses_supervisor.is_(True),
                     or_(
-                        EnrollmentRecord.supervisor_state
-                        == EnrollmentRecord.MARKER_ENROLLED,
-                        EnrollmentRecord.supervisor_state
-                        == EnrollmentRecord.MARKER_SABBATICAL,
+                        EnrollmentRecord.supervisor_state == EnrollmentRecord.MARKER_ENROLLED,
+                        EnrollmentRecord.supervisor_state == EnrollmentRecord.MARKER_SABBATICAL,
                     ),
                 )
             )
@@ -754,28 +687,20 @@ def ProjectConfigurationMixinFactory(
                 if count > 0:
                     self.supervisors = []
                     current_app.logger.info(
-                        'Regular maintenance: removed supervisor pool from project "{proj}" because '
-                        "it does not use the supervisor pool,".format(proj=self.name)
+                        'Regular maintenance: removed supervisor pool from project "{proj}" because it does not use the supervisor pool,'.format(
+                            proj=self.name
+                        )
                     )
 
                     return count
 
             if self.use_supervisor_pool:
-                removed = [
-                    f
-                    for f in self.supervisors
-                    if not self._is_supervisor_for_at_least_one_pclass(f)
-                ]
-                self.supervisors = [
-                    f
-                    for f in self.supervisors
-                    if self._is_supervisor_for_at_least_one_pclass(f)
-                ]
+                removed = [f for f in self.supervisors if not self._is_supervisor_for_at_least_one_pclass(f)]
+                self.supervisors = [f for f in self.supervisors if self._is_supervisor_for_at_least_one_pclass(f)]
 
                 for f in removed:
                     current_app.logger.info(
-                        'Regular maintenance: pruned supervisor "{name}" from project "{proj}" since '
-                        "they no longer meet eligibility criteria".format(
+                        'Regular maintenance: pruned supervisor "{name}" from project "{proj}" since they no longer meet eligibility criteria'.format(
                             name=f.user.name, proj=self.name
                         )
                     )
@@ -801,8 +726,7 @@ def ProjectConfigurationMixinFactory(
                 if count > 1:
                     f = self.supervisors.filter_by(id=supv_id).first()
                     current_app.logger.info(
-                        'Regular maintenance: supervisor "{name}" from project "{proj}" occurs '
-                        "multiple times (multiplicity = {count})".format(
+                        'Regular maintenance: supervisor "{name}" from project "{proj}" occurs multiple times (multiplicity = {count})'.format(
                             name=f.user.name, proj=self.name, count=count
                         )
                     )
@@ -883,11 +807,7 @@ def ProjectDescriptionMixinFactory(
         def _level_modules_query(self, level_id):
             from .academic import Module
 
-            query = (
-                db.session.query(module_mapped_column.label("module_id"))
-                .filter(module_self_column == self.id)
-                .subquery()
-            )
+            query = db.session.query(module_mapped_column.label("module_id")).filter(module_self_column == self.id).subquery()
 
             return (
                 db.session.query(Module)
@@ -910,11 +830,7 @@ def ProjectDescriptionMixinFactory(
         def ordered_modules(self):
             from .academic import FHEQ_Level, Module
 
-            query = (
-                db.session.query(module_mapped_column.label("module_id"))
-                .filter(module_self_column == self.id)
-                .subquery()
-            )
+            query = db.session.query(module_mapped_column.label("module_id")).filter(module_self_column == self.id).subquery()
 
             return (
                 db.session.query(Module)
@@ -937,9 +853,7 @@ class AssetExpiryMixin:
 
 class AssetDownloadDataMixin:
     # optional mimetype
-    mimetype = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None
-    )
+    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None)
 
     # target filename
     target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -975,9 +889,7 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
         comment = db.Column(db.Text())
 
         # is this asset stored encrypted?
-        encryption = db.Column(
-            db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE
-        )
+        encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
         # file size after encryption
         encrypted_size = db.Column(db.Integer())
@@ -1028,9 +940,7 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             elif isinstance(user, int):
                 user_obj = db.session.query(User).filter_by(id=user).first()
             else:
-                raise RuntimeError(
-                    f'Unrecognized object "{user}" of type "{type(user)}" passed to AssetMixin._get_user()'
-                )
+                raise RuntimeError(f'Unrecognized object "{user}" of type "{type(user)}" passed to AssetMixin._get_user()')
 
             return user_obj
 
@@ -1050,9 +960,7 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             elif isinstance(role, int):
                 role_obj = db.session.query(Role).filter_by(id=role).first()
             else:
-                raise RuntimeError(
-                    f'Unrecognized object "{role}" of type "{type(role)}" passed to AssetMixin._get_role()'
-                )
+                raise RuntimeError(f'Unrecognized object "{role}" of type "{type(role)}" passed to AssetMixin._get_role()')
 
             return role_obj
 
@@ -1087,11 +995,7 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
 
             role_list = []
 
-            key_roles = (
-                db.session.query(Role)
-                .filter(or_(Role.name == "root", Role.name == "admin"))
-                .all()
-            )
+            key_roles = db.session.query(Role).filter(or_(Role.name == "root", Role.name == "admin")).all()
 
             for r in key_roles:
                 if user_.has_role(r) and r not in role_list:

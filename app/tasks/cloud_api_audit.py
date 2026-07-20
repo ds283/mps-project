@@ -66,12 +66,8 @@ def register_cloud_api_audit_tasks(celery):
         data = {}
         if scheme == "mongodb":
             data = data | {
-                "audit_database": current_app.config.get(
-                    "OBJECT_STORAGE_AUDIT_BACKEND_DATABASE"
-                ),
-                "audit_collection": current_app.config.get(
-                    "OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION"
-                ),
+                "audit_database": current_app.config.get("OBJECT_STORAGE_AUDIT_BACKEND_DATABASE"),
+                "audit_collection": current_app.config.get("OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION"),
             }
 
         # instantiate the backend
@@ -79,15 +75,11 @@ def register_cloud_api_audit_tasks(celery):
 
         # get all audit records from the backend
         # what's supplied is a Pandas DataFrame containing the details
-        self.update_state(
-            "PROGRESS", meta={"msg": "Obtaining audit records from Cloud API backend"}
-        )
+        self.update_state("PROGRESS", meta={"msg": "Obtaining audit records from Cloud API backend"})
         now = datetime.now()
         records: pd.DataFrame = backend.get_audit_records(latest=now)
         rows: int = records.shape[0]
-        print(
-            f"send_api_events_to_telemetry: obtained Pandas DataFrame containing {rows} records"
-        )
+        print(f"send_api_events_to_telemetry: obtained Pandas DataFrame containing {rows} records")
 
         if rows == 0:
             self.update_state(
@@ -100,12 +92,8 @@ def register_cloud_api_audit_tasks(celery):
         mo = now.strftime("%m")
         dy = now.strftime("%d")
         time = now.strftime("%H_%M_%S")
-        csv_key = "Cloud_API_events_{yr}-{mo}-{dy}-{time}.csv".format(
-            yr=yr, mo=mo, dy=dy, time=time
-        )
-        tgz_key = "Cloud_API_events_{yr}-{mo}-{dy}-{time}.tar.gz".format(
-            yr=yr, mo=mo, dy=dy, time=time
-        )
+        csv_key = "Cloud_API_events_{yr}-{mo}-{dy}-{time}.csv".format(yr=yr, mo=mo, dy=dy, time=time)
+        tgz_key = "Cloud_API_events_{yr}-{mo}-{dy}-{time}.tar.gz".format(yr=yr, mo=mo, dy=dy, time=time)
 
         with ScratchFileManager(suffix=".csv") as csv_scratch:
             csv_path: Path = csv_scratch.path
@@ -114,31 +102,23 @@ def register_cloud_api_audit_tasks(celery):
             if not path.exists(csv_path) or not path.isfile(csv_path):
                 self.update_state(
                     state="FAILURE",
-                    meta={
-                        "msg": "Extraction of Cloud API backend data to CSV file did not produce any usable output"
-                    },
+                    meta={"msg": "Extraction of Cloud API backend data to CSV file did not produce any usable output"},
                 )
                 raise self.retry()
 
-            self.update_state(
-                "PROGRESS", meta={"msg": "Compressing extracted CSV file"}
-            )
+            self.update_state("PROGRESS", meta={"msg": "Compressing extracted CSV file"})
 
             with ScratchFileManager(suffix=".tar.gz") as archive_scratch:
                 archive_path: Path = archive_scratch.path
 
-                with tarfile.open(
-                        name=archive_path, mode="w:gz", format=tarfile.PAX_FORMAT
-                ) as archive:
+                with tarfile.open(name=archive_path, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
                     archive.add(name=csv_path, arcname=csv_key)
                     archive.close()
 
                 if not path.exists(archive_path) or not path.isfile(archive_path):
                     self.update_state(
                         state="FAILURE",
-                        meta={
-                            "msg": "Compression of extracted Cloud API backend data did not produce any usable output"
-                        },
+                        meta={"msg": "Compression of extracted Cloud API backend data did not produce any usable output"},
                     )
                     raise self.retry()
 

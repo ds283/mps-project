@@ -158,20 +158,11 @@ def schedule_view_sessions(slots, record, url=None, text=None):
                     back_text=text,
                     simple_label=simple_label,
                 ),
-                "sortvalue": s.session.date.isoformat()
-                             + (
-                                 "-AA"
-                                 if s.session.session_type == PresentationSession.MORNING_SESSION
-                                 else "-BB"
-                             ),
+                "sortvalue": s.session.date.isoformat() + ("-AA" if s.session.session_type == PresentationSession.MORNING_SESSION else "-BB"),
             },
             "room": render_template_string(_room, s=s),
-            "assessors": render_template_string(
-                _assessors, s=s, rec=record, back_url=url, back_text=text
-            ),
-            "talks": render_template_string(
-                _talks, s=s, rec=record, back_url=url, back_text=text
-            ),
+            "assessors": render_template_string(_assessors, s=s, rec=record, back_url=url, back_text=text),
+            "talks": render_template_string(_talks, s=s, rec=record, back_url=url, back_text=text),
         }
         for s in slots
     ]

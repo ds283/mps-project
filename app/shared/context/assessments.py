@@ -26,12 +26,7 @@ def get_schedule_message_data(configs=None):
     error_schedules = set()
 
     # collect (config, period) pairs for current-year configs
-    current_year_pairs = [
-        (config, period)
-        for config in configs
-        if config.year == current_year
-        for period in config.periods
-    ]
+    current_year_pairs = [(config, period) for config in configs if config.year == current_year for period in config.periods]
 
     if current_year_pairs:
         period_ids = [period.id for _, period in current_year_pairs]

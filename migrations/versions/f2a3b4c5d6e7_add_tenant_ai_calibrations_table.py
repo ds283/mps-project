@@ -53,7 +53,10 @@ def upgrade():
         sa.Column("sigma_inv", sa.Text(collation="utf8_bin"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "tenant_id", "feature_set", "llm_model_name", "llm_context_window",
+            "tenant_id",
+            "feature_set",
+            "llm_model_name",
+            "llm_context_window",
             name="uq_tenant_calibration",
         ),
     )

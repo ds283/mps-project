@@ -42,9 +42,7 @@ def store_selection(
     # iterate through bookmarks, appending them to a selection set, until we have sufficient selections or we have run out
     num_selections = len(existing)
     for bookmark in sel.ordered_bookmarks:
-        if bookmark.liveproject_id not in existing and (
-            bookmark.liveproject.is_available(sel) or force_unavailable
-        ):
+        if bookmark.liveproject_id not in existing and (bookmark.liveproject.is_available(sel) or force_unavailable):
             rec = SelectionRecord(
                 owner_id=sel.id,
                 liveproject_id=bookmark.liveproject_id,

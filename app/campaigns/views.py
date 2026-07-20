@@ -59,6 +59,4 @@ def atas_2026():
             )
             return redirect(url_for("faculty.dashboard"))
 
-    return render_template_context(
-        "campaigns/2026_ATAS.html", input_form=form, projects=projects
-    )
+    return render_template_context("campaigns/2026_ATAS.html", input_form=form, projects=projects)

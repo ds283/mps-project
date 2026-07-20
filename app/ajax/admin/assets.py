@@ -282,9 +282,7 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         mimetype=mimetype,
         thumbnail_url=thumbnail_url,
     )
-    license_html = render_template_string(
-        _license, license=license_obj, simple_label=simple_label
-    )
+    license_html = render_template_string(_license, license=license_obj, simple_label=simple_label)
     expiry_html = render_template_string(_expiry, expiry=asset.expiry)
     timestamp_html = render_template_string(_timestamp, timestamp=asset.timestamp)
     bucket_html = (
@@ -316,13 +314,9 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         "expiry": expiry_html,
         "mimetype": mimetype_html,
         "target_name": target_html,
-        "filesize": human_size
-        if human_size
-        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
+        "filesize": human_size if human_size else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
         "bucket": bucket_html,
-        "comment": comment
-        if comment
-        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
+        "comment": comment if comment else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
         "menu": menu_html,
     }
 

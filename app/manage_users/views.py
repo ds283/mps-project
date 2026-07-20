@@ -100,9 +100,7 @@ def create_user():
 
     # check whether any active degree programmes exist, and raise an error if not
     if not DegreeProgramme.query.filter_by(active=True).first():
-        flash(
-            "No degree programmes are available. Set up at least one active degree programme before adding new users."
-        )
+        flash("No degree programmes are available. Set up at least one active degree programme before adding new users.")
         return redirect(redirect_url())
 
     # first task is to capture the user role
@@ -122,14 +120,10 @@ def create_user():
             return redirect(url_for("manage_users.create_student", role=role))
 
         else:
-            flash(
-                "Requested role was not recognized. If this error persists, please contact the system administrator."
-            )
+            flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
             return redirect(url_for("manage_users.edit_users"))
 
-    return render_template_context(
-        "security/register_role.html", role_form=form, title="Select new account role"
-    )
+    return render_template_context("security/register_role.html", role_form=form, title="Select new account role")
 
 
 @manage_users.route("/create_office/<string:role>", methods=["GET", "POST"])
@@ -144,9 +138,7 @@ def create_office(role):
 
     # check whether role is ok
     if not (role == "office"):
-        flash(
-            "Requested role was not recognized. If this error persists, please contact the system administrator."
-        )
+        flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
         return redirect(url_for("manage_users.edit_users"))
 
     form = ConfirmRegisterOfficeForm(request.form)
@@ -168,11 +160,7 @@ def create_office(role):
         if request.method == "GET":
             form.random_password.data = True
 
-            license = (
-                db.session.query(AssetLicense)
-                .filter_by(abbreviation=current_app.config["OFFICE_DEFAULT_LICENSE"])
-                .first()
-            )
+            license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config["OFFICE_DEFAULT_LICENSE"]).first()
             form.default_license.data = license
 
     return render_template_context(
@@ -195,9 +183,7 @@ def create_faculty(role):
 
     # check whether role is ok
     if not (role == "faculty"):
-        flash(
-            "Requested role was not recognized. If this error persists, please contact the system administrator."
-        )
+        flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
         return redirect(url_for("manage_users.edit_users"))
 
     form = ConfirmRegisterFacultyForm(request.form)
@@ -217,9 +203,7 @@ def create_faculty(role):
             academic_title=form.academic_title.data,
             use_academic_title=form.use_academic_title.data,
             sign_off_students=form.sign_off_students.data,
-            project_capacity=form.project_capacity.data
-            if form.enforce_capacity.data
-            else None,
+            project_capacity=form.project_capacity.data if form.enforce_capacity.data else None,
             enforce_capacity=form.enforce_capacity.data,
             show_popularity=form.show_popularity.data,
             dont_clash_presentations=form.dont_clash_presentations.data,
@@ -236,11 +220,7 @@ def create_faculty(role):
         log_db_commit("Create faculty user account", user=current_user)
 
         if form.submit.data:
-            return redirect(
-                url_for(
-                    "manage_users.edit_affiliations", id=data.id, create=1, pane=pane
-                )
-            )
+            return redirect(url_for("manage_users.edit_affiliations", id=data.id, create=1, pane=pane))
         elif form.save_and_exit.data:
             if pane is None or pane == "accounts":
                 return redirect(url_for("manage_users.edit_users"))
@@ -258,26 +238,16 @@ def create_faculty(role):
             # dynamically set default project capacity
             form.project_capacity.data = current_app.config["DEFAULT_PROJECT_CAPACITY"]
 
-            form.sign_off_students.data = current_app.config[
-                "DEFAULT_SIGN_OFF_STUDENTS"
-            ]
+            form.sign_off_students.data = current_app.config["DEFAULT_SIGN_OFF_STUDENTS"]
             form.enforce_capacity.data = current_app.config["DEFAULT_ENFORCE_CAPACITY"]
             form.show_popularity.data = current_app.config["DEFAULT_SHOW_POPULARITY"]
-            form.dont_clash_presentations.data = current_app.config[
-                "DEFAULT_DONT_CLASH_PRESENTATIONS"
-            ]
+            form.dont_clash_presentations.data = current_app.config["DEFAULT_DONT_CLASH_PRESENTATIONS"]
 
-            form.use_academic_title.data = current_app.config[
-                "DEFAULT_USE_ACADEMIC_TITLE"
-            ]
+            form.use_academic_title.data = current_app.config["DEFAULT_USE_ACADEMIC_TITLE"]
 
             form.random_password.data = True
 
-            license = (
-                db.session.query(AssetLicense)
-                .filter_by(abbreviation=current_app.config["FACULTY_DEFAULT_LICENSE"])
-                .first()
-            )
+            license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config["FACULTY_DEFAULT_LICENSE"]).first()
             form.default_license.data = license
 
     return render_template_context(
@@ -295,9 +265,7 @@ def create_faculty(role):
 def create_student(role):
     # check whether role is ok
     if not (role == "student"):
-        flash(
-            "Requested role was not recognized. If this error persists, please contact the system administrator."
-        )
+        flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
         return redirect(url_for("manage_users.edit_users"))
 
     all_tenants: List[Tenant] = db.session.query(Tenant).all()
@@ -358,11 +326,7 @@ def create_student(role):
 
             form.random_password.data = True
 
-            lic = (
-                db.session.query(AssetLicense)
-                .filter_by(abbreviation=current_app.config["STUDENT_DEFAULT_LICENSE"])
-                .first()
-            )
+            lic = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config["STUDENT_DEFAULT_LICENSE"]).first()
             form.default_license.data = lic
 
             form.dyspraxia_sticker.data = False
@@ -496,13 +460,7 @@ def edit_users_students():
         .all()
     )
 
-    cohort_data = (
-        db.session.query(StudentData.cohort)
-        .join(User, User.id == StudentData.id)
-        .filter(User.active.is_(True))
-        .distinct()
-        .all()
-    )
+    cohort_data = db.session.query(StudentData.cohort).join(User, User.id == StudentData.id).filter(User.active.is_(True)).distinct().all()
 
     cohorts = [c[0] for c in cohort_data]
 
@@ -628,21 +586,13 @@ def users_ajax():
     elif filter == "inactive":
         base_query = db.session.query(User).filter_by(active=False)
     elif filter == "student":
-        base_query = db.session.query(User).filter(
-            User.roles.any(Role.name == "student")
-        )
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "student"))
     elif filter == "faculty":
-        base_query = db.session.query(User).filter(
-            User.roles.any(Role.name == "faculty")
-        )
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "faculty"))
     elif filter == "office":
-        base_query = db.session.query(User).filter(
-            User.roles.any(Role.name == "office")
-        )
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "office"))
     elif filter == "reports":
-        base_query = db.session.query(User).filter(
-            User.roles.any(Role.name == "reports")
-        )
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "reports"))
     elif filter == "admin":
         base_query = db.session.query(User).filter(User.roles.any(Role.name == "admin"))
     elif filter == "root":
@@ -691,9 +641,7 @@ def users_ajax():
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.users.build_accounts_data, current_user)
-        )
+        return handler.build_payload(partial(ajax.users.build_accounts_data, current_user))
 
 
 @manage_users.route("/users_students_ajax", methods=["POST"])
@@ -731,17 +679,11 @@ def users_students_ajax():
         base_query = base_query.filter(StudentData.cohort == cohort_value)
 
     if valid_filter == "valid":
-        base_query = base_query.filter(
-            StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED
-        )
+        base_query = base_query.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED)
     elif valid_filter == "not-valid":
-        base_query = base_query.filter(
-            StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-        )
+        base_query = base_query.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED)
     elif valid_filter == "reject":
-        base_query = base_query.filter(
-            StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED
-        )
+        base_query = base_query.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
 
     flag, year_value = is_integer(year_filter)
     if flag:
@@ -799,9 +741,7 @@ def users_students_ajax():
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.users.build_student_data, current_user)
-        )
+        return handler.build_payload(partial(ajax.users.build_student_data, current_user))
 
 
 @manage_users.route("/users_faculty_ajax", methods=["POST"])
@@ -820,9 +760,7 @@ def users_faculty_ajax():
 
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
-        base_query = base_query.filter(
-            FacultyData.enrollments.any(pclass_id=pclass_value)
-        )
+        base_query = base_query.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
 
     flag, filter_CATS = is_boolean(filter_CATS_pre)
     if flag and filter_CATS:
@@ -853,9 +791,7 @@ def users_faculty_ajax():
     columns = {"name": name, "active": active}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.users.build_faculty_data, current_user)
-        )
+        return handler.build_payload(partial(ajax.users.build_faculty_data, current_user))
 
 
 @manage_users.route("/remove_all_CATS_limits", methods=["GET"])
@@ -873,9 +809,7 @@ def remove_all_CATS_limits():
 
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
-        base_query = base_query.filter(
-            FacultyData.enrollments.any(pclass_id=pclass_value)
-        )
+        base_query = base_query.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
 
     flag, filter_CATS = is_boolean(filter_CATS_pre)
     if flag and filter_CATS:
@@ -967,13 +901,9 @@ def batch_create_students():
 
                 asset.grant_user(current_user)
 
-                tk_name = "Process batch user list '{name}'".format(
-                    name=incoming_filename
-                )
+                tk_name = "Process batch user list '{name}'".format(name=incoming_filename)
                 tk_description = "Batch import students from a CSV file"
-                uuid = register_task(
-                    tk_name, owner=current_user, description=tk_description
-                )
+                uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
                 record = StudentBatch(
                     name=batch_file.filename,
@@ -1002,9 +932,7 @@ def batch_create_students():
                         "Could not upload batch user list due to a database issue. Please contact an administrator.",
                         "error",
                     )
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     return redirect(url_for("manage_users.batch_create_students"))
 
                 celery = current_app.extensions["celery"]
@@ -1075,13 +1003,9 @@ def batch_create_faculty():
 
                 asset.grant_user(current_user)
 
-                tk_name = "Process faculty batch user list '{name}'".format(
-                    name=incoming_filename
-                )
+                tk_name = "Process faculty batch user list '{name}'".format(name=incoming_filename)
                 tk_description = "Batch import faculty from a CSV file"
-                uuid = register_task(
-                    tk_name, owner=current_user, description=tk_description
-                )
+                uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
                 record = FacultyBatch(
                     name=batch_file.filename,
@@ -1106,9 +1030,7 @@ def batch_create_faculty():
                         "Could not upload faculty batch user list due to a database issue. Please contact an administrator.",
                         "error",
                     )
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     return redirect(url_for("manage_users.batch_create_faculty"))
 
                 celery = current_app.extensions["celery"]
@@ -1119,9 +1041,7 @@ def batch_create_faculty():
 
                 batch_task = celery.tasks.get("app.tasks.batch_create.faculty")
                 if batch_task is None:
-                    flash(
-                        "The faculty batch import task is not yet implemented.", "error"
-                    )
+                    flash("The faculty batch import task is not yet implemented.", "error")
                     return redirect(url_for("manage_users.batch_create_faculty"))
 
                 work = batch_task.si(record.id, asset.id)
@@ -1160,16 +1080,13 @@ def delete_faculty_batch(batch_id):
 
     if not record.celery_finished:
         flash(
-            'Can not delete batch creation task for "{name}" because it has not yet '
-            "finished".format(name=record.name),
+            'Can not delete batch creation task for "{name}" because it has not yet finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
 
     title = "Delete faculty account import"
-    panel_title = "Delete faculty account import <strong>{name}</strong>".format(
-        name=record.name
-    )
+    panel_title = "Delete faculty account import <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for(
         "manage_users.perform_delete_faculty_batch",
@@ -1206,9 +1123,7 @@ def perform_delete_faculty_batch(batch_id):
 
     if not record.celery_finished:
         flash(
-            'Can not delete faculty account import task "{name}" because it has not yet finished'.format(
-                name=record.name
-            ),
+            'Can not delete faculty account import task "{name}" because it has not yet finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1221,16 +1136,15 @@ def perform_delete_faculty_batch(batch_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not delete faculty account import task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not delete faculty account import task "{name}" due to a database error. Please contact a system administrator.'.format(
+                name=record.name
+            ),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
     else:
         flash(
-            'Faculty account import task "{name}" has been deleted.'.format(
-                name=record.name
-            ),
+            'Faculty account import task "{name}" has been deleted.'.format(name=record.name),
             "info",
         )
 
@@ -1249,17 +1163,13 @@ def terminate_faculty_batch(batch_id):
 
     if record.celery_finished:
         flash(
-            'Can not terminate import "{name}" because it has finished'.format(
-                name=record.name
-            ),
+            'Can not terminate import "{name}" because it has finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
 
     title = "Terminate faculty account import"
-    panel_title = "Terminate faculty account import <strong>{name}</strong>".format(
-        name=record.name
-    )
+    panel_title = "Terminate faculty account import <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for(
         "manage_users.perform_terminate_faculty_batch",
@@ -1296,9 +1206,7 @@ def perform_terminate_faculty_batch(batch_id):
 
     if record.celery_finished:
         flash(
-            'Can not terminate import "{name}" because it has finished'.format(
-                name=record.name
-            ),
+            'Can not terminate import "{name}" because it has finished'.format(name=record.name),
             "error",
         )
         return redirect(url)
@@ -1323,8 +1231,9 @@ def perform_terminate_faculty_batch(batch_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not terminate batch user creation task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not terminate batch user creation task "{name}" due to a database error. Please contact a system administrator.'.format(
+                name=record.name
+            ),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1349,17 +1258,13 @@ def terminate_student_batch(batch_id):
 
     if record.celery_finished:
         flash(
-            'Can not terminate import "{name}" because it has finished'.format(
-                name=record.name
-            ),
+            'Can not terminate import "{name}" because it has finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
 
     title = "Terminate student account import"
-    panel_title = "Terminate student account import <strong>{name}</strong>".format(
-        name=record.name
-    )
+    panel_title = "Terminate student account import <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for(
         "manage_users.perform_terminate_student_batch",
@@ -1396,9 +1301,7 @@ def perform_terminate_student_batch(batch_id):
 
     if record.celery_finished:
         flash(
-            'Can not terminate import "{name}" because it has finished'.format(
-                name=record.name
-            ),
+            'Can not terminate import "{name}" because it has finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1423,8 +1326,9 @@ def perform_terminate_student_batch(batch_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not terminate batch user creation task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not terminate batch user creation task "{name}" due to a database error. Please contact a system administrator.'.format(
+                name=record.name
+            ),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1449,16 +1353,13 @@ def delete_student_batch(batch_id):
 
     if not record.celery_finished:
         flash(
-            'Can not delete batch creation task for "{name}" because it has not yet '
-            "finished".format(name=record.name),
+            'Can not delete batch creation task for "{name}" because it has not yet finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
 
     title = "Delete student account import"
-    panel_title = "Delete student account import <strong>{name}</strong>".format(
-        name=record.name
-    )
+    panel_title = "Delete student account import <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for(
         "manage_users.perform_delete_student_batch",
@@ -1495,9 +1396,7 @@ def perform_delete_student_batch(batch_id):
 
     if not record.celery_finished:
         flash(
-            'Can not delete student account import task "{name}" because it has not yet finished'.format(
-                name=record.name
-            ),
+            'Can not delete student account import task "{name}" because it has not yet finished'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1511,16 +1410,15 @@ def perform_delete_student_batch(batch_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not delete batch user creation task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not delete batch user creation task "{name}" due to a database error. Please contact a system administrator.'.format(
+                name=record.name
+            ),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
     else:
         flash(
-            'Student account import task "{name}" has been deleted.'.format(
-                name=record.name
-            ),
+            'Student account import task "{name}" has been deleted.'.format(name=record.name),
             "info",
         )
 
@@ -1645,9 +1543,7 @@ def view_student_batch_data_ajax(batch_id):
 
         return True
 
-    with ServerSideInMemoryHandler(
-        request, base_query, columns, row_filter=partial(_filter, filter)
-    ) as handler:
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=partial(_filter, filter)) as handler:
         return handler.build_payload(ajax.users.build_view_batch_data)
 
 
@@ -1702,9 +1598,7 @@ def view_faculty_batch_data_ajax(batch_id):
 
         return True
 
-    with ServerSideInMemoryHandler(
-        request, base_query, columns, row_filter=partial(_filter, filter)
-    ) as handler:
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=partial(_filter, filter)) as handler:
         return handler.build_payload(ajax.users.build_view_faculty_batch_data)
 
 
@@ -1737,37 +1631,24 @@ def edit_student_batch_item(item_id):
                 condition_list |= func.lower(User.email) == func.lower(record.email)
 
             if record.user_id is not None:
-                condition_list |= func.lower(User.username) == func.lower(
-                    record.user_id
-                )
+                condition_list |= func.lower(User.username) == func.lower(record.user_id)
 
             if record.exam_number is not None:
                 condition_list |= StudentData.exam_number == record.exam_number
 
             if record.registration_number is not None:
-                condition_list |= (
-                    StudentData.registration_number == record.registration_number
-                )
+                condition_list |= StudentData.registration_number == record.registration_number
 
-            existing_record = (
-                db.session.query(User)
-                .join(StudentData, StudentData.id == User.id)
-                .filter(condition_list)
-                .first()
-            )
+            existing_record = db.session.query(User).join(StudentData, StudentData.id == User.id).filter(condition_list).first()
 
-            record.existing_id = (
-                existing_record.id if existing_record is not None else None
-            )
+            record.existing_id = existing_record.id if existing_record is not None else None
 
             if existing_record.email.lower() != record.email.lower():
                 record.dont_convert = True
 
         log_db_commit("Save edits to student batch import item", user=current_user)
 
-        return redirect(
-            url_for("manage_users.view_student_batch_data", batch_id=record.parent.id)
-        )
+        return redirect(url_for("manage_users.view_student_batch_data", batch_id=record.parent.id))
 
 
 @manage_users.route("/edit_faculty_batch_item/<int:item_id>", methods=["GET", "POST"])
@@ -1797,12 +1678,7 @@ def edit_faculty_batch_item(item_id):
             if record.email is not None:
                 condition_list = or_(condition_list, User.email == record.email)
 
-            match = (
-                db.session.query(FacultyData)
-                .join(User, User.id == FacultyData.id)
-                .filter(condition_list)
-                .first()
-            )
+            match = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(condition_list).first()
             if match is not None:
                 record.existing_id = match.id
 
@@ -1816,9 +1692,7 @@ def edit_faculty_batch_item(item_id):
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(
-            url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id)
-        )
+        return redirect(url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id))
 
     return render_template_context(
         "manage_users/users_dashboard/edit_faculty_batch_item.html",
@@ -1845,9 +1719,7 @@ def mark_faculty_batch_item_convert(item_id):
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(
-        url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id)
-    )
+    return redirect(url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id))
 
 
 @manage_users.route("/mark_faculty_batch_item_dont_convert/<int:item_id>")
@@ -1867,9 +1739,7 @@ def mark_faculty_batch_item_dont_convert(item_id):
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(
-        url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id)
-    )
+    return redirect(url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id))
 
 
 @manage_users.route("/mark_batch_item_convert/<int:item_id>")
@@ -1914,25 +1784,19 @@ def import_student_batch(batch_id):
     import_error = celery.tasks["app.tasks.batch_create.import_student_error"]
     backup = celery.tasks["app.tasks.backup.backup"]
 
-    work_group = group(
-        import_batch_item.si(item.id, current_user.id) for item in record.items
-    )
+    work_group = group(import_batch_item.si(item.id, current_user.id) for item in record.items)
     work = chain(
         backup.si(
             current_user.id,
             type=BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK,
             tag="batch_import",
-            description='Rollback snapshot for student account creation "{name}"'.format(
-                name=record.name
-            ),
+            description='Rollback snapshot for student account creation "{name}"'.format(name=record.name),
         ),
         work_group,
         import_finalize.s(record.id, current_user.id),
     ).on_error(import_error.si(current_user.id))
 
-    seq = chain(
-        init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)
-    ).on_error(error.si(uuid, tk_name, current_user.id))
+    seq = chain(init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
     seq.apply_async(task_id=uuid)
 
     return redirect(redirect_url())
@@ -1953,9 +1817,7 @@ def import_faculty_batch(batch_id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    import_batch_item = celery.tasks.get(
-        "app.tasks.batch_create.import_faculty_batch_item"
-    )
+    import_batch_item = celery.tasks.get("app.tasks.batch_create.import_faculty_batch_item")
     import_finalize = celery.tasks.get("app.tasks.batch_create.import_faculty_finalize")
     import_error = celery.tasks.get("app.tasks.batch_create.import_faculty_error")
 
@@ -1965,25 +1827,19 @@ def import_faculty_batch(batch_id):
 
     backup = celery.tasks["app.tasks.backup.backup"]
 
-    work_group = group(
-        import_batch_item.si(item.id, current_user.id) for item in record.items
-    )
+    work_group = group(import_batch_item.si(item.id, current_user.id) for item in record.items)
     work = chain(
         backup.si(
             current_user.id,
             type=BackupRecord.BATCH_FACULTY_IMPORT_FALLBACK,
             tag="faculty_batch_import",
-            description='Rollback snapshot for faculty account creation "{name}"'.format(
-                name=record.name
-            ),
+            description='Rollback snapshot for faculty account creation "{name}"'.format(name=record.name),
         ),
         work_group,
         import_finalize.s(record.id, current_user.id),
     ).on_error(import_error.si(current_user.id))
 
-    seq = chain(
-        init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)
-    ).on_error(error.si(uuid, tk_name, current_user.id))
+    seq = chain(init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
     seq.apply_async(task_id=uuid)
 
     return redirect(redirect_url())
@@ -1997,9 +1853,7 @@ def make_admin(id):
     :param id:
     :return:
     """
-    current_app.logger.info(
-        "Arrived in make_admin(); request.referrer = {req}".format(req=request.referrer)
-    )
+    current_app.logger.info("Arrived in make_admin(); request.referrer = {req}".format(req=request.referrer))
 
     user = User.query.get_or_404(id)
 
@@ -2007,20 +1861,12 @@ def make_admin(id):
         flash("Inactive users cannot be given admin privileges.")
         return redirect(redirect_url())
 
-    current_app.logger.info(
-        "Preparing to add admin role in make_admin(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to add admin role in make_admin(); request.referrer = {req}".format(req=request.referrer))
 
     _datastore.add_role_to_user(user, "admin")
     _datastore.commit()
 
-    current_app.logger.info(
-        "Preparing to redirect in make_admin(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to redirect in make_admin(); request.referrer = {req}".format(req=request.referrer))
 
     return redirect(redirect_url())
 
@@ -2033,34 +1879,20 @@ def remove_admin(id):
     :param id:
     :return:
     """
-    current_app.logger.info(
-        "Arrived in remove_admin(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Arrived in remove_admin(); request.referrer = {req}".format(req=request.referrer))
 
     user = User.query.get_or_404(id)
 
     if user.has_role("root"):
-        flash(
-            "Administration privileges cannot be removed from a system administrator."
-        )
+        flash("Administration privileges cannot be removed from a system administrator.")
         return redirect(redirect_url())
 
-    current_app.logger.info(
-        "Preparing to remove admin role in remove_admin(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to remove admin role in remove_admin(); request.referrer = {req}".format(req=request.referrer))
 
     _datastore.remove_role_from_user(user, "admin")
     _datastore.commit()
 
-    current_app.logger.info(
-        "Preparing to redirect in remove_admin(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to redirect in remove_admin(); request.referrer = {req}".format(req=request.referrer))
 
     return redirect(redirect_url())
 
@@ -2073,9 +1905,7 @@ def make_root(id):
     :param id:
     :return:
     """
-    current_app.logger.info(
-        "Arrived in make_root(); request.referrer = {req}".format(req=request.referrer)
-    )
+    current_app.logger.info("Arrived in make_root(); request.referrer = {req}".format(req=request.referrer))
 
     user = User.query.get_or_404(id)
 
@@ -2083,21 +1913,13 @@ def make_root(id):
         flash("Inactive users cannot be given sysadmin privileges.")
         return redirect(redirect_url())
 
-    current_app.logger.info(
-        "Preparing to add root role in make_root(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to add root role in make_root(); request.referrer = {req}".format(req=request.referrer))
 
     _datastore.add_role_to_user(user, "admin")
     _datastore.add_role_to_user(user, "root")
     _datastore.commit()
 
-    current_app.logger.info(
-        "Preparing to redirect in make_root(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to redirect in make_root(); request.referrer = {req}".format(req=request.referrer))
 
     return redirect(redirect_url())
 
@@ -2110,28 +1932,16 @@ def remove_root(id):
     :param id:
     :return:
     """
-    current_app.logger.info(
-        "Arrived in remove_root(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Arrived in remove_root(); request.referrer = {req}".format(req=request.referrer))
 
     user = User.query.get_or_404(id)
 
-    current_app.logger.info(
-        "Preparing to remove root role in make_root(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to remove root role in make_root(); request.referrer = {req}".format(req=request.referrer))
 
     _datastore.remove_role_from_user(user, "root")
     _datastore.commit()
 
-    current_app.logger.info(
-        "Preparing to redirect in remove_root(); request.referrer = {req}".format(
-            req=request.referrer
-        )
-    )
+    current_app.logger.info("Preparing to redirect in remove_root(); request.referrer = {req}".format(req=request.referrer))
 
     return redirect(redirect_url())
 
@@ -2165,9 +1975,7 @@ def deactivate_user(id):
     user = User.query.get_or_404(id)
 
     if user.has_role("manage_users") or user.has_role("root"):
-        flash(
-            "Administrative users cannot be made inactive. Remove administration status before marking the user as inactive."
-        )
+        flash("Administrative users cannot be made inactive. Remove administration status before marking the user as inactive.")
         return redirect(redirect_url())
 
     _datastore.deactivate_user(user)
@@ -2197,9 +2005,7 @@ def edit_user(id):
     elif user.has_role("student"):
         return redirect(url_for("manage_users.edit_student", id=id, pane=pane))
 
-    flash(
-        "Requested role was not recognized. If this error persists, please contact the system administrator."
-    )
+    flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
     return redirect(url_for("manage_users.edit_users"))
 
 
@@ -2207,9 +2013,7 @@ def _resend_confirm_email(user):
     confirmation_link, token = generate_confirmation_link(user)
     do_flash(*get_message("CONFIRM_REGISTRATION", email=user.email))
 
-    user_registered.send(
-        current_app._get_current_object(), user=user, confirm_token=token
-    )
+    user_registered.send(current_app._get_current_object(), user=user, confirm_token=token)
 
     if config_value("SEND_REGISTER_EMAIL"):
         send_mail(
@@ -2288,9 +2092,7 @@ def edit_faculty(id):
         fd.academic_title = form.academic_title.data
         fd.use_academic_title = form.use_academic_title.data
         fd.sign_off_students = form.sign_off_students.data
-        fd.project_capacity = (
-            form.project_capacity.data if form.enforce_capacity.data else None
-        )
+        fd.project_capacity = form.project_capacity.data if form.enforce_capacity.data else None
         fd.enforce_capacity = form.enforce_capacity.data
         fd.show_popularity = form.show_popularity.data
         fd.dont_clash_presentations = form.dont_clash_presentations.data
@@ -2337,9 +2139,7 @@ def edit_faculty(id):
             form.CATS_presentation.data = fd.CATS_presentation
 
             if form.project_capacity.data is None and form.enforce_capacity.data:
-                form.project_capacity.data = current_app.config[
-                    "DEFAULT_PROJECT_CAPACITY"
-                ]
+                form.project_capacity.data = current_app.config["DEFAULT_PROJECT_CAPACITY"]
 
             form.tenants.data = user.tenants
 
@@ -2532,34 +2332,20 @@ def edit_enrollment(id):
         old_presentations_state = record.presentations_state
 
         record.supervisor_state = form.supervisor_state.data
-        record.supervisor_reenroll = (
-            None
-            if record.supervisor_state != EnrollmentRecord.SUPERVISOR_SABBATICAL
-            else form.supervisor_reenroll.data
-        )
+        record.supervisor_reenroll = None if record.supervisor_state != EnrollmentRecord.SUPERVISOR_SABBATICAL else form.supervisor_reenroll.data
         record.supervisor_comment = form.supervisor_comment.data
 
         record.marker_state = form.marker_state.data
-        record.marker_reenroll = (
-            None
-            if record.marker_state != EnrollmentRecord.MARKER_SABBATICAL
-            else form.marker_reenroll.data
-        )
+        record.marker_reenroll = None if record.marker_state != EnrollmentRecord.MARKER_SABBATICAL else form.marker_reenroll.data
         record.marker_comment = form.marker_comment.data
 
         record.moderator_state = form.moderator_state.data
-        record.moderator_reenroll = (
-            None
-            if record.moderator_state != EnrollmentRecord.MODERATOR_SABBATICAL
-            else form.moderator_reenroll.data
-        )
+        record.moderator_reenroll = None if record.moderator_state != EnrollmentRecord.MODERATOR_SABBATICAL else form.moderator_reenroll.data
         record.moderator_comment = form.moderator_comment.data
 
         record.presentations_state = form.presentations_state.data
         record.presentations_reenroll = (
-            None
-            if record.presentations_state != EnrollmentRecord.PRESENTATIONS_SABBATICAL
-            else form.presentations_reenroll.data
+            None if record.presentations_state != EnrollmentRecord.PRESENTATIONS_SABBATICAL else form.presentations_reenroll.data
         )
         record.presentations_comment = form.presentations_comment.data
 
@@ -2574,9 +2360,7 @@ def edit_enrollment(id):
         # project confirmation state
         if old_supervisor_state != record.supervisor_state:
             adjust_task = celery.tasks["app.tasks.issue_confirm.enroll_adjust"]
-            adjust_task.apply_async(
-                args=(record.id, old_supervisor_state, get_current_year())
-            )
+            adjust_task.apply_async(args=(record.id, old_supervisor_state, get_current_year()))
 
         # if presentation enrolment state has changed, check whether we need to adjust our
         # availability status for any presentation assessment events.
@@ -2587,9 +2371,7 @@ def edit_enrollment(id):
 
         return redirect(url)
 
-    return render_template_context(
-        "manage_users/edit_enrollment.html", record=record, form=form, url=url
-    )
+    return render_template_context("manage_users/edit_enrollment.html", record=record, form=form, url=url)
 
 
 @manage_users.route("/enroll_projects_assessor/<int:id>/<int:pclassid>")
@@ -2736,9 +2518,7 @@ def add_role():
 
         return redirect(url_for("manage_users.edit_roles"))
 
-    return render_template_context(
-        "manage_users/edit_role.html", title="Edit role", role_form=form
-    )
+    return render_template_context("manage_users/edit_role.html", title="Edit role", role_form=form)
 
 
 @manage_users.route("/edit_role/<int:id>", methods=["GET", "POST"])
@@ -2762,9 +2542,7 @@ def edit_role(id):
 
         return redirect(url_for("manage_users.edit_roles"))
 
-    return render_template_context(
-        "manage_users/edit_role.html", role=data, title="Edit role", role_form=form
-    )
+    return render_template_context("manage_users/edit_role.html", role=data, title="Edit role", role_form=form)
 
 
 @manage_users.route("/assign_roles/<int:id>")

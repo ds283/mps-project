@@ -65,6 +65,7 @@ def _letter_label(n: int) -> str:
 # In-scope record determination
 # ---------------------------------------------------------------------------
 
+
 def _build_in_scope_records(period: SubmissionPeriodRecord) -> list:
     """
     Return SubmissionRecord instances that are in scope for this period:
@@ -89,11 +90,7 @@ def _build_in_scope_records(period: SubmissionPeriodRecord) -> list:
 
     in_scope_ids = {rid for rid in all_record_ids if not dropped_everywhere.get(rid, False)}
 
-    records = (
-        db.session.query(SubmissionRecord)
-        .filter(SubmissionRecord.id.in_(in_scope_ids))
-        .all()
-    )
+    records = db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(in_scope_ids)).all()
 
     # Sort by exam number (None sorts last)
     def _exam_key(r):
@@ -243,10 +240,7 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, cloud_url_map: d
     first_col_fill = PatternFill(fill_type="solid", fgColor=_HEADER_FILL_DARK)
     header_font = Font(bold=True)
 
-    group_fills = [
-        PatternFill(fill_type="solid", fgColor=c)
-        for c in _GROUP_COLOURS
-    ]
+    group_fills = [PatternFill(fill_type="solid", fgColor=c) for c in _GROUP_COLOURS]
 
     def _get_group_fill(grp_idx: int):
         if grp_idx < len(group_fills):
@@ -384,6 +378,7 @@ def _build_excel(period: SubmissionPeriodRecord, records: list, cloud_url_map: d
 # Celery task registration
 # ---------------------------------------------------------------------------
 
+
 def register_cloud_export_period_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30, name="app.tasks.cloud_export_period_marking.export_period_marking")
@@ -402,9 +397,7 @@ def register_cloud_export_period_marking_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
 
         try:
-            period: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-            )
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
             box_user: User = db.session.query(User).filter_by(id=box_user_id).first()
             requesting_user: User = db.session.query(User).filter_by(id=requesting_user_id).first()
         except SQLAlchemyError as exc:
@@ -474,7 +467,9 @@ def register_cloud_export_period_marking_tasks(celery):
         except Exception as exc:
             current_app.logger.exception("cloud_export: error creating project subfolder", exc_info=exc)
             if location.handle_auth_error(exc, requesting_user):
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
+                progress_update(
+                    task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True
+                )
             else:
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage API error creating project subfolder.", autocommit=True)
             return
@@ -484,7 +479,9 @@ def register_cloud_export_period_marking_tasks(celery):
         except Exception as exc:
             current_app.logger.exception("cloud_export: error creating Reports subfolder", exc_info=exc)
             if location.handle_auth_error(exc, requesting_user):
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
+                progress_update(
+                    task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True
+                )
             else:
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage API error creating Reports subfolder.", autocommit=True)
             return
@@ -542,7 +539,9 @@ def register_cloud_export_period_marking_tasks(celery):
             except Exception as exc:
                 if location.handle_auth_error(exc, requesting_user):
                     current_app.logger.exception("cloud_export: auth error during file upload", exc_info=exc)
-                    progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
+                    progress_update(
+                        task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True
+                    )
                     return
                 current_app.logger.warning("cloud_export: could not upload report for record %s: %s", record.id, exc)
                 cloud_url_map[record.id] = None
@@ -578,7 +577,9 @@ def register_cloud_export_period_marking_tasks(celery):
         except Exception as exc:
             current_app.logger.exception("cloud_export: error during Excel upload", exc_info=exc)
             if location.handle_auth_error(exc, requesting_user):
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True)
+                progress_update(
+                    task_id, TaskRecord.FAILURE, 100, "Cloud storage authentication failed — please re-link your account.", autocommit=True
+                )
             else:
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Cloud storage API error uploading marking summary.", autocommit=True)
             return
@@ -590,14 +591,10 @@ def register_cloud_export_period_marking_tasks(celery):
             n_uploaded = sum(1 for v in cloud_url_map.values() if v is not None)
             n_skipped = total - n_uploaded
             msg_parts = [f"<strong>Cloud storage export for “{period.display_name}” is complete.</strong>"]
-            msg_parts.append(
-                f"Uploaded {n_uploaded} of {total} report{'' if total == 1 else 's'} "
-                f"and a marking summary spreadsheet."
-            )
+            msg_parts.append(f"Uploaded {n_uploaded} of {total} report{'' if total == 1 else 's'} and a marking summary spreadsheet.")
             if n_skipped:
                 msg_parts.append(
-                    f"{n_skipped} submission{' was' if n_skipped == 1 else 's were'} skipped "
-                    "(no uploaded report or exam number unavailable)."
+                    f"{n_skipped} submission{' was' if n_skipped == 1 else 's were'} skipped (no uploaded report or exam number unavailable)."
                 )
             requesting_user.post_message("<br>".join(msg_parts), "success", autocommit=True)
         except Exception as exc:

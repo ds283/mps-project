@@ -127,11 +127,7 @@ def selectors(id):
     if cohort_filter is None and session.get("convenor_selectors_cohort_filter"):
         cohort_filter = session["convenor_selectors_cohort_filter"]
 
-    if (
-            isinstance(cohort_filter, str)
-            and cohort_filter not in ["all", "twd"]
-            and int(cohort_filter) not in cohorts
-    ):
+    if isinstance(cohort_filter, str) and cohort_filter not in ["all", "twd"] and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -140,11 +136,7 @@ def selectors(id):
     if prog_filter is None and session.get("convenor_selectors_prog_filter"):
         prog_filter = session["convenor_selectors_prog_filter"]
 
-    if (
-            isinstance(prog_filter, str)
-            and prog_filter != "all"
-            and int(prog_filter) not in programmes
-    ):
+    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in programmes:
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -182,11 +174,7 @@ def selectors(id):
     if year_filter is None and session.get("convenor_selectors_year_filter"):
         year_filter = session["convenor_selectors_year_filter"]
 
-    if (
-            isinstance(year_filter, str)
-            and year_filter != "all"
-            and int(year_filter) not in years
-    ):
+    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
         year_filter = "all"
 
     if year_filter is not None:
@@ -210,11 +198,7 @@ def selectors(id):
         match_filter = "all"
         match_show = "all"
     else:
-        if (
-                isinstance(match_filter, str)
-                and match_filter != "all"
-                and int(match_filter) not in match_ids
-        ):
+        if isinstance(match_filter, str) and match_filter != "all" and int(match_filter) not in match_ids:
             match_filter = "all"
             match_show = "all"
 
@@ -340,19 +324,17 @@ def selectors_ajax(id):
 
 
 def _build_selector_data(
-        config,
-        cohort_filter,
-        prog_filter,
-        state_filter,
-        convert_filter,
-        year_filter,
-        match_filter,
-        match_show,
+    config,
+    cohort_filter,
+    prog_filter,
+    state_filter,
+    convert_filter,
+    year_filter,
+    match_filter,
+    match_show,
 ):
     # build a list of live students selecting from this project class
-    selectors: List[SelectingStudent] = config.selecting_students.filter_by(
-        retired=False
-    )
+    selectors: List[SelectingStudent] = config.selecting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -361,9 +343,7 @@ def _build_selector_data(
     match_flag, match_value = is_integer(match_filter)
 
     if cohort_flag or prog_flag:
-        selectors = selectors.join(
-            StudentData, StudentData.id == SelectingStudent.student_id
-        )
+        selectors = selectors.join(StudentData, StudentData.id == SelectingStudent.student_id)
 
     if cohort_flag:
         selectors = selectors.filter(StudentData.cohort == cohort_value)
@@ -379,17 +359,9 @@ def _build_selector_data(
     if state_filter == "submitted":
         data = [rec for rec in selectors.all() if rec.has_submitted]
     elif state_filter == "bookmarks":
-        data = [
-            rec
-            for rec in selectors.all()
-            if not rec.has_submitted and rec.has_bookmarks
-        ]
+        data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
     elif state_filter == "none":
-        data = [
-            rec
-            for rec in selectors.all()
-            if not rec.has_submitted and not rec.has_bookmarks
-        ]
+        data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
     elif state_filter == "confirmations":
         data = [rec for rec in selectors.all() if rec.number_pending > 0]
     elif state_filter == "custom":
@@ -401,11 +373,7 @@ def _build_selector_data(
         data = [rec for rec in selectors.all() if rec.student.intermitting]
 
     if year_flag:
-        data = [
-            s
-            for s in data
-            if (s.academic_year is None or s.academic_year == year_value)
-        ]
+        data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
 
     if match_flag:
         match = config.published_matches.filter_by(id=match_value).first()
@@ -442,9 +410,8 @@ def enrol_selectors(id):
         return redirect(redirect_url())
 
     if (
-            not (current_user.has_role("admin") or current_user.has_role("root"))
-            and config.selector_lifecycle
-            >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        not (current_user.has_role("admin") or current_user.has_role("root"))
+        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
         flash(
             "Manual enrolment of selectors is only possible before student choices are closed",
@@ -465,16 +432,8 @@ def enrol_selectors(id):
         if prog_filter not in ["all", "off"]:
             prog_filter = "all"
 
-    disable = (
-        True
-        if (
-                prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")
-        )
-        else False
-    )
-    candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=disable
-    )
+    disable = True if (prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")) else False
+    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
 
     # build list of available cohorts and degree programmes
     cohorts = set()
@@ -500,21 +459,13 @@ def enrol_selectors(id):
     if cohort_filter is None and session.get("convenor_sel_enroll_cohort_filter"):
         cohort_filter = session["convenor_sel_enroll_cohort_filter"]
 
-    if (
-            isinstance(cohort_filter, str)
-            and cohort_filter not in ["all"]
-            and int(cohort_filter) not in cohorts
-    ):
+    if isinstance(cohort_filter, str) and cohort_filter not in ["all"] and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
         session["convenor_sel_enroll_cohort_filter"] = cohort_filter
 
-    if (
-            isinstance(prog_filter, str)
-            and prog_filter not in ["all", "off"]
-            and int(prog_filter) not in programmes
-    ):
+    if isinstance(prog_filter, str) and prog_filter not in ["all", "off"] and int(prog_filter) not in programmes:
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -523,11 +474,7 @@ def enrol_selectors(id):
     if year_filter is None and session.get("convenor_sel_enroll_year_filter"):
         year_filter = session["convenor_sel_enroll_year_filter"]
 
-    if (
-            isinstance(year_filter, str)
-            and year_filter not in ["all"]
-            and int(year_filter) not in years
-    ):
+    if isinstance(year_filter, str) and year_filter not in ["all"] and int(year_filter) not in years:
         year_filter = "all"
 
     if year_filter is not None:
@@ -580,9 +527,8 @@ def enrol_selectors_ajax(id):
         return jsonify({})
 
     if (
-            not (current_user.has_role("admin") or current_user.has_role("root"))
-            and config.selector_lifecycle
-            >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        not (current_user.has_role("admin") or current_user.has_role("root"))
+        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
         return jsonify({})
 
@@ -591,16 +537,8 @@ def enrol_selectors_ajax(id):
     prog_flag, prog_value = is_integer(prog_filter)
     year_flag, year_value = is_integer(year_filter)
 
-    disable = (
-        True
-        if (
-                prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")
-        )
-        else False
-    )
-    candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=disable
-    )
+    disable = True if (prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")) else False
+    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
 
     if cohort_flag:
         candidates = candidates.filter(StudentData.cohort == cohort_value)
@@ -608,9 +546,7 @@ def enrol_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
     elif prog_filter.lower() == "all":
-        candidates = candidates.filter(
-            or_(StudentData.programme_id == p.id for p in pclass.programmes)
-        )
+        candidates = candidates.filter(or_(StudentData.programme_id == p.id for p in pclass.programmes))
 
     if not year_flag:
         # use SQL server-side handler for performance if it is possible
@@ -634,9 +570,7 @@ def _filter_candidates(year: int, row: StudentData):
     return True
 
 
-def _enrol_selectors_ajax_handler(
-        request, candidates, config: ProjectClassConfig, year_value: int = None
-):
+def _enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfig, year_value: int = None):
     def search_name(row: StudentData):
         u: User = row.user
         return u.name
@@ -687,12 +621,8 @@ def _enrol_selectors_ajax_handler(
         "current_year": current_year,
     }
 
-    with ServerSideInMemoryHandler(
-            request, candidates, columns, row_filter=partial(_filter_candidates, year_value)
-    ) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.enrol_selectors_data, config)
-        )
+    with ServerSideInMemoryHandler(request, candidates, columns, row_filter=partial(_filter_candidates, year_value)) as handler:
+        return handler.build_payload(partial(ajax.convenor.enrol_selectors_data, config))
 
 
 @convenor.route("/enroll_all_selectors/<int:configid>")
@@ -711,9 +641,8 @@ def enrol_all_selectors(configid):
         return redirect(redirect_url())
 
     if (
-            not (current_user.has_role("admin") or current_user.has_role("root"))
-            and config.selector_lifecycle
-            >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        not (current_user.has_role("admin") or current_user.has_role("root"))
+        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
         flash(
             "Manual enrolment of selectors is only possible before student choices are closed",
@@ -729,9 +658,7 @@ def enrol_all_selectors(configid):
 
     candidates = build_enrol_selector_candidates(
         config,
-        disable_programme_filter=True
-        if isinstance(prog_filter, str) and prog_filter.lower() != "all"
-        else False,
+        disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() != "all" else False,
     )
 
     # filter by cohort and programme if required
@@ -755,16 +682,12 @@ def enrol_all_selectors(configid):
             add_selector(c, configid, convert=convert, autocommit=False)
 
         log_db_commit(
-            'Bulk-enrolled {count} selectors for project class "{proj}"'.format(
-                count=len(c_list), proj=config.project_class.name
-            ),
+            'Bulk-enrolled {count} selectors for project class "{proj}"'.format(count=len(c_list), proj=config.project_class.name),
             user=current_user,
             project_classes=config.project_class,
         )
         flash(
-            'Added {count} selectors to project "{proj}"'.format(
-                count=len(c_list), proj=config.project_class.name
-            ),
+            'Added {count} selectors to project "{proj}"'.format(count=len(c_list), proj=config.project_class.name),
             "info",
         )
     except SQLAlchemyError as e:
@@ -800,9 +723,8 @@ def enrol_selector(sid, configid):
         return redirect(redirect_url())
 
     if (
-            not (current_user.has_role("admin") or current_user.has_role("root"))
-            and config.selector_lifecycle
-            >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        not (current_user.has_role("admin") or current_user.has_role("root"))
+        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
         flash(
             "Manual enrolment of selectors is only possible before student choices are closed",
@@ -831,9 +753,8 @@ def delete_selector(sid):
         return redirect(redirect_url())
 
     if (
-            not (current_user.has_role("admin") or current_user.has_role("root"))
-            and sel.config.selector_lifecycle
-            > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        not (current_user.has_role("admin") or current_user.has_role("root"))
+        and sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
     ):
         flash(
             "Manual deletion of selectors is only possible before student choices are closed",
@@ -877,15 +798,15 @@ def delete_selector(sid):
             db.session.flush()
 
             create_auto_journal_entry(
-                student, journal_html,
+                student,
+                journal_html,
                 title=f"Selector record deleted: {pclass.name} ({year_str})",
                 project_class_config=config,
                 entry_type=StudentJournalEntry.JOURNAL_TYPE_DELETION,
             )
 
             log_db_commit(
-                "Deleted selector record"
-                + (" (with bookmarks/matches detached)" if has_associated_data else ""),
+                "Deleted selector record" + (" (with bookmarks/matches detached)" if has_associated_data else ""),
                 user=current_user,
                 student=student,
                 project_classes=pclass,
@@ -901,9 +822,7 @@ def delete_selector(sid):
         return redirect(url)
 
     title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
-    panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
-        name=sel.student.user.name
-    )
+    panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sel.student.user.name)
 
     if sel.has_bookmarks or sel.has_submitted or sel.has_matches:
         message = (
@@ -911,9 +830,7 @@ def delete_selector(sid):
             "<p>This selector has stored bookmarks, submitted a list of project choices, or has been included "
             "in a matching.</p>"
             "<p>This action cannot be undone. Any bookmarks and submitted preferences will be lost, and "
-            "the selector will be deleted from any matches of which they are currently part.</p>".format(
-                name=sel.student.user.name
-            )
+            "the selector will be deleted from any matches of which they are currently part.</p>".format(name=sel.student.user.name)
         )
     else:
         message = (
@@ -993,12 +910,7 @@ def selector_grid(id):
         .all()
     )
     progs = [rec for rec in all_progs if rec.id in programmes]
-    groups = (
-        db.session.query(ResearchGroup)
-        .filter_by(active=True)
-        .order_by(ResearchGroup.name.asc())
-        .all()
-    )
+    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
 
     if cohort_filter is None and session.get("convenor_sel_grid_cohort_filter"):
         cohort_filter = session["convenor_sel_grid_cohort_filter"]
@@ -1015,11 +927,7 @@ def selector_grid(id):
     if year_filter is None and session.get("convenor_sel_grid_year_filter"):
         year_filter = session["convenor_sel_grid_year_filter"]
 
-    if (
-            isinstance(year_filter, str)
-            and year_filter != "all"
-            and int(year_filter) not in years
-    ):
+    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
         year_filter = "all"
 
     if year_filter is not None:
@@ -1052,11 +960,7 @@ def selector_grid(id):
         match_filter = "all"
         match_show = "all"
     else:
-        if (
-                isinstance(match_filter, str)
-                and match_filter != "all"
-                and int(match_filter) not in match_ids
-        ):
+        if isinstance(match_filter, str) and match_filter != "all" and int(match_filter) not in match_ids:
             match_filter = "all"
             match_show = "all"
 
@@ -1132,9 +1036,7 @@ def selector_grid_ajax(id):
     match_flag, match_value = is_integer(match_filter)
 
     if cohort_flag or prog_flag or state_filter != "all":
-        selectors = selectors.join(
-            StudentData, StudentData.id == SelectingStudent.student_id
-        )
+        selectors = selectors.join(StudentData, StudentData.id == SelectingStudent.student_id)
 
     if state_filter == "twd":
         selectors = selectors.filter(StudentData.intermitting.is_(True))
@@ -1146,11 +1048,7 @@ def selector_grid_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        data = [
-            s
-            for s in selectors.all()
-            if (s.academic_year is None or s.academic_year == year_value)
-        ]
+        data = [s for s in selectors.all() if (s.academic_year is None or s.academic_year == year_value)]
     else:
         data = selectors.all()
 
@@ -1195,10 +1093,7 @@ def show_confirmations(id):
         )
         return redirect(redirect_url())
 
-    if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
             "The outstanding confirmations view is available only after student choices have opened",
             "error",
@@ -1244,10 +1139,7 @@ def show_confirmations_ajax(id):
         )
         return jsonify({})
 
-    if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         return jsonify({})
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
@@ -1277,10 +1169,7 @@ def approve_outstanding_confirms(pid):
         )
         return redirect(redirect_url())
 
-    if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
             "Approval of all outstanding confirmation requests can be performed only after student choices have opened",
             "error",
@@ -1301,9 +1190,7 @@ def approve_outstanding_confirms(pid):
     tk_description = "Approve all outstanding confirmation requests"
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
-    approve_task.apply_async(
-        args=(task_id, config.id, current_user.id), task_id=task_id
-    )
+    approve_task.apply_async(args=(task_id, config.id, current_user.id), task_id=task_id)
 
     return redirect(redirect_url())
 
@@ -1327,10 +1214,7 @@ def delete_outstanding_confirms(pid):
         )
         return redirect(redirect_url())
 
-    if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
             "Deletion of all outstanding confirmation requests can be performed only after student choices have opened",
             "error",

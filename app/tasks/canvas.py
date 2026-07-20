@@ -156,18 +156,13 @@ def register_canvas_tasks(celery):
             for pcl in pclasses:
                 pcl: ProjectClass
                 config: ProjectClassConfig = pcl.most_recent_config
-                print(
-                    '** Checking Canvas integration for project class "{pcl}"'.format(
-                        pcl=pcl.name
-                    )
-                )
+                print('** Checking Canvas integration for project class "{pcl}"'.format(pcl=pcl.name))
 
                 API_root = config.main_config.canvas_root_API
 
                 if API_root is None:
                     print(
-                        "** Canvas API integration not enabled globally for cycle "
-                        "{yra}-{yrb}".format(
+                        "** Canvas API integration not enabled globally for cycle {yra}-{yrb}".format(
                             yra=config.submit_year_a, yrb=config.submit_year_b
                         )
                     )
@@ -175,14 +170,11 @@ def register_canvas_tasks(celery):
                 print("** API root URL is {root}".format(root=API_root))
 
                 if config is not None and config.canvas_enabled:
-                    print(
-                        "**   Canvas integration is enabled; scheduling user check-in for this project in the current cycle"
-                    )
+                    print("**   Canvas integration is enabled; scheduling user check-in for this project in the current cycle")
                     tasks.append(canvas_user_checkin_module.s(config.id, API_root))
                 else:
                     print(
-                        "**   Canvas integration is not enabled for this project class for cycle "
-                        "{yra}-{yrb}".format(
+                        "**   Canvas integration is not enabled for this project class for cycle {yra}-{yrb}".format(
                             yra=config.submit_year_a, yrb=config.submit_year_b
                         )
                     )
@@ -203,15 +195,11 @@ def register_canvas_tasks(celery):
     def canvas_user_checkin_module(self, pid, API_root: str):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Initiating Canvas checkin for synchronization of student submitters"
-            },
+            meta={"msg": "Initiating Canvas checkin for synchronization of student submitters"},
         )
 
         try:
-            config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=pid).first()
-            )
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=pid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -225,11 +213,7 @@ def register_canvas_tasks(celery):
         if not config.canvas_enabled:
             return
 
-        print(
-            "** Querying Canvas API for student list on module for {pcl} (module id={mid})".format(
-                pcl=config.name, mid=config.canvas_module_id
-            )
-        )
+        print("** Querying Canvas API for student list on module for {pcl} (module id={mid})".format(pcl=config.name, mid=config.canvas_module_id))
 
         # set up requests session; safe to assume config.canvas_login is not zero
         session = make_session(config.canvas_login.canvas_API_token)
@@ -241,19 +225,11 @@ def register_canvas_tasks(celery):
         user_list = get_paginated(session, API_URL, params={"enrollment_type": "student"})
 
         if user_list is None:
-            print(
-                "** [{pcl}]: recovered no students from Canvas API".format(
-                    pcl=config.name
-                )
-            )
+            print("** [{pcl}]: recovered no students from Canvas API".format(pcl=config.name))
             return
 
         # now loop through recovered students, matching them to SubmittingStudent instances if possible
-        print(
-            "** [{pcl}]: recovered {n} students from Canvas API".format(
-                pcl=config.name, n=len(user_list)
-            )
-        )
+        print("** [{pcl}]: recovered {n} students from Canvas API".format(pcl=config.name, n=len(user_list)))
 
         # initially, mark all students as missing, and get a list of all CanvasStudent records (if any)
         # that represent students present in the Canvas database, but not present as submitters in our
@@ -276,9 +252,7 @@ def register_canvas_tasks(celery):
 
                 # try to find a submitting student with this email address
                 match = (
-                    config.submitting_students.join(
-                        StudentData, StudentData.id == SubmittingStudent.student_id
-                    )
+                    config.submitting_students.join(StudentData, StudentData.id == SubmittingStudent.student_id)
                     .join(User, User.id == StudentData.id)
                     .filter(
                         or_(
@@ -298,23 +272,17 @@ def register_canvas_tasks(celery):
                 num = len(match)
 
                 if num > 1:
-                    msg = (
-                        '** [{pcl}]: Found multiple matches for Canvas user with email address "{email}", '
-                        "name={name}".format(pcl=config.name, email=email, name=name)
+                    msg = '** [{pcl}]: Found multiple matches for Canvas user with email address "{email}", name={name}'.format(
+                        pcl=config.name, email=email, name=name
                     )
                     print(msg)
                     current_app.logger.warning(msg)
 
                 elif num == 0:
-                    print(
-                        '** [{pcl}]: Student "{name}" was not found in submitter '
-                        "list".format(pcl=config.name, name=name)
-                    )
+                    print('** [{pcl}]: Student "{name}" was not found in submitter list'.format(pcl=config.name, name=name))
 
                     # the student isn't in our submitter list; check whether we already have a record of that
-                    record = config.missing_canvas_students.filter_by(
-                        canvas_user_id=canvas_user_id
-                    ).all()
+                    record = config.missing_canvas_students.filter_by(canvas_user_id=canvas_user_id).all()
                     num_record = len(record)
 
                     if num_record == 0:
@@ -324,19 +292,12 @@ def register_canvas_tasks(celery):
                         hn = HumanName(name)
 
                         # try to find match in our own user database
-                        found_user = (
-                            db.session.query(StudentData)
-                            .join(User, User.id == StudentData.id)
-                            .filter(User.email == email)
-                            .first()
-                        )
+                        found_user = db.session.query(StudentData).join(User, User.id == StudentData.id).filter(User.email == email).first()
 
                         c_add_list.append(
                             CanvasStudent(
                                 config_id=config.id,
-                                student_id=found_user.id
-                                if found_user is not None
-                                else None,
+                                student_id=found_user.id if found_user is not None else None,
                                 email=email,
                                 canvas_user_id=canvas_user_id,
                                 first_name=hn.first,
@@ -350,8 +311,7 @@ def register_canvas_tasks(celery):
 
                     else:
                         msg = (
-                            "** [{pcl}] Unexpected number of CanvasStudent record matches for user with "
-                            'email address "{email}", name={name}'.format(
+                            '** [{pcl}] Unexpected number of CanvasStudent record matches for user with email address "{email}", name={name}'.format(
                                 pcl=config.name, email=email, name=name
                             )
                         )
@@ -359,10 +319,7 @@ def register_canvas_tasks(celery):
                         current_app.logger.warning(msg)
 
                 elif num == 1:
-                    print(
-                        '** [{pcl}]: Student "{name}" was matched to a student in the '
-                        "submitter list".format(pcl=config.name, name=name)
-                    )
+                    print('** [{pcl}]: Student "{name}" was matched to a student in the submitter list'.format(pcl=config.name, name=name))
 
                     sub: SubmittingStudent = match[0]
                     sub.canvas_missing = False
@@ -377,9 +334,8 @@ def register_canvas_tasks(celery):
                             sub.student.exam_number = int(exam_number)
 
                 else:
-                    msg = (
-                        '** [{pcl}]Unexpected number of matches for Canvas user with email address "{email}", '
-                        "name={name}".format(pcl=config.name, email=email, name=name)
+                    msg = '** [{pcl}]Unexpected number of matches for Canvas user with email address "{email}", name={name}'.format(
+                        pcl=config.name, email=email, name=name
                     )
                     print(msg)
                     current_app.logger.warning(msg)
@@ -413,9 +369,7 @@ def register_canvas_tasks(celery):
                 )
                 for notify_user in notify_users:
                     if notify_user is not None and notify_user.active:
-                        notify_user.post_message(
-                            notify_msg, "warning", autocommit=False
-                        )
+                        notify_user.post_message(notify_msg, "warning", autocommit=False)
 
             log_db_commit(
                 "Synchronize Canvas student list with submitter list",
@@ -426,9 +380,7 @@ def register_canvas_tasks(celery):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-            msg = 'Could not synchronize submitter list with Canvas for project "{pname}" because of a database error'.format(
-                pname=config.name
-            )
+            msg = 'Could not synchronize submitter list with Canvas for project "{pname}" because of a database error'.format(pname=config.name)
             print(msg)
             current_app.logger.error(msg)
 
@@ -438,9 +390,7 @@ def register_canvas_tasks(celery):
     def canvas_submission_checkin(self):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Initiating Canvas synchronization of submission availability"
-            },
+            meta={"msg": "Initiating Canvas synchronization of submission availability"},
         )
 
         main_config: MainConfig = get_main_config()
@@ -463,18 +413,13 @@ def register_canvas_tasks(celery):
             for pcl in pclasses:
                 pcl: ProjectClass
                 config: ProjectClassConfig = pcl.most_recent_config
-                print(
-                    '** Checking Canvas integration for project class "{pcl}"'.format(
-                        pcl=pcl.name
-                    )
-                )
+                print('** Checking Canvas integration for project class "{pcl}"'.format(pcl=pcl.name))
 
                 API_root = config.main_config.canvas_root_API
 
                 if API_root is None:
                     print(
-                        "** Canvas API integration not enabled globally for cycle "
-                        "{yra}-{yrb}".format(
+                        "** Canvas API integration not enabled globally for cycle {yra}-{yrb}".format(
                             yra=config.submit_year_a, yrb=config.submit_year_b
                         )
                     )
@@ -483,27 +428,16 @@ def register_canvas_tasks(celery):
 
                 if config is not None and config.canvas_enabled:
                     period: SubmissionPeriodRecord = config.current_period
-                    print(
-                        '** Checking Canvas integration for submission period "{pd}"'.format(
-                            pd=period.display_name
-                        )
-                    )
+                    print('** Checking Canvas integration for submission period "{pd}"'.format(pd=period.display_name))
 
                     if not period.closed and period.canvas_enabled:
-                        print(
-                            "**   Canvas integration is enabled; scheduling submission check-in for this project in the current cycle"
-                        )
-                        tasks.append(
-                            canvas_submission_checkin_module.s(period.id, API_root)
-                        )
+                        print("**   Canvas integration is enabled; scheduling submission check-in for this project in the current cycle")
+                        tasks.append(canvas_submission_checkin_module.s(period.id, API_root))
                     else:
-                        print(
-                            "**  Submission period is closed, or canvas integration not enabled for this submission period"
-                        )
+                        print("**  Submission period is closed, or canvas integration not enabled for this submission period")
                 else:
                     print(
-                        "**   Canvas integration is not enabled for this project class for cycle "
-                        "{yra}-{yrb}".format(
+                        "**   Canvas integration is not enabled for this project class for cycle {yra}-{yrb}".format(
                             yra=config.submit_year_a, yrb=config.submit_year_b
                         )
                     )
@@ -514,9 +448,7 @@ def register_canvas_tasks(celery):
 
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Spawning Canvas subtasks for synchronization of submission availability"
-            },
+            meta={"msg": "Spawning Canvas subtasks for synchronization of submission availability"},
         )
 
         c_tasks = group(*tasks)
@@ -526,15 +458,11 @@ def register_canvas_tasks(celery):
     def canvas_submission_checkin_module(self, pid, API_root: str):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Initiating Canvas checkin for synchronization of submission availability"
-            },
+            meta={"msg": "Initiating Canvas checkin for synchronization of submission availability"},
         )
 
         try:
-            period: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=pid).first()
-            )
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=pid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -551,8 +479,7 @@ def register_canvas_tasks(celery):
         config: ProjectClassConfig = period.config
 
         print(
-            "** Querying Canvas API for submission list on module for {pcl} "
-            "(module id={mid}, assigment id={aid})".format(
+            "** Querying Canvas API for submission list on module for {pcl} (module id={mid}, assigment id={aid})".format(
                 pcl=config.name,
                 mid=period.canvas_module_id,
                 aid=period.canvas_assignment_id,
@@ -577,11 +504,7 @@ def register_canvas_tasks(celery):
         submission_list = get_paginated(session, API_URL)
 
         if submission_list is None:
-            print(
-                "** [{pcl}]: no submissions available from Canvas API".format(
-                    pcl=config.name
-                )
-            )
+            print("** [{pcl}]: no submissions available from Canvas API".format(pcl=config.name))
             return
 
         # now loop through submissions
@@ -590,9 +513,7 @@ def register_canvas_tasks(celery):
                 canvas_id = sub["user_id"]
 
                 # find a submitting user with this user id
-                student = config.submitting_students.filter_by(
-                    canvas_user_id=canvas_id
-                ).all()
+                student = config.submitting_students.filter_by(canvas_user_id=canvas_id).all()
                 num_student = len(student)
 
                 if num_student == 1:
@@ -654,9 +575,7 @@ def register_canvas_tasks(celery):
         user = None
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
 
             if user_id is not None:
                 user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -676,8 +595,7 @@ def register_canvas_tasks(celery):
         if period.closed:
             if user is not None:
                 user.post_message(
-                    "Can not pull report from Canvas for submitter {name} because this "
-                    "submission period has been closed.".format(
+                    "Can not pull report from Canvas for submitter {name} because this submission period has been closed.".format(
                         name=submitter.student.user.name
                     ),
                     "danger",
@@ -699,8 +617,7 @@ def register_canvas_tasks(celery):
         if record.report is not None:
             if user is not None:
                 user.post_message(
-                    "Can not pull report from Canvas for submitter {name} because a report "
-                    "has already been uploaded.".format(
+                    "Can not pull report from Canvas for submitter {name} because a report has already been uploaded.".format(
                         name=submitter.student.user.name
                     ),
                     "warning",
@@ -717,17 +634,14 @@ def register_canvas_tasks(celery):
                     "danger",
                     autocommit=True,
                 )
-            raise RuntimeError(
-                "Canvas user id is missing from SubmittingStudent instance"
-            )
+            raise RuntimeError("Canvas user id is missing from SubmittingStudent instance")
 
         # set up requests session; safe to assume config.canvas_login is not zero
         session = make_session(config.canvas_login.canvas_API_token)
 
         API_URL = build_api_url(
             API_root,
-            "courses/{course_id}/assignments/{assign_id}/"
-            "submissions/{user_id}".format(
+            "courses/{course_id}/assignments/{assign_id}/submissions/{user_id}".format(
                 course_id=period.canvas_module_id,
                 assign_id=period.canvas_assignment_id,
                 user_id=submitter.canvas_user_id,
@@ -740,9 +654,7 @@ def register_canvas_tasks(celery):
             if user is not None:
                 user.post_message(
                     "Can not pull report from Canvas for submitter {name}, because the "
-                    'matched Canvas submission is in workflow state "unsubmitted".'.format(
-                        name=submitter.student.user.name
-                    ),
+                    'matched Canvas submission is in workflow state "unsubmitted".'.format(name=submitter.student.user.name),
                     "warning",
                     autocommit=True,
                 )
@@ -753,8 +665,7 @@ def register_canvas_tasks(celery):
         if len(attachments) == 0:
             if user is not None:
                 user.post_message(
-                    "Can not pull report from Canvas for submitter {name} because no attachments "
-                    "are present in the Canvas record.".format(
+                    "Can not pull report from Canvas for submitter {name} because no attachments are present in the Canvas record.".format(
                         name=submitter.student.user.name
                     ),
                     "danger",
@@ -778,8 +689,9 @@ def register_canvas_tasks(celery):
         if "url" not in attachment:
             if user is not None:
                 user.post_message(
-                    "Can not pull report from Canvas for submitter {name} because no URL was present "
-                    "in the Canvas response.".format(name=submitter.student.user.name),
+                    "Can not pull report from Canvas for submitter {name} because no URL was present in the Canvas response.".format(
+                        name=submitter.student.user.name
+                    ),
                     "danger",
                     autocommit=True,
                 )
@@ -791,9 +703,7 @@ def register_canvas_tasks(celery):
             )
         )
 
-        default_report_license = (
-            db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
-        )
+        default_report_license = db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
         if default_report_license is None:
             default_report_license = submitter.student.user.default_license
 
@@ -917,9 +827,7 @@ def register_canvas_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def pull_report_error(self, rid, user_id):
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -936,9 +844,7 @@ def register_canvas_tasks(celery):
             raise Exception(msg)
 
         user.post_message(
-            "An error occurred when pulling the report for submitter {name} from Canvas".format(
-                name=record.owner.student.user.name
-            ),
+            "An error occurred when pulling the report for submitter {name} from Canvas".format(name=record.owner.student.user.name),
             "danger",
             autocommit=True,
         )
@@ -996,10 +902,7 @@ def register_canvas_tasks(celery):
         if fail > 0:
             if len(msg) > 0:
                 msg = msg + " "
-            msg = (
-                msg
-                + "Some reports could not be pulled automatically, and may require manual intervention."
-            )
+            msg = msg + "Some reports could not be pulled automatically, and may require manual intervention."
 
         user.post_message(msg, tag, autocommit=True)
 
@@ -1010,40 +913,28 @@ def register_canvas_tasks(celery):
         API_root = main_config.canvas_root_API
 
         if API_root is None:
-            current_app.logger.warning(
-                "Canvas API integration is not enabled; skipping Turnitin re-fetch"
-            )
+            current_app.logger.warning("Canvas API integration is not enabled; skipping Turnitin re-fetch")
             return
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
         except SQLAlchemyError as e:
-            current_app.logger.exception(
-                "SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e)
             raise self.retry()
 
         if record is None:
-            current_app.logger.error(
-                f"fetch_turnitin_data_for_record: SubmissionRecord id={rid} not found"
-            )
+            current_app.logger.error(f"fetch_turnitin_data_for_record: SubmissionRecord id={rid} not found")
             return
 
         period: SubmissionPeriodRecord = record.period
         submitter: SubmittingStudent = record.owner
 
         if submitter is None or submitter.canvas_user_id is None:
-            current_app.logger.warning(
-                f"fetch_turnitin_data_for_record: no Canvas user id for record id={rid}"
-            )
+            current_app.logger.warning(f"fetch_turnitin_data_for_record: no Canvas user id for record id={rid}")
             return
 
         if not period.canvas_enabled:
-            current_app.logger.warning(
-                f"fetch_turnitin_data_for_record: Canvas not enabled for period id={period.id}"
-            )
+            current_app.logger.warning(f"fetch_turnitin_data_for_record: Canvas not enabled for period id={period.id}")
             return
 
         config: ProjectClassConfig = submitter.config
@@ -1060,9 +951,7 @@ def register_canvas_tasks(celery):
         )
         response = session.get(API_URL)
         if not response.ok:
-            current_app.logger.warning(
-                f"fetch_turnitin_data_for_record: Canvas API returned {response.status_code} for record id={rid}"
-            )
+            current_app.logger.warning(f"fetch_turnitin_data_for_record: Canvas API returned {response.status_code} for record id={rid}")
             return
 
         data = response.json()
@@ -1075,9 +964,7 @@ def register_canvas_tasks(celery):
         turnitin_outcome = turnitin["turnitin_outcome"]
 
         if similarity_score is None:
-            current_app.logger.info(
-                f"fetch_turnitin_data_for_record: no scored Turnitin data available in Canvas for record id={rid}"
-            )
+            current_app.logger.info(f"fetch_turnitin_data_for_record: no scored Turnitin data available in Canvas for record id={rid}")
             return
 
         try:
@@ -1094,9 +981,7 @@ def register_canvas_tasks(celery):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e)
             raise self.retry()
 
         # Recompute risk factors now that the Turnitin score has changed.
@@ -1106,9 +991,7 @@ def register_canvas_tasks(celery):
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "fetch_turnitin_data_for_record: error recomputing risk factors", exc_info=exc
-            )
+            current_app.logger.exception("fetch_turnitin_data_for_record: error recomputing risk factors", exc_info=exc)
 
         # Re-evaluate all SubmitterReport lifecycle states for this record.
         celery = current_app.extensions["celery"]

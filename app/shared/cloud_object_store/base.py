@@ -58,28 +58,20 @@ def _as_bytes(raw: BytesLike) -> bytes:
 class EncryptionPipeline:
     @property
     def uses_nonce(self) -> bool:
-        raise NotImplementedError(
-            "The uses_nonce() method should be implemented by concrete EncryptionPipeline instances"
-        )
+        raise NotImplementedError("The uses_nonce() method should be implemented by concrete EncryptionPipeline instances")
 
     @property
     def database_key(self) -> int:
-        raise NotImplementedError(
-            "The database_key() method should be implemented by concrete EncryptionPipeline instances"
-        )
+        raise NotImplementedError("The database_key() method should be implemented by concrete EncryptionPipeline instances")
 
     def make_nonce(self) -> bytes:
         pass
 
     def encrypt(self, nonce: BytesLike, data: BytesLike) -> bytes:
-        raise NotImplementedError(
-            "The encrypt() method should be implemented by concrete EncryptionPipeline instances"
-        )
+        raise NotImplementedError("The encrypt() method should be implemented by concrete EncryptionPipeline instances")
 
     def decrypt(self, none: BytesLike, data: BytesLike) -> bytes:
-        raise NotImplementedError(
-            "The decrypt() method should be implemented by concrete EncryptionPipeline instances"
-        )
+        raise NotImplementedError("The decrypt() method should be implemented by concrete EncryptionPipeline instances")
 
 
 class Driver:
@@ -87,71 +79,43 @@ class Driver:
         pass
 
     def get_driver_name(self):
-        raise NotImplementedError(
-            "The get_driver_name() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The get_driver_name() method should be implemented by concrete Driver instances")
 
     def get_bucket_name(self):
-        raise NotImplementedError(
-            "The get_bucket_name() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The get_bucket_name() method should be implemented by concrete Driver instances")
 
     def get_host_uri(self):
-        raise NotImplementedError(
-            "The get_host_uri() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The get_host_uri() method should be implemented by concrete Driver instances")
 
     def get(self, key: PathLike) -> bytes:
-        raise NotImplementedError(
-            "The get() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The get() method should be implemented by concrete Driver instances")
 
     def get_range(self, key: PathLike, start: int, length: int) -> BytesLike:
-        raise NotImplementedError(
-            "The get_range() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The get_range() method should be implemented by concrete Driver instances")
 
-    def put(
-            self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None
-    ) -> None:
-        raise NotImplementedError(
-            "The put() method should be implemented by concrete Driver instances"
-        )
+    def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None) -> None:
+        raise NotImplementedError("The put() method should be implemented by concrete Driver instances")
 
     def delete(self, key: PathLike) -> None:
-        raise NotImplementedError(
-            "The delete() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The delete() method should be implemented by concrete Driver instances")
 
     def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
-        raise NotImplementedError(
-            "The list() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The list() method should be implemented by concrete Driver instances")
 
     def list_keys(self, prefix: Optional[PathLike] = None) -> Set[str]:
-        raise NotImplementedError(
-            "The list_keys() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The list_keys() method should be implemented by concrete Driver instances")
 
     def copy(self, src: PathLike, dst: PathLike) -> None:
-        raise NotImplementedError(
-            "The copy() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The copy() method should be implemented by concrete Driver instances")
 
     def head(self, key: PathLike) -> ObjectMeta:
-        raise NotImplementedError(
-            "The head() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The head() method should be implemented by concrete Driver instances")
 
     def get_url(self, key: PathLike) -> str:
-        raise NotImplementedError(
-            "The get_url() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The get_url() method should be implemented by concrete Driver instances")
 
     def ping(self) -> None:
-        raise NotImplementedError(
-            "The ping() method should be implemented by concrete Driver instances"
-        )
+        raise NotImplementedError("The ping() method should be implemented by concrete Driver instances")
 
 
 class ObjectStore:
@@ -162,9 +126,7 @@ class ObjectStore:
 
         scheme = uri_elements.scheme
         if scheme not in _drivers:
-            raise NotImplementedError(
-                f'cloud_object_store: unsupported URI scheme "{scheme}"'
-            )
+            raise NotImplementedError(f'cloud_object_store: unsupported URI scheme "{scheme}"')
 
         self._encryption_pipeline: EncryptionPipeline
         self._encryption_pipeline = data.get("encryption_pipeline", None)
@@ -195,9 +157,7 @@ class ObjectStore:
 
             backend_scheme = backend_uri_elements.scheme
             if backend_scheme not in _audit_backends:
-                raise NotImplementedError(
-                    f'cloud_object_store: unsupported audit backend URI scheme "{backend_scheme}"'
-                )
+                raise NotImplementedError(f'cloud_object_store: unsupported audit backend URI scheme "{backend_scheme}"')
 
             audit_backend_type: Type[AuditBackend] = _audit_backends[backend_scheme]
             self._audit_backend = audit_backend_type(backend_uri_elements, data)
@@ -231,13 +191,13 @@ class ObjectStore:
         return self._compressed
 
     def get(
-            self,
-            key: PathLike,
-            audit_data: str,
-            nonce: Optional[BytesLike] = None,
-            no_encryption=False,
-            decompress=None,
-            initial_buf_size=None,
+        self,
+        key: PathLike,
+        audit_data: str,
+        nonce: Optional[BytesLike] = None,
+        no_encryption=False,
+        decompress=None,
+        initial_buf_size=None,
     ) -> bytes:
         data: bytes = self._driver.get(_as_path(key))
 
@@ -253,9 +213,7 @@ class ObjectStore:
 
         if self._encryption_pipeline is not None and not no_encryption:
             if self._encryption_pipeline.uses_nonce and nonce is None:
-                raise RuntimeError(
-                    "ObjectStore: the configured encryption pipeline expects a nonce, but none was provided"
-                )
+                raise RuntimeError("ObjectStore: the configured encryption pipeline expects a nonce, but none was provided")
 
             decrypt_data: bytes = self._encryption_pipeline.decrypt(nonce, data)
         else:
@@ -272,12 +230,12 @@ class ObjectStore:
         return zlib_decompress(decrypt_data)
 
     def get_range(
-            self,
-            key: PathLike,
-            audit_data: str,
-            start: int,
-            length: int,
-            no_encryption=False,
+        self,
+        key: PathLike,
+        audit_data: str,
+        start: int,
+        length: int,
+        no_encryption=False,
     ) -> bytes:
         if self.encrypted and not no_encryption:
             raise RuntimeError(
@@ -286,8 +244,7 @@ class ObjectStore:
 
         if self.compressed:
             raise RuntimeError(
-                "ObjectStore: you cannot use get_range() with a compressed object store. "
-                "Download the object completely using get() to decompress it."
+                "ObjectStore: you cannot use get_range() with a compressed object store. Download the object completely using get() to decompress it."
             )
 
         data = self._driver.get_range(_as_path(key), start=start, length=length)
@@ -383,9 +340,7 @@ class ObjectStore:
                 host_uri=self._host_uri,
             )
 
-    def list(
-            self, audit_data: str, prefix: Optional[PathLike] = None
-    ) -> Dict[str, ObjectMeta]:
+    def list(self, audit_data: str, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
         data = self._driver.list(prefix=prefix)
 
         # generate audit record if auditing is enabled

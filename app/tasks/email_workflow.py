@@ -80,10 +80,10 @@ from ..shared.workflow_logging import log_db_commit
 # After a failed send attempt, the item's next_retry_time is set to:
 #   now + min(_BACKOFF_BASE_SECONDS * 2^(send_attempts - 1), _BACKOFF_MAX_SECONDS)
 # ---------------------------------------------------------------------------
-_BACKOFF_BASE_SECONDS: int = 120   # 2 minutes
-_BACKOFF_MAX_SECONDS: int = 7200   # 2 hours (cap)
-_MAX_SEND_ATTEMPTS: int = 50       # pause item permanently after this many failures
-_SMTP_CONNECT_TIMEOUT: int = 30    # seconds to wait for TCP connect to SMTP server
+_BACKOFF_BASE_SECONDS: int = 120  # 2 minutes
+_BACKOFF_MAX_SECONDS: int = 7200  # 2 hours (cap)
+_MAX_SEND_ATTEMPTS: int = 50  # pause item permanently after this many failures
+_SMTP_CONNECT_TIMEOUT: int = 30  # seconds to wait for TCP connect to SMTP server
 
 
 @contextmanager
@@ -95,6 +95,7 @@ def _smtp_timeout(seconds: int):
         yield
     finally:
         socket.setdefaulttimeout(old)
+
 
 # ---------------------------------------------------------------------------
 # Mapping from encoded model class name → SQLAlchemy model class.
@@ -152,14 +153,10 @@ def _decode_payload_value(value):
             pk = int(pk_str)
             model_cls = _MODEL_REGISTRY.get(model_name)
             if model_cls is None:
-                raise LookupError(
-                    f"_decode_payload_value: unknown model class '{model_name}'"
-                )
+                raise LookupError(f"_decode_payload_value: unknown model class '{model_name}'")
             obj = db.session.query(model_cls).filter_by(id=pk).first()
             if obj is None:
-                raise LookupError(
-                    f"_decode_payload_value: {model_name} with id={pk} not found in database"
-                )
+                raise LookupError(f"_decode_payload_value: {model_name} with id={pk} not found in database")
             return obj
         if value.startswith(_DATETIME_PREFIX):
             return datetime.fromisoformat(value[len(_DATETIME_PREFIX) :])
@@ -170,11 +167,7 @@ def _decode_payload_value(value):
         return [_decode_payload_value(item) for item in value]
     if isinstance(value, dict):
         if value.get(_INTKEYS_MARKER):
-            return {
-                int(k): _decode_payload_value(v)
-                for k, v in value.items()
-                if k != _INTKEYS_MARKER
-            }
+            return {int(k): _decode_payload_value(v) for k, v in value.items() if k != _INTKEYS_MARKER}
         return {k: _decode_payload_value(v) for k, v in value.items()}
     return value
 
@@ -213,9 +206,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
             .all()
         )
 
-        print(
-            f"poll_email_workflows: found {len(workflows)} active workflow(s) past their send_time"
-        )
+        print(f"poll_email_workflows: found {len(workflows)} active workflow(s) past their send_time")
 
         initiated = 0
         workflows_checked = len(workflows)
@@ -237,15 +228,11 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 .all()
             )
 
-            print(
-                f"poll_email_workflows: workflow '{workflow.name}' (id={workflow.id}) "
-                f"has {len(pending_items)} pending item(s)"
-            )
+            print(f"poll_email_workflows: workflow '{workflow.name}' (id={workflow.id}) has {len(pending_items)} pending item(s)")
 
             for item in pending_items:
                 print(
-                    f"poll_email_workflows: dispatching send task for "
-                    f"EmailWorkflowItem id={item.id} in workflow '{workflow.name}' (id={workflow.id})"
+                    f"poll_email_workflows: dispatching send task for EmailWorkflowItem id={item.id} in workflow '{workflow.name}' (id={workflow.id})"
                 )
                 send_workflow_item.apply_async(args=(item.id,))
                 initiated += 1
@@ -261,16 +248,12 @@ def register_email_workflow_tasks(celery, mail: Mail):
         """
         item = db.session.query(EmailWorkflowItem).filter_by(id=item_id).first()
         if item is None:
-            print(
-                f"send_workflow_item: EmailWorkflowItem id={item_id} not found; aborting"
-            )
+            print(f"send_workflow_item: EmailWorkflowItem id={item_id} not found; aborting")
             return {"outcome": "not-found", "item_id": item_id}
 
         workflow = item.workflow
         if workflow is None:
-            print(
-                f"send_workflow_item: EmailWorkflowItem id={item_id} has no parent workflow; aborting"
-            )
+            print(f"send_workflow_item: EmailWorkflowItem id={item_id} has no parent workflow; aborting")
             return {"outcome": "no-workflow", "item_id": item_id}
 
         # Guard against duplicate sends: mark in-progress and commit immediately.
@@ -309,21 +292,14 @@ def register_email_workflow_tasks(celery, mail: Mail):
         # Resolve common per-item send parameters.
         template = workflow.template
         to = item.recipient_addresses
-        from_email = (
-            item.from_email
-        )  # None → apply_() / apply_raw_() uses MAIL_DEFAULT_SENDER
-        reply_to = (
-            item.reply_to_list
-        )  # None → apply_() / apply_raw_() uses [MAIL_REPLY_TO]
+        from_email = item.from_email  # None → apply_() / apply_raw_() uses MAIL_DEFAULT_SENDER
+        reply_to = item.reply_to_list  # None → apply_() / apply_raw_() uses [MAIL_REPLY_TO]
         attachments = list(item.attachments) if item.attachments is not None else []
         max_attachment_size = workflow.max_attachment_size
 
         try:
             if item.subject_override is not None and item.body_override is not None:
-                print(
-                    f"send_workflow_item: using subject_override and body_override "
-                    f"for EmailWorkflowItem id={item_id}"
-                )
+                print(f"send_workflow_item: using subject_override and body_override for EmailWorkflowItem id={item_id}")
                 msg = EmailTemplate.apply_raw_(
                     subject=item.subject_override,
                     html_body=item.body_override,
@@ -334,20 +310,14 @@ def register_email_workflow_tasks(celery, mail: Mail):
                     max_attachment_size=max_attachment_size,
                 )
             else:
-                print(
-                    f"send_workflow_item: rendering from template type={template.type} "
-                    f"for EmailWorkflowItem id={item_id}"
-                )
+                print(f"send_workflow_item: rendering from template type={template.type} for EmailWorkflowItem id={item_id}")
                 # Decode stored payloads, resolving any '__object__' DB references.
                 try:
-                    subject_kwargs = (
-                        _decode_email_payload(item.subject_payload_dict) or None
-                    )
+                    subject_kwargs = _decode_email_payload(item.subject_payload_dict) or None
                     body_kwargs = _decode_email_payload(item.body_payload_dict) or None
                 except LookupError as lookup_err:
                     current_app.logger.exception(
-                        f"send_workflow_item: database lookup failed while decoding payload "
-                        f"for EmailWorkflowItem id={item_id}",
+                        f"send_workflow_item: database lookup failed while decoding payload for EmailWorkflowItem id={item_id}",
                         exc_info=lookup_err,
                     )
                     item.append_error(f"Payload decode error — database object not found: {lookup_err}")
@@ -378,9 +348,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
         except (KeyError, ValueError) as e:
             # Permanent failure: the stored payload is incompatible with the template's
             # format string.  Pausing stops poll_email_workflows from re-dispatching.
-            current_app.logger.error(
-                f"send_workflow_item: template format error for item id={item_id} — pausing: {e}"
-            )
+            current_app.logger.error(f"send_workflow_item: template format error for item id={item_id} — pausing: {e}")
             item.paused = True
             item.append_error(f"Template format error (item paused): {e}")
             item.send_in_progress_timestamp = None
@@ -419,9 +387,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                         with mail.get_connection() as connection:
                             connection.send_messages([msg])
                     else:
-                        current_app.logger.error(
-                            "send_workflow_item: ignoring attempt to send email with empty body"
-                        )
+                        current_app.logger.error("send_workflow_item: ignoring attempt to send email with empty body")
                         with mail.get_connection(backend="console") as connection:
                             msg.connection = connection
                             msg.send()
@@ -431,9 +397,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                         msg.send()
 
         except TimeoutError as e:
-            current_app.logger.info(
-                f"send_workflow_item: TimeoutError for item id={item_id}"
-            )
+            current_app.logger.info(f"send_workflow_item: TimeoutError for item id={item_id}")
             current_app.logger.exception("TimeoutError exception", exc_info=e)
             item.append_error(f"TimeoutError: {e}")
             delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
@@ -461,9 +425,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
             SMTPSenderRefused,
             SMTPServerDisconnected,
         ) as e:
-            current_app.logger.info(
-                f"send_workflow_item: SMTP exception for item id={item_id}"
-            )
+            current_app.logger.info(f"send_workflow_item: SMTP exception for item id={item_id}")
             current_app.logger.exception("SMTP exception", exc_info=e)
             item.append_error(f"{type(e).__name__}: {e}")
             delay = min(_BACKOFF_BASE_SECONDS * (2 ** (item.send_attempts - 1)), _BACKOFF_MAX_SECONDS)
@@ -480,9 +442,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
             return {"outcome": "retry-scheduled", "item_id": item_id, "reason": type(e).__name__}
 
         # Email sent successfully.  Record success and write to EmailLog.
-        print(
-            f"send_workflow_item: email sent successfully for EmailWorkflowItem id={item_id}"
-        )
+        print(f"send_workflow_item: email sent successfully for EmailWorkflowItem id={item_id}")
 
         now = datetime.now()
         item.sent_timestamp = now
@@ -558,10 +518,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
 
         workflow_completed = False
         if remaining == 0:
-            print(
-                f"send_workflow_item: all items sent for workflow '{workflow.name}' "
-                f"(id={workflow.id}); marking as completed"
-            )
+            print(f"send_workflow_item: all items sent for workflow '{workflow.name}' (id={workflow.id}); marking as completed")
             workflow.completed = True
             workflow.completed_timestamp = datetime.now()
             try:
@@ -622,9 +579,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
             .all()
         )
 
-        print(
-            f"cleanup_workflow_sends: found {len(stuck_items)} item(s) with an in-progress task ID set"
-        )
+        print(f"cleanup_workflow_sends: found {len(stuck_items)} item(s) with an in-progress task ID set")
 
         revoked = 0
         cleaned = 0
@@ -688,9 +643,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 )
                 raise self.retry()
 
-        print(
-            f"cleanup_workflow_sends: cleaned {cleaned} item(s), revoked {revoked} task(s)"
-        )
+        print(f"cleanup_workflow_sends: cleaned {cleaned} item(s), revoked {revoked} task(s)")
         return {"cleaned": cleaned, "revoked": revoked}
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -708,17 +661,13 @@ def register_email_workflow_tasks(celery, mail: Mail):
         )
 
         try:
-            workflow: EmailWorkflow = (
-                db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
-            )
+            workflow: EmailWorkflow = db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if workflow is None:
-            print(
-                f"delete_email_workflow: workflow id={workflow_id} not found; nothing to do"
-            )
+            print(f"delete_email_workflow: workflow id={workflow_id} not found; nothing to do")
             return {"outcome": "not-found", "workflow_id": workflow_id}
 
         workflow_name = workflow.name
@@ -743,26 +692,19 @@ def register_email_workflow_tasks(celery, mail: Mail):
             result = celery.AsyncResult(task_id)
             if result.state in (PENDING, STARTED, RETRY):
                 celery.control.revoke(task_id, terminate=True)
-                print(
-                    f"delete_email_workflow: revoked in-progress send task {task_id} "
-                    f"for EmailWorkflowItem id={item.id}"
-                )
+                print(f"delete_email_workflow: revoked in-progress send task {task_id} for EmailWorkflowItem id={item.id}")
                 revoked += 1
 
         # Delete the workflow; ORM cascade removes items and their attachments.
         try:
             db.session.delete(workflow)
             log_db_commit(
-                f'Deleted email workflow "{workflow_name}" (id={workflow_id}) '
-                f"and all its items ({revoked} send task(s) revoked)",
+                f'Deleted email workflow "{workflow_name}" (id={workflow_id}) and all its items ({revoked} send task(s) revoked)',
             )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        print(
-            f'delete_email_workflow: deleted workflow "{workflow_name}" (id={workflow_id}), '
-            f"revoked {revoked} task(s)"
-        )
+        print(f'delete_email_workflow: deleted workflow "{workflow_name}" (id={workflow_id}), revoked {revoked} task(s)')
         return {"outcome": "deleted", "workflow_id": workflow_id, "revoked": revoked}

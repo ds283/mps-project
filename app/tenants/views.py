@@ -49,9 +49,7 @@ def tenants_ajax():
     return_text = "tenants view"
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.tenants.tenants_data, return_url, return_text)
-        )
+        return handler.build_payload(partial(ajax.tenants.tenants_data, return_url, return_text))
 
 
 @tenants.route("/add_tenant", methods=["GET", "POST"])
@@ -79,9 +77,7 @@ def add_tenant():
 
         return redirect(url_for("tenants.edit_tenants"))
 
-    return render_template_context(
-        "tenants/edit_tenant.html", tenant_form=form, title="Add new tenant"
-    )
+    return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Add new tenant")
 
 
 @tenants.route("/edit_tenant/<int:id>", methods=["GET", "POST"])
@@ -109,9 +105,7 @@ def edit_tenant(id):
 
         return redirect(url_for("tenants.edit_tenants"))
 
-    return render_template_context(
-        "tenants/edit_tenant.html", tenant_form=form, title="Edit tenant"
-    )
+    return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Edit tenant")
 
 
 # Tenant-level email template views
@@ -131,9 +125,7 @@ def email_templates(tenant_id):
     if url is None:
         url = redirect_url()
 
-    AJAX_endpoint = url_for(
-        "tenants.email_templates_ajax", tenant_id=tenant_id, url=url, text=text
-    )
+    AJAX_endpoint = url_for("tenants.email_templates_ajax", tenant_id=tenant_id, url=url, text=text)
 
     return render_template_context(
         "admin/email_templates/list.html",
@@ -223,9 +215,7 @@ def email_templates_ajax(tenant_id):
     }
 
     with ServerSideInMemoryHandler(request, fake_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.email_templates.template_data_tenant_override, tenant)
-        )
+        return handler.build_payload(partial(ajax.email_templates.template_data_tenant_override, tenant))
 
 
 @tenants.route("/create_email_template/<int:tenant_id>/<int:template_type>")
@@ -522,9 +512,7 @@ def view_default_template(tenant_id, template_type):
     if url is None:
         url = url_for("tenants.email_templates", tenant_id=tenant_id)
 
-    type_name = _TYPE_NAMES.get(
-        template_type, f"Unknown email template type ({template_type})"
-    )
+    type_name = _TYPE_NAMES.get(template_type, f"Unknown email template type ({template_type})")
 
     return render_template_context(
         "admin/email_templates/view_default.html",
@@ -580,10 +568,7 @@ def _uncovered_pclasses(tenant: Tenant) -> list:
     for cal in tenant.ai_calibrations:
         covered_ids.update(cal.included_pclass_ids_data)
 
-    return [
-        p for p in ProjectClass.query.filter_by(tenant_id=tenant.id).all()
-        if p.uses_submission and p.id not in covered_ids
-    ]
+    return [p for p in ProjectClass.query.filter_by(tenant_id=tenant.id).all() if p.uses_submission and p.id not in covered_ids]
 
 
 @tenants.route("/ai_calibrations/<int:tenant_id>")
@@ -660,9 +645,7 @@ def add_ai_calibration(tenant_id):
             return redirect(request.url)
 
         try:
-            cal_data = compute_calibration(
-                tenant_id, pclass_ids=pclass_ids, years=years, feature_set=feature_set
-            )
+            cal_data = compute_calibration(tenant_id, pclass_ids=pclass_ids, years=years, feature_set=feature_set)
         except ValueError as exc:
             flash(str(exc), "error")
             return redirect(request.url)

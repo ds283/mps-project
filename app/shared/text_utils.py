@@ -29,9 +29,7 @@ _BIBLIO_HEADING = re.compile(
 #   [ \t]+         — space/tab only (not \s) so the optional group cannot
 #                    span a newline and consume the next line
 #   (?:[:\t \-\.].*)?  — optional subtitle text following the letter label
-_APPENDIX_HEADING = re.compile(
-    r"(?im)^\s*appendix(?:[ \t]+(?-i:[A-Z])(?:[:\t \-\.].*)?)?$"
-)
+_APPENDIX_HEADING = re.compile(r"(?im)^\s*appendix(?:[ \t]+(?-i:[A-Z])(?:[:\t \-\.].*)?)?$")
 
 # Minimum fraction of pre_core that must precede an appendix heading for it
 # to be treated as a genuine section heading rather than a TOC entry or an
@@ -497,7 +495,7 @@ def _detect_top_level_sections(text: str) -> tuple[list[dict], str]:
                         if lines[j].strip():
                             # Treat as continuation title only if it's body text
                             if categories[j][0] not in top_level_cats and categories[j][0] not in ("numbered_sub",):
-                                skip_next = (j == i + 1)
+                                skip_next = j == i + 1
                             break
 
     if not top_level_indices:

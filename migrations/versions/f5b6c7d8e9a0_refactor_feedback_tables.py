@@ -27,6 +27,7 @@ revised model in feedback.py:
   - Create feedback_recipe_to_assets (recreated association table)
   - feedback_reports is structurally unchanged and untouched
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -64,28 +65,30 @@ def upgrade():
         sa.Column("creator_id", sa.Integer(), nullable=True),
         sa.Column("last_edit_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
-            ["creator_id"], ["users.id"],
+            ["creator_id"],
+            ["users.id"],
             name=op.f("fk_feedback_template_tags_creator_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["last_edit_id"], ["users.id"],
+            ["last_edit_id"],
+            ["users.id"],
             name=op.f("fk_feedback_template_tags_last_edit_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenants.id"],
+            ["tenant_id"],
+            ["tenants.id"],
             name=op.f("fk_feedback_template_tags_tenant_id_tenants"),
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_feedback_template_tags")),
         sa.UniqueConstraint(
-            "tenant_id", "name",
+            "tenant_id",
+            "name",
             name=op.f("uq_feedback_template_tags_tenant_id"),
         ),
         sa.UniqueConstraint("name", name=op.f("uq_feedback_template_tags_name")),
     )
     with op.batch_alter_table("feedback_template_tags", schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f("ix_feedback_template_tags_tenant_id"), ["tenant_id"], unique=False
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_template_tags_tenant_id"), ["tenant_id"], unique=False)
 
     # feedback_assets — new schema adds pclass_id and composite unique constraint
     op.create_table(
@@ -101,31 +104,34 @@ def upgrade():
         sa.Column("creator_id", sa.Integer(), nullable=True),
         sa.Column("last_edit_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
-            ["asset_id"], ["submitted_assets.id"],
+            ["asset_id"],
+            ["submitted_assets.id"],
             name=op.f("fk_feedback_assets_asset_id_submitted_assets"),
         ),
         sa.ForeignKeyConstraint(
-            ["creator_id"], ["users.id"],
+            ["creator_id"],
+            ["users.id"],
             name=op.f("fk_feedback_assets_creator_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["last_edit_id"], ["users.id"],
+            ["last_edit_id"],
+            ["users.id"],
             name=op.f("fk_feedback_assets_last_edit_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["pclass_id"], ["project_classes.id"],
+            ["pclass_id"],
+            ["project_classes.id"],
             name=op.f("fk_feedback_assets_pclass_id_project_classes"),
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_feedback_assets")),
         sa.UniqueConstraint(
-            "pclass_id", "label",
+            "pclass_id",
+            "label",
             name=op.f("uq_feedback_assets_pclass_id"),
         ),
     )
     with op.batch_alter_table("feedback_assets", schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f("ix_feedback_assets_label"), ["label"], unique=False
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_assets_label"), ["label"], unique=False)
 
     # feedback_templates — new table
     op.create_table(
@@ -140,27 +146,29 @@ def upgrade():
         sa.Column("creator_id", sa.Integer(), nullable=True),
         sa.Column("last_edit_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
-            ["creator_id"], ["users.id"],
+            ["creator_id"],
+            ["users.id"],
             name=op.f("fk_feedback_templates_creator_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["last_edit_id"], ["users.id"],
+            ["last_edit_id"],
+            ["users.id"],
             name=op.f("fk_feedback_templates_last_edit_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["pclass_id"], ["project_classes.id"],
+            ["pclass_id"],
+            ["project_classes.id"],
             name=op.f("fk_feedback_templates_pclass_id_project_classes"),
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_feedback_templates")),
         sa.UniqueConstraint(
-            "pclass_id", "label",
+            "pclass_id",
+            "label",
             name=op.f("uq_feedback_templates_pclass_id"),
         ),
     )
     with op.batch_alter_table("feedback_templates", schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f("ix_feedback_templates_label"), ["label"], unique=True
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_templates_label"), ["label"], unique=True)
 
     # feedback_recipes — new schema adds pclass_id + composite UniqueConstraint(pclass_id, label)
     # label also has index=True, unique=True at column level
@@ -175,31 +183,34 @@ def upgrade():
         sa.Column("creator_id", sa.Integer(), nullable=True),
         sa.Column("last_edit_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
-            ["creator_id"], ["users.id"],
+            ["creator_id"],
+            ["users.id"],
             name=op.f("fk_feedback_recipes_creator_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["last_edit_id"], ["users.id"],
+            ["last_edit_id"],
+            ["users.id"],
             name=op.f("fk_feedback_recipes_last_edit_id_users"),
         ),
         sa.ForeignKeyConstraint(
-            ["pclass_id"], ["project_classes.id"],
+            ["pclass_id"],
+            ["project_classes.id"],
             name=op.f("fk_feedback_recipes_pclass_id_project_classes"),
         ),
         sa.ForeignKeyConstraint(
-            ["template_id"], ["feedback_templates.id"],
+            ["template_id"],
+            ["feedback_templates.id"],
             name=op.f("fk_feedback_recipes_template_id_feedback_templates"),
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_feedback_recipes")),
         sa.UniqueConstraint(
-            "pclass_id", "label",
+            "pclass_id",
+            "label",
             name=op.f("uq_feedback_recipes_pclass_id"),
         ),
     )
     with op.batch_alter_table("feedback_recipes", schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f("ix_feedback_recipes_label"), ["label"], unique=True
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_recipes_label"), ["label"], unique=True)
 
     # feedback_template_to_tags — new; FKs to feedback_templates + feedback_template_tags
     op.create_table(
@@ -207,15 +218,18 @@ def upgrade():
         sa.Column("template_id", sa.Integer(), nullable=False),
         sa.Column("tag_id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["template_id"], ["feedback_templates.id"],
+            ["template_id"],
+            ["feedback_templates.id"],
             name=op.f("fk_feedback_template_to_tags_template_id_feedback_templates"),
         ),
         sa.ForeignKeyConstraint(
-            ["tag_id"], ["feedback_template_tags.id"],
+            ["tag_id"],
+            ["feedback_template_tags.id"],
             name=op.f("fk_feedback_template_to_tags_tag_id_feedback_template_tags"),
         ),
         sa.PrimaryKeyConstraint(
-            "template_id", "tag_id",
+            "template_id",
+            "tag_id",
             name=op.f("pk_feedback_template_to_tags"),
         ),
     )
@@ -226,15 +240,18 @@ def upgrade():
         sa.Column("recipe_id", sa.Integer(), nullable=False),
         sa.Column("asset_id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["asset_id"], ["feedback_assets.id"],
+            ["asset_id"],
+            ["feedback_assets.id"],
             name=op.f("fk_feedback_recipe_to_assets_asset_id_feedback_assets"),
         ),
         sa.ForeignKeyConstraint(
-            ["recipe_id"], ["feedback_recipes.id"],
+            ["recipe_id"],
+            ["feedback_recipes.id"],
             name=op.f("fk_feedback_recipe_to_assets_recipe_id_feedback_recipes"),
         ),
         sa.PrimaryKeyConstraint(
-            "recipe_id", "asset_id",
+            "recipe_id",
+            "asset_id",
             name=op.f("pk_feedback_recipe_to_assets"),
         ),
     )

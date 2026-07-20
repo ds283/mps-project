@@ -69,9 +69,7 @@ def email_workflows_ajax():
     show_paused = dt_args.get("show_paused", "1") not in ("0", "false", "False")
     show_not_paused = dt_args.get("show_not_paused", "1") not in ("0", "false", "False")
 
-    base_query = db.session.query(EmailWorkflow).outerjoin(
-        User, EmailWorkflow.creator_id == User.id
-    )
+    base_query = db.session.query(EmailWorkflow).outerjoin(User, EmailWorkflow.creator_id == User.id)
 
     # apply completion filter
     if show_complete and not show_incomplete:
@@ -285,9 +283,7 @@ def clone_workflow_template(id):
 
     if workflow.completed:
         flash("Cannot clone the template of a completed workflow.", "error")
-        return redirect(
-            url_for("emailworkflow.edit_workflow", id=id, url=url, text=text)
-        )
+        return redirect(url_for("emailworkflow.edit_workflow", id=id, url=url, text=text))
 
     # Build the back-URL so the template editor can return to this workflow's edit page
     edit_url = url_for("emailworkflow.edit_workflow", id=id, url=url, text=text)
@@ -309,9 +305,7 @@ def clone_workflow_template(id):
         pclass_id = None
         tenant_id = None
 
-    new_template = clone_email_template(
-        workflow.template, pclass_id, tenant_id, current_user
-    )
+    new_template = clone_email_template(workflow.template, pclass_id, tenant_id, current_user)
 
     try:
         db.session.add(new_template)
@@ -351,11 +345,7 @@ def clone_workflow_template(id):
             )
         )
     else:
-        return redirect(
-            url_for(
-                "admin.edit_global_email_template", id=new_template.id, url=edit_url
-            )
-        )
+        return redirect(url_for("admin.edit_global_email_template", id=new_template.id, url=edit_url))
 
 
 # ---------------------------------------------------------------------------
@@ -391,9 +381,7 @@ def workflow_items_ajax(id):
     self_url = url_for("emailworkflow.workflow_items", id=id, url=url, text=text)
     self_text = "Workflow items"
 
-    base_query = db.session.query(EmailWorkflowItem).filter(
-        EmailWorkflowItem.workflow_id == id
-    )
+    base_query = db.session.query(EmailWorkflowItem).filter(EmailWorkflowItem.workflow_id == id)
 
     columns = {
         "name": {"order": EmailWorkflowItem.id},
@@ -402,9 +390,7 @@ def workflow_items_ajax(id):
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            lambda items: ajax.site.email_workflow_item_data(items, self_url, self_text)
-        )
+        return handler.build_payload(lambda items: ajax.site.email_workflow_item_data(items, self_url, self_text))
 
 
 # ---------------------------------------------------------------------------
@@ -417,9 +403,7 @@ def workflow_items_ajax(id):
 def pause_item(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=item.workflow_id))
 
     if item.sent_timestamp is not None:
         flash("Cannot pause an item that has already been sent.", "error")
@@ -431,9 +415,7 @@ def pause_item(id):
 
     try:
         item.paused = True
-        log_db_commit(
-            f'Paused email workflow item "{item.workflow.name}"', user=current_user
-        )
+        log_db_commit(f'Paused email workflow item "{item.workflow.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not pause item due to a database error.", "error")
@@ -446,9 +428,7 @@ def pause_item(id):
 def unpause_item(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=item.workflow_id))
 
     if item.sent_timestamp is not None:
         flash("Cannot unpause an item that has already been sent.", "error")
@@ -460,9 +440,7 @@ def unpause_item(id):
 
     try:
         item.paused = False
-        log_db_commit(
-            f'Unpaused email workflow item "{item.workflow.name}"', user=current_user
-        )
+        log_db_commit(f'Unpaused email workflow item "{item.workflow.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not unpause item due to a database error.", "error")
@@ -479,11 +457,7 @@ def _pretty_json(raw):
     """Return a pretty-printed JSON string, or '(empty)' if raw is None/empty."""
     try:
         parsed = json.loads(raw) if raw else None
-        return (
-            json.dumps(parsed, indent=2, default=str)
-            if parsed is not None
-            else "(empty)"
-        )
+        return json.dumps(parsed, indent=2, default=str) if parsed is not None else "(empty)"
     except (ValueError, TypeError):
         return raw or "(empty)"
 
@@ -493,9 +467,7 @@ def _pretty_json(raw):
 def item_payloads(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=item.workflow_id))
     text = request.args.get("text", "Workflow items")
 
     return render_template_context(
@@ -514,9 +486,7 @@ def item_payloads(id):
 def item_overrides(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=item.workflow_id))
     text = request.args.get("text", "Workflow items")
 
     return render_template_context(
@@ -532,9 +502,7 @@ def item_overrides(id):
 def confirm_delete_item(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=item.workflow_id))
     text = request.args.get("text", "Workflow items")
 
     if item.sent_timestamp is not None:
@@ -605,9 +573,7 @@ def preview_item(id):
     workflow: EmailWorkflow = item.workflow
     template: EmailTemplate = workflow.template
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=workflow.id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=workflow.id))
     text = request.args.get("text", "Workflow items")
 
     # Decode payloads
@@ -623,9 +589,7 @@ def preview_item(id):
         subject_str = item.subject_override
     else:
         try:
-            subject_str, _ = EmailTemplate.render_content_(
-                template, subject_kwargs, None
-            )
+            subject_str, _ = EmailTemplate.render_content_(template, subject_kwargs, None)
         except Exception as e:
             subject_str = f"[Rendering error: {e}]"
 
@@ -704,9 +668,7 @@ def item_error_log(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
     workflow = item.workflow
 
-    url = request.args.get(
-        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
-    )
+    url = request.args.get("url", url_for("emailworkflow.workflow_items", id=item.workflow_id))
     text = request.args.get("text", "Workflow items")
 
     # Error entries in descending timestamp order.

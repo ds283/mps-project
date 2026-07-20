@@ -89,13 +89,9 @@ def _build_student_email_item(
     if not attachments:
         return None
 
-    template = EmailTemplate.find_template_(
-        EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
-    )
+    template = EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass)
     if template is None:
-        current_app.logger.warning(
-            f"_build_student_email_item: no PUSH_FEEDBACK_PUSH_TO_STUDENT template for pclass {pclass.id}"
-        )
+        current_app.logger.warning(f"_build_student_email_item: no PUSH_FEEDBACK_PUSH_TO_STUDENT template for pclass {pclass.id}")
         return None
 
     recipient_list = [test_email if test_email else student.email]
@@ -264,8 +260,7 @@ def register_push_feedback_tasks(celery):
 
         try:
             log_db_commit(
-                f"Marked feedback as sent for ConflationReport #{cr_id} "
-                f"(EmailLog #{email_log_id}); user_id={user_id}",
+                f"Marked feedback as sent for ConflationReport #{cr_id} (EmailLog #{email_log_id}); user_id={user_id}",
                 endpoint=self.name,
             )
         except SQLAlchemyError as e:
@@ -354,16 +349,16 @@ def register_push_feedback_tasks(celery):
         if not unsent_crs:
             if task_id is not None:
                 progress_update(
-                    task_id, TaskRecord.SUCCESS, 100,
+                    task_id,
+                    TaskRecord.SUCCESS,
+                    100,
                     "No unsent feedback — nothing to dispatch.",
                     autocommit=True,
                 )
             return
 
         # ---- Build student EmailWorkflow — one item per unsent CR ----
-        student_template = EmailTemplate.find_template_(
-            EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
-        )
+        student_template = EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass)
         if student_template is not None:
             student_workflow = EmailWorkflow.build_(
                 name=f"Push student feedback: {pclass.name} — {event.name}",
@@ -384,9 +379,7 @@ def register_push_feedback_tasks(celery):
 
         # ---- Build supervisor EmailWorkflow ----
         if notify_supervisors:
-            supervisor_template = EmailTemplate.find_template_(
-                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass
-            )
+            supervisor_template = EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR, pclass=pclass)
             if supervisor_template is not None:
                 supervisor_workflow = EmailWorkflow.build_(
                     name=f"Push supervisor feedback: {pclass.name} — {event.name}",
@@ -411,9 +404,7 @@ def register_push_feedback_tasks(celery):
 
         # ---- Build marker EmailWorkflow ----
         if notify_markers:
-            marker_template = EmailTemplate.find_template_(
-                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
-            )
+            marker_template = EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass)
             if marker_template is not None:
                 marker_workflow = EmailWorkflow.build_(
                     name=f"Push marker feedback: {pclass.name} — {event.name}",
@@ -427,17 +418,13 @@ def register_push_feedback_tasks(celery):
                 db.session.flush()
 
                 for cr in unsent_crs:
-                    for item in _build_role_group_email_items_for_cr(
-                        cr, defer, test_email, [SubmissionRole.ROLE_MARKER]
-                    ):
+                    for item in _build_role_group_email_items_for_cr(cr, defer, test_email, [SubmissionRole.ROLE_MARKER]):
                         item.workflow = marker_workflow
                         db.session.add(item)
 
         # ---- Build moderator EmailWorkflow ----
         if notify_moderators:
-            moderator_template = EmailTemplate.find_template_(
-                EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass
-            )
+            moderator_template = EmailTemplate.find_template_(EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER, pclass=pclass)
             if moderator_template is not None:
                 moderator_workflow = EmailWorkflow.build_(
                     name=f"Push moderator feedback: {pclass.name} — {event.name}",
@@ -451,16 +438,13 @@ def register_push_feedback_tasks(celery):
                 db.session.flush()
 
                 for cr in unsent_crs:
-                    for item in _build_role_group_email_items_for_cr(
-                        cr, defer, test_email, [SubmissionRole.ROLE_MODERATOR]
-                    ):
+                    for item in _build_role_group_email_items_for_cr(cr, defer, test_email, [SubmissionRole.ROLE_MODERATOR]):
                         item.workflow = moderator_workflow
                         db.session.add(item)
 
         try:
             log_db_commit(
-                f"Queued feedback push for MarkingEvent '{event.name}' ({pclass.name}) — "
-                f"{len(unsent_crs)} unsent ConflationReport(s)",
+                f"Queued feedback push for MarkingEvent '{event.name}' ({pclass.name}) — {len(unsent_crs)} unsent ConflationReport(s)",
                 user=user_id,
                 project_classes=pclass,
                 endpoint=self.name,
@@ -472,15 +456,16 @@ def register_push_feedback_tasks(celery):
 
         if user is not None:
             report_info(
-                f"Queued feedback push for {pclass.name} — {event.name}: "
-                f"{len(unsent_crs)} student email(s) dispatched.",
+                f"Queued feedback push for {pclass.name} — {event.name}: {len(unsent_crs)} student email(s) dispatched.",
                 self.name,
                 user,
             )
 
         if task_id is not None:
             progress_update(
-                task_id, TaskRecord.SUCCESS, 100,
+                task_id,
+                TaskRecord.SUCCESS,
+                100,
                 f"Queued feedback emails for {len(unsent_crs)} student(s).",
                 autocommit=True,
             )

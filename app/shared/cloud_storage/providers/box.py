@@ -47,10 +47,7 @@ class BoxCloudStorageProvider(CloudStorageProvider):
 
     @classmethod
     def from_config(cls, cfg: dict) -> "BoxCloudStorageProvider":
-        raise NotImplementedError(
-            "Server-delegated Box auth (JWT / app-user) is not yet implemented. "
-            "Use from_user() for user-delegated OAuth."
-        )
+        raise NotImplementedError("Server-delegated Box auth (JWT / app-user) is not yet implemented. Use from_user() for user-delegated OAuth.")
 
     # -- Introspection -------------------------------------------------------
 
@@ -250,9 +247,7 @@ class BoxCloudStorageProvider(CloudStorageProvider):
             self.invalidate_folder_cache(folder_ref)
             return file_id
 
-    def _upload_chunked_version(
-        self, existing_id: str, filename: str, stream: BinaryIO, size: int
-    ) -> str:
+    def _upload_chunked_version(self, existing_id: str, filename: str, stream: BinaryIO, size: int) -> str:
         """Chunked version-replacement upload for an existing Box file."""
         from box_sdk_gen.internal.utils import (
             Hash,

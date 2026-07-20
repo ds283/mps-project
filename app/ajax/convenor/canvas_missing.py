@@ -76,10 +76,7 @@ def _build_templ(src: str) -> Template:
 def _is_enrolled(cs: CanvasStudent, config: ProjectClassConfig) -> bool:
     if cs.student_id is None:
         return False
-    return (
-            config.submitting_students.filter_by(student_id=cs.student_id, retired=False).first()
-            is not None
-    )
+    return config.submitting_students.filter_by(student_id=cs.student_id, retired=False).first() is not None
 
 
 def canvas_missing_data(config: ProjectClassConfig):

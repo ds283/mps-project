@@ -16,6 +16,4 @@ import os
 SIMILARITY_ST_MODEL = os.environ.get("SIMILARITY_ST_MODEL", "all-mpnet-base-v2")
 
 # Context window size (tokens) for the Ollama model during chunk extraction.
-OLLAMA_CHUNK_EXTRACTION_CONTEXT_SIZE = int(
-    os.environ.get("OLLAMA_CHUNK_EXTRACTION_CONTEXT_SIZE", "18432")
-)
+OLLAMA_CHUNK_EXTRACTION_CONTEXT_SIZE = int(os.environ.get("OLLAMA_CHUNK_EXTRACTION_CONTEXT_SIZE", "18432"))

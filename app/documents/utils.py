@@ -29,11 +29,7 @@ def is_editable(
     allow_student: bool = True,
 ):
     # 'root', 'admin' and 'office' users can always edit SubmissionRecord data
-    if (
-            current_user.has_role("root")
-            or current_user.has_role("admin")
-            or current_user.has_role("office")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office"):
         return True
 
     period = period or record.period
@@ -135,12 +131,7 @@ def is_listable(record, message=False):
     :return:
     """
     # 'root', 'admin', 'faculty' and 'office' users can always list the documents attached to a SubmissionRecord
-    if (
-            current_user.has_role("root")
-            or current_user.has_role("admin")
-            or current_user.has_role("faculty")
-            or current_user.has_role("office")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("faculty") or current_user.has_role("office"):
         return True
 
     # 'student' users can only list the documents attached if they are the submitter
@@ -175,11 +166,7 @@ def is_uploadable(record, message=False, allow_student=True, allow_faculty=True)
     :return:
     """
     # 'root', 'admin', 'faculty' and 'office' users can always upload new documents to a SubmissionRecord
-    if (
-            current_user.has_role("root")
-            or current_user.has_role("admin")
-            or current_user.has_role("office")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office"):
         return True
 
     if current_user.has_role("faculty"):

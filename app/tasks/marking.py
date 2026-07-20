@@ -129,9 +129,7 @@ def _resolve_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass):
     return workflow.resolve_email_template()
 
 
-def _resolve_workflow_reminder_template(
-    workflow: MarkingWorkflow, pclass: ProjectClass
-):
+def _resolve_workflow_reminder_template(workflow: MarkingWorkflow, pclass: ProjectClass):
     """Return the best-matching active reminder EmailTemplate for this workflow+pclass, or None."""
     if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
         template_type = EmailTemplate.MARKING_MARKER_REMINDER
@@ -148,10 +146,7 @@ def _resolve_workflow_reminder_template(
 def _try_advance_to_awaiting_grading(sr: SubmitterReport) -> bool:
     """Advance sr to AWAITING_GRADING_REPORTS if every MarkingReport is in a terminal
     distribution state (EMAIL_CONFIRMED or NOT_REQUIRED). Returns True if transitioned."""
-    if (
-        sr is None
-        or sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-    ):
+    if sr is None or sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
         return False
     mrs = list(sr.marking_reports)
     if not mrs:
@@ -178,9 +173,7 @@ def register_marking_tasks(celery):
         in a single MarkingWorkflow.
         """
         try:
-            workflow: MarkingWorkflow = (
-                db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
-            )
+            workflow: MarkingWorkflow = db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -193,15 +186,8 @@ def register_marking_tasks(celery):
         event: MarkingEvent = workflow.event
         pclass: ProjectClass = event.pclass
 
-        if (
-            test_user_id is None
-            and event.workflow_state == MarkingEventWorkflowStates.WAITING
-        ):
-            convenor: Optional[User] = (
-                db.session.query(User).filter_by(id=convenor_id).first()
-                if convenor_id is not None
-                else None
-            )
+        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+            convenor: Optional[User] = db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
             report_error(
                 f'Cannot send marking emails: marking event "{event.name}" has not been opened yet.',
                 "send_marking_emails",
@@ -226,9 +212,7 @@ def register_marking_tasks(celery):
                     continue
                 for mr in sr.marking_reports:
                     if not mr.distributed:
-                        mr.distribution_state = (
-                            MarkingReportDistributionStates.NOT_REQUIRED
-                        )
+                        mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
                 if _try_advance_to_awaiting_grading(sr):
                     advanced += 1
             try:
@@ -247,9 +231,7 @@ def register_marking_tasks(celery):
         test_email: Optional[str] = None
         if test_user_id is not None:
             try:
-                test_user: User = (
-                    db.session.query(User).filter_by(id=test_user_id).first()
-                )
+                test_user: User = db.session.query(User).filter_by(id=test_user_id).first()
                 if test_user is not None:
                     test_email = test_user.email
             except SQLAlchemyError:
@@ -270,10 +252,7 @@ def register_marking_tasks(celery):
         if not eligible_ids:
             return
 
-        print(
-            f"-- send_marking_emails: workflow={workflow.name!r}, "
-            f"{len(eligible_ids)} submitter report(s) to notify"
-        )
+        print(f"-- send_marking_emails: workflow={workflow.name!r}, {len(eligible_ids)} submitter report(s) to notify")
         if test_email is not None:
             print(f"-- working in test mode: emails being sent to sink={test_email}")
 
@@ -293,10 +272,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         email_group = group(
-            dispatch_emails.s(
-                sr_id, cc_convenor, max_attachment, test_email, deadline, email_wf.id
-            )
-            for sr_id in eligible_ids
+            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline, email_wf.id) for sr_id in eligible_ids
         ) | notify_dispatch.s(convenor_id)
 
         return self.replace(email_group)
@@ -315,9 +291,7 @@ def register_marking_tasks(celery):
         have undistributed reports and an assigned template.
         """
         try:
-            event: MarkingEvent = (
-                db.session.query(MarkingEvent).filter_by(id=event_id).first()
-            )
+            event: MarkingEvent = db.session.query(MarkingEvent).filter_by(id=event_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -327,15 +301,8 @@ def register_marking_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        if (
-            test_user_id is None
-            and event.workflow_state == MarkingEventWorkflowStates.WAITING
-        ):
-            convenor: Optional[User] = (
-                db.session.query(User).filter_by(id=convenor_id).first()
-                if convenor_id is not None
-                else None
-            )
+        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+            convenor: Optional[User] = db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
             report_error(
                 f'Cannot send marking emails: marking event "{event.name}" has not been opened yet.',
                 "send_marking_event_emails",
@@ -347,9 +314,7 @@ def register_marking_tasks(celery):
         test_email: Optional[str] = None
         if test_user_id is not None:
             try:
-                test_user: User = (
-                    db.session.query(User).filter_by(id=test_user_id).first()
-                )
+                test_user: User = db.session.query(User).filter_by(id=test_user_id).first()
                 if test_user is not None:
                     test_email = test_user.email
             except SQLAlchemyError:
@@ -374,17 +339,11 @@ def register_marking_tasks(celery):
                         continue
                     for mr in sr.marking_reports:
                         if not mr.distributed:
-                            mr.distribution_state = (
-                                MarkingReportDistributionStates.NOT_REQUIRED
-                            )
+                            mr.distribution_state = MarkingReportDistributionStates.NOT_REQUIRED
                             not_required_changed = True
                     _try_advance_to_awaiting_grading(sr)
                 continue
-            deadline_str = (
-                workflow.effective_deadline.isoformat()
-                if workflow.effective_deadline
-                else None
-            )
+            deadline_str = workflow.effective_deadline.isoformat() if workflow.effective_deadline else None
             workflow_sr_ids = []
             for sr in workflow.submitter_reports:
                 if sr.workflow_state in _blocking:
@@ -484,9 +443,7 @@ def register_marking_tasks(celery):
     ) -> EmailWorkflowItem:
         asset = record.processed_report
         if asset is not None:
-            filename_path = Path(
-                asset.target_name if hasattr(asset, "target_name") else asset.filename
-            )
+            filename_path = Path(asset.target_name if hasattr(asset, "target_name") else asset.filename)
             extension = filename_path.suffix.lower()
         else:
             extension = ".pdf"
@@ -501,13 +458,9 @@ def register_marking_tasks(celery):
         )
 
         user: User = role.user
-        print(
-            f'-- preparing email to supervisor "{user.name}" for submitter "{student.user.name}"'
-        )
+        print(f'-- preparing email to supervisor "{user.name}" for submitter "{student.user.name}"')
 
-        attachments = _collect_marking_attachments(
-            record, workflow, report_name, target_role=role.role
-        )
+        attachments = _collect_marking_attachments(record, workflow, report_name, target_role=role.role)
 
         recipient = test_email if test_email is not None else user.email
         recipient_list = [recipient]
@@ -524,11 +477,7 @@ def register_marking_tasks(celery):
                 }
             ]
 
-        marking_form_url = (
-            url_for("faculty.marking_form", report_id=marking_report_id, _external=True)
-            if marking_report_id is not None
-            else None
-        )
+        marking_form_url = url_for("faculty.marking_form", report_id=marking_report_id, _external=True) if marking_report_id is not None else None
 
         return EmailWorkflowItem.build_(
             subject_payload=encode_email_payload(
@@ -578,9 +527,7 @@ def register_marking_tasks(celery):
     ) -> EmailWorkflowItem:
         asset = record.processed_report
         if asset is not None:
-            filename_path = Path(
-                asset.target_name if hasattr(asset, "target_name") else asset.filename
-            )
+            filename_path = Path(asset.target_name if hasattr(asset, "target_name") else asset.filename)
             extension = filename_path.suffix.lower()
         else:
             extension = ".pdf"
@@ -595,13 +542,9 @@ def register_marking_tasks(celery):
         )
 
         user: User = role.user
-        print(
-            f'-- preparing email to marker "{user.name}" for submitter "{student.user.name}"'
-        )
+        print(f'-- preparing email to marker "{user.name}" for submitter "{student.user.name}"')
 
-        attachments = _collect_marking_attachments(
-            record, workflow, report_name, target_role=role.role
-        )
+        attachments = _collect_marking_attachments(record, workflow, report_name, target_role=role.role)
 
         recipient = test_email if test_email is not None else user.email
         recipient_list = [recipient]
@@ -618,11 +561,7 @@ def register_marking_tasks(celery):
                 }
             ]
 
-        marking_form_url = (
-            url_for("faculty.marking_form", report_id=marking_report_id, _external=True)
-            if marking_report_id is not None
-            else None
-        )
+        marking_form_url = url_for("faculty.marking_form", report_id=marking_report_id, _external=True) if marking_report_id is not None else None
 
         return EmailWorkflowItem.build_(
             subject_payload=encode_email_payload(
@@ -669,19 +608,13 @@ def register_marking_tasks(celery):
         belonging to a single SubmitterReport.
         """
         try:
-            sr: SubmitterReport = (
-                db.session.query(SubmitterReport)
-                .filter_by(id=submitter_report_id)
-                .first()
-            )
+            sr: SubmitterReport = db.session.query(SubmitterReport).filter_by(id=submitter_report_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if sr is None:
-            msg = (
-                f"Could not load SubmitterReport id={submitter_report_id} from database"
-            )
+            msg = f"Could not load SubmitterReport id={submitter_report_id} from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
@@ -714,16 +647,12 @@ def register_marking_tasks(celery):
         supervisors: List[SubmissionRole] = record.supervisor_roles
         markers: List[SubmissionRole] = record.marker_roles
 
-        undistributed: List[MarkingReport] = [
-            mr for mr in sr.marking_reports if not mr.distributed
-        ]
+        undistributed: List[MarkingReport] = [mr for mr in sr.marking_reports if not mr.distributed]
         if not undistributed:
             return {"sent": 0}
 
         try:
-            email_wf: EmailWorkflow = (
-                db.session.query(EmailWorkflow).filter_by(id=email_workflow_id).first()
-            )
+            email_wf: EmailWorkflow = db.session.query(EmailWorkflow).filter_by(id=email_workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -785,8 +714,7 @@ def register_marking_tasks(celery):
 
         try:
             log_db_commit(
-                f"Distributed {sent} marking notification(s) for {student.user.name} "
-                f"({pclass.name}, workflow={workflow.name!r})",
+                f"Distributed {sent} marking notification(s) for {student.user.name} ({pclass.name}, workflow={workflow.name!r})",
                 student=student,
                 project_classes=pclass,
                 endpoint=self.name,
@@ -807,12 +735,8 @@ def register_marking_tasks(celery):
         The email_log_id is prepended to args automatically by the EmailWorkflowItem callback mechanism.
         """
         try:
-            mr: MarkingReport = (
-                db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
-            )
-            email_log: EmailLog = (
-                db.session.query(EmailLog).filter_by(id=email_log_id).first()
-            )
+            mr: MarkingReport = db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+            email_log: EmailLog = db.session.query(EmailLog).filter_by(id=email_log_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -839,9 +763,7 @@ def register_marking_tasks(celery):
 
         commit_msg = f"Linked distribution email #{email_log_id} to MarkingReport #{marking_report_id}"
         if transitioned:
-            commit_msg += (
-                f"; advanced SubmitterReport #{sr.id} to AWAITING_GRADING_REPORTS"
-            )
+            commit_msg += f"; advanced SubmitterReport #{sr.id} to AWAITING_GRADING_REPORTS"
 
         try:
             log_db_commit(commit_msg, endpoint=self.name)
@@ -859,12 +781,8 @@ def register_marking_tasks(celery):
         The email_log_id is prepended to args automatically by the EmailWorkflowItem callback mechanism.
         """
         try:
-            mr: MarkingReport = (
-                db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
-            )
-            email_log: EmailLog = (
-                db.session.query(EmailLog).filter_by(id=email_log_id).first()
-            )
+            mr: MarkingReport = db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+            email_log: EmailLog = db.session.query(EmailLog).filter_by(id=email_log_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -916,9 +834,7 @@ def register_marking_tasks(celery):
         modifying any workflow-state flags.
         """
         try:
-            workflow: MarkingWorkflow = (
-                db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
-            )
+            workflow: MarkingWorkflow = db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -931,15 +847,8 @@ def register_marking_tasks(celery):
         event: MarkingEvent = workflow.event
         pclass: ProjectClass = event.pclass
 
-        if (
-            test_user_id is None
-            and event.workflow_state == MarkingEventWorkflowStates.WAITING
-        ):
-            convenor: Optional[User] = (
-                db.session.query(User).filter_by(id=convenor_id).first()
-                if convenor_id is not None
-                else None
-            )
+        if test_user_id is None and event.workflow_state == MarkingEventWorkflowStates.WAITING:
+            convenor: Optional[User] = db.session.query(User).filter_by(id=convenor_id).first() if convenor_id is not None else None
             report_error(
                 f'Cannot send marking reminders: marking event "{event.name}" has not been opened yet.',
                 "send_marking_reminders",
@@ -949,18 +858,14 @@ def register_marking_tasks(celery):
 
         resolved_template = _resolve_workflow_reminder_template(workflow, pclass)
         if resolved_template is None:
-            current_app.logger.warning(
-                f"send_marking_reminders: no active reminder template for workflow id={workflow_id}; skipping"
-            )
+            current_app.logger.warning(f"send_marking_reminders: no active reminder template for workflow id={workflow_id}; skipping")
             return
 
         # Resolve test email address
         test_email: Optional[str] = None
         if test_user_id is not None:
             try:
-                test_user: User = (
-                    db.session.query(User).filter_by(id=test_user_id).first()
-                )
+                test_user: User = db.session.query(User).filter_by(id=test_user_id).first()
                 if test_user is not None:
                     test_email = test_user.email
             except SQLAlchemyError:
@@ -992,8 +897,7 @@ def register_marking_tasks(celery):
                 if not mr.report_submitted:
                     eligible.append((sr, mr, mr.role, False))
                 elif mr.role.role in _SUPERVISOR_ROLES and (
-                    sr.workflow_state
-                    == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
+                    sr.workflow_state == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
                 ):
                     for resp_role in mr.responsible_supervisors:
                         eligible.append((sr, mr, resp_role, True))
@@ -1013,10 +917,7 @@ def register_marking_tasks(celery):
             )
             return
 
-        print(
-            f"-- send_marking_reminders: workflow={workflow.name!r}, "
-            f"{len(eligible)} reminder(s) to dispatch"
-        )
+        print(f"-- send_marking_reminders: workflow={workflow.name!r}, {len(eligible)} reminder(s) to dispatch")
         if test_email is not None:
             print(f"-- working in test mode: emails being sent to sink={test_email}")
 
@@ -1063,9 +964,7 @@ def register_marking_tasks(celery):
             if is_responsible_supervisor:
                 marking_form_url = None
             else:
-                marking_form_url = url_for(
-                    "faculty.marking_form", report_id=mr.id, _external=True
-                )
+                marking_form_url = url_for("faculty.marking_form", report_id=mr.id, _external=True)
 
             callbacks = None
             if test_email is None:
@@ -1125,8 +1024,7 @@ def register_marking_tasks(celery):
 
         try:
             log_db_commit(
-                f"Dispatched {sent} marking reminder(s) for workflow {workflow.name!r} "
-                f"({pclass.name})",
+                f"Dispatched {sent} marking reminder(s) for workflow {workflow.name!r} ({pclass.name})",
                 project_classes=pclass,
                 endpoint=self.name,
             )
@@ -1157,9 +1055,7 @@ def register_marking_tasks(celery):
         If force=True, send even if already distributed (re-send).
         """
         try:
-            mr: MarkingReport = (
-                db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
-            )
+            mr: MarkingReport = db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1214,9 +1110,7 @@ def register_marking_tasks(celery):
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
             return {"sent": 0}
 
@@ -1276,8 +1170,7 @@ def register_marking_tasks(celery):
 
         try:
             log_db_commit(
-                f"Dispatched single marking notification for {student.user.name} "
-                f"({pclass.name}, workflow={workflow.name!r}, force={force})",
+                f"Dispatched single marking notification for {student.user.name} ({pclass.name}, workflow={workflow.name!r}, force={force})",
                 student=student,
                 project_classes=pclass,
                 endpoint=self.name,
@@ -1293,9 +1186,7 @@ def register_marking_tasks(celery):
         return markdown.markdown(input)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def generate_feedback_report(
-        self, conflation_report_id: int, recipe_id: int, convenor_id: Optional[int]
-    ):
+    def generate_feedback_report(self, conflation_report_id: int, recipe_id: int, convenor_id: Optional[int]):
         """
         Render a feedback PDF for a single student using a Jinja2/WeasyPrint recipe.
 
@@ -1387,11 +1278,7 @@ def register_marking_tasks(celery):
           - the abort protocol changes
         """
         try:
-            cr: ConflationReport = (
-                db.session.query(ConflationReport)
-                .filter_by(id=conflation_report_id)
-                .first()
-            )
+            cr: ConflationReport = db.session.query(ConflationReport).filter_by(id=conflation_report_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1416,9 +1303,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         try:
-            recipe: FeedbackRecipe = (
-                db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
-            )
+            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1462,9 +1347,7 @@ def register_marking_tasks(celery):
 
         # Template body is stored in the database — no file download needed
         template_body: str = recipe.template.template_body
-        template_env = jinja2.Environment(
-            loader=jinja2.DictLoader({"template": template_body})
-        )
+        template_env = jinja2.Environment(loader=jinja2.DictLoader({"template": template_body}))
 
         # add basic data
         template_env.globals["student_user"] = student
@@ -1490,9 +1373,7 @@ def register_marking_tasks(celery):
         for workflow in event.workflows:
             if workflow.key is None:
                 continue
-            sr: SubmitterReport = workflow.submitter_reports.filter_by(
-                record_id=record.id
-            ).first()
+            sr: SubmitterReport = workflow.submitter_reports.filter_by(record_id=record.id).first()
             if sr is None:
                 continue
             if sr.workflow_state == SubmitterReportWorkflowStates.DROPPED:
@@ -1513,23 +1394,13 @@ def register_marking_tasks(celery):
                         "report": mr.report,
                         "feedback_positive": mr.feedback_positive,
                         "feedback_improvement": mr.feedback_improvement,
-                        "feedback_timestamp": mr.feedback_timestamp.strftime(
-                            "%Y/%m/%d %H:%M"
-                        )
-                        if mr.feedback_timestamp
-                        else None,
+                        "feedback_timestamp": mr.feedback_timestamp.strftime("%Y/%m/%d %H:%M") if mr.feedback_timestamp else None,
                     }
                 )
             workflow_data[workflow.key] = {
                 "grade": float(sr.grade) if sr.grade is not None else None,
-                "grade_generated_by": sr.grade_generated_by.name
-                if sr.grade_generated_by
-                else None,
-                "grade_generated_timestamp": sr.grade_generated_timestamp.strftime(
-                    "%Y/%m/%d %H:%M"
-                )
-                if sr.grade_generated_timestamp
-                else None,
+                "grade_generated_by": sr.grade_generated_by.name if sr.grade_generated_by else None,
+                "grade_generated_timestamp": sr.grade_generated_timestamp.strftime("%Y/%m/%d %H:%M") if sr.grade_generated_timestamp else None,
                 "reports": reports,
             }
 
@@ -1545,10 +1416,7 @@ def register_marking_tasks(celery):
         try:
             output = template.render()
         except Exception as e:
-            current_app.logger.warning(
-                f"generate_feedback_report: template raised exception for "
-                f"ConflationReport #{conflation_report_id}: {e}"
-            )
+            current_app.logger.warning(f"generate_feedback_report: template raised exception for ConflationReport #{conflation_report_id}: {e}")
             cr.feedback_generation_failed = True
             cr.feedback_celery_id = None
             try:
@@ -1580,14 +1448,8 @@ def register_marking_tasks(celery):
                     ],
                     font_config=font_config,
                 )
-                target_name = sanitize_filename(
-                    f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf"
-                )
-                license = (
-                    db.session.query(AssetLicense)
-                    .filter_by(abbreviation="Work")
-                    .first()
-                )
+                target_name = sanitize_filename(f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf")
+                license = db.session.query(AssetLicense).filter_by(abbreviation="Work").first()
 
                 new_asset = GeneratedAsset(
                     timestamp=datetime.now(),
@@ -1614,9 +1476,7 @@ def register_marking_tasks(celery):
                     db.session.flush()
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
                 dispatch_thumbnail_task(new_asset)
@@ -1632,9 +1492,7 @@ def register_marking_tasks(celery):
                     db.session.flush()
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
                 # attach to the ConflationReport
@@ -1673,9 +1531,7 @@ def register_marking_tasks(celery):
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
         # remove downloaded files from the scratch folder

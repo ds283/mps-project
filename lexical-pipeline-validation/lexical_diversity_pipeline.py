@@ -211,9 +211,7 @@ def parse_args():
         default=ARXIV_FILE,
         help=f"arXiv control Excel file [default: {ARXIV_FILE}]",
     )
-    p.add_argument(
-        "--output", default=OUTPUT_DIR, help=f"Output directory [default: {OUTPUT_DIR}]"
-    )
+    p.add_argument("--output", default=OUTPUT_DIR, help=f"Output directory [default: {OUTPUT_DIR}]")
     grp = p.add_mutually_exclusive_group()
     grp.add_argument(
         "--sheets",
@@ -242,8 +240,7 @@ def parse_args():
 
     cal = p.add_argument_group(
         "Production calibration",
-        "Load mu/sigma_inv from the Calibrations sheet of an AI dashboard export "
-        "so that σ values are numerically identical to production values.",
+        "Load mu/sigma_inv from the Calibrations sheet of an AI dashboard export so that σ values are numerically identical to production values.",
     )
     cal.add_argument(
         "--calibration-file",
@@ -257,8 +254,7 @@ def parse_args():
         default="lexical",
         choices=["lexical", "full"],
         dest="calibration_type",
-        help="Feature set to use from the calibration: lexical (3-D) or full (4-D) "
-        "[default: lexical]",
+        help="Feature set to use from the calibration: lexical (3-D) or full (4-D) [default: lexical]",
     )
     cal.add_argument(
         "--calibration-llm",
@@ -319,14 +315,10 @@ def load_data(student_file, arxiv_file, include_sheets=None, exclude_sheets=None
 def display_coords(df, mean_3, std_3, inv_corr):
     """Return (x_combined, y_cv, mahalanobis) for scatter plots."""
     sub = df.dropna(subset=["MATTR", "MTLD", "CV"])[["MATTR", "MTLD", "CV"]].copy()
-    x = (
-        (sub["MATTR"] - mean_3[0]) / std_3[0] + (sub["MTLD"] - mean_3[1]) / std_3[1]
-    ) / np.sqrt(2)
+    x = ((sub["MATTR"] - mean_3[0]) / std_3[0] + (sub["MTLD"] - mean_3[1]) / std_3[1]) / np.sqrt(2)
     y = (sub["CV"] - mean_3[2]) / std_3[2]
     mah = sub.apply(
-        lambda r: np.sqrt(
-            ((r.values - mean_3) / std_3) @ inv_corr @ ((r.values - mean_3) / std_3)
-        ),
+        lambda r: np.sqrt(((r.values - mean_3) / std_3) @ inv_corr @ ((r.values - mean_3) / std_3)),
         axis=1,
     ).values
     return x.values, y.values, mah
@@ -374,16 +366,8 @@ def plot_violin_box(student_main, output_dir):
         ax.axhline(hi, color="green", lw=0.8, ls="--", alpha=0.5)
         ax.axvline(2.5, color="#e74c3c", lw=1.5, ls=":", alpha=0.7)
 
-        data_by_year = [
-            student_main[student_main["Academic Year"] == yr][m].dropna().values
-            for yr in YEAR_ORDER
-        ]
-        colors_v = [
-            PRE_COL
-            if yr in PRE_LLM_YEARS
-            else (TRANS_COL if yr in TRANS_YEARS else POST_COL)
-            for yr in YEAR_ORDER
-        ]
+        data_by_year = [student_main[student_main["Academic Year"] == yr][m].dropna().values for yr in YEAR_ORDER]
+        colors_v = [PRE_COL if yr in PRE_LLM_YEARS else (TRANS_COL if yr in TRANS_YEARS else POST_COL) for yr in YEAR_ORDER]
 
         parts = ax.violinplot(
             data_by_year,
@@ -417,9 +401,7 @@ def plot_violin_box(student_main, output_dir):
         for j, (yr, col) in enumerate(zip(YEAR_ORDER, colors_v)):
             vals = student_main[student_main["Academic Year"] == yr][m].dropna().values
             jitter = np.random.RandomState(42 + j).uniform(-0.12, 0.12, len(vals))
-            ax.scatter(
-                j + jitter, vals, color=col, alpha=0.30, s=10, zorder=3, linewidths=0
-            )
+            ax.scatter(j + jitter, vals, color=col, alpha=0.30, s=10, zorder=3, linewidths=0)
 
         ax.set_xticks(range(len(YEAR_ORDER)))
         ax.set_xticklabels(YEAR_LABELS, fontsize=8.5)
@@ -431,9 +413,7 @@ def plot_violin_box(student_main, output_dir):
         mpatches.Patch(facecolor=PRE_COL, alpha=0.7, label="Pre-LLM"),
         mpatches.Patch(facecolor=TRANS_COL, alpha=0.7, label="Transitional (2022/23)"),
         mpatches.Patch(facecolor=POST_COL, alpha=0.7, label="Post-LLM"),
-        mpatches.Patch(
-            facecolor="green", alpha=0.2, label="Human academic normal range"
-        ),
+        mpatches.Patch(facecolor="green", alpha=0.2, label="Human academic normal range"),
     ]
     fig.legend(
         handles=legend_els,
@@ -469,9 +449,7 @@ def plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_d
     self-built mahal_dist() closure or mahal_dist_production() closure,
     depending on whether --calibration-file was supplied.
     """
-    all_vals = [
-        mahal_fn(student_main[student_main["Academic Year"] == yr]) for yr in YEAR_ORDER
-    ]
+    all_vals = [mahal_fn(student_main[student_main["Academic Year"] == yr]) for yr in YEAR_ORDER]
     global_max = max(v.max() for v in all_vals)
     x_max = global_max * 1.08
     x_ref = np.linspace(0, x_max, 400)
@@ -484,16 +462,8 @@ def plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_d
     for i, (yr, lbl, vals) in enumerate(zip(YEAR_ORDER, YEAR_LABELS, all_vals)):
         ax = axes[i]
         ax.set_facecolor("#f7f7f7")
-        col = (
-            PRE_COL
-            if yr in PRE_LLM_YEARS
-            else (TRANS_COL if yr in TRANS_YEARS else POST_COL)
-        )
-        era = (
-            "Pre-LLM"
-            if yr in PRE_LLM_YEARS
-            else ("Transitional" if yr in TRANS_YEARS else "Post-LLM")
-        )
+        col = PRE_COL if yr in PRE_LLM_YEARS else (TRANS_COL if yr in TRANS_YEARS else POST_COL)
+        era = "Pre-LLM" if yr in PRE_LLM_YEARS else ("Transitional" if yr in TRANS_YEARS else "Post-LLM")
 
         ax.plot(x_ref, chi_pdf * len(vals) * 0.45, color="#aaaaaa", lw=1.2, ls="--")
         bins = np.linspace(0, x_max, 26)
@@ -526,9 +496,7 @@ def plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_d
         ax.text(
             0.97,
             0.97,
-            f"n={len(vals)}\nmean={np.mean(vals):.2f}\n"
-            f"median={np.median(vals):.2f}\n"
-            f">p0.05: {n05} ({pct05:.0f}%)\n>p0.01: {n01} ({pct01:.0f}%)",
+            f"n={len(vals)}\nmean={np.mean(vals):.2f}\nmedian={np.median(vals):.2f}\n>p0.05: {n05} ({pct05:.0f}%)\n>p0.01: {n01} ({pct01:.0f}%)",
             transform=ax.transAxes,
             ha="right",
             va="top",
@@ -588,9 +556,7 @@ def plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_d
 # =============================================================================
 
 
-def plot_mahal_kde(
-    m_pre, m_post, controls_mahal, colors, thresh_05, thresh_01, output_dir
-):
+def plot_mahal_kde(m_pre, m_post, controls_mahal, colors, thresh_05, thresh_01, output_dir):
     datasets_kd = {
         "Pre-LLM students": (m_pre, PRE_COL, "solid", 2.2),
         "Post-LLM students": (m_post, POST_COL, "solid", 2.2),
@@ -619,10 +585,7 @@ def plot_mahal_kde(
             kde = stats.gaussian_kde(vals, bw_method=0.35)
             ax.plot(kde_x, kde(kde_x), color=col, lw=lw, ls=ls, alpha=0.85, label=label)
             ax.axvline(np.mean(vals), color=col, lw=0.9, ls=":", alpha=0.55)
-        rows = [
-            f"{lb[:28]:<28}  mean={v.mean():.2f}  >p05={100 * (v > thresh_05).mean():.0f}%"
-            for lb, (v, *_) in datasets_kd.items()
-        ]
+        rows = [f"{lb[:28]:<28}  mean={v.mean():.2f}  >p05={100 * (v > thresh_05).mean():.0f}%" for lb, (v, *_) in datasets_kd.items()]
         ax.text(
             0.97,
             0.97,
@@ -652,9 +615,7 @@ def plot_mahal_kde(
         Line2D([0], [0], color=POST_COL, lw=2.2, ls="solid", label="Post-LLM students"),
     ]
     for name in controls_mahal:
-        legend_els.append(
-            Line2D([0], [0], color=colors[name], lw=2.0, ls="dashed", label=name)
-        )
+        legend_els.append(Line2D([0], [0], color=colors[name], lw=2.0, ls="dashed", label=name))
     legend_els += [
         Line2D([0], [0], color="#aaaaaa", lw=1.2, ls=":", label="χ(3) null reference"),
         Line2D(
@@ -675,9 +636,7 @@ def plot_mahal_kde(
         framealpha=0.95,
         edgecolor="#cccccc",
     )
-    fig.suptitle(
-        "Mahalanobis Distance KDE", fontsize=12, fontweight="bold", color="#1a1a2e"
-    )
+    fig.suptitle("Mahalanobis Distance KDE", fontsize=12, fontweight="bold", color="#1a1a2e")
     plt.tight_layout(rect=[0, 0.08, 1, 0.96])
     path = os.path.join(output_dir, "03_mahal_kde.png")
     plt.savefig(path, dpi=150, bbox_inches="tight", facecolor="#fafafa")
@@ -725,9 +684,7 @@ def _draw_scatter_base(
     ax.tick_params(labelsize=8)
 
 
-def _plot_scatter_points(
-    ax, df, col, mk, al, sz, label, mean_3, std_3, inv_corr, thresh_05, thresh_01
-):
+def _plot_scatter_points(ax, df, col, mk, al, sz, label, mean_3, std_3, inv_corr, thresh_05, thresh_01):
     x, y, mah = display_coords(df, mean_3, std_3, inv_corr)
     b01 = mah > thresh_01
     b05 = (mah > thresh_05) & ~b01
@@ -841,12 +798,8 @@ def plot_scatters(
     e05, e01 = build_ellipses(corr_3, thresh_05, thresh_01)
 
     # Human-normal bands in display coordinates
-    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(
-        2
-    )
-    x_norm_hi = (
-        (0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]
-    ) / np.sqrt(2)
+    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(2)
+    x_norm_hi = ((0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]) / np.sqrt(2)
     z_cv_lo = (0.55 - mean_3[2]) / std_3[2]
     z_cv_hi = (0.85 - mean_3[2]) / std_3[2]
 
@@ -926,12 +879,8 @@ def plot_scatters(
     fig, ax = plt.subplots(figsize=(9, 8))
     fig.patch.set_facecolor("#fafafa")
     _draw_scatter_base(ax, xlim_zoom, ylim_zoom, **ell_kw)
-    _plot_scatter_points(
-        ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw
-    )
-    _plot_scatter_points(
-        ax, post, POST_COL, "o", 0.75, 36, f"Post-LLM students (n={n_post})", **base_kw
-    )
+    _plot_scatter_points(ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw)
+    _plot_scatter_points(ax, post, POST_COL, "o", 0.75, 36, f"Post-LLM students (n={n_post})", **base_kw)
     _hn_labels(ax, xlim_zoom, ylim_zoom)
     ax.set_title("Student cohorts — central region", fontsize=10, fontweight="bold")
     fig.legend(
@@ -953,16 +902,10 @@ def plot_scatters(
     fig, ax = plt.subplots(figsize=(10, 9))
     fig.patch.set_facecolor("#fafafa")
     _draw_scatter_base(ax, xlim_full, ylim_full, **ell_kw)
-    _plot_scatter_points(
-        ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw
-    )
-    _plot_scatter_points(
-        ax, post, POST_COL, "o", 0.75, 36, f"Post-LLM students (n={n_post})", **base_kw
-    )
+    _plot_scatter_points(ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw)
+    _plot_scatter_points(ax, post, POST_COL, "o", 0.75, 36, f"Post-LLM students (n={n_post})", **base_kw)
     _hn_labels(ax, xlim_full, ylim_full)
-    ax.set_title(
-        "Student cohorts — all outliers included", fontsize=10, fontweight="bold"
-    )
+    ax.set_title("Student cohorts — all outliers included", fontsize=10, fontweight="bold")
     fig.legend(
         handles=leg_no_controls,
         loc="lower center",
@@ -983,9 +926,7 @@ def plot_scatters(
     fig.patch.set_facecolor("#fafafa")
     _draw_scatter_base(ax, xlim_ctrl, ylim_ctrl, **ell_kw)
     for name, df in controls.items():
-        _plot_scatter_points(
-            ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw
-        )
+        _plot_scatter_points(ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw)
     _hn_labels(ax, xlim_ctrl, ylim_ctrl)
     ax.set_title(
         "arXiv control samples — Mahalanobis contours from pre-LLM reference",
@@ -1044,24 +985,16 @@ def plot_custom_scatter(
         if name in controls:
             included_controls[name] = controls[name]
         else:
-            print(
-                f"  WARNING: --scatter token '{name}' not found in loaded sheets; skipping"
-            )
+            print(f"  WARNING: --scatter token '{name}' not found in loaded sheets; skipping")
 
     if not include_students and not included_controls:
-        print(
-            f"  WARNING: --scatter '{spec_str}' resolved to no valid datasets; skipping"
-        )
+        print(f"  WARNING: --scatter '{spec_str}' resolved to no valid datasets; skipping")
         return
 
     e05, e01 = build_ellipses(corr_3, thresh_05, thresh_01)
 
-    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(
-        2
-    )
-    x_norm_hi = (
-        (0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]
-    ) / np.sqrt(2)
+    x_norm_lo = ((0.70 - mean_3[0]) / std_3[0] + (70 - mean_3[1]) / std_3[1]) / np.sqrt(2)
+    x_norm_hi = ((0.85 - mean_3[0]) / std_3[0] + (120 - mean_3[1]) / std_3[1]) / np.sqrt(2)
     z_cv_lo = (0.55 - mean_3[2]) / std_3[2]
     z_cv_hi = (0.85 - mean_3[2]) / std_3[2]
 
@@ -1107,9 +1040,7 @@ def plot_custom_scatter(
     if include_students:
         n_pre = len(pre.dropna(subset=["MATTR", "MTLD", "CV"]))
         n_post = len(post.dropna(subset=["MATTR", "MTLD", "CV"]))
-        _plot_scatter_points(
-            ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw
-        )
+        _plot_scatter_points(ax, pre, PRE_COL, "o", 0.50, 30, f"Pre-LLM students (n={n_pre})", **base_kw)
         _plot_scatter_points(
             ax,
             post,
@@ -1122,9 +1053,7 @@ def plot_custom_scatter(
         )
 
     for name, df in included_controls.items():
-        _plot_scatter_points(
-            ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw
-        )
+        _plot_scatter_points(ax, df, colors[name], markers[name], 0.65, 32, name, **base_kw)
 
     ax.text(
         x_norm_lo + 0.1,
@@ -1243,13 +1172,9 @@ def plot_metric_kde(pre, post, controls, colors, output_dir):
         Line2D([0], [0], color=POST_COL, lw=2.2, ls="solid", label="Post-LLM students"),
     ]
     for name in controls:
-        legend_els.append(
-            Line2D([0], [0], color=colors[name], lw=2.0, ls="dashed", label=name)
-        )
+        legend_els.append(Line2D([0], [0], color=colors[name], lw=2.0, ls="dashed", label=name))
     legend_els += [
-        mpatches.Patch(
-            facecolor="green", alpha=0.2, label="Human academic normal range"
-        ),
+        mpatches.Patch(facecolor="green", alpha=0.2, label="Human academic normal range"),
         Line2D([0], [0], color="grey", lw=0.9, ls=":", label="Dataset mean"),
     ]
     fig.legend(
@@ -1333,16 +1258,10 @@ def run_stats(
             continue
         _, mw_p = stats.mannwhitneyu(m_yr, m_pre, alternative="two-sided")
         _, ks_p = stats.ks_2samp(m_yr, m_pre)
-        p(
-            f"{yr + ' vs pre-LLM':<40} {len(m_yr):>5} {m_yr.mean():>7.3f} "
-            f"{mw_p:>12.4e} {ks_p:>12.4e}"
-        )
+        p(f"{yr + ' vs pre-LLM':<40} {len(m_yr):>5} {m_yr.mean():>7.3f} {mw_p:>12.4e} {ks_p:>12.4e}")
 
     p("\n--- Exceedance summary ---")
-    p(
-        f"{'Dataset':<30} {'n':>4}  {'mean':>6}  {'median':>7}  "
-        f"{'>p=0.05':>9}  {'>p=0.01':>9}  {'max':>7}"
-    )
+    p(f"{'Dataset':<30} {'n':>4}  {'mean':>6}  {'median':>7}  {'>p=0.05':>9}  {'>p=0.01':>9}  {'max':>7}")
     for label, vals in [
         ("Pre-LLM students", m_pre),
         ("Post-LLM students", m_post),
@@ -1362,10 +1281,7 @@ def run_stats(
         for label, df in [("Post-LLM students", post)] + list(controls.items()):
             other = df[m].dropna()
             _, pm = stats.mannwhitneyu(pre_v, other, alternative="two-sided")
-            p(
-                f"    vs {label:<25}: p={pm:.4e}  "
-                f"(pre={pre_v.mean():.4f}, other={other.mean():.4f})"
-            )
+            p(f"    vs {label:<25}: p={pm:.4e}  (pre={pre_v.mean():.4f}, other={other.mean():.4f})")
 
     # Exposure estimate
     p("\n--- Simple exposure estimate (exceedance rate difference) ---")
@@ -1380,10 +1296,7 @@ def run_stats(
     p(f"  Difference (exposure est):{100 * diff:.1f}%  ± {100 * se_diff:.1f} pp (1σ)")
 
     # Power analysis for next cohort
-    p(
-        f"\n--- Power analysis: next cohort (n={NEXT_COHORT_N}, "
-        f"assuming 2024/25 distribution) ---"
-    )
+    p(f"\n--- Power analysis: next cohort (n={NEXT_COHORT_N}, assuming 2024/25 distribution) ---")
     m_2425 = mahal_fn(student_main[student_main["Academic Year"] == "2024/2025"])
     np.random.seed(42)
     n_sim = 20000
@@ -1417,11 +1330,7 @@ def main():
     print(f"\nOutput directory: {output_dir}/\n")
 
     include = [s.strip() for s in args.sheets.split(",")] if args.sheets else None
-    exclude = (
-        [s.strip() for s in args.exclude_sheets.split(",")]
-        if args.exclude_sheets
-        else None
-    )
+    exclude = [s.strip() for s in args.exclude_sheets.split(",")] if args.exclude_sheets else None
 
     student, controls = load_data(args.student, args.arxiv, include, exclude)
     colors = assign_control_colors(list(controls.keys()))
@@ -1461,9 +1370,7 @@ def main():
     print("\nGenerating plots...")
     plot_violin_box(student_main, output_dir)
     plot_mahal_histograms(student_main, mahal_fn, thresh_05, thresh_01, output_dir)
-    plot_mahal_kde(
-        m_pre, m_post, controls_mahal, colors, thresh_05, thresh_01, output_dir
-    )
+    plot_mahal_kde(m_pre, m_post, controls_mahal, colors, thresh_05, thresh_01, output_dir)
     plot_scatters(
         pre,
         post,

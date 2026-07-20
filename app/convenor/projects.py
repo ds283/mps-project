@@ -261,9 +261,7 @@ def edit_project_alternatives(proj_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template_context(
-        "convenor/projects/edit_alternatives.html", proj=proj, url=url, text=text
-    )
+    return render_template_context("convenor/projects/edit_alternatives.html", proj=proj, url=url, text=text)
 
 
 @convenor.route("/edit_project_alternatives_ajax/<int:proj_id>", methods=["POST"])
@@ -279,9 +277,7 @@ def edit_project_alternatives_ajax(proj_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    base_query = proj.alternatives.join(
-        Project, Project.id == ProjectAlternative.alternative_id
-    )
+    base_query = proj.alternatives.join(Project, Project.id == ProjectAlternative.alternative_id)
 
     project = {
         "search": Project.name,
@@ -362,9 +358,7 @@ def edit_project_alternative(alt_id):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/projects/edit_alternative.html", form=form, alt=alt, url=url
-    )
+    return render_template_context("convenor/projects/edit_alternative.html", form=form, alt=alt, url=url)
 
 
 @convenor.route("/new_project_alternative/<int:proj_id>")
@@ -379,9 +373,7 @@ def new_project_alternative(proj_id):
 
     url = request.args.get("url", None)
 
-    return render_template_context(
-        "convenor/projects/new_alternative.html", proj=proj, url=url
-    )
+    return render_template_context("convenor/projects/new_alternative.html", proj=proj, url=url)
 
 
 @convenor.route("/new_project_alternative_ajax/<int:proj_id>", methods=["POST"])
@@ -493,9 +485,7 @@ def edit_liveproject_alternatives(lp_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template_context(
-        "convenor/liveprojects/edit_alternatives.html", lp=lp, url=url, text=text
-    )
+    return render_template_context("convenor/liveprojects/edit_alternatives.html", lp=lp, url=url, text=text)
 
 
 @convenor.route("/edit_liveproject_alternatives_ajax/<int:lp_id>", methods=["POST"])
@@ -511,9 +501,7 @@ def edit_liveproject_alternatives_ajax(lp_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    base_query = lp.alternatives.join(
-        LiveProject, LiveProject.id == LiveProjectAlternative.alternative_id
-    )
+    base_query = lp.alternatives.join(LiveProject, LiveProject.id == LiveProjectAlternative.alternative_id)
 
     project = {
         "search": LiveProject.name,
@@ -527,9 +515,7 @@ def edit_liveproject_alternatives_ajax(lp_id):
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 
         def row_formatter(alternatives):
-            return ajax.convenor.liveproject_alternatives(
-                alternatives, url=url, text=text
-            )
+            return ajax.convenor.liveproject_alternatives(alternatives, url=url, text=text)
 
         return handler.build_payload(row_formatter)
 
@@ -603,9 +589,7 @@ def edit_liveproject_alternative(alt_id):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/liveprojects/edit_alternative.html", form=form, alt=alt, url=url
-    )
+    return render_template_context("convenor/liveprojects/edit_alternative.html", form=form, alt=alt, url=url)
 
 
 @convenor.route("/new_liveproject_alternative/<int:lp_id>")
@@ -620,9 +604,7 @@ def new_liveproject_alternative(lp_id):
 
     url = request.args.get("url", None)
 
-    return render_template_context(
-        "convenor/liveprojects/new_alternative.html", lp=lp, url=url
-    )
+    return render_template_context("convenor/liveprojects/new_alternative.html", lp=lp, url=url)
 
 
 @convenor.route("/new_liveproject_alternative_ajax/<int:lp_id>", methods=["POST"])
@@ -640,9 +622,7 @@ def new_liveproject_alternative_ajax(lp_id):
     # get list of available projects, excluding any projects that are already alternatives for this one
     config: ProjectClassConfig = lp.config
     base_query = (
-        config.live_projects.filter(
-            ~LiveProject.alternative_for.any(parent_id=lp.id), LiveProject.id != lp_id
-        )
+        config.live_projects.filter(~LiveProject.alternative_for.any(parent_id=lp.id), LiveProject.id != lp_id)
         .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
         .join(User, User.id == FacultyData.id, isouter=True)
     )
@@ -683,8 +663,7 @@ def create_liveproject_alternative(lp_id, alt_lp_id):
     # reject if lp and alt_lp don't belong to the same ProjectClassConfig
     if lp.config_id != alt_lp.config_id:
         flash(
-            f'Projects "{lp.name}" and "{alt_lp.name}" do not belong to the same project cycle, '
-            f"so they cannot be alternatives",
+            f'Projects "{lp.name}" and "{alt_lp.name}" do not belong to the same project cycle, so they cannot be alternatives',
             "error",
         )
         return redirect(url)
@@ -760,13 +739,7 @@ def copy_alternative_to_library(alt_id):
         return redirect(redirect_url())
 
     try:
-        library_alt = (
-            db.session.query(ProjectAlternative)
-            .filter_by(
-                parent_id=library_project.id, alternative_id=library_alt_project.id
-            )
-            .first()
-        )
+        library_alt = db.session.query(ProjectAlternative).filter_by(parent_id=library_project.id, alternative_id=library_alt_project.id).first()
         if library_alt is None:
             library_alt = ProjectAlternative(
                 parent_id=library_project.id,
@@ -914,9 +887,7 @@ def edit_project_supervisors(proj_id):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/projects/edit_supervisors.html", form=form, proj=proj, url=url
-    )
+    return render_template_context("convenor/projects/edit_supervisors.html", form=form, proj=proj, url=url)
 
 
 @convenor.route("/edit_liveproject_supervisors/<int:proj_id>", methods=["GET", "POST"])
@@ -955,9 +926,7 @@ def edit_liveproject_supervisors(proj_id):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/liveprojects/edit_supervisors.html", form=form, proj=proj, url=url
-    )
+    return render_template_context("convenor/liveprojects/edit_supervisors.html", form=form, proj=proj, url=url)
 
 
 @convenor.route("/liveprojects/<int:id>")
@@ -1073,9 +1042,7 @@ def liveprojects_ajax(id):
     )
 
     base_query = (
-        config.live_projects.join(
-            FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True
-        )
+        config.live_projects.join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
         .join(User, User.id == FacultyData.id, isouter=True)
         .join(
             popularity_subq,
@@ -1085,8 +1052,7 @@ def liveprojects_ajax(id):
         .join(
             PopularityRecord,
             and_(
-                PopularityRecord.liveproject_id
-                == popularity_subq.c.popq_liveproject_id,
+                PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
                 PopularityRecord.datestamp == popularity_subq.c.popq_datestamp,
             ),
             isouter=True,
@@ -1103,24 +1069,18 @@ def liveprojects_ajax(id):
         base_query = base_query.filter(LiveProject.group_id.in_(valid_group_ids))
 
     if len(valid_skill_ids) > 0:
-        base_query = base_query.filter(
-            LiveProject.skills.any(TransferableSkill.id.in_(valid_skill_ids))
-        )
+        base_query = base_query.filter(LiveProject.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
 
     return _liveprojects_ajax_handler(base_query, config, state_filter, type_filter)
 
 
-def _liveprojects_ajax_handler(
-    base_query, config: ProjectClassConfig, state_filter: str, type_filter: str
-):
+def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_filter: str, type_filter: str):
     if type_filter == "generic":
         base_query = base_query.filter(LiveProject.use_supervisor_pool.is_(True))
     elif type_filter == "hidden":
         base_query = base_query.filter(LiveProject.hidden.is_(True))
     elif type_filter == "alternatives":
-        base_query = base_query.join(
-            LiveProjectAlternative, LiveProjectAlternative.parent_id == LiveProject.id
-        ).distinct()
+        base_query = base_query.join(LiveProjectAlternative, LiveProjectAlternative.parent_id == LiveProject.id).distinct()
 
     if state_filter == "submitter":
         base_query = base_query.filter(func.count(LiveProject.submitted) > 0)
@@ -1149,9 +1109,7 @@ def _liveprojects_ajax_handler(
             .distinct()
         )
     elif state_filter == "custom":
-        base_query = base_query.join(
-            CustomOffer, CustomOffer.liveproject_id == LiveProject.id
-        ).distinct()
+        base_query = base_query.join(CustomOffer, CustomOffer.liveproject_id == LiveProject.id).distinct()
 
     name = {
         "search": LiveProject.name,
@@ -1163,12 +1121,8 @@ def _liveprojects_ajax_handler(
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    bookmarks = {
-        "order": [PopularityRecord.bookmarks, PopularityRecord.score, LiveProject.name]
-    }
-    selections = {
-        "order": [PopularityRecord.selections, PopularityRecord.score, LiveProject.name]
-    }
+    bookmarks = {"order": [PopularityRecord.bookmarks, PopularityRecord.score, LiveProject.name]}
+    selections = {"order": [PopularityRecord.selections, PopularityRecord.score, LiveProject.name]}
     popularity = {
         "order": [
             PopularityRecord.score_rank,
@@ -1223,9 +1177,7 @@ def delete_live_project(pid):
     # reject if project is not deletable
     if not project.is_deletable:
         flash(
-            'Cannot delete live project "{name}" because it is marked as not removable.'.format(
-                name=project.name
-            ),
+            'Cannot delete live project "{name}" because it is marked as not removable.'.format(name=project.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1233,22 +1185,18 @@ def delete_live_project(pid):
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash(
-            'Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(
+            'Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, because selections have already closed'.format(
                 cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
         )
         return redirect(redirect_url())
 
-    title = (
-        'Delete LiveProject "{name}" for project class "{cls}" in '
-        "{yra}&ndash;{yrb}".format(
-            name=project.name,
-            cls=config.name,
-            yra=config.submit_year_a,
-            yrb=config.submit_year_b,
-        )
+    title = 'Delete LiveProject "{name}" for project class "{cls}" in {yra}&ndash;{yrb}'.format(
+        name=project.name,
+        cls=config.name,
+        yra=config.submit_year_a,
+        yrb=config.submit_year_b,
     )
     action_url = url_for("convenor.perform_delete_live_project", pid=pid)
     message = (
@@ -1299,9 +1247,7 @@ def perform_delete_live_project(pid):
     # reject if project is not deletable
     if not project.is_deletable:
         flash(
-            'Cannot delete live project "{name}" because it is marked as undeletable.'.format(
-                name=project.name
-            ),
+            'Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1309,8 +1255,7 @@ def perform_delete_live_project(pid):
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash(
-            'Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(
+            'Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, because selections have already closed'.format(
                 cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -1357,8 +1302,7 @@ def perform_delete_live_project(pid):
 
     except SQLAlchemyError as e:
         flash(
-            'Could not delete live project "{name}" because of a database error. '
-            "Please contact a system administrator.".format(name=project.name),
+            'Could not delete live project "{name}" because of a database error. Please contact a system administrator.'.format(name=project.name),
             "error",
         )
         db.session.rollback()
@@ -1394,8 +1338,7 @@ def hide_liveproject(id):
     # This also preserves the database record.
     if config.selection_closed:
         flash(
-            'Cannot hide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(
+            'Cannot hide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, because selections have already closed'.format(
                 cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -1412,8 +1355,7 @@ def hide_liveproject(id):
 
     except SQLAlchemyError as e:
         flash(
-            'Could not hide live project "{name}" because of a database error. '
-            "Please contact a system administrator.".format(name=project.name),
+            'Could not hide live project "{name}" because of a database error. Please contact a system administrator.'.format(name=project.name),
             "error",
         )
         db.session.rollback()
@@ -1449,8 +1391,7 @@ def unhide_liveproject(id):
     # This also preserves the database record.
     if config.selection_closed:
         flash(
-            'Cannot unhide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(
+            'Cannot unhide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, because selections have already closed'.format(
                 cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -1467,8 +1408,7 @@ def unhide_liveproject(id):
 
     except SQLAlchemyError as e:
         flash(
-            'Could not unhide live project "{name}" because of a database error. '
-            "Please contact a system administrator.".format(name=project.name),
+            'Could not unhide live project "{name}" because of a database error. Please contact a system administrator.'.format(name=project.name),
             "error",
         )
         db.session.rollback()
@@ -1552,14 +1492,14 @@ def attach_liveproject_ajax(id):
     base_query = base_query.filter(Project.id.not_in(current_projects))
 
     # restrict query to projects owned by active users, or generic projects
-    base_query = base_query.join(
-        User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
+    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(
+        or_(Project.use_supervisor_pool.is_(True), User.active.is_(True))
+    )
 
     # remove projects that don't have a description
-    base_query = base_query.join(
-        ProjectDescription, ProjectDescription.parent_id == Project.id
-    ).filter(ProjectDescription.project_classes.any(id=pclass.id))
+    base_query = base_query.join(ProjectDescription, ProjectDescription.parent_id == Project.id).filter(
+        ProjectDescription.project_classes.any(id=pclass.id)
+    )
 
     return project_list_SQL_handler(
         request,
@@ -1604,18 +1544,16 @@ def manual_attach_project(id, configid):
 
     if config.project_class not in project.project_classes:
         flash(
-            'Could not attach LiveProject "{proj}" to project class "{pcl}" because this project '
-            "is not attached to that class.".format(proj=project.name, pcl=config.name),
+            'Could not attach LiveProject "{proj}" to project class "{pcl}" because this project is not attached to that class.'.format(
+                proj=project.name, pcl=config.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     desc: ProjectDescription = project.get_description(config.project_class)
     if desc is None:
-        flash(
-            'Project "{p}" does not have a description for "{c}" and cannot be '
-            "attached.".format(p=project.name, c=config.name)
-        )
+        flash('Project "{p}" does not have a description for "{c}" and cannot be attached.'.format(p=project.name, c=config.name))
         return redirect(redirect_url())
 
     try:
@@ -1629,9 +1567,7 @@ def manual_attach_project(id, configid):
             "error",
         )
     else:
-        flash(
-            f'LiveProject "{project.name}" has been published to students.', "success"
-        )
+        flash(f'LiveProject "{project.name}" has been published to students.', "success")
 
     return redirect(redirect_url())
 
@@ -1674,9 +1610,9 @@ def attach_liveproject_other_ajax(id):
     base_query = base_query
 
     # restrict query to projects owned by active users, or generic projects
-    base_query = base_query.join(
-        User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
+    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(
+        or_(Project.use_supervisor_pool.is_(True), User.active.is_(True))
+    )
 
     return project_list_SQL_handler(
         request,
@@ -1832,9 +1768,7 @@ def todo_list_ajax(id):
         "search_collation": "utf8_general_ci",
     }
     status = {
-        "order": literal_column(
-            "(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)"
-        )
+        "order": literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")
     }
 
     columns = {
@@ -1899,9 +1833,7 @@ def add_generic_task(config_id):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/tasks/edit_generic_task.html", form=form, url=url, config=config
-    )
+    return render_template_context("convenor/tasks/edit_generic_task.html", form=form, url=url, config=config)
 
 
 @convenor.route("/edit_generic_task/<int:tid>", methods=["GET", "POST"])
@@ -2018,9 +1950,7 @@ def descriptions_ajax(id, pclass_id):
 
     else:
         # get project class details
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_id).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
 
         # if logged-in user is not a suitable convenor, or an administrator, object
         if pclass is not None and not validate_is_convenor(pclass):
@@ -2095,11 +2025,7 @@ def add_project(pclass_id):
             creation_timestamp=datetime.now(),
         )
 
-        if (
-            pclass_id != 0
-            and len(project.project_classes.all()) == 0
-            and not pclass.uses_supervisor
-        ):
+        if pclass_id != 0 and len(project.project_classes.all()) == 0 and not pclass.uses_supervisor:
             project.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is consistent
@@ -2127,11 +2053,7 @@ def add_project(pclass_id):
             for pclass in project.project_classes:
                 if not owner.is_enrolled(pclass):
                     owner.add_enrollment(pclass)
-                    flash(
-                        "Auto-enrolled {name} in {pclass}".format(
-                            name=project.owner.user.name, pclass=pclass.name
-                        )
-                    )
+                    flash("Auto-enrolled {name} in {pclass}".format(name=project.owner.user.name, pclass=pclass.name))
 
         if form.submit.data:
             return redirect(
@@ -2247,11 +2169,7 @@ def edit_project(id, pclass_id):
         project.last_edit_id = current_user.id
         project.last_edit_timestamp = datetime.now()
 
-        if (
-            pclass_id != 0
-            and len(project.project_classes.all()) == 0
-            and not pclass.uses_supervisor
-        ):
+        if pclass_id != 0 and len(project.project_classes.all()) == 0 and not pclass.uses_supervisor:
             project.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is now consistent
@@ -2270,11 +2188,7 @@ def edit_project(id, pclass_id):
 
                     if not project.owner.is_enrolled(pclass):
                         project.owner.add_enrollment(pclass)
-                        flash(
-                            "Auto-enrolled {name} in {pclass}".format(
-                                name=project.owner.user.name, pclass=pclass.name
-                            )
-                        )
+                        flash("Auto-enrolled {name} in {pclass}".format(name=project.owner.user.name, pclass=pclass.name))
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -2376,9 +2290,7 @@ def duplicate_project(id):
                 desc: ProjectDescription
 
                 new_desc = ProjectDescription()
-                for item in [
-                    p.key for p in class_mapper(ProjectDescription).iterate_properties
-                ]:
+                for item in [p.key for p in class_mapper(ProjectDescription).iterate_properties]:
                     if item not in ["id", "parent_id"]:
                         setattr(new_desc, item, getattr(desc, item))
 
@@ -2561,11 +2473,7 @@ def add_description(pid, pclass_id):
                 "error",
             )
 
-        return redirect(
-            url_for(
-                "convenor.edit_descriptions", id=pid, pclass_id=pclass_id, create=create
-            )
-        )
+        return redirect(url_for("convenor.edit_descriptions", id=pid, pclass_id=pclass_id, create=create))
 
     return render_template_context(
         "faculty/edit_description.html",
@@ -2647,9 +2555,7 @@ def edit_description(did, pclass_id):
     )
 
 
-@convenor.route(
-    "/edit_description_content/<int:did>/<int:pclass_id>", methods=["GET", "POST"]
-)
+@convenor.route("/edit_description_content/<int:did>/<int:pclass_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_description_content(did, pclass_id):
     desc = ProjectDescription.query.get_or_404(did)
@@ -2715,9 +2621,7 @@ def edit_description_content(did, pclass_id):
     "/description_modules/<int:did>/<int:pclass_id>/<int:level_id>",
     methods=["GET", "POST"],
 )
-@convenor.route(
-    "/description_modules/<int:did>/<int:pclass_id>", methods=["GET", "POST"]
-)
+@convenor.route("/description_modules/<int:did>/<int:pclass_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def description_modules(did, pclass_id, level_id=None):
     desc = ProjectDescription.query.get_or_404(did)
@@ -2738,15 +2642,9 @@ def description_modules(did, pclass_id, level_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
-            form.selector.data = (
-                FHEQ_Level.query.filter(FHEQ_Level.active.is_(True))
-                .order_by(FHEQ_Level.numeric_level.asc())
-                .first()
-            )
+            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active.is_(True)).order_by(FHEQ_Level.numeric_level.asc()).first()
         else:
-            form.selector.data = FHEQ_Level.query.filter(
-                FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id
-            ).first()
+            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
@@ -2755,11 +2653,7 @@ def description_modules(did, pclass_id, level_id=None):
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
-    levels = (
-        FHEQ_Level.query.filter_by(active=True)
-        .order_by(FHEQ_Level.numeric_level.asc())
-        .all()
-    )
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
     return render_template_context(
         "convenor/projects/description_modules.html",
@@ -2775,9 +2669,7 @@ def description_modules(did, pclass_id, level_id=None):
     )
 
 
-@convenor.route(
-    "/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>"
-)
+@convenor.route("/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>")
 @roles_accepted("faculty", "admin", "root")
 def description_attach_module(did, pclass_id, mod_id, level_id):
     desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
@@ -2808,16 +2700,13 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 flash(
-                    'Could not attach module "{name}" due to a database error. '
-                    "Please contact a system administrator".format(name=module.name),
+                    'Could not attach module "{name}" due to a database error. Please contact a system administrator'.format(name=module.name),
                     "error",
                 )
 
         else:
             flash(
-                'Could not attach module "{name}" because it is already attached.'.format(
-                    name=module.name
-                ),
+                'Could not attach module "{name}" because it is already attached.'.format(name=module.name),
                 "warning",
             )
 
@@ -2841,9 +2730,7 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
     )
 
 
-@convenor.route(
-    "/description_detach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>"
-)
+@convenor.route("/description_detach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>")
 @roles_accepted("faculty", "admin", "root")
 def description_detach_module(did, pclass_id, mod_id, level_id):
     desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
@@ -2873,15 +2760,13 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
-                'Could not detach module "{name}" due to a database error. '
-                "Please contact a system administrator".format(name=module.name),
+                'Could not detach module "{name}" due to a database error. Please contact a system administrator'.format(name=module.name),
                 "error",
             )
 
     else:
         flash(
-            'Could not detach specified module "{name}" because it was not previously '
-            "attached.".format(name=module.name),
+            'Could not detach specified module "{name}" because it was not previously attached.'.format(name=module.name),
             "warning",
         )
 
@@ -2947,20 +2832,14 @@ def duplicate_description(did, pclass_id):
     while suffix < 100:
         new_label = "{label} #{suffix}".format(label=desc.label, suffix=suffix)
 
-        if (
-            ProjectDescription.query.filter_by(
-                parent_id=desc.parent_id, label=new_label
-            ).first()
-            is None
-        ):
+        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
             break
 
         suffix += 1
 
     if suffix >= 100:
         flash(
-            'Could not duplicate variant "{label}" because a new unique label could not '
-            "be generated".format(label=desc.label),
+            'Could not duplicate variant "{label}" because a new unique label could not be generated'.format(label=desc.label),
             "error",
         )
         return redirect(redirect_url())
@@ -3017,9 +2896,7 @@ def move_description(did, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    MoveDescriptionForm = MoveDescriptionFormFactory(
-        old_project.owner_id, old_project.id, pclass_id=pclass_id
-    )
+    MoveDescriptionForm = MoveDescriptionFormFactory(old_project.owner_id, old_project.id, pclass_id=pclass_id)
     form = MoveDescriptionForm(request.form)
 
     if form.validate_on_submit():
@@ -3059,14 +2936,7 @@ def move_description(did, pclass_id):
                 if get_count(new_project.project_classes.filter_by(id=pclass.id)) == 0:
                     remove.add(pclass)
 
-                elif (
-                    get_count(
-                        new_project.descriptions.filter(
-                            ProjectDescription.project_classes.any(id=pclass.id)
-                        )
-                    )
-                    > 0
-                ):
+                elif get_count(new_project.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id))) > 0:
                     remove.add(pclass)
 
             for pclass in remove:
@@ -3085,24 +2955,19 @@ def move_description(did, pclass_id):
                     user=current_user,
                 )
                 flash(
-                    'Variant "{name}" successfully moved to project "{pname}"'.format(
-                        name=desc.label, pname=new_project.name
-                    ),
+                    'Variant "{name}" successfully moved to project "{pname}"'.format(name=desc.label, pname=new_project.name),
                     "info",
                 )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 flash(
-                    'Variant "{name}" could not be moved due to a database error'.format(
-                        name=desc.label
-                    ),
+                    'Variant "{name}" could not be moved due to a database error'.format(name=desc.label),
                     "error",
                 )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
             flash(
-                'Variant "{name}" could not be moved because its parent project is '
-                "missing".format(name=desc.label),
+                'Variant "{name}" could not be moved because its parent project is missing'.format(name=desc.label),
                 "error",
             )
 
@@ -3116,11 +2981,7 @@ def move_description(did, pclass_id):
                 )
             )
         else:
-            return redirect(
-                url_for(
-                    "convenor.edit_descriptions", id=new_project.id, pclass_id=pclass_id
-                )
-            )
+            return redirect(url_for("convenor.edit_descriptions", id=new_project.id, pclass_id=pclass_id))
 
     return render_template_context(
         "faculty/move_description.html",
@@ -3156,8 +3017,9 @@ def make_default_description(pid, pclass_id, did=None):
 
         if desc.parent_id != pid:
             flash(
-                "Cannot set default description (id={did}) for project (id={pid}) because this description "
-                "does not belong to the project".format(pid=pid, did=did),
+                "Cannot set default description (id={did}) for project (id={pid}) because this description does not belong to the project".format(
+                    pid=pid, did=did
+                ),
                 "error",
             )
             return redirect(redirect_url())
@@ -3195,15 +3057,9 @@ def attach_skills(id, pclass_id, sel_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if sel_id is None:
-            form.selector.data = (
-                SkillGroup.query.filter(SkillGroup.active.is_(True))
-                .order_by(SkillGroup.name.asc())
-                .first()
-            )
+            form.selector.data = SkillGroup.query.filter(SkillGroup.active.is_(True)).order_by(SkillGroup.name.asc()).first()
         else:
-            form.selector.data = SkillGroup.query.filter(
-                SkillGroup.active.is_(True), SkillGroup.id == sel_id
-            ).first()
+            form.selector.data = SkillGroup.query.filter(SkillGroup.active.is_(True), SkillGroup.id == sel_id).first()
 
     # get list of active skills matching selector
     if form.selector.data is not None:
@@ -3212,9 +3068,7 @@ def attach_skills(id, pclass_id, sel_id=None):
             TransferableSkill.group_id == form.selector.data.id,
         ).order_by(TransferableSkill.name.asc())
     else:
-        skills = TransferableSkill.query.filter_by(active=True).order_by(
-            TransferableSkill.name.asc()
-        )
+        skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
     create = request.args.get("create", default=None)
 
@@ -3261,9 +3115,7 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
     )
 
 
-@convenor.route(
-    "/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>"
-)
+@convenor.route("/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>")
 @roles_accepted("faculty", "admin", "root")
 def remove_skill(projectid, skillid, pclass_id, sel_id):
     # get project details
@@ -3695,9 +3547,7 @@ def liveproject_sync_assessors(proj_id, live_id):
         return redirect(redirect_url())
 
     # copy assessors from library project to live project, if they are current
-    live_project.assessors = [
-        f for f in library_project.assessors if library_project.is_assessor(f.id)
-    ]
+    live_project.assessors = [f for f in library_project.assessors if library_project.is_assessor(f.id)]
     log_db_commit(
         f'Synced assessors from library project "{library_project.name}" to live project "{live_project.name}"',
         user=current_user,

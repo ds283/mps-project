@@ -34,6 +34,7 @@ Also move feedback-tracking fields from submitter_reports to conflation_reports:
   - Add columns to conflation_reports: feedback_sent, feedback_push_id,
     feedback_push_timestamp
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect as sa_inspect
@@ -112,12 +113,8 @@ def upgrade():
                 server_default=sa.false(),
             )
         )
-        batch_op.add_column(
-            sa.Column("feedback_push_id", sa.Integer(), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("feedback_push_id", sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True))
         batch_op.create_foreign_key(
             "fk_conflation_reports_feedback_push_id_users",
             "users",
@@ -175,12 +172,8 @@ def downgrade():
     # ── Re-create submitter_reports feedback columns and association tables ──
     with op.batch_alter_table("submitter_reports", schema=None) as batch_op:
         batch_op.add_column(sa.Column("feedback_sent", sa.Boolean(), nullable=True))
-        batch_op.add_column(
-            sa.Column("feedback_push_id", sa.Integer(), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("feedback_push_id", sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True))
         batch_op.create_foreign_key(
             "fk_submitter_reports_feedback_push_id_users",
             "users",
@@ -222,19 +215,9 @@ def downgrade():
 
     # ── marking_events: restore three boolean columns ────────────────────────
     with op.batch_alter_table("marking_events", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("open", sa.Boolean(), nullable=False, server_default=sa.false())
-        )
-        batch_op.add_column(
-            sa.Column(
-                "completed", sa.Boolean(), nullable=False, server_default=sa.false()
-            )
-        )
-        batch_op.add_column(
-            sa.Column(
-                "closed", sa.Boolean(), nullable=False, server_default=sa.false()
-            )
-        )
+        batch_op.add_column(sa.Column("open", sa.Boolean(), nullable=False, server_default=sa.false()))
+        batch_op.add_column(sa.Column("completed", sa.Boolean(), nullable=False, server_default=sa.false()))
+        batch_op.add_column(sa.Column("closed", sa.Boolean(), nullable=False, server_default=sa.false()))
 
     # Reverse data migration: reconstruct booleans from workflow_state.
     op.execute(

@@ -40,15 +40,11 @@ def upgrade():
 
     fk_matching = _get_fk_name(conn, "matching_attempts", "lp_file_id", "generated_assets")
     op.drop_constraint(fk_matching, "matching_attempts", type_="foreignkey")
-    op.create_foreign_key(
-        None, "matching_attempts", "generated_assets", ["lp_file_id"], ["id"], ondelete="SET NULL"
-    )
+    op.create_foreign_key(None, "matching_attempts", "generated_assets", ["lp_file_id"], ["id"], ondelete="SET NULL")
 
     fk_scheduling = _get_fk_name(conn, "scheduling_attempts", "lp_file_id", "generated_assets")
     op.drop_constraint(fk_scheduling, "scheduling_attempts", type_="foreignkey")
-    op.create_foreign_key(
-        None, "scheduling_attempts", "generated_assets", ["lp_file_id"], ["id"], ondelete="SET NULL"
-    )
+    op.create_foreign_key(None, "scheduling_attempts", "generated_assets", ["lp_file_id"], ["id"], ondelete="SET NULL")
 
 
 def downgrade():
@@ -57,12 +53,8 @@ def downgrade():
     # Introspect the auto-generated SET NULL constraint names and restore plain RESTRICT FKs.
     fk_matching = _get_fk_name(conn, "matching_attempts", "lp_file_id", "generated_assets")
     op.drop_constraint(fk_matching, "matching_attempts", type_="foreignkey")
-    op.create_foreign_key(
-        None, "matching_attempts", "generated_assets", ["lp_file_id"], ["id"]
-    )
+    op.create_foreign_key(None, "matching_attempts", "generated_assets", ["lp_file_id"], ["id"])
 
     fk_scheduling = _get_fk_name(conn, "scheduling_attempts", "lp_file_id", "generated_assets")
     op.drop_constraint(fk_scheduling, "scheduling_attempts", type_="foreignkey")
-    op.create_foreign_key(
-        None, "scheduling_attempts", "generated_assets", ["lp_file_id"], ["id"]
-    )
+    op.create_foreign_key(None, "scheduling_attempts", "generated_assets", ["lp_file_id"], ["id"])

@@ -1308,11 +1308,7 @@ def submitter_report_data(reports):
         "ROLE_MARKER": SubmissionRoleTypesMixin.ROLE_MARKER,
     }
 
-    event_is_closed = (
-        reports[0].workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED
-        if reports
-        else False
-    )
+    event_is_closed = reports[0].workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED if reports else False
 
     _urgent_states = {
         SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
@@ -1329,17 +1325,10 @@ def submitter_report_data(reports):
     rows = []
     for report in reports:
         mrs = list(report.marking_reports)
-        has_distributable_mrs = (
-            report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-            and any(not mr.distributed for mr in mrs)
-        )
+        has_distributable_mrs = report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE and any(not mr.distributed for mr in mrs)
         has_reminder_eligible_mrs = report.workflow_state not in _blocking and any(
             mr.distributed
-            and (
-                not mr.report_submitted
-                or report.workflow_state
-                == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF
-            )
+            and (not mr.report_submitted or report.workflow_state == SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF)
             for mr in mrs
         )
         rows.append(
@@ -1356,9 +1345,7 @@ def submitter_report_data(reports):
                 "reports": render_template(reports_tmpl, report=report, **state_ctx),
                 "grade": render_template(grade_tmpl, report=report, **state_ctx),
                 "signoff": render_template(signoff_tmpl, report=report, **state_ctx),
-                "risk_factors": render_template(
-                    risk_factors_tmpl, report=report, event_is_closed=event_is_closed
-                ),
+                "risk_factors": render_template(risk_factors_tmpl, report=report, event_is_closed=event_is_closed),
                 "actions": render_template(
                     actions_tmpl,
                     report=report,
@@ -1386,12 +1373,7 @@ def marking_report_data(reports):
     offcanvas_tmpl = env.from_string(_mr_emails_offcanvas)
     actions_tmpl = env.from_string(_marking_report_actions)
 
-    event_is_closed = (
-        reports[0].submitter_report.workflow.event.workflow_state
-        == MarkingEventWorkflowStates.CLOSED
-        if reports
-        else False
-    )
+    event_is_closed = reports[0].submitter_report.workflow.event.workflow_state == MarkingEventWorkflowStates.CLOSED if reports else False
 
     form = ActionForm()
 
@@ -1408,16 +1390,9 @@ def marking_report_data(reports):
     }
 
     def _row_class(report):
-        if (
-            report.submitter_report.workflow_state
-            == SubmitterReportWorkflowStates.DROPPED
-        ):
+        if report.submitter_report.workflow_state == SubmitterReportWorkflowStates.DROPPED:
             return "table-secondary"
-        if (
-            not report.distributed
-            and report.submitter_report.workflow_state
-            == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-        ):
+        if not report.distributed and report.submitter_report.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
             return "table-warning"
         return ""
 
@@ -1432,9 +1407,7 @@ def marking_report_data(reports):
             "student": render_template(student_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report, **_status_ctx),
-            "signoff": render_template(
-                signoff_tmpl, report=report, event_is_closed=event_is_closed
-            ),
+            "signoff": render_template(signoff_tmpl, report=report, event_is_closed=event_is_closed),
             "actions": render_template(
                 actions_tmpl,
                 report=report,
@@ -1479,9 +1452,7 @@ def _make_schema_block_summaries(schema) -> list | None:
             if len(text) > _POPOVER_TEXT_MAX:
                 text = text[:_POPOVER_TEXT_MAX] + "\u2026"
             field_type = field["field_type"]["type"]
-            lines.append(
-                f"<span class='badge bg-secondary'>{escape(field_type)}</span> {escape(text)}"
-            )
+            lines.append(f"<span class='badge bg-secondary'>{escape(field_type)}</span> {escape(text)}")
         summaries.append(
             {
                 "title": str(escape(block["title"])),
@@ -1819,9 +1790,7 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "name": render_template(name_tmpl, workflow=workflow),
             "reports": render_template(reports_tmpl, workflow=workflow, **_SR_STATES),
             "signoff": render_template(signoff_tmpl, workflow=workflow, **_SR_STATES),
-            "distribution": render_template(
-                distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES
-            ),
+            "distribution": render_template(distribution_tmpl, workflow=workflow, form=form, **_EVENT_STATES),
             "menu": render_template(
                 menu_tmpl,
                 workflow=workflow,
@@ -1852,9 +1821,7 @@ def marking_scheme_data(url, text, schemes):
             "schema": render_template(
                 schema,
                 scheme=scheme,
-                schema_blocks=_make_schema_block_summaries(
-                    _parse_scheme_schema(scheme)
-                ),
+                schema_blocks=_make_schema_block_summaries(_parse_scheme_schema(scheme)),
             ),
             "menu": render_template(menu_tmpl, scheme=scheme, url=url, text=text),
         }
@@ -2196,9 +2163,7 @@ def conflation_report_data(event_id, crs):
 
     from flask import url_for as _url_for
 
-    inspector_url = _url_for(
-        "convenor.marking_event_conflation_reports", event_id=event_id
-    )
+    inspector_url = _url_for("convenor.marking_event_conflation_reports", event_id=event_id)
 
     form = ActionForm()
 
@@ -2207,11 +2172,7 @@ def conflation_report_data(event_id, crs):
         grade_dict = cr.conflation_report_as_dict
         feedback_count = cr.feedback_reports.count()
         record = cr.submission_record
-        canvas_enabled = (
-            record is not None
-            and record.period.canvas_enabled
-            and record.owner.canvas_user_id is not None
-        )
+        canvas_enabled = record is not None and record.period.canvas_enabled and record.owner.canvas_user_id is not None
         rows.append(
             {
                 "student": render_template(student_tmpl, cr=cr),

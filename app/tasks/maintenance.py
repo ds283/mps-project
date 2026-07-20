@@ -78,44 +78,28 @@ def register_maintenance_tasks(celery):
         print("database maintenance: performing maintenance for LiveProject records")
         liveprojects_maintenance(self)
 
-        print(
-            "database maintenance: performing maintenance for ProjectDescription records"
-        )
+        print("database maintenance: performing maintenance for ProjectDescription records")
         project_descriptions_maintenance(self)
 
         print("database maintenance: performing maintenance for StudentData records")
         students_data_maintenance(self)
-        print(
-            "database maintenance: performing maintenance for SubmittingStudent records"
-        )
+        print("database maintenance: performing maintenance for SubmittingStudent records")
         submitting_student_maintenance(self)
 
-        print(
-            "database maintenance: performing maintenance for AssessorAttendanceData records"
-        )
+        print("database maintenance: performing maintenance for AssessorAttendanceData records")
         assessor_attendance_maintenance(self)
-        print(
-            "database maintenance: performing maintenance for SubmitterAttendanceData records"
-        )
+        print("database maintenance: performing maintenance for SubmitterAttendanceData records")
         submitter_attendance_maintenance(self)
 
-        print(
-            "database maintenance: performing maintenance for MatchingEnumeration records"
-        )
+        print("database maintenance: performing maintenance for MatchingEnumeration records")
         matching_enumeration_maintenance(self)
-        print(
-            "database maintenance: performing maintenance for ScheduleEnumeration records"
-        )
+        print("database maintenance: performing maintenance for ScheduleEnumeration records")
         schedule_enumeration_maintenance(self)
 
-        print(
-            "database maintenance: performing maintenance for SubmissionRecord records"
-        )
+        print("database maintenance: performing maintenance for SubmissionRecord records")
         submission_record_maintenance(self)
 
-        print(
-            "database maintenance: performing maintenance for PopularityRecord records"
-        )
+        print("database maintenance: performing maintenance for PopularityRecord records")
         popularity_record_maintenance(self)
 
         self.update_state(state=states.SUCCESS)
@@ -220,11 +204,7 @@ def register_maintenance_tasks(celery):
 
     def project_classes_maintenance(self):
         try:
-            records = (
-                db.session.query(ProjectClass)
-                .filter(ProjectClass.active, ProjectClass.publish)
-                .all()
-            )
+            records = db.session.query(ProjectClass).filter(ProjectClass.active, ProjectClass.publish).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -278,18 +258,12 @@ def register_maintenance_tasks(celery):
                 config: ProjectClassConfig = pcl.most_recent_config
 
                 if config is not None:
-                    records = (
-                        db.session.query(LiveProject)
-                        .filter_by(config_id=config.id)
-                        .all()
-                    )
+                    records = db.session.query(LiveProject).filter_by(config_id=config.id).all()
 
                     if task is None:
                         task = [liveproject_record_maintenance.s(p.id) for p in records]
                     else:
-                        task += [
-                            liveproject_record_maintenance.s(p.id) for p in records
-                        ]
+                        task += [liveproject_record_maintenance.s(p.id) for p in records]
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -310,9 +284,7 @@ def register_maintenance_tasks(celery):
 
     def matching_enumeration_maintenance(self):
         try:
-            records: List[MatchingEnumeration] = db.session.query(
-                MatchingEnumeration
-            ).all()
+            records: List[MatchingEnumeration] = db.session.query(MatchingEnumeration).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -323,9 +295,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def student_data_maintenance(self, sid):
         try:
-            record: StudentData = (
-                db.session.query(StudentData).filter_by(id=sid).first()
-            )
+            record: StudentData = db.session.query(StudentData).filter_by(id=sid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -346,9 +316,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def submitting_student_record_maintenance(self, sid):
         try:
-            record: SubmittingStudent = (
-                db.session.query(SubmittingStudent).filter_by(id=sid).first()
-            )
+            record: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -624,13 +592,10 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        all_records = (
-            [(r, r.unique_name) for r in thumbnail_records]
-            + [
-                (r, r.target_name if hasattr(r, "target_name") and r.target_name is not None else r.unique_name)
-                for r in generated_records + temporary_records + submitted_records
-            ]
-        )
+        all_records = [(r, r.unique_name) for r in thumbnail_records] + [
+            (r, r.target_name if hasattr(r, "target_name") and r.target_name is not None else r.unique_name)
+            for r in generated_records + temporary_records + submitted_records
+        ]
 
         # Build a key-set for each distinct bucket used by these records (one list() call per bucket).
         bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
@@ -640,9 +605,7 @@ def register_maintenance_tasks(celery):
             if bucket_type not in bucket_keys and bucket_type in bucket_map:
                 storage: ObjectStore = bucket_map[bucket_type]
                 try:
-                    bucket_keys[bucket_type] = storage.list_keys(
-                        audit_data=f"maintenance.asset_check_lost (bucket type {bucket_type})"
-                    )
+                    bucket_keys[bucket_type] = storage.list_keys(audit_data=f"maintenance.asset_check_lost (bucket type {bucket_type})")
                 except Exception as e:
                     current_app.logger.exception("Error listing bucket keys", exc_info=e)
                     raise self.retry()
@@ -676,9 +639,7 @@ def register_maintenance_tasks(celery):
     def asset_check_unattached(self, notify_email):
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        tasks = [
-            asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records
-        ]
+        tasks = [asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records]
 
         # also find and delete orphaned ThumbnailAsset records (those not referenced by any parent)
         thumbnail_cleanup_unattached.delay()
@@ -706,11 +667,7 @@ def register_maintenance_tasks(celery):
             return
 
         if hasattr(record, "target_name"):
-            asset_name = (
-                record.target_name
-                if record.target_name is not None
-                else record.unique_name
-            )
+            asset_name = record.target_name if record.target_name is not None else record.unique_name
         else:
             asset_name = record.unique_name
 
@@ -719,9 +676,7 @@ def register_maintenance_tasks(celery):
         bucket_type = record.bucket
         bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         if bucket_type not in bucket_map:
-            raise RuntimeError(
-                f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store"
-            )
+            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
 
         storage = AssetCloudAdapter(
             record,
@@ -769,9 +724,7 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        print(
-            f'** Garbage collection removed expired {asset_type} object "{asset_name}" (id={record.id})'
-        )
+        print(f'** Garbage collection removed expired {asset_type} object "{asset_name}" (id={record.id})')
         return asset_name
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
@@ -794,14 +747,10 @@ def register_maintenance_tasks(celery):
         if attached:
             return None
 
-        asset_name = (
-            record.target_name if record.target_name is not None else record.unique_name
-        )
+        asset_name = record.target_name if record.target_name is not None else record.unique_name
         asset_type = RecordType.get_type()
 
-        print(
-            f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})'
-        )
+        print(f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})')
         return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -837,9 +786,7 @@ def register_maintenance_tasks(celery):
 
         for thumbnail_id in orphan_ids:
             try:
-                thumbnail: ThumbnailAsset = (
-                    db.session.query(ThumbnailAsset).filter_by(id=thumbnail_id).first()
-                )
+                thumbnail: ThumbnailAsset = db.session.query(ThumbnailAsset).filter_by(id=thumbnail_id).first()
                 if thumbnail is None:
                     continue
 
@@ -856,9 +803,7 @@ def register_maintenance_tasks(celery):
                     except FileNotFoundError:
                         pass
 
-                print(
-                    f'** Deleted orphaned ThumbnailAsset "{thumbnail.unique_name}" (id={thumbnail.id})'
-                )
+                print(f'** Deleted orphaned ThumbnailAsset "{thumbnail.unique_name}" (id={thumbnail.id})')
                 db.session.delete(thumbnail)
                 db.session.commit()
 
@@ -878,11 +823,7 @@ def register_maintenance_tasks(celery):
 
         app_name = current_app.config.get("APP_NAME", "mpsprojects")
 
-        to_list = (
-            notify_email
-            if isinstance(notify_email, Iterable) and not isinstance(notify_email, str)
-            else [notify_email]
-        )
+        to_list = notify_email if isinstance(notify_email, Iterable) and not isinstance(notify_email, str) else [notify_email]
 
         stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
         if len(stripped_assets) == 0:
@@ -898,9 +839,7 @@ def register_maintenance_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload(
-                {"app_name": app_name, "time": now_human}
-            ),
+            subject_payload=encode_email_payload({"app_name": app_name, "time": now_human}),
             body_payload=encode_email_payload({"assets": stripped_assets, "date": now}),
             recipient_list=to_list,
         )
@@ -932,9 +871,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def subrecord_maintenance(self, rec_id):
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=rec_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rec_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -981,9 +918,7 @@ def register_maintenance_tasks(celery):
         bucket_type = asset.bucket
         bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         if bucket_type not in bucket_map:
-            raise RuntimeError(
-                f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store"
-            )
+            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
         object_store = bucket_map[bucket_type]
 
         # ensure object is encrypted, if storage supports that
@@ -1006,9 +941,7 @@ def register_maintenance_tasks(celery):
                             storage=object_store,
                             audit_data=f'maintenance.assetrecord_maintenance #2 (record type="{asset_type}", record id #{rec_id})',
                             length=asset.filesize,
-                            mimetype=asset.mimetype
-                            if hasattr(asset, "mimetype")
-                            else None,
+                            mimetype=asset.mimetype if hasattr(asset, "mimetype") else None,
                         ) as upload_mgr:
                             pass
 
@@ -1019,16 +952,11 @@ def register_maintenance_tasks(celery):
                     )
                     storage.delete()
                 except SQLAlchemyError as e:
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
             except FileNotFoundError:
-                print(
-                    f"!! Was not able to perform maintenance on asset #{asset.id}, "
-                    f'key="{asset.unique_name}"'
-                )
+                print(f'!! Was not able to perform maintenance on asset #{asset.id}, key="{asset.unique_name}"')
 
     def backup_maintenance(self):
         try:
@@ -1043,9 +971,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def backuprecord_maintenance(self, rec_id):
         try:
-            record: BackupRecord = (
-                db.session.query(BackupRecord).filter_by(id=rec_id).first()
-            )
+            record: BackupRecord = db.session.query(BackupRecord).filter_by(id=rec_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1097,23 +1023,14 @@ def register_maintenance_tasks(celery):
                     )
                     storage.delete()
                 except SQLAlchemyError as e:
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
             except FileNotFoundError:
-                print(
-                    f"!! Was not able to perform maintenance on backup record #{record.id}, "
-                    f'key="{record.unique_name}"'
-                )
+                print(f'!! Was not able to perform maintenance on backup record #{record.id}, key="{record.unique_name}"')
 
         now = date.today()
-        if (
-            record.locked
-            and record.unlock_date is not None
-            and now >= record.unlock_date
-        ):
+        if record.locked and record.unlock_date is not None and now >= record.unlock_date:
             record.locked = False
             record.unlock_date = None
 
@@ -1135,10 +1052,7 @@ def register_maintenance_tasks(celery):
                 label: ProjectTag
 
                 # if label is not used, prune it
-                if (
-                    get_count(label.projects) == 0
-                    and get_count(label.live_projects) == 0
-                ):
+                if get_count(label.projects) == 0 and get_count(label.live_projects) == 0:
                     print(f'@@ prune_project_tags: removing project tag "{label.name}"')
                     db.session.delete(label)
 
@@ -1159,9 +1073,7 @@ def register_maintenance_tasks(celery):
 
                 # if label is not used, prune it
                 if get_count(label.assets) == 0:
-                    print(
-                        f'@@ prune_feedback_template_tags: removing unused tag "{label.name}"'
-                    )
+                    print(f'@@ prune_feedback_template_tags: removing unused tag "{label.name}"')
                     db.session.delete(label)
 
                 db.session.commit()  # intentionally not logged: high-frequency maintenance loop

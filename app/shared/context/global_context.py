@@ -62,12 +62,8 @@ def build_static_context_data(app):
         "SubmitterReportWorkflowStates": SubmitterReportWorkflowStates,
         "SubmissionRoleTypesMixin": SubmissionRoleTypesMixin,
         "branding_label": app.config.get("BRANDING_LABEL", "Not configured"),
-        "branding_login_landing_string": app.config.get(
-            "BRANDING_LOGIN_LANDING_STRING", "Not configured"
-        ),
-        "branding_public_landing_string": app.config.get(
-            "BRANDING_PUBLIC_LANDING_STRING", "Not configured"
-        ),
+        "branding_login_landing_string": app.config.get("BRANDING_LOGIN_LANDING_STRING", "Not configured"),
+        "branding_public_landing_string": app.config.get("BRANDING_PUBLIC_LANDING_STRING", "Not configured"),
         "email_is_live": app.config.get("EMAIL_IS_LIVE", False),
         "backup_is_live": app.config.get("BACKUP_IS_LIVE", False),
     }
@@ -139,8 +135,6 @@ def _build_global_context():
     )
 
 
-def render_template_context(
-    template: str | Template | List[str | Template], **kwargs
-) -> str:
+def render_template_context(template: str | Template | List[str | Template], **kwargs) -> str:
     context = _build_global_context()
     return render_template(template, **kwargs, **context)

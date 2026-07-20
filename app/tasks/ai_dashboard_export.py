@@ -394,11 +394,7 @@ def _build_calibrations_sheet(tenant_ids: List[int]):
     if not tenant_ids:
         return None
 
-    cals = (
-        db.session.query(TenantAICalibration)
-        .filter(TenantAICalibration.tenant_id.in_(tenant_ids))
-        .all()
-    )
+    cals = db.session.query(TenantAICalibration).filter(TenantAICalibration.tenant_id.in_(tenant_ids)).all()
     if not cals:
         return None
 
@@ -455,11 +451,7 @@ def _load_and_build_rows(record_ids: List[int]) -> List[dict]:
     chunk_size = 200
     for start in range(0, len(record_ids), chunk_size):
         chunk = record_ids[start : start + chunk_size]
-        records = (
-            db.session.query(SubmissionRecord)
-            .filter(SubmissionRecord.id.in_(chunk))
-            .all()
-        )
+        records = db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(chunk)).all()
         # Preserve the order given by record_ids (stable for reproducible exports)
         id_to_rec = {r.id: r for r in records}
         for rid in chunk:
@@ -510,9 +502,7 @@ def register_ai_dashboard_export_tasks(celery):
             if user is None:
                 raise Exception(f"User #{user_id} not found")
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError loading user in export_ai_dashboard_xlsx", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError loading user in export_ai_dashboard_xlsx", exc_info=exc)
             raise self.retry()
 
         self.update_state(state="STARTED", meta={"msg": "Building export data"})
@@ -520,9 +510,7 @@ def register_ai_dashboard_export_tasks(celery):
         try:
             rows = _load_and_build_rows(record_ids)
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError building rows in export_ai_dashboard_xlsx", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError building rows in export_ai_dashboard_xlsx", exc_info=exc)
             raise self.retry()
 
         self.update_state(state="STARTED", meta={"msg": "Writing Excel workbook"})
@@ -559,10 +547,7 @@ def register_ai_dashboard_export_tasks(celery):
                         storage=object_store,
                         audit_data="ai_dashboard_export.export_ai_dashboard_xlsx",
                         length=size,
-                        mimetype=(
-                            "application/vnd.openxmlformats-officedocument"
-                            ".spreadsheetml.sheet"
-                        ),
+                        mimetype=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
                     ):
                         pass
 
@@ -585,9 +570,7 @@ def register_ai_dashboard_export_tasks(celery):
 
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in export_ai_dashboard_xlsx", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in export_ai_dashboard_xlsx", exc_info=exc)
             raise self.retry()
 
         self.update_state(state="SUCCESS", meta={"msg": "Export complete"})
@@ -615,9 +598,7 @@ def register_ai_dashboard_export_tasks(celery):
             if user is None:
                 raise Exception(f"User #{user_id} not found")
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError loading user in export_ai_dashboard_csv", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError loading user in export_ai_dashboard_csv", exc_info=exc)
             raise self.retry()
 
         self.update_state(state="STARTED", meta={"msg": "Building export data"})
@@ -625,9 +606,7 @@ def register_ai_dashboard_export_tasks(celery):
         try:
             rows = _load_and_build_rows(record_ids)
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError building rows in export_ai_dashboard_csv", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError building rows in export_ai_dashboard_csv", exc_info=exc)
             raise self.retry()
 
         self.update_state(state="STARTED", meta={"msg": "Writing CSV file"})
@@ -683,9 +662,7 @@ def register_ai_dashboard_export_tasks(celery):
 
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in export_ai_dashboard_csv", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in export_ai_dashboard_csv", exc_info=exc)
             raise self.retry()
 
         self.update_state(state="SUCCESS", meta={"msg": "Export complete"})

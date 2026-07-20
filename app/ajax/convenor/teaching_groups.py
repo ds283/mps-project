@@ -30,9 +30,7 @@ def teaching_group_by_faculty(data, config, show_period):
             },
             "group": render_template_string(
                 _group,
-                assignments=f.supervisor_assignments(
-                    config=config, period=show_period
-                ).all(),
+                assignments=f.supervisor_assignments(config=config, period=show_period).all(),
             ),
         }
         for f in data
@@ -47,8 +45,7 @@ def _supervisor_data(rec):
 
     return {
         "display": rec.project.owner.user.name,
-        "sortvalue": rec.project.owner.user.last_name
-                     + rec.project.owner.user.first_name,
+        "sortvalue": rec.project.owner.user.last_name + rec.project.owner.user.first_name,
     }
 
 

@@ -52,9 +52,7 @@ class WorkflowLogEntry(db.Model):
     timestamp = db.Column(db.DateTime(), index=True, default=datetime.now)
 
     # The logged-in user who initiated the action, if any (nullable for background tasks)
-    initiator_id = db.Column(
-        db.Integer(), db.ForeignKey("users.id"), default=None, nullable=True
-    )
+    initiator_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None, nullable=True)
     initiator = db.relationship(
         "User",
         foreign_keys=[initiator_id],
@@ -63,9 +61,7 @@ class WorkflowLogEntry(db.Model):
     )
 
     # Student this transaction applies to, if present
-    student_id = db.Column(
-        db.Integer(), db.ForeignKey("student_data.id"), default=None, nullable=True
-    )
+    student_id = db.Column(db.Integer(), db.ForeignKey("student_data.id"), default=None, nullable=True)
     student = db.relationship(
         "StudentData",
         foreign_keys=[student_id],

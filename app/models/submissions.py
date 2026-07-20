@@ -84,9 +84,7 @@ class CanvasStudent(db.Model):
     )
 
     # link to match found in our own (student) user database, or None if no matching user is present
-    student_id = db.Column(
-        db.Integer(), db.ForeignKey("student_data.id"), nullable=True
-    )
+    student_id = db.Column(db.Integer(), db.ForeignKey("student_data.id"), nullable=True)
     student = db.relationship(
         "StudentData",
         foreign_keys=[student_id],
@@ -99,19 +97,13 @@ class CanvasStudent(db.Model):
     )
 
     # student email
-    email = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # first name
-    first_name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None
-    )
+    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None)
 
     # last name
-    last_name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None
-    )
+    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None)
 
     # Canvas user id
     canvas_user_id = db.Column(db.Integer(), nullable=False)
@@ -219,9 +211,7 @@ class SubmissionRole(
     # EMAIL LOG
 
     # email log associated with this role
-    email_log = db.relationship(
-        "EmailLog", secondary=submission_role_emails, lazy="dynamic"
-    )
+    email_log = db.relationship("EmailLog", secondary=submission_role_emails, lazy="dynamic")
 
     # SUPERVISION EVENTS (only used where the SubmissionRole is a supervisory one)
 
@@ -232,10 +222,7 @@ class SubmissionRole(
     regular_meeting_time = db.Column(db.Time(), default=None, nullable=True)
 
     # current regular meeting location
-    regular_meeting_location = db.Column(
-        db.String(DEFAULT_STRING_LENGTH), default=None, nullable=True
-    )
-
+    regular_meeting_location = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None, nullable=True)
 
     # FACTORY FUNCTION
     @classmethod
@@ -298,10 +285,7 @@ class SubmissionRole(
         ]:
             return False
 
-        return (
-            self.regular_meeting_weekday is not None
-            and self.regular_meeting_time is not None
-        )
+        return self.regular_meeting_weekday is not None and self.regular_meeting_time is not None
 
     @property
     def regular_meeting_as_string(self):
@@ -327,9 +311,7 @@ class SubmissionRole(
     def events_attending(self) -> List["SupervisionEvent"]:
         return self.events_team.all()
 
-    def past_owned_events(
-        self, now: Optional[datetime] = None
-    ) -> List[SupervisionEvent]:
+    def past_owned_events(self, now: Optional[datetime] = None) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 
@@ -353,9 +335,7 @@ class SubmissionRole(
 
         return query
 
-    def notpast_owned_events(
-        self, now: Optional[datetime] = None
-    ) -> List[SupervisionEvent]:
+    def notpast_owned_events(self, now: Optional[datetime] = None) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 
@@ -379,9 +359,7 @@ class SubmissionRole(
 
         return query
 
-    def future_owned_events(
-        self, now: Optional[datetime] = None
-    ) -> List[SupervisionEvent]:
+    def future_owned_events(self, now: Optional[datetime] = None) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 
@@ -405,9 +383,7 @@ class SubmissionRole(
 
         return query
 
-    def current_owned_events(
-        self, now: Optional[datetime] = None
-    ) -> List[SupervisionEvent]:
+    def current_owned_events(self, now: Optional[datetime] = None) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 
@@ -426,9 +402,7 @@ class SubmissionRole(
 
         return query
 
-    def number_owned_events_with_attendance(
-        self, now: Optional[datetime] = None
-    ) -> int:
+    def number_owned_events_with_attendance(self, now: Optional[datetime] = None) -> int:
         if now is None:
             now = datetime.now()
 
@@ -439,9 +413,7 @@ class SubmissionRole(
         )
         return get_count(query)
 
-    def number_owned_events_missing_attendance(
-        self, now: Optional[datetime] = None
-    ) -> int:
+    def number_owned_events_missing_attendance(self, now: Optional[datetime] = None) -> int:
         if now is None:
             now = datetime.now()
 
@@ -461,11 +433,7 @@ def _SubmissionRole_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
 
-        record: SubmissionRecord = (
-            db.session.query(SubmissionRecord)
-            .filter_by(id=target.submission_id)
-            .first()
-        )
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=target.submission_id).first()
         if record is not None:
             from .live_projects import _SubmittingStudent_is_valid
 
@@ -480,11 +448,7 @@ def _SubmissionRole_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
 
-        record: SubmissionRecord = (
-            db.session.query(SubmissionRecord)
-            .filter_by(id=target.submission_id)
-            .first()
-        )
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=target.submission_id).first()
         if record is not None:
             from .live_projects import _SubmittingStudent_is_valid
 
@@ -499,11 +463,7 @@ def _SubmissionRole_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
 
-        record: SubmissionRecord = (
-            db.session.query(SubmissionRecord)
-            .filter_by(id=target.submission_id)
-            .first()
-        )
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=target.submission_id).first()
         if record is not None:
             from .live_projects import _SubmittingStudent_is_valid
 
@@ -527,17 +487,11 @@ def _SubmissionRecord_is_valid(sid):
     markers_needed = period.number_markers
 
     supervisor_roles: List[SubmissionRole] = obj.supervisor_roles
-    responsible_supervisor_roles: List[SubmissionRole] = [
-        r
-        for r in supervisor_roles
-        if r.role == SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR
-    ]
+    responsible_supervisor_roles: List[SubmissionRole] = [r for r in supervisor_roles if r.role == SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]
     marker_roles: List[SubmissionRole] = obj.marker_roles
 
     supervisor_ids: Set[int] = set(r.user_id for r in supervisor_roles)
-    responsible_supervisor_ids: Set[int] = set(
-        r.user_id for r in responsible_supervisor_roles
-    )
+    responsible_supervisor_ids: Set[int] = set(r.user_id for r in responsible_supervisor_roles)
     marker_ids: Set[int] = set(r.user_id for r in marker_roles)
 
     # 1. SUPERVISOR AND MARKER ROLES SHOULD BE DISTINCT
@@ -570,16 +524,12 @@ def _SubmissionRecord_is_valid(sid):
     if uses_supervisor:
         # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
         if len(supervisor_ids) == 0:
-            errors[("supervisors", 0)] = (
-                "No supervision roles are assigned for this project"
-            )
+            errors[("supervisors", 0)] = "No supervision roles are assigned for this project"
 
         # 1B. USUALLY THERE SHOULD BE JUST ONE RESPONSIBLE SUPERVISOR ROLE
         if len(responsible_supervisor_ids) > 1:
-            warnings[("responsible-supervisors", 0)] = (
-                "There are {n} responsible supervision roles assigned for this project".format(
-                    n=len(supervisor_ids)
-                )
+            warnings[("responsible-supervisors", 0)] = "There are {n} responsible supervision roles assigned for this project".format(
+                n=len(supervisor_ids)
             )
 
         # 1C. SUPERVISORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
@@ -588,27 +538,19 @@ def _SubmissionRecord_is_valid(sid):
             if count > 1:
                 user: User = supervisor_dict[u_id]
 
-                errors[("supervisors", 1)] = (
-                    'Supervisor "{name}" is assigned {n} times for this submitter'.format(
-                        name=user.name, n=count
-                    )
-                )
+                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this submitter'.format(name=user.name, n=count)
 
     if uses_marker:
         # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
         if len(marker_ids) < markers_needed:
-            errors[("markers", 0)] = (
-                "Fewer marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                    assgn=len(marker_ids), exp=markers_needed
-                )
+            errors[("markers", 0)] = "Fewer marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
+                assgn=len(marker_ids), exp=markers_needed
             )
 
         # 1E. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
         if len(marker_ids) > markers_needed:
-            warnings[("markers", 0)] = (
-                "More marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                    assgn=len(marker_ids), exp=markers_needed
-                )
+            warnings[("markers", 0)] = "More marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
+                assgn=len(marker_ids), exp=markers_needed
             )
 
         # 1F. MARKERS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
@@ -617,90 +559,57 @@ def _SubmissionRecord_is_valid(sid):
             if count > 1:
                 user: User = marker_dict[u_id]
 
-                errors[("markers", 1)] = (
-                    'Marker "{name}" is assigned {n} times for this submitter'.format(
-                        name=user.name, n=count
-                    )
-                )
+                errors[("markers", 1)] = 'Marker "{name}" is assigned {n} times for this submitter'.format(name=user.name, n=count)
 
     # 2. ASSIGNED PROJECT SHOULD BE PART OF THE PROJECT CLASS
     if obj.selection_config is not None:
         if project is not None and project.config_id != obj.selection_config_id:
-            errors[("config", 0)] = (
-                "Assigned project does not belong to the correct class for this submitter"
-            )
+            errors[("config", 0)] = "Assigned project does not belong to the correct class for this submitter"
 
     # 3. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for r in supervisor_roles:
         user: User = r.user
         if user.faculty_data is not None:
-            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(
-                pclass
-            )
-            if (
-                enrolment is None
-                or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
-            ):
+            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                 errors[("enrolment", 0)] = (
-                    '"{name}" has been assigned a supervision role, but is not currently '
-                    "enrolled for this project class".format(name=user.name)
+                    '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(name=user.name)
                 )
         else:
-            warnings[("enrolment", 0)] = (
-                '"{name}" has been assigned a supervision role, but is not a faculty member'
-            )
+            warnings[("enrolment", 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
     # 4. STAFF WITH MARKER ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for r in marker_roles:
         user: User = r.user
         if user.faculty_data is not None:
-            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(
-                pclass
-            )
-            if (
-                enrolment is None
-                or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED
-            ):
-                errors[("enrolment", 1)] = (
-                    '"{name}" has been assigned a marking role, but is not currently '
-                    "enrolled for this project class".format(name=user.name)
+            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+                errors[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(
+                    name=user.name
                 )
         else:
-            warnings[("enrolment", 1)] = (
-                '"{name}" has been assigned a marking role, but is not a faculty member'
-            )
+            warnings[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
 
     # 5. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     if uses_marker and project is not None:
         for r in marker_roles:
             user: User = r.user
-            count = get_count(
-                project.assessor_list_query.filter(FacultyData.id == user.id)
-            )
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == user.id))
 
             if count != 1:
-                errors[("markers", 2)] = (
-                    'Assigned marker "{name}" is not in assessor pool for '
-                    "assigned project".format(name=user.name)
-                )
+                errors[("markers", 2)] = 'Assigned marker "{name}" is not in assessor pool for assigned project'.format(name=user.name)
 
     # 6. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if project is not None and not project.use_supervisor_pool:
         if project.owner is not None and project.owner_id not in supervisor_ids:
-            warnings[("supervisors", 2)] = (
-                'Assigned project owner "{name}" does not have a supervision '
-                "role".format(name=project.owner.user.name)
-            )
+            warnings[("supervisors", 2)] = 'Assigned project owner "{name}" does not have a supervision role'.format(name=project.owner.user.name)
 
     # 7. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
     if project is not None and project.use_supervisor_pool:
         for r in supervisor_roles:
             user: User = r.user
             if not any(user.id == fd.id for fd in project.supervisors):
-                errors[("supervisors", 3)] = (
-                    'Assigned supervisor "{name}" is not in supervision pool for '
-                    "assigned project".format(name=user.name)
-                )
+                errors[("supervisors", 3)] = 'Assigned supervisor "{name}" is not in supervision pool for assigned project'.format(name=user.name)
 
     is_valid = len(errors) == 0
     return is_valid, errors, warnings
@@ -767,15 +676,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         "SubmittingStudent",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "records", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("records", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # assigned project
-    project_id = db.Column(
-        db.Integer(), db.ForeignKey("live_projects.id"), default=None
-    )
+    project_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"), default=None)
     project = db.relationship(
         "LiveProject",
         foreign_keys=[project_id],
@@ -785,17 +690,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # link to ProjectClassConfig that selections were drawn from; used to offer a list of LiveProjects
     # if the convenor wishes to reassign
-    selection_config_id = db.Column(
-        db.Integer(), db.ForeignKey("project_class_config.id")
-    )
-    selection_config = db.relationship(
-        "ProjectClassConfig", foreign_keys=[selection_config_id], uselist=None
-    )
+    selection_config_id = db.Column(db.Integer(), db.ForeignKey("project_class_config.id"))
+    selection_config = db.relationship("ProjectClassConfig", foreign_keys=[selection_config_id], uselist=None)
 
     # capture parent MatchingRecord, if one exists
-    matching_record_id = db.Column(
-        db.Integer(), db.ForeignKey("matching_records.id"), default=None
-    )
+    matching_record_id = db.Column(db.Integer(), db.ForeignKey("matching_records.id"), default=None)
     matching_record = db.relationship(
         "MatchingRecord",
         foreign_keys=[matching_record_id],
@@ -806,9 +705,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # REPORT UPLOAD
 
     # main report
-    report_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), default=None
-    )
+    report_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     report = db.relationship(
         "SubmittedAsset",
         foreign_keys=[report_id],
@@ -818,9 +715,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # processed version of report; if report is not None, then a value of None indicates that processing has not
     # yet been done
-    processed_report_id = db.Column(
-        db.Integer(), db.ForeignKey("generated_assets.id"), default=None
-    )
+    processed_report_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)
     processed_report = db.relationship(
         "GeneratedAsset",
         foreign_keys=[processed_report_id],
@@ -989,9 +884,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # who back-populated the supervision grade from a ConflationReport?
     supervision_generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    supervision_generated_by = db.relationship(
-        "User", foreign_keys=[supervision_generated_id], uselist=False
-    )
+    supervision_generated_by = db.relationship("User", foreign_keys=[supervision_generated_id], uselist=False)
 
     # when was the supervision grade back-populated?
     supervision_generated_timestamp = db.Column(db.DateTime())
@@ -1001,9 +894,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # who back-populated the report grade from a ConflationReport?
     report_generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    report_generated_by = db.relationship(
-        "User", foreign_keys=[report_generated_id], uselist=False
-    )
+    report_generated_by = db.relationship("User", foreign_keys=[report_generated_id], uselist=False)
 
     # when was the report grade back-populated?
     report_generated_timestamp = db.Column(db.DateTime())
@@ -1013,9 +904,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # who back-populated the presentation grade from a ConflationReport?
     presentation_generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    presentation_generated_by = db.relationship(
-        "User", foreign_keys=[presentation_generated_id], uselist=False
-    )
+    presentation_generated_by = db.relationship("User", foreign_keys=[presentation_generated_id], uselist=False)
 
     # when was the presentation grade back-populated?
     presentation_generated_timestamp = db.Column(db.DateTime())
@@ -1023,26 +912,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # GRADE PROVENANCE: which MarkingEvent was used to populate each grade?
     # These are cross-references (not ownership FKs), recorded when _propagate_grade_to_records() runs.
 
-    supervision_event_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_events.id"), nullable=True
-    )
-    supervision_event = db.relationship(
-        "MarkingEvent", foreign_keys="SubmissionRecord.supervision_event_id", uselist=False
-    )
+    supervision_event_id = db.Column(db.Integer(), db.ForeignKey("marking_events.id"), nullable=True)
+    supervision_event = db.relationship("MarkingEvent", foreign_keys="SubmissionRecord.supervision_event_id", uselist=False)
 
-    report_event_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_events.id"), nullable=True
-    )
-    report_event = db.relationship(
-        "MarkingEvent", foreign_keys="SubmissionRecord.report_event_id", uselist=False
-    )
+    report_event_id = db.Column(db.Integer(), db.ForeignKey("marking_events.id"), nullable=True)
+    report_event = db.relationship("MarkingEvent", foreign_keys="SubmissionRecord.report_event_id", uselist=False)
 
-    presentation_event_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_events.id"), nullable=True
-    )
-    presentation_event = db.relationship(
-        "MarkingEvent", foreign_keys="SubmissionRecord.presentation_event_id", uselist=False
-    )
+    presentation_event_id = db.Column(db.Integer(), db.ForeignKey("marking_events.id"), nullable=True)
+    presentation_event = db.relationship("MarkingEvent", foreign_keys="SubmissionRecord.presentation_event_id", uselist=False)
 
     # CANVAS SYNCHRONIZATION
 
@@ -1099,20 +976,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def report_processing_failed(self) -> bool:
         """True if the report was uploaded but processing crashed without generating a processed_report."""
-        return (
-            self.report is not None
-            and self.processed_report is None
-            and bool(self.celery_failed)
-        )
+        return self.report is not None and self.processed_report is None and bool(self.celery_failed)
 
     @property
     def canvas_turnitin_refetchable(self) -> bool:
         """True if a Canvas Turnitin re-fetch is possible for this submission record."""
-        return (
-            self.period.canvas_enabled
-            and self.owner is not None
-            and self.owner.canvas_user_id is not None
-        )
+        return self.period.canvas_enabled and self.owner is not None and self.owner.canvas_user_id is not None
 
     @property
     def consent_eligible(self) -> bool:
@@ -1120,11 +989,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         True if this record is eligible to receive a consent invitation:
         the submission period is closed AND report_grade is not None.
         """
-        return (
-            self.period is not None
-            and self.period.closed
-            and self.report_grade is not None
-        )
+        return self.period is not None and self.period.closed and self.report_grade is not None
 
     @property
     def is_report_restricted(self) -> bool:
@@ -1136,18 +1001,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def exemplar_consent_active(self) -> bool:
         """True if the student has given active (non-withdrawn) exemplar consent."""
-        return (
-            self.exemplar_consent_granted_at is not None
-            and not self.exemplar_consent_withdrawn
-        )
+        return self.exemplar_consent_granted_at is not None and not self.exemplar_consent_withdrawn
 
     @property
     def openday_consent_active(self) -> bool:
         """True if the student has given active (non-withdrawn) open day consent."""
-        return (
-            self.openday_consent_granted_at is not None
-            and not self.openday_consent_withdrawn
-        )
+        return self.openday_consent_granted_at is not None and not self.openday_consent_withdrawn
 
     @property
     def exemplar_fully_approved(self) -> bool:
@@ -1232,11 +1091,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         }
 
         if role not in role_map:
-            raise KeyError(
-                'Unknown role "{role}" in SubmissionRecord.get_roles()'.format(
-                    role=role
-                )
-            )
+            raise KeyError('Unknown role "{role}" in SubmissionRecord.get_roles()'.format(role=role))
 
         role_ids = role_map[role]
         return [r for r in self.roles if r.role in role_ids]
@@ -1262,9 +1117,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         elif isinstance(user, int):
             _user_id = user
         else:
-            raise RuntimeError(
-                "Unexpected user object passed to SubmissionRecord.get_role_user()"
-            )
+            raise RuntimeError("Unexpected user object passed to SubmissionRecord.get_role_user()")
 
         roles = self.get_roles(role)
         for role in roles:
@@ -1287,9 +1140,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         elif isinstance(user, int):
             _user_id = user
         else:
-            raise RuntimeError(
-                "Unexpected user object passed to SubmissionRecord.get_role()"
-            )
+            raise RuntimeError("Unexpected user object passed to SubmissionRecord.get_role()")
 
         for role in self.roles:
             role: SubmissionRole
@@ -1394,17 +1245,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         )
         for event in closed_events:
             sr = (
-                self.submitter_reports.join(
-                    MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
-                )
+                self.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
                 .filter(MarkingWorkflow.event_id == event.id)
                 .first()
             )
-            if (
-                sr is not None
-                and sr.workflow_state
-                >= SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE
-            ):
+            if sr is not None and sr.workflow_state >= SubmitterReportWorkflowStates.FEEDBACK_AVAILABLE:
                 return True
 
         return False
@@ -1471,11 +1316,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if not self.period.has_deployed_schedule:
             return None
 
-        query = (
-            db.session.query(submitter_to_slots.c.slot_id)
-            .filter(submitter_to_slots.c.submitter_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(submitter_to_slots.c.slot_id).filter(submitter_to_slots.c.submitter_id == self.id).subquery()
 
         slot_query = (
             db.session.query(ScheduleSlot)
@@ -1486,9 +1327,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         slots = get_count(slot_query)
         if slots > 1:
-            raise RuntimeError(
-                "Too many deployed ScheduleSlot instances attached to a SubmissionRecord"
-            )
+            raise RuntimeError("Too many deployed ScheduleSlot instances attached to a SubmissionRecord")
         elif slots == 0:
             return None
 
@@ -1499,9 +1338,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         Return all SubmissionRole instances with role ROLE_PRESENTATION_ASSESSOR
         """
-        return [
-            r for r in self.roles if r.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR
-        ]
+        return [r for r in self.roles if r.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR]
 
     def presentation_assessor_roles_by_slot(self) -> List[tuple]:
         """
@@ -1529,11 +1366,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Returns True if this SubmissionRecord has any PRESENTATION_ASSESSOR roles
         with an associated ScheduleSlot.
         """
-        return any(
-            role.schedule_slot is not None
-            for role in self.roles
-            if role.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR
-        )
+        return any(role.schedule_slot is not None for role in self.roles if role.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR)
 
     def is_in_assessor_pool(self, fac_id):
         """
@@ -1552,23 +1385,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     ):
         from .assets import SubmittedAsset
 
-        allowed_user_ids = (
-            [x.id for x in allowed_users] if allowed_users is not None else None
-        )
-        allowed_role_ids = (
-            [x.id for x in allowed_roles] if allowed_roles is not None else None
-        )
+        allowed_user_ids = [x.id for x in allowed_users] if allowed_users is not None else None
+        allowed_role_ids = [x.id for x in allowed_roles] if allowed_roles is not None else None
 
-        query = db.session.query(SubmissionAttachment).filter(
-            SubmissionAttachment.parent_id == self.id
-        )
+        query = db.session.query(SubmissionAttachment).filter(SubmissionAttachment.parent_id == self.id)
 
         # Role-based filtering: include attachments that are either unrestricted (no entries in
         # submission_attachment_roles) or have an entry matching the requested role.
         if role is not None:
-            restricted_ids = db.session.query(
-                SubmissionAttachmentRole.attachment_id
-            ).scalar_subquery()
+            restricted_ids = db.session.query(SubmissionAttachmentRole.attachment_id).scalar_subquery()
             query = query.outerjoin(
                 SubmissionAttachmentRole,
                 and_(
@@ -1583,9 +1408,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             )
 
         query = (
-            query.join(
-                SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id
-            )
+            query.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id)
             .join(submitted_acl, submitted_acl.c.asset_id == SubmittedAsset.id)
             .join(submitted_acr, submitted_acr.c.asset_id == SubmittedAsset.id)
             .join(User, User.id == submitted_acl.c.user_id)
@@ -1629,23 +1452,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         from .assets import SubmittedAsset
 
-        allowed_user_ids = (
-            [x.id for x in allowed_users] if allowed_users is not None else None
-        )
-        allowed_role_ids = (
-            [x.id for x in allowed_roles] if allowed_roles is not None else None
-        )
+        allowed_user_ids = [x.id for x in allowed_users] if allowed_users is not None else None
+        allowed_role_ids = [x.id for x in allowed_roles] if allowed_roles is not None else None
 
-        query = db.session.query(PeriodAttachment).filter(
-            PeriodAttachment.parent_id == self.period.id
-        )
+        query = db.session.query(PeriodAttachment).filter(PeriodAttachment.parent_id == self.period.id)
 
         # Role-based filtering: include attachments that are either unrestricted (no entries in
         # period_attachment_roles) or have an entry matching the requested role.
         if role is not None:
-            restricted_ids = db.session.query(
-                PeriodAttachmentRole.attachment_id
-            ).scalar_subquery()
+            restricted_ids = db.session.query(PeriodAttachmentRole.attachment_id).scalar_subquery()
             query = query.outerjoin(
                 PeriodAttachmentRole,
                 and_(
@@ -1654,17 +1469,13 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 ),
             ).filter(
                 or_(
-                    ~PeriodAttachment.id.in_(
-                        restricted_ids
-                    ),  # unrestricted: no role entries at all
+                    ~PeriodAttachment.id.in_(restricted_ids),  # unrestricted: no role entries at all
                     PeriodAttachmentRole.role.isnot(None),  # has a matching role entry
                 )
             )
 
         query = (
-            query.join(
-                SubmittedAsset, SubmittedAsset.id == PeriodAttachment.attachment_id
-            )
+            query.join(SubmittedAsset, SubmittedAsset.id == PeriodAttachment.attachment_id)
             .join(submitted_acl, submitted_acl.c.asset_id == SubmittedAsset.id)
             .join(submitted_acr, submitted_acr.c.asset_id == SubmittedAsset.id)
             .join(User, User.id == submitted_acl.c.user_id)
@@ -1707,11 +1518,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return (
             get_count(submission_attachments)
             + get_count(period_attachments)
-            + (
-                1
-                if (self.report is not None or self.processed_report is not None)
-                else 0
-            )
+            + (1 if (self.report is not None or self.processed_report is not None) else 0)
         )
 
     @property
@@ -1759,11 +1566,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return (
             get_count(submission_attachments)
             + get_count(period_attachments)
-            + (
-                1
-                if (self.report is not None or self.processed_report is not None)
-                else 0
-            )
+            + (1 if (self.report is not None or self.processed_report is not None) else 0)
         )
 
     @property
@@ -1774,9 +1577,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             ProjectSubmitterArticle,
         )
 
-        articles = with_polymorphic(
-            FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle]
-        )
+        articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])
 
         return db.session.query(articles).filter(
             or_(
@@ -1795,13 +1596,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     def has_articles(self):
         return self.article_list.first() is not None
 
-    def get_event(
-        self, template: "SupervisionEventTemplate"
-    ) -> Optional["SupervisionEvent"]:
+    def get_event(self, template: "SupervisionEventTemplate") -> Optional["SupervisionEvent"]:
         if not isinstance(template, SupervisionEventTemplate):
-            raise RuntimeError(
-                f'Unknown template type "{type(template)}" passed to get_meeting()'
-            )
+            raise RuntimeError(f'Unknown template type "{type(template)}" passed to get_meeting()')
 
         # find if anyone with a submission role for this record has an event matching this template
         return (
@@ -1905,20 +1702,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             return event.unit.end_date < now.date()
 
         past_events = [e for e in self.events if e.monitor_attendance and in_past(e)]
-        total_events_attended = sum(
-            [e.attendance in attended_values for e in past_events]
-        )
-        total_events_recorded_attendance = sum(
-            [e.attendance is not None for e in past_events]
-        )
-        total_events_missing_attendance = sum(
-            [e.attendance is None for e in past_events]
-        )
+        total_events_attended = sum([e.attendance in attended_values for e in past_events])
+        total_events_recorded_attendance = sum([e.attendance is not None for e in past_events])
+        total_events_missing_attendance = sum([e.attendance is None for e in past_events])
 
         return {
-            "attendance": 100.0
-            * float(total_events_attended)
-            / float(total_events_recorded_attendance)
+            "attendance": 100.0 * float(total_events_attended) / float(total_events_recorded_attendance)
             if total_events_recorded_attendance > 0
             else nan,
             "total": len(past_events),
@@ -2206,11 +1995,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def get_unresolved_risk_factors(self) -> list:
         """Return a list of (key, factor_dict) pairs for present, unresolved risk factors."""
-        return [
-            (key, factor)
-            for key, factor in self.get_present_risk_factors()
-            if not factor.get("resolved", False)
-        ]
+        return [(key, factor) for key, factor in self.get_present_risk_factors() if not factor.get("resolved", False)]
 
     def resolve_risk_factor(self, factor_type: str, user, annotation: str = None) -> None:
         """
@@ -2275,15 +2060,17 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                         resolved_by_name = user.name
                 except Exception:
                     pass
-            factors.append({
-                "key": key,
-                "label": self.RISK_FACTOR_LABELS.get(key, key),
-                "present": True,
-                "resolved": factor.get("resolved", False),
-                "resolved_by_name": resolved_by_name,
-                "resolved_at": factor.get("resolved_at"),
-                "annotation": factor.get("annotation"),
-            })
+            factors.append(
+                {
+                    "key": key,
+                    "label": self.RISK_FACTOR_LABELS.get(key, key),
+                    "present": True,
+                    "resolved": factor.get("resolved", False),
+                    "resolved_by_name": resolved_by_name,
+                    "resolved_at": factor.get("resolved_at"),
+                    "annotation": factor.get("annotation"),
+                }
+            )
         unresolved = [f for f in factors if not f["resolved"]]
         resolved = [f for f in factors if f["resolved"]]
         return {
@@ -2318,12 +2105,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if period is None or period.presentation_grade_available:
             grade_specs.append(("Presentation", self.presentation_grade, self.presentation_event))
         for label, grade, event in grade_specs:
-            entries.append({
-                "label": label,
-                "grade": float(grade) if grade is not None else None,
-                "event_name": event.name if event is not None else None,
-                "event_timestamp": event.creation_timestamp if event is not None else None,
-            })
+            entries.append(
+                {
+                    "label": label,
+                    "grade": float(grade) if grade is not None else None,
+                    "event_name": event.name if event is not None else None,
+                    "event_timestamp": event.creation_timestamp if event is not None else None,
+                }
+            )
         return entries
 
     def llm_metrics_for_display(self) -> dict:
@@ -2459,36 +2248,40 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 summary.append(("Publication overlap", f"{self.turnitin_publication_overlap}%"))
             if self.turnitin_student_overlap is not None:
                 summary.append(("Student overlap", f"{self.turnitin_student_overlap}%"))
-            items.append({
-                "key": self.RISK_TURNITIN,
-                "label": self.RISK_FACTOR_LABELS[self.RISK_TURNITIN],
-                "present": True,
-                "resolved": t.get("resolved", False),
-                "resolved_by_name": _resolved_by_name(t),
-                "resolved_at": t.get("resolved_at"),
-                "annotation": t.get("annotation"),
-                "severity": "danger",
-                "description": "The Turnitin similarity score is ≥25%, which requires convenor review before marking can proceed.",
-                "summary_items": summary,
-            })
+            items.append(
+                {
+                    "key": self.RISK_TURNITIN,
+                    "label": self.RISK_FACTOR_LABELS[self.RISK_TURNITIN],
+                    "present": True,
+                    "resolved": t.get("resolved", False),
+                    "resolved_by_name": _resolved_by_name(t),
+                    "resolved_at": t.get("resolved_at"),
+                    "annotation": t.get("annotation"),
+                    "severity": "danger",
+                    "description": "The Turnitin similarity score is ≥25%, which requires convenor review before marking can proceed.",
+                    "summary_items": summary,
+                }
+            )
 
         # --- AI COMPLIANCE ---
         ac = data.get(self.RISK_AI_COMPLIANCE, {})
         if ac.get("present", False):
             statement = llm_result.get("genai_statement", "")
             summary = [("Detected statement", statement[:200] + "…" if len(statement) > 200 else statement)]
-            items.append({
-                "key": self.RISK_AI_COMPLIANCE,
-                "label": self.RISK_FACTOR_LABELS[self.RISK_AI_COMPLIANCE],
-                "present": True,
-                "resolved": ac.get("resolved", False),
-                "resolved_by_name": _resolved_by_name(ac),
-                "resolved_at": ac.get("resolved_at"),
-                "annotation": ac.get("annotation"),
-                "severity": "warning",
-                "description": "An AI/generative-AI compliance statement was detected in the document. Please review and confirm this has been noted.",
-                "summary_items": summary,
-            })
+            items.append(
+                {
+                    "key": self.RISK_AI_COMPLIANCE,
+                    "label": self.RISK_FACTOR_LABELS[self.RISK_AI_COMPLIANCE],
+                    "present": True,
+                    "resolved": ac.get("resolved", False),
+                    "resolved_by_name": _resolved_by_name(ac),
+                    "resolved_at": ac.get("resolved_at"),
+                    "annotation": ac.get("annotation"),
+                    "severity": "warning",
+                    "description": "An AI/generative-AI compliance statement was detected in the document. Please review and confirm this has been noted.",
+                    "summary_items": summary,
+                }
+            )
 
         # --- AI USE METRICS ---
         au = data.get(self.RISK_AI_USE, {})
@@ -2524,18 +2317,20 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 label_str = metric_labels.get(m, m)
                 flag_str = {"ok": "Normal", "note": "Elevated", "strong": "Strongly elevated"}.get(flag, flag)
                 summary.append((label_str, (f"{val:.3f}" if val is not None else "—") + f" ({flag_str})"))
-            items.append({
-                "key": self.RISK_AI_USE,
-                "label": self.RISK_FACTOR_LABELS[self.RISK_AI_USE],
-                "present": True,
-                "resolved": au.get("resolved", False),
-                "resolved_by_name": _resolved_by_name(au),
-                "resolved_at": au.get("resolved_at"),
-                "annotation": au.get("annotation"),
-                "severity": "warning",
-                "description": description,
-                "summary_items": summary,
-            })
+            items.append(
+                {
+                    "key": self.RISK_AI_USE,
+                    "label": self.RISK_FACTOR_LABELS[self.RISK_AI_USE],
+                    "present": True,
+                    "resolved": au.get("resolved", False),
+                    "resolved_by_name": _resolved_by_name(au),
+                    "resolved_at": au.get("resolved_at"),
+                    "annotation": au.get("annotation"),
+                    "severity": "warning",
+                    "description": description,
+                    "summary_items": summary,
+                }
+            )
 
         # --- DOCUMENT LENGTH ---
         dl = data.get(self.RISK_DOCUMENT_LENGTH, {})
@@ -2548,18 +2343,20 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 ("Configured limit", str(limit) if limit else "—"),
                 ("Measured count", str(measured) if measured else "—"),
             ]
-            items.append({
-                "key": self.RISK_DOCUMENT_LENGTH,
-                "label": self.RISK_FACTOR_LABELS[self.RISK_DOCUMENT_LENGTH],
-                "present": True,
-                "resolved": dl.get("resolved", False),
-                "resolved_by_name": _resolved_by_name(dl),
-                "resolved_at": dl.get("resolved_at"),
-                "annotation": dl.get("annotation"),
-                "severity": "warning",
-                "description": f"The measured document {limit_type} count exceeds the configured limit.",
-                "summary_items": summary,
-            })
+            items.append(
+                {
+                    "key": self.RISK_DOCUMENT_LENGTH,
+                    "label": self.RISK_FACTOR_LABELS[self.RISK_DOCUMENT_LENGTH],
+                    "present": True,
+                    "resolved": dl.get("resolved", False),
+                    "resolved_by_name": _resolved_by_name(dl),
+                    "resolved_at": dl.get("resolved_at"),
+                    "annotation": dl.get("annotation"),
+                    "severity": "warning",
+                    "description": f"The measured document {limit_type} count exceeds the configured limit.",
+                    "summary_items": summary,
+                }
+            )
 
         # --- WORD COUNT DISCREPANCY ---
         wd = data.get(self.RISK_WORD_COUNT_DISCREPANCY, {})
@@ -2574,18 +2371,20 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 ("Discrepancy", f"{pct:.1f}%" if pct is not None else "—"),
                 ("Tolerance", f"{tol:.1f}%" if tol is not None else "—"),
             ]
-            items.append({
-                "key": self.RISK_WORD_COUNT_DISCREPANCY,
-                "label": self.RISK_FACTOR_LABELS[self.RISK_WORD_COUNT_DISCREPANCY],
-                "present": True,
-                "resolved": wd.get("resolved", False),
-                "resolved_by_name": _resolved_by_name(wd),
-                "resolved_at": wd.get("resolved_at"),
-                "annotation": wd.get("annotation"),
-                "severity": "warning",
-                "description": "The student-reported word count differs from the measured word count by more than the configured tolerance.",
-                "summary_items": summary,
-            })
+            items.append(
+                {
+                    "key": self.RISK_WORD_COUNT_DISCREPANCY,
+                    "label": self.RISK_FACTOR_LABELS[self.RISK_WORD_COUNT_DISCREPANCY],
+                    "present": True,
+                    "resolved": wd.get("resolved", False),
+                    "resolved_by_name": _resolved_by_name(wd),
+                    "resolved_at": wd.get("resolved_at"),
+                    "annotation": wd.get("annotation"),
+                    "severity": "warning",
+                    "description": "The student-reported word count differs from the measured word count by more than the configured tolerance.",
+                    "summary_items": summary,
+                }
+            )
 
         return items
 
@@ -2658,11 +2457,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         # The per-metric elevated_metrics list is kept for informational display
         # alongside the Mahalanobis result.
         elevated_thresholds = {"note", "strong"}
-        elevated_metrics = [
-            m
-            for m in ("mattr", "mtld", "burstiness", "sentence_cv")
-            if flags.get(f"{m}_flag", "ok") in elevated_thresholds
-        ]
+        elevated_metrics = [m for m in ("mattr", "mtld", "burstiness", "sentence_cv") if flags.get(f"{m}_flag", "ok") in elevated_thresholds]
         ai_concern = flags.get("ai_concern", "low")
         ai_use_present = ai_concern in ("medium", "high")
         ai_use_factor = {
@@ -2767,25 +2562,17 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         messages = []
 
         # get license used for exam submission
-        exam_license: AssetLicense = (
-            db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
-        )
+        exam_license: AssetLicense = db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
 
         if self.period.closed and self.report is None:
-            messages.append(
-                "This submission period is closed, but no report has been uploaded."
-            )
+            messages.append("This submission period is closed, but no report has been uploaded.")
 
         if exam_license is not None:
             if self.report is not None and self.report.license_id != exam_license.id:
-                messages.append(
-                    'The uploaded report is tagged with an unexpected license type '
-                    '"{license}"'.format(license=self.report.license.name)
-                )
+                messages.append('The uploaded report is tagged with an unexpected license type "{license}"'.format(license=self.report.license.name))
             if self.processed_report is not None and self.processed_report.license_id != exam_license.id:
                 messages.append(
-                    'The processed report is tagged with an unexpected license type '
-                    '"{license}"'.format(license=self.processed_report.license.name)
+                    'The processed report is tagged with an unexpected license type "{license}"'.format(license=self.processed_report.license.name)
                 )
 
         return messages
@@ -2830,11 +2617,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def inline_similarity_concerns(self):
         """Unreviewed concerns at or above SIMILARITY_INLINE_MIN_COSINE, for inline display."""
-        return [
-            c
-            for c in self.open_similarity_concerns
-            if c.transformer_cosine is not None and c.transformer_cosine >= SIMILARITY_INLINE_MIN_COSINE
-        ]
+        return [c for c in self.open_similarity_concerns if c.transformer_cosine is not None and c.transformer_cosine >= SIMILARITY_INLINE_MIN_COSINE]
 
 
 @listens_for(SubmissionRecord, "before_update")
@@ -2900,9 +2683,7 @@ class SubmissionAttachmentRole(db.Model):
 
     __tablename__ = "submission_attachment_roles"
 
-    attachment_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_attachments.id"), primary_key=True
-    )
+    attachment_id = db.Column(db.Integer(), db.ForeignKey("submission_attachments.id"), primary_key=True)
     # raw integer from SubmissionRoleTypesMixin; not a FK to another table
     role = db.Column(db.Integer(), primary_key=True)
 
@@ -2918,9 +2699,7 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent submission record, i.e., what submission is this attached to?
-    parent_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_records.id"), nullable=False
-    )
+    parent_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"), nullable=False)
     parent = db.relationship(
         "SubmissionRecord",
         foreign_keys=[parent_id],
@@ -2930,9 +2709,7 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
 
     # attached file
     # TODO: in the longer term, this field should be renamed asset_id rather than attachment_id
-    attachment_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), default=None
-    )
+    attachment_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     attachment = db.relationship(
         "SubmittedAsset",
         foreign_keys=[attachment_id],
@@ -2993,9 +2770,7 @@ class PeriodAttachmentRole(db.Model):
 
     __tablename__ = "period_attachment_roles"
 
-    attachment_id = db.Column(
-        db.Integer(), db.ForeignKey("period_attachments.id"), primary_key=True
-    )
+    attachment_id = db.Column(db.Integer(), db.ForeignKey("period_attachments.id"), primary_key=True)
     # raw integer from SubmissionRoleTypesMixin; not a FK to another table
     role = db.Column(db.Integer(), primary_key=True)
 
@@ -3011,9 +2786,7 @@ class PeriodAttachment(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent SubmissionPeriodRecord
-    parent_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False
-    )
+    parent_id = db.Column(db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False)
     parent = db.relationship(
         "SubmissionPeriodRecord",
         foreign_keys=[parent_id],
@@ -3023,9 +2796,7 @@ class PeriodAttachment(db.Model):
 
     # attached file
     # TODO: in the longer term, this field should be renamed to asset_id rather than attachment_id
-    attachment_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), default=None
-    )
+    attachment_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     attachment = db.relationship(
         "SubmittedAsset",
         foreign_keys=[attachment_id],
@@ -3099,9 +2870,7 @@ class Bookmark(db.Model):
         "SelectingStudent",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "bookmarks", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("bookmarks", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # LiveProject we are linking to
@@ -3172,9 +2941,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         "SelectingStudent",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "selections", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("selections", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # LiveProject we are linking to
@@ -3209,13 +2976,8 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
 
         # determine whether the project tagged in this selection is really selectable; eg. the supervisor
         # might now be marked on sabbatical or exempted
-        record = self.liveproject.owner.get_enrollment_record(
-            self.liveproject.config.pclass_id
-        )
-        return (
-            record is not None
-            and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-        )
+        record = self.liveproject.owner.get_enrollment_record(self.liveproject.config.pclass_id)
+        return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
 
     def format_project(self, **kwargs):
         show_hint = kwargs.get("show_hint", True)
@@ -3273,10 +3035,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         return value
 
     def set_hint(self, hint):
-        if (
-            hint < SelectionRecord.SELECTION_HINT_NEUTRAL
-            or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG
-        ):
+        if hint < SelectionRecord.SELECTION_HINT_NEUTRAL or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
             return
 
         if self.hint == hint:
@@ -3286,20 +3045,14 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
             # count number of other 'require' flags attached to this selector
             count = 0
             for item in self.owner.selections:
-                if (
-                    item.id != self.id
-                    and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE
-                ):
+                if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
                     count += 1
 
             # if too many, remove one
             target = self.owner.config.number_submissions
             if count >= target:
                 for item in self.owner.selections:
-                    if (
-                        item.id != self.id
-                        and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE
-                    ):
+                    if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
                         item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
                         count -= 1
 
@@ -3364,9 +3117,7 @@ class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
         "LiveProject",
         foreign_keys=[liveproject_id],
         uselist=False,
-        backref=db.backref(
-            "custom_offers", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("custom_offers", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # id of SelectingStudent to whom this custom offer has been made
@@ -3379,9 +3130,7 @@ class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
     )
 
     # status of offer
-    status = db.Column(
-        db.Integer(), default=CustomOfferStatesMixin.OFFERED, nullable=False
-    )
+    status = db.Column(db.Integer(), default=CustomOfferStatesMixin.OFFERED, nullable=False)
 
     # for specified submission period?
     # set to None if can be used for any period
@@ -3391,9 +3140,7 @@ class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
         default=None,
         nullable=True,
     )
-    period = db.relationship(
-        "SubmissionPeriodDefinition", foreign_keys=[period_id], uselist=False
-    )
+    period = db.relationship("SubmissionPeriodDefinition", foreign_keys=[period_id], uselist=False)
 
     # document reason/explanation for offer
     comment = db.Column(db.Text())
@@ -3411,9 +3158,7 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # SelectingStudent in the current live cycle
-    selector_id = db.Column(
-        db.Integer(), db.ForeignKey("selecting_students.id"), index=True, nullable=False
-    )
+    selector_id = db.Column(db.Integer(), db.ForeignKey("selecting_students.id"), index=True, nullable=False)
     selector = db.relationship(
         "SelectingStudent",
         foreign_keys=[selector_id],
@@ -3422,9 +3167,7 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
     )
 
     # Retired SubmissionRecord that triggered this hint
-    submission_record_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_records.id"), nullable=False
-    )
+    submission_record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"), nullable=False)
     submission_record = db.relationship(
         "SubmissionRecord",
         foreign_keys=[submission_record_id],
@@ -3434,9 +3177,7 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
 
     # Denormalized faculty owner id (from submission_record.project.owner_id at hint creation time).
     # Avoids traversing the retired LiveProject chain at dashboard display time.
-    faculty_id = db.Column(
-        db.Integer(), db.ForeignKey("faculty_data.id"), nullable=False, index=True
-    )
+    faculty_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"), nullable=False, index=True)
     faculty = db.relationship("FacultyData", foreign_keys=[faculty_id], uselist=False)
 
     __table_args__ = (
@@ -3493,27 +3234,21 @@ class ConsentAuditEvent(db.Model):
 
     # the user who made the change (student or faculty member);
     # nullable because token-authenticated requests have no session user
-    actor_id = db.Column(
-        db.Integer(), db.ForeignKey("users.id"), nullable=True
-    )
+    actor_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
     actor = db.relationship("User", foreign_keys=[actor_id], uselist=False)
 
     # event type — one of the constants above
     event_type = db.Column(db.Integer(), nullable=False, index=True)
 
     # UTC timestamp of the event
-    timestamp = db.Column(
-        db.DateTime(), nullable=False, default=datetime.now, index=True
-    )
+    timestamp = db.Column(db.DateTime(), nullable=False, default=datetime.now, index=True)
 
     # optional free-text note (e.g. reason for supervisor decline)
     note = db.Column(db.Text(collation="utf8_bin"), default=None, nullable=True)
 
     # IP address of the requesting client (best-effort; may be None for
     # server-side Celery-triggered events)
-    ip_address = db.Column(
-        db.String(45, collation="utf8_bin"), default=None, nullable=True
-    )
+    ip_address = db.Column(db.String(45, collation="utf8_bin"), default=None, nullable=True)
 
     @property
     def event_label(self) -> str:

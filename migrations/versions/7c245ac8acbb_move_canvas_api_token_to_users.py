@@ -12,6 +12,7 @@ Changes:
   - Retarget project_class_config.canvas_login_id FK from faculty_data.id to users.id
     (no data migration needed — FacultyData and User share primary keys)
 """
+
 from alembic import op
 import sqlalchemy as sa
 import sqlalchemy_utils

@@ -16,9 +16,7 @@ from ..database import db
 from ..models.emails import EmailTemplate
 
 
-def clone_email_template(
-    template: EmailTemplate, pclass_id, tenant_id, creator
-) -> EmailTemplate:
+def clone_email_template(template: EmailTemplate, pclass_id, tenant_id, creator) -> EmailTemplate:
     """
     Clone *template* at the given (pclass_id, tenant_id) scope.
 

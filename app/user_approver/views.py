@@ -150,9 +150,7 @@ def validate_ajax():
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.user_approver.validate_data, url, text)
-        )
+        return handler.build_payload(partial(ajax.user_approver.validate_data, url, text))
 
 
 @user_approver.route("/approve/<int:id>")
@@ -252,9 +250,7 @@ def correct_ajax():
     base_query = (
         db.session.query(StudentData)
         .join(student_user, student_user.id == StudentData.id)
-        .join(
-            validator_user, validator_user.id == StudentData.validator_id, isouter=True
-        )
+        .join(validator_user, validator_user.id == StudentData.validator_id, isouter=True)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .filter(
@@ -331,6 +327,4 @@ def correct_ajax():
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.user_approver.correction_data, url, text)
-        )
+        return handler.build_payload(partial(ajax.user_approver.correction_data, url, text))

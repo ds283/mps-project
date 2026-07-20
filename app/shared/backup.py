@@ -33,19 +33,13 @@ def get_backup_config():
     if num == 0:
         # no configuration record is present; generate a default and
         # allow exceptions to propagate up to caller (we have no sensible way to handle them here)
-        data: BackupConfiguration = BackupConfiguration(
-            keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now()
-        )
+        data: BackupConfiguration = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now())
         db.session.add(data)
         db.session.commit()
 
     elif num > 1:
         # remove all but most-recently-edited configuration
-        keep_id = (
-            db.session.query(BackupConfiguration.id)
-            .order_by(BackupConfiguration.last_changed.desc())
-            .scalar()
-        )
+        keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
 
         BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
         db.session.commit()
@@ -86,16 +80,10 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
 
     elif num > 1:
         # remove all but most-recently-edited configuration
-        keep_id = (
-            db.session.query(BackupConfiguration.id)
-            .order_by(BackupConfiguration.last_changed.desc())
-            .scalar()
-        )
+        keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
 
         try:
-            BackupConfiguration.query().filter(
-                ~BackupConfiguration.id == keep_id
-            ).delete()
+            BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
             db.session.commit()
 
         except SQLAlchemyError as e:

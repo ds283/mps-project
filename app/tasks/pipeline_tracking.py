@@ -25,6 +25,7 @@ def _to_int(v) -> int | None:
 def _to_float(v) -> float | None:
     return float(v) if v is not None else None
 
+
 _STEP_KEY_PREFIX = "llm_step"
 _STEP_TTL = 86400  # 24 h safety expiry on Redis hashes
 

@@ -50,9 +50,7 @@ def register_issue_confirm_tasks(celery):
 
         # get database records for this project class
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
             convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -69,9 +67,7 @@ def register_issue_confirm_tasks(celery):
             if config is None:
                 self.update_state(
                     "FAILURE",
-                    meta={
-                        "msg": "Could not load ProjectClassConfig record from database"
-                    },
+                    meta={"msg": "Could not load ProjectClassConfig record from database"},
                 )
 
             if convenor is None:
@@ -87,20 +83,13 @@ def register_issue_confirm_tasks(celery):
 
         year = config.year
 
-        if (
-                config.selector_lifecycle
-                > ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
-        ):
+        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED:
             convenor.post_message(
-                "Confirmation requests for {name} {yra}-{yrb} have already been issued.".format(
-                    name=config.name, yra=year, yrb=year + 1
-                ),
+                "Confirmation requests for {name} {yra}-{yrb} have already been issued.".format(name=config.name, yra=year, yrb=year + 1),
                 "warning",
                 autocommit=True,
             )
-            self.update_state(
-                "FAILURE", meta={"msg": "Confirmation requests have not been issued"}
-            )
+            self.update_state("FAILURE", meta={"msg": "Confirmation requests have not been issued"})
             return issue_fail.apply_async(args=(task_id, convenor_id))
 
         config.confirmation_required = []
@@ -116,8 +105,7 @@ def register_issue_confirm_tasks(celery):
             .select_from(EnrollmentRecord)
             .filter(
                 EnrollmentRecord.pclass_id == config.pclass_id,
-                EnrollmentRecord.supervisor_state
-                == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
             )
             .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id)
             .join(User, User.id == FacultyData.id)
@@ -132,9 +120,7 @@ def register_issue_confirm_tasks(celery):
 
         # build a task group to mark individual faculty as needing to provide confirmation of their
         # project descriptions
-        issue_group = group(
-            issue_confirm.si(d, config_id) for d in faculty if d is not None
-        )
+        issue_group = group(issue_confirm.si(d, config_id) for d in faculty if d is not None)
 
         # get backup task from celery instance
         celery = current_app.extensions["celery"]
@@ -146,9 +132,7 @@ def register_issue_confirm_tasks(celery):
                 convenor_id,
                 type=BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK,
                 tag="issue_confirm",
-                description="Rollback snapshot for issuing confirmation requests for {proj} confirmations {yr}".format(
-                    proj=config.name, yr=year
-                ),
+                description="Rollback snapshot for issuing confirmation requests for {proj} confirmations {yr}".format(proj=config.name, yr=year),
             ),
             issue_group,
             issue_update_db.s(task_id, config_id, convenor_id, deadline),
@@ -179,9 +163,7 @@ def register_issue_confirm_tasks(celery):
         )
 
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -216,9 +198,7 @@ def register_issue_confirm_tasks(celery):
         )
 
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -231,9 +211,7 @@ def register_issue_confirm_tasks(celery):
         if confirm_template_id is not None:
             template = db.session.get(EmailTemplate, confirm_template_id)
         else:
-            template = EmailTemplate.find_template_(
-                EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=config.project_class
-            )
+            template = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=config.project_class)
         workflow = EmailWorkflow.build_(
             name=f"Confirmation request: {config.project_class.name}",
             template=template,
@@ -258,11 +236,7 @@ def register_issue_confirm_tasks(celery):
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
-            group(
-                send_notification_email.si(d, config_id, workflow_id)
-                for d in notify_list
-                if d is not None
-            ),
+            group(send_notification_email.si(d, config_id, workflow_id) for d in notify_list if d is not None),
             notify.s(convenor_id, "{n} confirmation request{pl} issued", "info"),
         )
 
@@ -280,9 +254,7 @@ def register_issue_confirm_tasks(celery):
 
         try:
             convenor: User = User.query.filter_by(id=convenor_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -290,8 +262,7 @@ def register_issue_confirm_tasks(celery):
         if convenor is not None:
             # send direct message to user announcing successful Go Live event
             convenor.post_message(
-                'Issuing confirmation requests for "{proj}" '
-                "for {yra}-{yrb} is now complete".format(
+                'Issuing confirmation requests for "{proj}" for {yra}-{yrb} is now complete'.format(
                     proj=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
                 ),
                 "success",
@@ -341,9 +312,7 @@ def register_issue_confirm_tasks(celery):
     def issue_confirm(self, faculty_id, config_id):
         try:
             data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -374,9 +343,7 @@ def register_issue_confirm_tasks(celery):
     def send_notification_email(self, faculty_id, config_id, workflow_id):
         try:
             data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
             workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -391,13 +358,15 @@ def register_issue_confirm_tasks(celery):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"name": config.project_class.name}),
-            body_payload=encode_email_payload({
-                "user": data.user,
-                "pclass": config.project_class,
-                "config": config,
-                "number_projects": len(projects),
-                "projects": projects,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": data.user,
+                    "pclass": config.project_class,
+                    "config": config,
+                    "number_projects": len(projects),
+                    "projects": projects,
+                }
+            ),
             recipient_list=[data.user.email],
         )
         item.workflow = workflow
@@ -419,9 +388,7 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def reminder_email(self, config_id, convenor_id, reminder_template_id=None):
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -439,9 +406,7 @@ def register_issue_confirm_tasks(celery):
         if reminder_template_id is not None:
             template = db.session.get(EmailTemplate, reminder_template_id)
         else:
-            template = EmailTemplate.find_template_(
-                EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class
-            )
+            template = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class)
         workflow = EmailWorkflow.build_(
             name=f"Confirmation reminder: {config.project_class.name}",
             template=template,
@@ -466,11 +431,7 @@ def register_issue_confirm_tasks(celery):
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         tasks = chain(
-            group(
-                send_reminder_email.si(r, config_id, workflow_id)
-                for r in recipients
-                if r is not None
-            ),
+            group(send_reminder_email.si(r, config_id, workflow_id) for r in recipients if r is not None),
             notify.s(convenor_id, "{n} reminder email{pl} issued", "info"),
         )
 
@@ -480,9 +441,7 @@ def register_issue_confirm_tasks(celery):
     def send_reminder_email(self, faculty_id, config_id, workflow_id=None, reminder_template_id=None):
         try:
             data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
             workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first() if workflow_id is not None else None
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -498,9 +457,7 @@ def register_issue_confirm_tasks(celery):
             if reminder_template_id is not None:
                 template = db.session.get(EmailTemplate, reminder_template_id)
             else:
-                template = EmailTemplate.find_template_(
-                    EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class
-                )
+                template = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class)
             workflow = EmailWorkflow.build_(
                 name=f"Confirmation reminder: {config.project_class.name}",
                 template=template,
@@ -519,13 +476,15 @@ def register_issue_confirm_tasks(celery):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"name": config.project_class.name}),
-            body_payload=encode_email_payload({
-                "user": data.user,
-                "pclass": config.project_class,
-                "config": config,
-                "number_projects": len(projects),
-                "projects": projects,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": data.user,
+                    "pclass": config.project_class,
+                    "config": config,
+                    "number_projects": len(projects),
+                    "projects": projects,
+                }
+            ),
             recipient_list=[data.user.email],
         )
         item.workflow = workflow
@@ -547,9 +506,7 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def enroll_adjust(self, enroll_id, old_supervisor_state, current_year):
         try:
-            record: EnrollmentRecord = (
-                db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
-            )
+            record: EnrollmentRecord = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -576,20 +533,11 @@ def register_issue_confirm_tasks(celery):
 
         # remove supervisors from confirmation list if no longer normally enrolled
         if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-            if (
-                    get_count(config.confirmation_required.filter_by(id=record.owner_id))
-                    > 0
-            ):
+            if get_count(config.confirmation_required.filter_by(id=record.owner_id)) > 0:
                 config.confirmation_required.remove(record.owner)
 
-        if (
-                record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                and old_supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
-        ):
-            if (
-                    get_count(config.confirmation_required.filter_by(id=record.owner_id))
-                    == 0
-            ):
+        if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and old_supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            if get_count(config.confirmation_required.filter_by(id=record.owner_id)) == 0:
                 config.confirmation_required.append(record.owner)
 
         log_db_commit(
@@ -601,9 +549,7 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def enrollment_created(self, enroll_id, current_year):
         try:
-            record: EnrollmentRecord = (
-                db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
-            )
+            record: EnrollmentRecord = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -630,10 +576,7 @@ def register_issue_confirm_tasks(celery):
 
         # add supervisor to confirmation list if normally enrolled
         if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
-            if (
-                    get_count(config.confirmation_required.filter_by(id=record.owner_id))
-                    == 0
-            ):
+            if get_count(config.confirmation_required.filter_by(id=record.owner_id)) == 0:
                 config.confirmation_required.append(record.owner)
 
         log_db_commit(
@@ -645,12 +588,8 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def enrollment_deleted(self, pclass_id, faculty_id, current_year):
         try:
-            faculty: FacultyData = (
-                db.session.query(FacultyData).filter_by(id=faculty_id).first()
-            )
-            pclass: ProjectClass = (
-                db.session.query(ProjectClass).filter_by(id=pclass_id).first()
-            )
+            faculty: FacultyData = db.session.query(FacultyData).filter_by(id=faculty_id).first()
+            pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
             config: ProjectClassConfig = pclass.get_config(current_year)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -684,9 +623,7 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revise_notify(self, record_id, pcl_names, user_id):
         try:
-            record = (
-                db.session.query(ProjectDescription).filter_by(id=record_id).first()
-            )
+            record = db.session.query(ProjectDescription).filter_by(id=record_id).first()
             current_user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -700,9 +637,7 @@ def register_issue_confirm_tasks(celery):
         project = record.parent
         owner = project.owner
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST
-        )
+        template = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST)
         workflow = EmailWorkflow.build_(
             name=f"Confirmation revision request: {project.name}",
             template=template,
@@ -714,14 +649,16 @@ def register_issue_confirm_tasks(celery):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"name": project.name, "desc": record.label}),
-            body_payload=encode_email_payload({
-                "user": owner.user,
-                "pclasses": list(record.project_classes),
-                "project": project,
-                "record": record,
-                "pcl_names": pcl_names,
-                "current_user": current_user,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": owner.user,
+                    "pclasses": list(record.project_classes),
+                    "project": project,
+                    "record": record,
+                    "pcl_names": pcl_names,
+                    "current_user": current_user,
+                }
+            ),
             recipient_list=[owner.user.email],
             reply_to=[current_user.email],
         )
@@ -770,9 +707,7 @@ def register_issue_confirm_tasks(celery):
             if config is not None:
                 if fac_data.number_projects_offered(config.pclass_id) > 0:
                     # if no confirmations outstanding, mark this project class as confirmed automatically
-                    if config.is_confirmation_required(
-                            user_id
-                    ) and not config.has_confirmations_outstanding(user_id):
+                    if config.is_confirmation_required(user_id) and not config.has_confirmations_outstanding(user_id):
                         config.mark_confirmed(user_id, message=False)
 
                         user.post_message(
@@ -792,12 +727,8 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True)
     def notify_comment(self, comment_id):
         try:
-            comment: DescriptionComment = (
-                db.session.query(DescriptionComment).filter_by(id=comment_id).first()
-            )
-            project_approver = (
-                db.session.query(Role).filter_by(name="project_approver").first()
-            )
+            comment: DescriptionComment = db.session.query(DescriptionComment).filter_by(id=comment_id).first()
+            project_approver = db.session.query(Role).filter_by(name="project_approver").first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -823,10 +754,7 @@ def register_issue_confirm_tasks(celery):
                 else:
                     recipients = recipients.union(approvals_team)
 
-        if (
-                len(recipients) == 0
-                and comment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM
-        ):
+        if len(recipients) == 0 and comment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM:
             recipients = recipients.union(approvals_team)
 
         # split comment string into words and search for @-style tags
@@ -849,9 +777,7 @@ def register_issue_confirm_tasks(celery):
         project: ProjectDescription = comment.parent
         desc_project = project.parent
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT
-        )
+        template = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT)
         workflow = EmailWorkflow.build_(
             name=f"New comment notification: {desc_project.name}",
             template=template,
@@ -861,15 +787,19 @@ def register_issue_confirm_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({
-                "proj": desc_project.name,
-                "desc": project.label,
-            }),
-            body_payload=encode_email_payload({
-                "comment": comment,
-                "project": desc_project,
-                "desc": project,
-            }),
+            subject_payload=encode_email_payload(
+                {
+                    "proj": desc_project.name,
+                    "desc": project.label,
+                }
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "comment": comment,
+                    "project": desc_project,
+                    "desc": project,
+                }
+            ),
             recipient_list=list(recipients),
         )
         item.workflow = workflow

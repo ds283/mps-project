@@ -97,6 +97,7 @@ ROLE_PRESENTATION_ASSESSOR = 2
 # Argument parsing
 # ---------------------------------------------------------------------------
 
+
 def _parse_args():
     p = argparse.ArgumentParser(
         description="Inject presentation marks into MarkingReport instances.",
@@ -107,32 +108,40 @@ def _parse_args():
         "--db-uri",
         dest="db_uri",
         default=None,
-        help="SQLAlchemy URI, e.g. mysql+pymysql://user:pass@127.0.0.1:13306/db  "
-             "(falls back to DB_URI environment variable)",
+        help="SQLAlchemy URI, e.g. mysql+pymysql://user:pass@127.0.0.1:13306/db  (falls back to DB_URI environment variable)",
     )
     p.add_argument("--spreadsheet", required=True, help="Path to the .xlsx file")
     p.add_argument(
-        "--bsc-workflow", required=True, dest="bsc_workflow",
+        "--bsc-workflow",
+        required=True,
+        dest="bsc_workflow",
         help="ID (integer) or name of the BSc MarkingWorkflow",
     )
     p.add_argument(
-        "--mphys-workflow", required=True, dest="mphys_workflow",
+        "--mphys-workflow",
+        required=True,
+        dest="mphys_workflow",
         help="ID (integer) or name of the MPhys MarkingWorkflow",
     )
     p.add_argument(
-        "--dry-run", action="store_true", dest="dry_run",
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
         help="Report only; make no database changes",
     )
     p.add_argument(
-        "--verbose", action="store_true",
+        "--verbose",
+        action="store_true",
         help="Print a line for every processed MarkingReport",
     )
     p.add_argument(
-        "--role-constant", type=int, default=ROLE_PRESENTATION_ASSESSOR,
+        "--role-constant",
+        type=int,
+        default=ROLE_PRESENTATION_ASSESSOR,
         dest="role_constant",
         help=f"Integer value of ROLE_PRESENTATION_ASSESSOR in your deployment "
-             f"(default: {ROLE_PRESENTATION_ASSESSOR}). "
-             f"Verify with: SELECT DISTINCT role FROM submission_roles;",
+        f"(default: {ROLE_PRESENTATION_ASSESSOR}). "
+        f"Verify with: SELECT DISTINCT role FROM submission_roles;",
     )
     return p.parse_args()
 
@@ -140,6 +149,7 @@ def _parse_args():
 # ---------------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------------
+
 
 def _connect(uri: str):
     """Return (engine, session, metadata-with-all-tables-reflected)."""
@@ -152,8 +162,7 @@ def _connect(uri: str):
 
 def _tbl(meta: MetaData, name: str) -> Table:
     if name not in meta.tables:
-        raise SystemExit(f"ERROR: Table '{name}' not found in database. "
-                         f"Check your URI and database name.")
+        raise SystemExit(f"ERROR: Table '{name}' not found in database. Check your URI and database name.")
     return meta.tables[name]
 
 
@@ -168,9 +177,7 @@ def _find_workflow(session: Session, meta: MetaData, spec: str):
         return row
     except ValueError:
         pass
-    row = session.execute(
-        select(t).where(func.lower(t.c.name) == spec.lower())
-    ).mappings().first()
+    row = session.execute(select(t).where(func.lower(t.c.name) == spec.lower())).mappings().first()
     if row is None:
         raise SystemExit(f"ERROR: No MarkingWorkflow with name matching '{spec}'")
     return row
@@ -188,9 +195,7 @@ def _get_config(session: Session, meta: MetaData, config_id: int):
 
 def _find_user_by_email(session: Session, meta: MetaData, email: str):
     t = _tbl(meta, "users")
-    return session.execute(
-        select(t).where(func.lower(t.c.email) == email.strip().lower())
-    ).mappings().first()
+    return session.execute(select(t).where(func.lower(t.c.email) == email.strip().lower())).mappings().first()
 
 
 def _get_student_data(session: Session, meta: MetaData, user_id: int):
@@ -207,9 +212,7 @@ def _parse_assessor_name(full_name: str) -> Tuple[str, str]:
     return parts[0], " ".join(parts[1:])
 
 
-def _find_user_by_name(
-    session: Session, meta: MetaData, full_name: str
-) -> Tuple[Optional[object], Optional[str]]:
+def _find_user_by_name(session: Session, meta: MetaData, full_name: str) -> Tuple[Optional[object], Optional[str]]:
     """
     Match 'First Last' to a users row.
     Prefers faculty_data-linked users when the name is ambiguous.
@@ -220,14 +223,18 @@ def _find_user_by_name(
         return None, f"Cannot parse assessor name '{full_name}' into first + last"
 
     t = _tbl(meta, "users")
-    matches = session.execute(
-        select(t).where(
-            and_(
-                func.lower(t.c.first_name) == first.lower(),
-                func.lower(t.c.last_name) == last.lower(),
+    matches = (
+        session.execute(
+            select(t).where(
+                and_(
+                    func.lower(t.c.first_name) == first.lower(),
+                    func.lower(t.c.last_name) == last.lower(),
+                )
             )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
 
     if not matches:
         return None, f"No User found matching name '{full_name}'"
@@ -237,92 +244,97 @@ def _find_user_by_name(
 
     # Prefer faculty-linked accounts
     fd = _tbl(meta, "faculty_data")
-    faculty_ids = {
-        row.id
-        for row in session.execute(
-            select(fd.c.id).where(fd.c.id.in_([u["id"] for u in matches]))
-        ).mappings().all()
-    }
+    faculty_ids = {row.id for row in session.execute(select(fd.c.id).where(fd.c.id.in_([u["id"] for u in matches]))).mappings().all()}
     faculty_matches = [u for u in matches if u["id"] in faculty_ids]
 
     if len(faculty_matches) == 1:
-        return faculty_matches[0], (
-            f"Ambiguous name '{full_name}' ({len(matches)} users); "
-            f"resolved to faculty user id={faculty_matches[0]['id']}"
-        )
+        return faculty_matches[0], (f"Ambiguous name '{full_name}' ({len(matches)} users); resolved to faculty user id={faculty_matches[0]['id']}")
 
     ids = ", ".join(str(u["id"]) for u in matches)
-    return None, (
-        f"Ambiguous name '{full_name}' — {len(matches)} users matched "
-        f"(ids: {ids}); cannot resolve automatically"
-    )
+    return None, (f"Ambiguous name '{full_name}' — {len(matches)} users matched (ids: {ids}); cannot resolve automatically")
 
 
-def _find_submission_record(
-    session: Session, meta: MetaData, config_id: int, student_data_id: int
-):
+def _find_submission_record(session: Session, meta: MetaData, config_id: int, student_data_id: int):
     """
     Return the SubmissionRecord for this student within the given ProjectClassConfig.
     Path: submission_records -> owner (submitting_students) filtered by config_id and student_id.
     """
     sr = _tbl(meta, "submission_records")
     ss = _tbl(meta, "submitting_students")
-    return session.execute(
-        select(sr)
-        .join(ss, sr.c.owner_id == ss.c.id)
-        .where(
-            and_(
-                ss.c.config_id == config_id,
-                ss.c.student_id == student_data_id,
+    return (
+        session.execute(
+            select(sr)
+            .join(ss, sr.c.owner_id == ss.c.id)
+            .where(
+                and_(
+                    ss.c.config_id == config_id,
+                    ss.c.student_id == student_data_id,
+                )
             )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
 
 
 def _find_submission_role(
-    session: Session, meta: MetaData,
-    submission_id: int, user_id: int, role_type: int,
+    session: Session,
+    meta: MetaData,
+    submission_id: int,
+    user_id: int,
+    role_type: int,
 ):
     t = _tbl(meta, "submission_roles")
-    return session.execute(
-        select(t).where(
-            and_(
-                t.c.submission_id == submission_id,
-                t.c.user_id == user_id,
-                t.c.role == role_type,
+    return (
+        session.execute(
+            select(t).where(
+                and_(
+                    t.c.submission_id == submission_id,
+                    t.c.user_id == user_id,
+                    t.c.role == role_type,
+                )
             )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
 
 
 def _find_submitter_report(
-    session: Session, meta: MetaData, record_id: int, workflow_id: int,
+    session: Session,
+    meta: MetaData,
+    record_id: int,
+    workflow_id: int,
 ):
     t = _tbl(meta, "submitter_reports")
-    return session.execute(
-        select(t).where(
-            and_(t.c.record_id == record_id, t.c.workflow_id == workflow_id)
-        )
-    ).mappings().first()
+    return session.execute(select(t).where(and_(t.c.record_id == record_id, t.c.workflow_id == workflow_id))).mappings().first()
 
 
 def _find_marking_report(
-    session: Session, meta: MetaData, role_id: int, submitter_report_id: int,
+    session: Session,
+    meta: MetaData,
+    role_id: int,
+    submitter_report_id: int,
 ):
     t = _tbl(meta, "marking_reports")
-    return session.execute(
-        select(t).where(
-            and_(
-                t.c.role_id == role_id,
-                t.c.submitter_report_id == submitter_report_id,
+    return (
+        session.execute(
+            select(t).where(
+                and_(
+                    t.c.role_id == role_id,
+                    t.c.submitter_report_id == submitter_report_id,
+                )
             )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
 
 
 # ---------------------------------------------------------------------------
 # Grade / report helpers
 # ---------------------------------------------------------------------------
+
 
 def _safe_float(v) -> float:
     try:
@@ -337,7 +349,12 @@ def _safe_float(v) -> float:
 
 
 def _build_report_json(
-    duration, content, structure, presentation, visual, understanding,
+    duration,
+    content,
+    structure,
+    presentation,
+    visual,
+    understanding,
 ) -> str:
     """
     Build the JSON blob stored in MarkingReport.report.
@@ -345,32 +362,29 @@ def _build_report_json(
     'justification' is blank — not captured this year.
     'validation_failures' is omitted (optional per schema).
     """
-    return json.dumps({
-        "fields": {
-            "duration":      _safe_float(duration),
-            "content":       _safe_float(content),
-            "structure":     _safe_float(structure),
-            "presentation":  _safe_float(presentation),
-            "visual":        _safe_float(visual),
-            "understanding": _safe_float(understanding),
-            "justification": "",
+    return json.dumps(
+        {
+            "fields": {
+                "duration": _safe_float(duration),
+                "content": _safe_float(content),
+                "structure": _safe_float(structure),
+                "presentation": _safe_float(presentation),
+                "visual": _safe_float(visual),
+                "understanding": _safe_float(understanding),
+                "justification": "",
+            }
         }
-    })
+    )
 
 
 def _compute_grade(content, structure, presentation, visual, understanding) -> float:
-    return (
-        _safe_float(content)
-        + _safe_float(structure)
-        + _safe_float(presentation)
-        + _safe_float(visual)
-        + _safe_float(understanding)
-    ) * 5.0
+    return (_safe_float(content) + _safe_float(structure) + _safe_float(presentation) + _safe_float(visual) + _safe_float(understanding)) * 5.0
 
 
 # ---------------------------------------------------------------------------
 # Core injection logic for a single assessor slot
 # ---------------------------------------------------------------------------
+
 
 def _process_assessor(
     *,
@@ -381,7 +395,12 @@ def _process_assessor(
     assessor_user,
     slot_index: int,
     role_type: int,
-    duration, content, structure, presentation, visual, understanding,
+    duration,
+    content,
+    structure,
+    presentation,
+    visual,
+    understanding,
     feedback_positive: str,
     now: datetime,
     dry_run: bool,
@@ -397,9 +416,7 @@ def _process_assessor(
     t_mr = _tbl(meta, "marking_reports")
 
     # --- Locate SubmissionRole ---
-    role = _find_submission_role(
-        session, meta, sub_record["id"], assessor_user["id"], role_type
-    )
+    role = _find_submission_role(session, meta, sub_record["id"], assessor_user["id"], role_type)
 
     if role is None:
         msg = (
@@ -424,17 +441,14 @@ def _process_assessor(
         )
         session.flush()
         role_id = result.inserted_primary_key[0]
-        role = _find_submission_role(
-            session, meta, sub_record["id"], assessor_user["id"], role_type
-        )
+        role = _find_submission_role(session, meta, sub_record["id"], assessor_user["id"], role_type)
 
     # --- Locate SubmitterReport ---
     sr = _find_submitter_report(session, meta, sub_record["id"], workflow["id"])
 
     if sr is None:
         msg = (
-            f"[{student_email}] No SubmitterReport for submission_record id={sub_record['id']} "
-            f"in workflow '{workflow['name']}' (id={workflow['id']})"
+            f"[{student_email}] No SubmitterReport for submission_record id={sub_record['id']} in workflow '{workflow['name']}' (id={workflow['id']})"
         )
         if dry_run:
             errors.append(msg)
@@ -456,9 +470,7 @@ def _process_assessor(
     # --- Locate or create MarkingReport ---
     mr = _find_marking_report(session, meta, role["id"], sr["id"])
 
-    report_json = _build_report_json(
-        duration, content, structure, presentation, visual, understanding
-    )
+    report_json = _build_report_json(duration, content, structure, presentation, visual, understanding)
     grade = _compute_grade(content, structure, presentation, visual, understanding)
 
     def _filter_cols(vals: dict) -> dict:
@@ -482,29 +494,28 @@ def _process_assessor(
         return filtered
 
     if mr is None:
-        msg = (
-            f"[{student_email}] Assessor{slot_index}: no MarkingReport for "
-            f"role id={role['id']}, submitter_report id={sr['id']}"
-        )
+        msg = f"[{student_email}] Assessor{slot_index}: no MarkingReport for role id={role['id']}, submitter_report id={sr['id']}"
         if dry_run:
             errors.append(msg)
             return False
         warnings.append(f"{msg} — creating missing MarkingReport")
-        insert_vals = _filter_cols({
-            "role_id": role["id"],
-            "submitter_report_id": sr["id"],
-            "report": report_json,
-            "distribution_state": 3,  # NOT_REQUIRED — no email needed for ROLE_PRESENTATION_ASSESSOR
-            "report_submitted": True,
-            "grade": grade,
-            "grade_submitted_by_id": None,
-            "grade_submitted_timestamp": now,
-            "feedback_positive": feedback_positive,
-            "feedback_improvement": None,
-            "feedback_submitted": True,
-            "feedback_timestamp": now,
-            "weight": 1,
-        })
+        insert_vals = _filter_cols(
+            {
+                "role_id": role["id"],
+                "submitter_report_id": sr["id"],
+                "report": report_json,
+                "distribution_state": 3,  # NOT_REQUIRED — no email needed for ROLE_PRESENTATION_ASSESSOR
+                "report_submitted": True,
+                "grade": grade,
+                "grade_submitted_by_id": None,
+                "grade_submitted_timestamp": now,
+                "feedback_positive": feedback_positive,
+                "feedback_improvement": None,
+                "feedback_submitted": True,
+                "feedback_timestamp": now,
+                "weight": 1,
+            }
+        )
         session.execute(t_mr.insert().values(**insert_vals))
     else:
         label = f"[{student_email}] Assessor{slot_index} '{assessor_user['email']}'"
@@ -525,11 +536,7 @@ def _process_assessor(
                 update_vals["grade_submitted_timestamp"] = now
             if mr["feedback_timestamp"] is None:
                 update_vals["feedback_timestamp"] = now
-            session.execute(
-                t_mr.update()
-                .where(t_mr.c.id == mr["id"])
-                .values(**_filter_cols(update_vals))
-            )
+            session.execute(t_mr.update().where(t_mr.c.id == mr["id"]).values(**_filter_cols(update_vals)))
 
     return True
 
@@ -537,6 +544,7 @@ def _process_assessor(
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     args = _parse_args()
@@ -577,20 +585,12 @@ def main():
     def _config_id_for_workflow(wf):
         event = _get_marking_event(session, meta, wf["event_id"])
         if event is None:
-            raise SystemExit(
-                f"ERROR: MarkingWorkflow id={wf['id']} references missing "
-                f"MarkingEvent id={wf['event_id']}"
-            )
+            raise SystemExit(f"ERROR: MarkingWorkflow id={wf['id']} references missing MarkingEvent id={wf['event_id']}")
         # MarkingEvent.period_id -> submission_periods.id -> project_class_config.id
         t_period = _tbl(meta, "submission_periods")
-        period = session.execute(
-            select(t_period).where(t_period.c.id == event["period_id"])
-        ).mappings().first()
+        period = session.execute(select(t_period).where(t_period.c.id == event["period_id"])).mappings().first()
         if period is None:
-            raise SystemExit(
-                f"ERROR: MarkingEvent id={event['id']} references missing "
-                f"SubmissionPeriodRecord id={event['period_id']}"
-            )
+            raise SystemExit(f"ERROR: MarkingEvent id={event['id']} references missing SubmissionPeriodRecord id={event['period_id']}")
         return period["config_id"]
 
     bsc_config_id = _config_id_for_workflow(bsc_wf)
@@ -599,7 +599,7 @@ def main():
     print(f"MPhys config id: {mphys_config_id}\n")
 
     LEVEL_TO_WORKFLOW = {
-        "Final Year Project (BSc)":   (bsc_wf,   bsc_config_id),
+        "Final Year Project (BSc)": (bsc_wf, bsc_config_id),
         "Final Year Project (MPhys)": (mphys_wf, mphys_config_id),
     }
 
@@ -641,66 +641,65 @@ def main():
 
         student_data = _get_student_data(session, meta, student_user["id"])
         if student_data is None:
-            errors.append(
-                f"[{email}]: User id={student_user['id']} has no StudentData row"
-            )
+            errors.append(f"[{email}]: User id={student_user['id']} has no StudentData row")
             continue
 
         # Resolve SubmissionRecord
-        sub_record = _find_submission_record(
-            session, meta, config_id, student_data["id"]
-        )
+        sub_record = _find_submission_record(session, meta, config_id, student_data["id"])
         if sub_record is None:
-            errors.append(
-                f"[{email}]: no SubmissionRecord in ProjectClassConfig id={config_id} "
-                f"(workflow '{workflow['name']}')"
-            )
+            errors.append(f"[{email}]: no SubmissionRecord in ProjectClassConfig id={config_id} (workflow '{workflow['name']}')")
             continue
 
         if verbose:
-            print(
-                f"[{email}] -> SubmissionRecord id={sub_record['id']}, "
-                f"workflow='{workflow['name']}'"
-            )
+            print(f"[{email}] -> SubmissionRecord id={sub_record['id']}, workflow='{workflow['name']}'")
 
         # Resolve assessors
         a1_user, a1_warn = _find_user_by_name(session, meta, a1_name)
         a2_user, a2_warn = _find_user_by_name(session, meta, a2_name)
 
         if a1_warn:
-            (errors if a1_user is None else warnings).append(
-                f"[{email}] Assessor1: {a1_warn}"
-            )
+            (errors if a1_user is None else warnings).append(f"[{email}] Assessor1: {a1_warn}")
         if a2_warn:
-            (errors if a2_user is None else warnings).append(
-                f"[{email}] Assessor2: {a2_warn}"
-            )
+            (errors if a2_user is None else warnings).append(f"[{email}] Assessor2: {a2_warn}")
         if a1_user is None or a2_user is None:
             continue
 
         common = dict(
-            session=session, meta=meta,
-            sub_record=sub_record, workflow=workflow,
-            role_type=role_type, now=now,
-            dry_run=dry_run, verbose=verbose,
-            errors=errors, warnings=warnings,
+            session=session,
+            meta=meta,
+            sub_record=sub_record,
+            workflow=workflow,
+            role_type=role_type,
+            now=now,
+            dry_run=dry_run,
+            verbose=verbose,
+            errors=errors,
+            warnings=warnings,
             student_email=email,
         )
 
         ok1 = _process_assessor(
             **common,
-            assessor_user=a1_user, slot_index=1,
-            duration=row.get("Duration1"), content=row.get("Content1"),
-            structure=row.get("Structure1"), presentation=row.get("Presentation1"),
-            visual=row.get("Visual1"), understanding=row.get("Understanding1"),
+            assessor_user=a1_user,
+            slot_index=1,
+            duration=row.get("Duration1"),
+            content=row.get("Content1"),
+            structure=row.get("Structure1"),
+            presentation=row.get("Presentation1"),
+            visual=row.get("Visual1"),
+            understanding=row.get("Understanding1"),
             feedback_positive=str(row.get("Feedback1", "")) if pd.notna(row.get("Feedback1")) else "",
         )
         ok2 = _process_assessor(
             **common,
-            assessor_user=a2_user, slot_index=2,
-            duration=row.get("Duration2"), content=row.get("Content2"),
-            structure=row.get("Structure2"), presentation=row.get("Presentation2"),
-            visual=row.get("Visual2"), understanding=row.get("Understanding2"),
+            assessor_user=a2_user,
+            slot_index=2,
+            duration=row.get("Duration2"),
+            content=row.get("Content2"),
+            structure=row.get("Structure2"),
+            presentation=row.get("Presentation2"),
+            visual=row.get("Visual2"),
+            understanding=row.get("Understanding2"),
             feedback_positive=str(row.get("Feedback2", "")) if pd.notna(row.get("Feedback2")) else "",
         )
 

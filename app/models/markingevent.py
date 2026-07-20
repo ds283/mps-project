@@ -30,9 +30,9 @@ class ConvenorActionButton:
 
     label: str
     url: str
-    method: str = "GET"    # "GET" or "POST"
-    outline: bool = False   # True → btn-outline-<severity>; False → btn-<severity>
-    icon: str = ""          # FA icon name without the "fa-" prefix, e.g. "search"
+    method: str = "GET"  # "GET" or "POST"
+    outline: bool = False  # True → btn-outline-<severity>; False → btn-<severity>
+    icon: str = ""  # FA icon name without the "fa-" prefix, e.g. "search"
 
 
 @dataclass
@@ -134,9 +134,7 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # project class this marking scheme is for
-    pclass_id = db.Column(
-        db.Integer(), db.ForeignKey("project_classes.id"), nullable=False
-    )
+    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"), nullable=False)
     pclass = db.relationship("ProjectClass", foreign_keys=[pclass_id], uselist=False)
 
 
@@ -156,14 +154,10 @@ class LiveMarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name copied from the parent MarkingScheme at snapshot time; not required to be globally unique
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=False
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=False)
 
     # parent marking scheme
-    parent_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_schemes.id"), nullable=False
-    )
+    parent_id = db.Column(db.Integer(), db.ForeignKey("marking_schemes.id"), nullable=False)
     parent = db.relationship("MarkingScheme", foreign_keys=[parent_id], uselist=False)
 
 
@@ -241,9 +235,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # submission period this marking event is for
-    period_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False
-    )
+    period_id = db.Column(db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False)
     period = db.relationship(
         "SubmissionPeriodRecord",
         foreign_keys=[period_id],
@@ -256,9 +248,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
 
     # current workflow state — see MarkingEventWorkflowStates for the full state machine description.
     # Do not set directly; use the transition methods and refresh_completed().
-    workflow_state = db.Column(
-        db.Integer(), nullable=False, default=MarkingEventWorkflowStates.WAITING
-    )
+    workflow_state = db.Column(db.Integer(), nullable=False, default=MarkingEventWorkflowStates.WAITING)
 
     # global marking deadline for this event; individual workflows may have earlier sub-deadlines
     deadline = db.Column(db.DateTime(), nullable=True)
@@ -283,9 +273,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # Locked Canvas grade target for this event. Set the first time a grade push is confirmed
     # (either bulk or per-student) and used for all subsequent pushes to ensure consistency.
     # Cleared when a bulk re-conflation is performed so the target can be re-selected.
-    canvas_grade_target = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True, default=None
-    )
+    canvas_grade_target = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True, default=None)
 
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
 
@@ -341,12 +329,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
         }
-        count = sum(
-            1
-            for workflow in self.workflows
-            for sr in workflow.submitter_reports
-            if sr.workflow_state in urgent_states
-        )
+        count = sum(1 for workflow in self.workflows for sr in workflow.submitter_reports if sr.workflow_state in urgent_states)
         # Distributable reports (READY_TO_DISTRIBUTE with undistributed MarkingReports) are
         # time-critical — assessors cannot begin until notification emails are sent.
         if self.workflow_state >= MarkingEventWorkflowStates.OPEN:
@@ -415,11 +398,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                     icon="check-circle",
                     title="Ready to conflate",
                     description="All marking workflows are complete. Calculate conflated grades to advance to the next stage.",
-                    buttons=(
-                        [ConvenorActionButton(label="Conflate…", url=conflation_url, icon="calculator")]
-                        if conflation_url
-                        else []
-                    ),
+                    buttons=([ConvenorActionButton(label="Conflate…", url=conflation_url, icon="calculator")] if conflation_url else []),
                 )
             )
 
@@ -465,13 +444,8 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         ready_count = 0
         for workflow in self.workflows:
             for sr in workflow.submitter_reports:
-                if (
-                    sr.workflow_state
-                    == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-                ):
-                    undistributed = sum(
-                        1 for mr in sr.marking_reports if not mr.distributed
-                    )
+                if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+                    undistributed = sum(1 for mr in sr.marking_reports if not mr.distributed)
                     if undistributed > 0:
                         ready_count += undistributed
 
@@ -482,8 +456,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                         severity="danger",
                         icon="paper-plane",
                         title="Reports ready to distribute",
-                        description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
-                        f"ready to send to assessors.",
+                        description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} ready to send to assessors.",
                         buttons=(
                             [ConvenorActionButton(label="Send notifications", url=send_emails_url, method="POST", icon="paper-plane")]
                             if send_emails_url
@@ -499,11 +472,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                         title="Ready to open marking event",
                         description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
                         f"ready. Open this event to trigger distribution.",
-                        buttons=(
-                            [ConvenorActionButton(label="Open event", url=open_event_url, icon="play")]
-                            if open_event_url
-                            else []
-                        ),
+                        buttons=([ConvenorActionButton(label="Open event", url=open_event_url, icon="play")] if open_event_url else []),
                     )
                 )
 
@@ -610,9 +579,7 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent MarkingEvent
-    event_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_events.id"), nullable=False
-    )
+    event_id = db.Column(db.Integer(), db.ForeignKey("marking_events.id"), nullable=False)
     event = db.relationship(
         "MarkingEvent",
         foreign_keys=[event_id],
@@ -626,17 +593,11 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     # key for this workflow; must be a valid Python identifier and unique within the parent MarkingEvent.
     # Used to identify this workflow's contribution when computing aggregated marks via the MarkingEvent.targets expressions.
-    key = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    key = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "event_id", "name", name="uq_marking_workflows_event_id_name"
-        ),
-        db.UniqueConstraint(
-            "event_id", "key", name="uq_marking_workflows_event_id_key"
-        ),
+        db.UniqueConstraint("event_id", "name", name="uq_marking_workflows_event_id_name"),
+        db.UniqueConstraint("event_id", "key", name="uq_marking_workflows_event_id_key"),
     )
 
     # role that this workflow targets. All SubmissionRole instances that belong to the ProjectClassConfig for the parent MarkingEvent
@@ -681,14 +642,10 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     )
 
     # list of users to notify when an out-of-tolerance situation is detected and moderation is required
-    notify_on_moderation_required = db.relationship(
-        "User", secondary=notify_on_moderation_required, lazy="dynamic"
-    )
+    notify_on_moderation_required = db.relationship("User", secondary=notify_on_moderation_required, lazy="dynamic")
 
     # list of users to notify when an email is generated due to a validation failure
-    notify_on_validation_failure = db.relationship(
-        "User", secondary=notify_on_validation_failure, lazy="dynamic"
-    )
+    notify_on_validation_failure = db.relationship("User", secondary=notify_on_validation_failure, lazy="dynamic")
 
     # note that the "submitter_reports" property is set back backref from the SubmitterReport relationship
 
@@ -700,9 +657,7 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     def marking_reports(self):
         # TODO: This approach may not scale if self.submitter_reports is every large
         submitter_report_ids = [r.id for r in self.submitter_reports]
-        return db.session.query(MarkingReport).filter(
-            MarkingReport.submitter_report_id.in_(submitter_report_ids)
-        )
+        return db.session.query(MarkingReport).filter(MarkingReport.submitter_report_id.in_(submitter_report_ids))
 
     # obtain role name as string
     @property
@@ -729,21 +684,15 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     @property
     def number_marking_reports_distributed(self) -> int:
-        return self.marking_reports.filter(
-            MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
-        ).count()
+        return self.marking_reports.filter(MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))).count()
 
     @property
     def number_marking_reports_undistributed(self) -> int:
-        return self.marking_reports.filter(
-            ~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))
-        ).count()
+        return self.marking_reports.filter(~MarkingReport.distribution_state.in_(list(_DISTRIBUTED_STATE_VALUES))).count()
 
     @property
     def number_marking_reports_with_feedback(self) -> int:
-        return self.marking_reports.filter(
-            MarkingReport.feedback_submitted.is_(True)
-        ).count()
+        return self.marking_reports.filter(MarkingReport.feedback_submitted.is_(True)).count()
 
     @property
     def has_reminder_eligible_reports(self) -> bool:
@@ -767,9 +716,7 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         """Count of SubmitterReports whose SubmissionRecord has report_processing_failed == True."""
         if not self.requires_report:
             return 0
-        return sum(
-            1 for sr in self.submitter_reports if sr.record.report_processing_failed
-        )
+        return sum(1 for sr in self.submitter_reports if sr.record.report_processing_failed)
 
     def resolve_email_template(self):
         """Return the active EmailTemplate for this workflow's role, or None if no email is needed."""
@@ -831,9 +778,7 @@ conflation_report_to_email_log = db.Table(
         db.ForeignKey("conflation_reports.id"),
         primary_key=True,
     ),
-    db.Column(
-        "email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
+    db.Column("email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
 )
 
 
@@ -1032,9 +977,7 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent SubmissionRecord
-    record_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_records.id"), nullable=False
-    )
+    record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"), nullable=False)
     record = db.relationship(
         "SubmissionRecord",
         foreign_keys=[record_id],
@@ -1043,9 +986,7 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     )
 
     # parent MarkingWorkflow
-    workflow_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_workflows.id"), nullable=False
-    )
+    workflow_id = db.Column(db.Integer(), db.ForeignKey("marking_workflows.id"), nullable=False)
     workflow = db.relationship(
         "MarkingWorkflow",
         foreign_keys=[workflow_id],
@@ -1054,20 +995,14 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     )
 
     # current workflow state
-    workflow_state = db.Column(
-        db.Integer(), nullable=False, default=SubmitterReportWorkflowStates.NOT_READY
-    )
+    workflow_state = db.Column(db.Integer(), nullable=False, default=SubmitterReportWorkflowStates.NOT_READY)
 
     # aggregated grade
     grade = db.Column(db.Numeric(6, 2), nullable=True)
 
     # grade generated by
-    grade_generated_by_id = db.Column(
-        db.Integer(), db.ForeignKey("users.id"), nullable=True
-    )
-    grade_generated_by = db.relationship(
-        "User", foreign_keys=[grade_generated_by_id], uselist=False
-    )
+    grade_generated_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    grade_generated_by = db.relationship("User", foreign_keys=[grade_generated_by_id], uselist=False)
 
     # grade generated timestamp
     grade_generated_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1099,12 +1034,8 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     )
 
     # SubmissionRole (ROLE_MODERATOR) belonging to the moderator whose report was accepted
-    moderator_accepted_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_roles.id"), nullable=True
-    )
-    moderator_accepted_by = db.relationship(
-        "SubmissionRole", foreign_keys=[moderator_accepted_id], uselist=False
-    )
+    moderator_accepted_id = db.Column(db.Integer(), db.ForeignKey("submission_roles.id"), nullable=True)
+    moderator_accepted_by = db.relationship("SubmissionRole", foreign_keys=[moderator_accepted_id], uselist=False)
 
     # timestamp when the acceptance was recorded
     moderator_accepted_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1128,9 +1059,7 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     signed_off_timestamp = db.Column(db.DateTime(), nullable=True)
 
     completed_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    completed_by = db.relationship(
-        "User", foreign_keys=[completed_by_id], uselist=False
-    )
+    completed_by = db.relationship("User", foreign_keys=[completed_by_id], uselist=False)
     completed_timestamp = db.Column(db.DateTime(), nullable=True)
 
     # DROPPED tracking
@@ -1201,9 +1130,7 @@ marking_distribution_to_email_log = db.Table(
         db.ForeignKey("marking_reports.id"),
         primary_key=True,
     ),
-    db.Column(
-        "email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
+    db.Column("email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
 )
 
 
@@ -1267,9 +1194,7 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent SubmissionRole
-    role_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_roles.id"), nullable=False
-    )
+    role_id = db.Column(db.Integer(), db.ForeignKey("submission_roles.id"), nullable=False)
     role = db.relationship(
         "SubmissionRole",
         foreign_keys=[role_id],
@@ -1278,9 +1203,7 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     )
 
     # parent SubmitterReport
-    submitter_report_id = db.Column(
-        db.Integer(), db.ForeignKey("submitter_reports.id"), nullable=False
-    )
+    submitter_report_id = db.Column(db.Integer(), db.ForeignKey("submitter_reports.id"), nullable=False)
     submitter_report = db.relationship(
         "SubmitterReport",
         foreign_keys=[submitter_report_id],
@@ -1309,9 +1232,7 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     )
 
     # distribution emails
-    distribution_emails = db.relationship(
-        "EmailLog", secondary=marking_distribution_to_email_log, lazy="dynamic"
-    )
+    distribution_emails = db.relationship("EmailLog", secondary=marking_distribution_to_email_log, lazy="dynamic")
 
     @property
     def distributed(self) -> bool:
@@ -1322,12 +1243,8 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     report_submitted = db.Column(db.Boolean(), default=False, nullable=False)
 
     # if this report is from a supervisor rather than a responsible supervisor, has it been signed off by the responsible supervisor?
-    signed_off_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_roles.id"), nullable=True
-    )
-    signed_off_by = db.relationship(
-        "SubmissionRole", foreign_keys=[signed_off_id], uselist=False
-    )
+    signed_off_id = db.Column(db.Integer(), db.ForeignKey("submission_roles.id"), nullable=True)
+    signed_off_by = db.relationship("SubmissionRole", foreign_keys=[signed_off_id], uselist=False)
 
     # signed off timestamp
     signed_off_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1336,12 +1253,8 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     grade = db.Column(db.Numeric(6, 2), nullable=True)
 
     # who generated the grade (i.e., who submitted this individual marking report)?
-    grade_submitted_by_id = db.Column(
-        db.Integer(), db.ForeignKey("users.id"), nullable=True
-    )
-    grade_submitted_by = db.relationship(
-        "User", foreign_keys=[grade_submitted_by_id], uselist=False
-    )
+    grade_submitted_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    grade_submitted_by = db.relationship("User", foreign_keys=[grade_submitted_by_id], uselist=False)
 
     # when was the grade generated?
     grade_submitted_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1438,9 +1351,7 @@ class ModeratorReport(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # owning SubmissionRole (with ROLE_MODERATOR)
-    role_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_roles.id"), nullable=False
-    )
+    role_id = db.Column(db.Integer(), db.ForeignKey("submission_roles.id"), nullable=False)
     role = db.relationship(
         "SubmissionRole",
         foreign_keys=[role_id],
@@ -1449,9 +1360,7 @@ class ModeratorReport(db.Model, EditingMetadataMixin):
     )
 
     # parent SubmitterReport
-    submitter_report_id = db.Column(
-        db.Integer(), db.ForeignKey("submitter_reports.id"), nullable=False
-    )
+    submitter_report_id = db.Column(db.Integer(), db.ForeignKey("submitter_reports.id"), nullable=False)
     submitter_report = db.relationship(
         "SubmitterReport",
         foreign_keys=[submitter_report_id],
@@ -1546,9 +1455,7 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent MarkingEvent
-    marking_event_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_events.id"), nullable=False
-    )
+    marking_event_id = db.Column(db.Integer(), db.ForeignKey("marking_events.id"), nullable=False)
     marking_event = db.relationship(
         "MarkingEvent",
         foreign_keys=[marking_event_id],
@@ -1557,9 +1464,7 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     )
 
     # SubmissionRecord whose grades are stored in this row
-    submission_record_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_records.id"), nullable=False
-    )
+    submission_record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"), nullable=False)
     submission_record = db.relationship(
         "SubmissionRecord",
         foreign_keys=[submission_record_id],
@@ -1572,9 +1477,7 @@ class ConflationReport(db.Model, EditingMetadataMixin):
 
     # who generated this report?
     generated_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    generated_by = db.relationship(
-        "User", foreign_keys=[generated_by_id], uselist=False
-    )
+    generated_by = db.relationship("User", foreign_keys=[generated_by_id], uselist=False)
 
     # when was this report generated?
     generated_timestamp = db.Column(db.DateTime(), nullable=True)
@@ -1583,36 +1486,26 @@ class ConflationReport(db.Model, EditingMetadataMixin):
     is_stale = db.Column(db.Boolean(), default=False, nullable=False)
 
     # generated feedback PDFs for this student (one per ConflationReport)
-    feedback_reports = db.relationship(
-        "FeedbackReport", secondary=conflation_report_to_feedback_report, lazy="dynamic"
-    )
+    feedback_reports = db.relationship("FeedbackReport", secondary=conflation_report_to_feedback_report, lazy="dynamic")
 
     # has feedback been pushed out to this student?
     feedback_sent = db.Column(db.Boolean(), default=False, nullable=False)
 
     # who pushed the feedback?
     feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    feedback_push_by = db.relationship(
-        "User", foreign_keys=[feedback_push_id], uselist=False
-    )
+    feedback_push_by = db.relationship("User", foreign_keys=[feedback_push_id], uselist=False)
 
     # timestamp when feedback was pushed
     feedback_push_timestamp = db.Column(db.DateTime(), nullable=True)
 
     # email log entries tracking feedback-push emails
-    feedback_emails = db.relationship(
-        "EmailLog", secondary=conflation_report_to_email_log, lazy="dynamic"
-    )
+    feedback_emails = db.relationship("EmailLog", secondary=conflation_report_to_email_log, lazy="dynamic")
 
     # label of the FeedbackRecipe used to generate the PDFs (archived string, not FK)
-    recipe = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    recipe = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # Celery task ID for an in-progress PDF generation; non-null means generation underway
-    feedback_celery_id = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    feedback_celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # set True when the last PDF generation attempt failed
     feedback_generation_failed = db.Column(db.Boolean(), default=False, nullable=False)
@@ -1621,9 +1514,7 @@ class ConflationReport(db.Model, EditingMetadataMixin):
 
     # Grade target name archived at push time (e.g. "report", "supervisor").
     # Null until the first successful grade push.
-    canvas_grade_target = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    canvas_grade_target = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # True once a grade has been successfully POSTed to Canvas for this student.
     canvas_grade_pushed = db.Column(db.Boolean(), default=False, nullable=False)

@@ -46,14 +46,10 @@ def register_box_tokens_tasks(celery):
                 _do_token_refresh(user)
                 n_ok += 1
             except Exception as exc:
-                current_app.logger.error(
-                    "Box token proactive refresh failed for user id=%s: %s", user.id, exc
-                )
+                current_app.logger.error("Box token proactive refresh failed for user id=%s: %s", user.id, exc)
                 n_err += 1
 
-        current_app.logger.info(
-            "Box token proactive refresh: %d refreshed, %d errors", n_ok, n_err
-        )
+        current_app.logger.info("Box token proactive refresh: %d refreshed, %d errors", n_ok, n_err)
 
         # Query 2: lapse warning for inactive users near expiry
         lapse_users = (
@@ -71,8 +67,7 @@ def register_box_tokens_tasks(celery):
 
         for user in lapse_users:
             user.post_message(
-                "Your Box connection will expire soon. "
-                "Please visit your account settings to re-authenticate.",
+                "Your Box connection will expire soon. Please visit your account settings to re-authenticate.",
                 "warning",
                 autocommit=True,
             )

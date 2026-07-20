@@ -132,9 +132,7 @@ def outstanding_confirm_data(config, url=None, text=None):
                 ),
                 "sortstring": f.user.last_name + f.user.first_name,
             },
-            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(
-                em=f.user.email
-            ),
+            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=f.user.email),
             "projects": render_template_string(
                 _projects,
                 f=f,

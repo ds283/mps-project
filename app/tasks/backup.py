@@ -66,9 +66,7 @@ def register_backup_tasks(celery):
 
         # don't execute if we are not on a live backup platform
         if not current_app.config.get("BACKUP_IS_LIVE", False):
-            self.update_state(
-                state="FINISHED", meta={"msg": "Backup is not live: did not run"}
-            )
+            self.update_state(state="FINISHED", meta={"msg": "Backup is not live: did not run"})
             raise Ignore()
 
         # get backup object store
@@ -92,9 +90,7 @@ def register_backup_tasks(celery):
         with ScratchFileManager(suffix=".sql") as SQL_scratch:
             SQL_scratch_path: Path = SQL_scratch.path
 
-            self.update_state(
-                state="PROGRESS", meta={"msg": "Performing mysqldump on main database"}
-            )
+            self.update_state(state="PROGRESS", meta={"msg": "Performing mysqldump on main database"})
 
             # get database details from configuration
             user = current_app.config["DATABASE_USER"]
@@ -122,22 +118,16 @@ def register_backup_tasks(celery):
                 current_app.logger.error(msg)
                 raise Exception(msg)
 
-            self.update_state(
-                state="PROGRESS", meta={"msg": "Compressing mysqldump output"}
-            )
+            self.update_state(state="PROGRESS", meta={"msg": "Compressing mysqldump output"})
 
             with ScratchFileManager(suffix=".tar.gz") as archive_scratch:
                 archive_scratch_path: Path = archive_scratch.path
 
-                with tarfile.open(
-                    name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT
-                ) as archive:
+                with tarfile.open(name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
                     archive.add(name=SQL_scratch_path, arcname="database.sql")
                     archive.close()
 
-                if not path.exists(archive_scratch_path) or not path.isfile(
-                    archive_scratch_path
-                ):
+                if not path.exists(archive_scratch_path) or not path.isfile(archive_scratch_path):
                     msg = "archive construction failed or did not produce a readable file"
                     current_app.logger.error(msg)
                     raise Exception(msg)
@@ -146,9 +136,7 @@ def register_backup_tasks(celery):
                 uncompressed_size = SQL_scratch_path.stat().st_size
                 this_archive_size = archive_scratch_path.stat().st_size
 
-                current_backup_size = db.session.query(
-                    func.sum(BackupRecord.archive_size)
-                ).scalar()
+                current_backup_size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()
                 if current_backup_size is None:
                     current_backup_size = 0
 
@@ -197,18 +185,14 @@ def register_backup_tasks(celery):
 
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
         return True
 
     @celery.task(bind=True, default_retry_delay=30)
     def do_thinning(self):
-        self.update_state(
-            state="STARTED", meta={"msg": "Building list of backups to be thinned"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Building list of backups to be thinned"})
 
         # don't execute if we are not on a live backup platform
         if not current_app.config.get("BACKUP_IS_LIVE", False):
@@ -217,9 +201,7 @@ def register_backup_tasks(celery):
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
         max_hourly_age = timedelta(days=keep_hourly)
-        max_daily_age = (
-            None if keep_daily is None else max_hourly_age + timedelta(weeks=keep_daily)
-        )
+        max_daily_age = None if keep_daily is None else max_hourly_age + timedelta(weeks=keep_daily)
 
         # bin backups into categories (but only those tagged as ordinary scheduled backups; ie., we don't thin backups
         # that have been taken for special purposes, such as snapshots constructed before rolling over
@@ -256,9 +238,7 @@ def register_backup_tasks(celery):
                 # do nothing; in this period we just keep all backups
                 pass
 
-            elif max_daily_age is None or (
-                max_daily_age is not None and age < max_daily_age
-            ):
+            elif max_daily_age is None or (max_daily_age is not None and age < max_daily_age):
                 # bin into groups based on age in days
                 if age.days in daily:
                     daily[age.days].append((record.id, str(record.date)))
@@ -267,9 +247,7 @@ def register_backup_tasks(celery):
 
             else:
                 # work out age in weeks (as an integer)
-                age_weeks = floor(
-                    float(age.days) / float(7)
-                )  # returns an Integer in Python3
+                age_weeks = floor(float(age.days) / float(7))  # returns an Integer in Python3
 
                 # bin into groups based on age in weeks
                 if age_weeks in weekly:
@@ -292,11 +270,7 @@ def register_backup_tasks(celery):
     def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Thinning backup bin for {period} {unit}".format(
-                    period=period, unit=unit
-                )
-            },
+            meta={"msg": "Thinning backup bin for {period} {unit}".format(period=period, unit=unit)},
         )
 
         # don't execute if we are not on a live backup platform
@@ -306,9 +280,7 @@ def register_backup_tasks(celery):
         # sort records from the bin into order, then retain the oldest record.
         # This means that re-running the thinning task is idempotent and stable under small changes in binning.
         # output_bin will eventually contain the retained record from this bin
-        output_bin = sorted(
-            ((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1)
-        )
+        output_bin = sorted(((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1))
 
         # keep a list of backups that we drop
         dropped = []
@@ -319,9 +291,7 @@ def register_backup_tasks(celery):
             drop_id = drop_element[0]
 
             try:
-                drop_record: BackupRecord = (
-                    db.session.query(BackupRecord).filter_by(id=drop_id).first()
-                )
+                drop_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=drop_id).first()
                 if drop_record is not None:
                     dropped.append((drop_id, str(drop_record.date)))
 
@@ -339,9 +309,7 @@ def register_backup_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        retained_record: BackupRecord = (
-            db.session.query(BackupRecord).filter_by(id=(output_bin[0])[0]).first()
-        )
+        retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=(output_bin[0])[0]).first()
 
         self.update_state(state="SUCCESS")
         return {
@@ -374,9 +342,7 @@ def register_backup_tasks(celery):
             b_period = b["period"]
             return a_period > b_period
 
-        sorted_result = sorted(
-            thinning_result, key=functools.cmp_to_key(sort_comparator)
-        )
+        sorted_result = sorted(thinning_result, key=functools.cmp_to_key(sort_comparator))
 
         timestamp = parser.parse(timestamp_str)
         timestamp_human = timestamp.strftime("%a %d %b %Y %H:%M:%S")
@@ -439,9 +405,7 @@ def register_backup_tasks(celery):
             for record in records:
                 record: BackupRecord
                 if record.unique_name not in contents:
-                    print(
-                        f'Backup "{record.unique_name}" has no counterpart in the object store: deleting'
-                    )
+                    print(f'Backup "{record.unique_name}" has no counterpart in the object store: deleting')
                     db.session.delete(record)
                 else:
                     record.last_validated = datetime.now()
@@ -449,14 +413,10 @@ def register_backup_tasks(celery):
             # for each object in the object store, test whether there is a counterpart object
             for item in contents.keys():
                 item: str
-                record: BackupRecord = (
-                    db.session.query(BackupRecord).filter_by(unique_name=item).first()
-                )
+                record: BackupRecord = db.session.query(BackupRecord).filter_by(unique_name=item).first()
 
                 if record is None:
-                    print(
-                        f'Object store item "{item}" has no counterpart backup record: deleting'
-                    )
+                    print(f'Object store item "{item}" has no counterpart backup record: deleting')
                     object_store.delete(item, audit_data="drop_absent_backups")
 
             log_db_commit("Synchronise backup records with object store, removing absent entries", endpoint=self.name)
@@ -496,19 +456,14 @@ def register_backup_tasks(celery):
 
         while current_size > backup_max and current_count > 0:
             print(
-                "apply_size_limit: current backup size = {current}, maximum size = "
-                "{maxsize}, backup count = {count}".format(
+                "apply_size_limit: current backup size = {current}, maximum size = {maxsize}, backup count = {count}".format(
                     current=format_size(current_size),
                     maxsize=format_size(backup_max),
                     count=current_count,
                 )
             )
             try:
-                oldest_backup: BackupRecord = (
-                    db.session.query(BackupRecord.id)
-                    .order_by(BackupRecord.date.asc())
-                    .first()
-                )
+                oldest_backup: BackupRecord = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
 
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -520,15 +475,12 @@ def register_backup_tasks(celery):
                     dropped += 1
 
                 except SQLAlchemyError as e:
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     return self.retry()
 
                 if not success:
                     print(
-                        "apply_size_limit: failed to remove backup {timestamp} "
-                        '("{desc}")'.format(
+                        'apply_size_limit: failed to remove backup {timestamp} ("{desc}")'.format(
                             timestamp=oldest_backup.timestamp,
                             desc=oldest_backup.description,
                         )
@@ -542,9 +494,7 @@ def register_backup_tasks(celery):
             else:
                 self.update_state(
                     state="FAILED",
-                    meta={
-                        "msg": "Database record for oldest backup could not be loaded"
-                    },
+                    meta={"msg": "Database record for oldest backup could not be loaded"},
                 )
                 raise self.retry()
 
@@ -595,13 +545,9 @@ def register_backup_tasks(celery):
             success, msg = remove_backup(id)
 
             if not success:
-                self.update_state(
-                    state="FAILED", meta={"msg": "Prune failed: {msg}".format(msg=msg)}
-                )
+                self.update_state(state="FAILED", meta={"msg": "Prune failed: {msg}".format(msg=msg)})
             else:
-                self.update_state(
-                    state="SUCCESS", meta={"msg": "Prune backup succeeded"}
-                )
+                self.update_state(state="SUCCESS", meta={"msg": "Prune backup succeeded"})
 
     @celery.task(bind=True)
     def delete_backup(self, id):
@@ -628,9 +574,7 @@ def register_backup_tasks(celery):
             raise self.retry()
 
         if not success:
-            self.update_state(
-                state="FAILED", meta={"msg": "Delete failed: {msg}".format(msg=msg)}
-            )
+            self.update_state(state="FAILED", meta={"msg": "Delete failed: {msg}".format(msg=msg)})
         else:
             self.update_state(state="SUCCESS", meta={"msg": "Delete backup succeeded"})
 

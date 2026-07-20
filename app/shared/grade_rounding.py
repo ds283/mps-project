@@ -50,11 +50,7 @@ class SussexStandardRoundingPolicy(RoundingPolicy):
 
     identifier = "sussex-standard-2024"
     label = "University of Sussex Standard"
-    description = (
-        "Marks are rounded to a whole number. "
-        "Fractional part ≥ 0.45 rounds up; "
-        "fractional part ≤ 0.44 rounds down."
-    )
+    description = "Marks are rounded to a whole number. Fractional part ≥ 0.45 rounds up; fractional part ≤ 0.44 rounds down."
 
     def round(self, value: float) -> int:
         # Use Decimal to avoid IEEE 754 representation errors at the 0.45 threshold.

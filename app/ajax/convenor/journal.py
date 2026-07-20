@@ -112,9 +112,7 @@ def journal_data(entries: List[StudentJournalEntry], return_url: str = None, ret
             "classes": render_template(classes_templ, entry=e),
             "title": render_template(title_templ, entry=e, return_url=return_url, return_text=return_text),
             "owner": render_template(owner_templ, entry=e),
-            "actions": render_template(
-                menu_templ, entry=e, current_user=current_user, return_url=return_url, return_text=return_text
-            ),
+            "actions": render_template(menu_templ, entry=e, current_user=current_user, return_url=return_url, return_text=return_text),
         }
 
     return [_process(e) for e in entries]

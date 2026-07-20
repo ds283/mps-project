@@ -85,13 +85,9 @@ def create_new_tags(form, allowed_tenants):
                     db.session.add(new_tag)
                     matched.append(new_tag)
                 except SQLAlchemyError as e:
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     flash(
-                        'Could not add newly defined tag "{tag}" due to a database error. Please contact a system administrator'.format(
-                            tag=label
-                        ),
+                        'Could not add newly defined tag "{tag}" due to a database error. Please contact a system administrator'.format(tag=label),
                         "error",
                     )
 
@@ -100,12 +96,7 @@ def create_new_tags(form, allowed_tenants):
 
 def get_filter_list_for_groups_and_skills(pclass: ProjectClass):
     if pclass.advertise_research_group:
-        groups = (
-            db.session.query(ResearchGroup)
-            .filter_by(active=True)
-            .order_by(ResearchGroup.name.asc())
-            .all()
-        )
+        groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
     else:
         groups = None
 
@@ -215,9 +206,7 @@ def project_list_in_memory_handler(
 
     columns = {"name": name, "owner": owner}
 
-    with ServerSideInMemoryHandler(
-            request, base_query, columns, row_filter=row_filter
-    ) as handler:
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=row_filter) as handler:
 
         def row_formatter(projects):
             # convert project list back into a list of primary keys, so that we can

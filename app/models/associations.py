@@ -27,9 +27,7 @@ tenant_to_users = db.Table(
 # association table mapping from research groups to tenants
 tenant_to_groups = db.Table(
     "tenant_groups",
-    db.Column(
-        "group_id", db.Integer(), db.ForeignKey("research_groups.id"), primary_key=True
-    ),
+    db.Column("group_id", db.Integer(), db.ForeignKey("research_groups.id"), primary_key=True),
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
@@ -60,18 +58,14 @@ tenant_to_degree_programmes = db.Table(
 # association table mapping from student batch records to tenants
 student_batch_to_tenants = db.Table(
     "student_batch_tenants",
-    db.Column(
-        "batch_id", db.Integer(), db.ForeignKey("batch_student.id"), primary_key=True
-    ),
+    db.Column("batch_id", db.Integer(), db.ForeignKey("batch_student.id"), primary_key=True),
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
 # association table mapping from faculty batch records to tenants
 faculty_batch_to_tenants = db.Table(
     "faculty_batch_tenants",
-    db.Column(
-        "batch_id", db.Integer(), db.ForeignKey("batch_faculty.id"), primary_key=True
-    ),
+    db.Column("batch_id", db.Integer(), db.ForeignKey("batch_faculty.id"), primary_key=True),
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
@@ -94,12 +88,8 @@ mask_roles_to_users = db.Table(
 # association table giving faculty research group affiliations
 faculty_affiliations = db.Table(
     "faculty_affiliations",
-    db.Column(
-        "user_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
-    db.Column(
-        "group_id", db.Integer(), db.ForeignKey("research_groups.id"), primary_key=True
-    ),
+    db.Column("user_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
+    db.Column("group_id", db.Integer(), db.ForeignKey("research_groups.id"), primary_key=True),
 )
 
 # association table mapping degree programmes to modules
@@ -143,9 +133,7 @@ pclass_coconvenors = db.Table(
         db.ForeignKey("project_classes.id"),
         primary_key=True,
     ),
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
 # association table giving School Office contacts for a project class
@@ -213,17 +201,13 @@ pclass_message_associations = db.Table(
         db.ForeignKey("project_classes.id"),
         primary_key=True,
     ),
-    db.Column(
-        "message_id", db.Integer(), db.ForeignKey("messages.id"), primary_key=True
-    ),
+    db.Column("message_id", db.Integer(), db.ForeignKey("messages.id"), primary_key=True),
 )
 
 # associate dismissals with messages
 message_dismissals = db.Table(
     "message_dismissals",
-    db.Column(
-        "message_id", db.Integer(), db.ForeignKey("messages.id"), primary_key=True
-    ),
+    db.Column("message_id", db.Integer(), db.ForeignKey("messages.id"), primary_key=True),
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
 )
 
@@ -231,9 +215,7 @@ message_dismissals = db.Table(
 
 golive_confirmation = db.Table(
     "go_live_confirmation",
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
     db.Column(
         "pclass_config_id",
         db.Integer(),
@@ -248,9 +230,7 @@ golive_confirmation = db.Table(
 # association table giving association between projects and project classes
 project_pclasses = db.Table(
     "project_to_classes",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
     db.Column(
         "project_class_id",
         db.Integer(),
@@ -262,9 +242,7 @@ project_pclasses = db.Table(
 # association table giving association between projects and transferable skills
 project_skills = db.Table(
     "project_to_skills",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
     db.Column(
         "skill_id",
         db.Integer(),
@@ -276,9 +254,7 @@ project_skills = db.Table(
 # association table giving association between projects and degree programmes
 project_programmes = db.Table(
     "project_to_programmes",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
     db.Column(
         "programme_id",
         db.Integer(),
@@ -290,12 +266,8 @@ project_programmes = db.Table(
 # association table giving assessors
 project_assessors = db.Table(
     "project_to_assessors",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True
-    ),
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
 # association table giving supervisor pool (currently only used for generic projects)
@@ -303,12 +275,8 @@ project_assessors = db.Table(
 # the people available to fill those roles
 project_supervisors = db.Table(
     "project_to_supervisors",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True
-    ),
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
 # association table matching project descriptions to supervision team
@@ -362,12 +330,8 @@ description_to_modules = db.Table(
 # association table linking projects to tags
 project_tags = db.Table(
     "project_to_tags",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True
-    ),
-    db.Column(
-        "tag_id", db.Integer(), db.ForeignKey("project_tags.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
+    db.Column("tag_id", db.Integer(), db.ForeignKey("project_tags.id"), primary_key=True),
 )
 
 # PROJECT ASSOCIATIONS (LIVE)
@@ -376,9 +340,7 @@ project_tags = db.Table(
 # association table giving association between projects and transferable skills
 live_project_skills = db.Table(
     "live_project_to_skills",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
     db.Column(
         "skill_id",
         db.Integer(),
@@ -390,9 +352,7 @@ live_project_skills = db.Table(
 # association table giving association between projects and degree programmes
 live_project_programmes = db.Table(
     "live_project_to_programmes",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
     db.Column(
         "programme_id",
         db.Integer(),
@@ -404,12 +364,8 @@ live_project_programmes = db.Table(
 # association table matching live projects to assessors
 live_assessors = db.Table(
     "live_project_to_assessors",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
 # association table giving supervisor pool for this live project (currently only used for generic projects)
@@ -417,12 +373,8 @@ live_assessors = db.Table(
 # the people available to fill those roles
 live_supervisors = db.Table(
     "live_project_to_supervisors",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
 # association table matching live projects to supervision team
@@ -430,9 +382,7 @@ live_supervisors = db.Table(
 # not the people available to fill those roles
 live_project_supervision = db.Table(
     "live_project_to_supervision",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
     db.Column(
         "supervisor.id",
         db.Integer(),
@@ -444,21 +394,15 @@ live_project_supervision = db.Table(
 # association table matching live projects to modules
 live_project_to_modules = db.Table(
     "live_project_to_modules",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
     db.Column("module_id", db.Integer(), db.ForeignKey("modules.id"), primary_key=True),
 )
 
 # association table linking projects to tags
 live_project_tags = db.Table(
     "live_project_to_tags",
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
-    db.Column(
-        "tag_id", db.Integer(), db.ForeignKey("project_tags.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
+    db.Column("tag_id", db.Integer(), db.ForeignKey("project_tags.id"), primary_key=True),
 )
 
 # CONVENOR FILTERS
@@ -585,9 +529,7 @@ marker_matching_table = db.Table(
         db.ForeignKey("matching_attempts.id"),
         primary_key=True,
     ),
-    db.Column(
-        "marker_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
+    db.Column("marker_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
 # configuration association: projects
@@ -599,9 +541,7 @@ project_matching_table = db.Table(
         db.ForeignKey("matching_attempts.id"),
         primary_key=True,
     ),
-    db.Column(
-        "project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True
-    ),
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
 )
 
 # SUPERVISION ROLES, EVENTS, ATTENDANCE MONITORING
@@ -615,9 +555,7 @@ event_email_table = db.Table(
         db.ForeignKey("supervision_events.id"),
         primary_key=True,
     ),
-    db.Column(
-        "email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
+    db.Column("email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
 )
 
 # email log linking reminder emails to the supervision event they are associated with
@@ -630,9 +568,7 @@ event_reminder_table = db.Table(
         db.ForeignKey("supervision_events.id"),
         primary_key=True,
     ),
-    db.Column(
-        "email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
+    db.Column("email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
 )
 
 # link members of the supervision team to a supervision event
@@ -654,9 +590,7 @@ event_roles_table = db.Table(
 
 even_assets_table = db.Table(
     "supervision_event_assets",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True),
     db.Column(
         "event_id",
         db.Integer(),
@@ -670,12 +604,8 @@ even_assets_table = db.Table(
 # email log linking all marking emails to a SubmissionRole instance
 submission_role_emails = db.Table(
     "submission_role_emails",
-    db.Column(
-        "role_id", db.Integer(), db.ForeignKey("submission_roles.id"), primary_key=True
-    ),
-    db.Column(
-        "email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
+    db.Column("role_id", db.Integer(), db.ForeignKey("submission_roles.id"), primary_key=True),
+    db.Column("email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
 )
 
 # link feedback reports to submission records
@@ -729,12 +659,8 @@ session_to_rooms = db.Table(
 # faculty to slots map
 faculty_to_slots = db.Table(
     "faculty_to_slots",
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
-    db.Column(
-        "slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True
-    ),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
+    db.Column("slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True),
 )
 
 # submitter to slots map
@@ -746,20 +672,14 @@ submitter_to_slots = db.Table(
         db.ForeignKey("submission_records.id"),
         primary_key=True,
     ),
-    db.Column(
-        "slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True
-    ),
+    db.Column("slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True),
 )
 
 # original faculty to slots map - used for reverting
 orig_fac_to_slots = db.Table(
     "orig_fac_to_slots",
-    db.Column(
-        "faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True
-    ),
-    db.Column(
-        "slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True
-    ),
+    db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
+    db.Column("slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True),
 )
 
 # orig submitter to slots map - used for reverting
@@ -771,9 +691,7 @@ orig_sub_to_slots = db.Table(
         db.ForeignKey("submission_records.id"),
         primary_key=True,
     ),
-    db.Column(
-        "slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True
-    ),
+    db.Column("slot_id", db.Integer(), db.ForeignKey("schedule_slots.id"), primary_key=True),
 )
 
 # assessor attendance: available
@@ -866,51 +784,39 @@ submitter_unavailable_sessions = db.Table(
 # generated assets
 generated_acl = db.Table(
     "acl_generated",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("generated_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("generated_assets.id"), primary_key=True),
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
 )
 
 generated_acr = db.Table(
     "acr_generated",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("generated_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("generated_assets.id"), primary_key=True),
     db.Column("role_id", db.Integer(), db.ForeignKey("roles.id"), primary_key=True),
 )
 
 # temporary assets
 temporary_acl = db.Table(
     "acl_temporary",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("temporary_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("temporary_assets.id"), primary_key=True),
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
 )
 
 temporary_acr = db.Table(
     "acr_temporary",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("temporary_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("temporary_assets.id"), primary_key=True),
     db.Column("role_id", db.Integer(), db.ForeignKey("roles.id"), primary_key=True),
 )
 
 # submitted assets
 submitted_acl = db.Table(
     "acl_submitted",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True),
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
 )
 
 submitted_acr = db.Table(
     "acr_submitted",
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True),
     db.Column("role_id", db.Integer(), db.ForeignKey("roles.id"), primary_key=True),
 )
 
@@ -919,12 +825,8 @@ submitted_acr = db.Table(
 # recipient list
 recipient_list = db.Table(
     "email_log_recipients",
-    db.Column(
-        "email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
-    ),
-    db.Column(
-        "recipient_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True
-    ),
+    db.Column("email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
+    db.Column("recipient_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
 )
 
 ## MATCHING ROLES
@@ -938,9 +840,7 @@ matching_role_list = db.Table(
         db.ForeignKey("matching_records.id"),
         primary_key=True,
     ),
-    db.Column(
-        "role_id", db.Integer(), db.ForeignKey("matching_roles.id"), primary_key=True
-    ),
+    db.Column("role_id", db.Integer(), db.ForeignKey("matching_roles.id"), primary_key=True),
 )
 
 # original role list (to support reversion of changes)
@@ -952,9 +852,7 @@ matching_role_list_original = db.Table(
         db.ForeignKey("matching_records.id"),
         primary_key=True,
     ),
-    db.Column(
-        "role_id", db.Integer(), db.ForeignKey("matching_roles.id"), primary_key=True
-    ),
+    db.Column("role_id", db.Integer(), db.ForeignKey("matching_roles.id"), primary_key=True),
 )
 
 ## BACKUP LABELS
@@ -962,9 +860,7 @@ matching_role_list_original = db.Table(
 backup_record_to_labels = db.Table(
     "backups_to_labels",
     db.Column("backup_id", db.Integer(), db.ForeignKey("backups.id"), primary_key=True),
-    db.Column(
-        "label_id", db.Integer(), db.ForeignKey("backup_labels.id"), primary_key=True
-    ),
+    db.Column("label_id", db.Integer(), db.ForeignKey("backup_labels.id"), primary_key=True),
 )
 
 ## FEEDBACK ASSETS
@@ -977,9 +873,7 @@ feedback_template_to_tags = db.Table(
         db.ForeignKey("feedback_templates.id"),
         primary_key=True,
     ),
-    db.Column(
-        "tag_id", db.Integer(), db.ForeignKey("feedback_template_tags.id"), primary_key=True
-    ),
+    db.Column("tag_id", db.Integer(), db.ForeignKey("feedback_template_tags.id"), primary_key=True),
 )
 
 feedback_recipe_to_assets = db.Table(
@@ -990,7 +884,5 @@ feedback_recipe_to_assets = db.Table(
         db.ForeignKey("feedback_recipes.id"),
         primary_key=True,
     ),
-    db.Column(
-        "asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True
-    ),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True),
 )

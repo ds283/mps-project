@@ -80,9 +80,7 @@ class Markdown(object):
         """
         Registers the rendering method as template filter.
         """
-        app.jinja_env.filters.setdefault(
-            "markdown", self.__build_filter(self.auto_escape)
-        )
+        app.jinja_env.filters.setdefault("markdown", self.__build_filter(self.auto_escape))
 
     def __call__(self, stream):
         return Markup(self._instance.convert(stream))

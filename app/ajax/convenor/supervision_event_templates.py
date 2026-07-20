@@ -85,14 +85,12 @@ def _build_menu_templ() -> Template:
 
 
 def supervision_event_templates_data(
-        templates: List[SupervisionEventTemplate],
-        unit: SubmissionPeriodUnit,
-        url: str = None,
-        text: str = None,
+    templates: List[SupervisionEventTemplate],
+    unit: SubmissionPeriodUnit,
+    url: str = None,
+    text: str = None,
 ):
-    return_url = url_for(
-        "convenor.inspect_unit_event_templates", unit_id=unit.id, url=url, text=text
-    )
+    return_url = url_for("convenor.inspect_unit_event_templates", unit_id=unit.id, url=url, text=text)
 
     name_templ: Template = _build_name_templ()
     target_role_templ: Template = _build_target_role_templ()

@@ -19,6 +19,7 @@ period_attachments and submission_attachments.  These were retained after the mi
 role-based access control (PeriodAttachmentRole / SubmissionAttachmentRole) to allow data
 migration, but are now fully unused.
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -44,23 +45,11 @@ def upgrade():
 
 def downgrade():
     with op.batch_alter_table("submission_attachments", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("include_supervisor_emails", sa.Boolean(), nullable=True, server_default=sa.false())
-        )
-        batch_op.add_column(
-            sa.Column("include_marker_emails", sa.Boolean(), nullable=True, server_default=sa.false())
-        )
-        batch_op.add_column(
-            sa.Column("publish_to_students", sa.Boolean(), nullable=True, server_default=sa.false())
-        )
+        batch_op.add_column(sa.Column("include_supervisor_emails", sa.Boolean(), nullable=True, server_default=sa.false()))
+        batch_op.add_column(sa.Column("include_marker_emails", sa.Boolean(), nullable=True, server_default=sa.false()))
+        batch_op.add_column(sa.Column("publish_to_students", sa.Boolean(), nullable=True, server_default=sa.false()))
 
     with op.batch_alter_table("period_attachments", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("include_supervisor_emails", sa.Boolean(), nullable=True, server_default=sa.false())
-        )
-        batch_op.add_column(
-            sa.Column("include_marker_emails", sa.Boolean(), nullable=True, server_default=sa.false())
-        )
-        batch_op.add_column(
-            sa.Column("publish_to_students", sa.Boolean(), nullable=True, server_default=sa.false())
-        )
+        batch_op.add_column(sa.Column("include_supervisor_emails", sa.Boolean(), nullable=True, server_default=sa.false()))
+        batch_op.add_column(sa.Column("include_marker_emails", sa.Boolean(), nullable=True, server_default=sa.false()))
+        batch_op.add_column(sa.Column("publish_to_students", sa.Boolean(), nullable=True, server_default=sa.false()))

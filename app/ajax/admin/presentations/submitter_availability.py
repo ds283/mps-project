@@ -93,8 +93,7 @@ def submitter_session_availability_data(assessment, session, talks, editable=Fal
                     email=s.submitter.owner.student.user.email,
                     name=s.submitter.owner.student.user.name,
                 ),
-                "sortstring": s.submitter.owner.student.user.last_name
-                              + s.submitter.owner.student.user.first_name,
+                "sortstring": s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name,
             },
             "pclass": render_template_string(_pclass, config=s.submitter.owner.config),
             "project": render_template_string(
@@ -130,8 +129,7 @@ def presentation_attendees_data(assessment, talks, editable=False):
         {
             "student": {
                 "display": render_template_string(_global_name, s=s, a=assessment),
-                "sortstring": s.submitter.owner.student.user.last_name
-                              + s.submitter.owner.student.user.first_name,
+                "sortstring": s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name,
             },
             "pclass": render_template_string(_pclass, config=s.submitter.owner.config),
             "project": render_template_string(
@@ -148,9 +146,7 @@ def presentation_attendees_data(assessment, talks, editable=False):
                 url=url_for("admin.assessment_manage_attendees", id=assessment.id),
                 text="submitter management view",
             ),
-            "menu": render_template_string(
-                _submitter_actions, s=s.submitter, a=assessment, editable=editable
-            ),
+            "menu": render_template_string(_submitter_actions, s=s.submitter, a=assessment, editable=editable),
         }
         for s in talks
     ]

@@ -25,9 +25,7 @@ class SimilarityConcern(db.Model):
 
     __tablename__ = "similarity_concerns"
 
-    __table_args__ = (
-        db.UniqueConstraint("record_a_id", "record_b_id", "chunk_type", name="uq_similarity_concern"),
-    )
+    __table_args__ = (db.UniqueConstraint("record_a_id", "record_b_id", "chunk_type", name="uq_similarity_concern"),)
 
     id = db.Column(db.Integer(), primary_key=True)
 

@@ -244,9 +244,7 @@ def _build_selector_menu_templ() -> Template:
     return env.from_string(_selector_menu)
 
 
-def selector_liveprojects_data(
-    sel: SelectingStudent, is_live: bool, projects: List[LiveProject]
-):
+def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: List[LiveProject]):
     if hasattr(projects, "len") and len(projects) == 0:
         return []
 
@@ -265,9 +263,7 @@ def selector_liveprojects_data(
 
     def _process(p: LiveProject, is_live: bool):
         base = {
-            "name": render_template(
-                name_templ, project=p, is_live=is_live, sel=sel, config=config
-            ),
+            "name": render_template(name_templ, project=p, is_live=is_live, sel=sel, config=config),
             "supervisor": render_template(owner_templ, project=p),
             "group": render_template(
                 group_templ,
@@ -282,12 +278,8 @@ def selector_liveprojects_data(
                 skills=p.ordered_skills,
                 simple_label=simple_label,
             ),
-            "prefer": render_template(
-                prefer_templ, project=p, simple_label=simple_label
-            ),
-            "menu": render_template(
-                menu_templ, sel=sel, project=p, is_live=is_live, config=config
-            ),
+            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
+            "menu": render_template(menu_templ, sel=sel, project=p, is_live=is_live, config=config),
         }
 
         if is_live:
@@ -335,9 +327,7 @@ def submitter_liveprojects_data(sub: SubmittingStudent, projects: List[LiveProje
                 skills=p.ordered_skills,
                 simple_label=simple_label,
             ),
-            "prefer": render_template(
-                prefer_templ, project=p, simple_label=simple_label
-            ),
+            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
             "menu": render_template(menu_templ, sub=sub, project=p),
         }
 

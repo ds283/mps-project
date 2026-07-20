@@ -296,9 +296,7 @@ def upload_submission_comment_file(
 
     if not notify_response.ok:
         raise CanvasAPIError(
-            "Canvas file upload step 1 returned error status {code}".format(
-                code=notify_response.status_code
-            ),
+            "Canvas file upload step 1 returned error status {code}".format(code=notify_response.status_code),
             status_code=notify_response.status_code,
             response_body=notify_response.text[:500],
         )
@@ -337,23 +335,17 @@ def upload_submission_comment_file(
         try:
             confirm_response = session.get(location)
         except requests.RequestException as e:
-            raise CanvasAPIError(
-                "Canvas file upload step 2 redirect follow failed: {err}".format(err=e)
-            ) from e
+            raise CanvasAPIError("Canvas file upload step 2 redirect follow failed: {err}".format(err=e)) from e
         if not confirm_response.ok:
             raise CanvasAPIError(
-                "Canvas file upload step 2 redirect target returned error {code}".format(
-                    code=confirm_response.status_code
-                ),
+                "Canvas file upload step 2 redirect target returned error {code}".format(code=confirm_response.status_code),
                 status_code=confirm_response.status_code,
                 response_body=confirm_response.text[:500],
             )
         file_id = confirm_response.json()["id"]
     else:
         raise CanvasAPIError(
-            "Canvas file upload step 2 returned unexpected status {code}".format(
-                code=upload_response.status_code
-            ),
+            "Canvas file upload step 2 returned unexpected status {code}".format(code=upload_response.status_code),
             status_code=upload_response.status_code,
             response_body=upload_response.text[:500],
         )

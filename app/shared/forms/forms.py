@@ -20,6 +20,7 @@ class ConfirmActionForm(Form):
 
     pass
 
+
 from .mixins import PeriodSelectorMixinFactory
 from .queries import BuildWorkflowTemplateLabel
 from ...models import ProjectClassConfig
@@ -54,9 +55,7 @@ class ChoosePairedEmailTemplatesForm(FlaskForm):
 
 
 def SelectSubmissionRecordFormFactory(config: ProjectClassConfig, is_admin: bool):
-    class SelectSubmissionRecordForm(
-        Form, PeriodSelectorMixinFactory(config, is_admin)
-    ):
+    class SelectSubmissionRecordForm(Form, PeriodSelectorMixinFactory(config, is_admin)):
         pass
 
     return SelectSubmissionRecordForm

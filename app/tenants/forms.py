@@ -37,6 +37,7 @@ class TenantMixin:
 
 class DeleteForm(Form):
     """Minimal form used solely to provide CSRF protection for destructive POST actions."""
+
     submit = SubmitField("Delete")
 
 
@@ -46,7 +47,6 @@ class AddTenantForm(Form, TenantMixin):
 
 class EditTenantForm(Form, TenantMixin, SaveChangesMixin):
     pass
-
 
 
 def AddAICalibrationFormFactory(tenant_id: int, llm_configs: list[tuple]):
@@ -67,18 +67,14 @@ def AddAICalibrationFormFactory(tenant_id: int, llm_configs: list[tuple]):
             .all()
         )
 
-    llm_choices = [("", "— none (lexical only) —")] + [
-        (f"{m}::{c}", f"{m}  (context: {c:,} tokens)") for m, c in llm_configs
-    ]
+    llm_choices = [("", "— none (lexical only) —")] + [(f"{m}::{c}", f"{m}  (context: {c:,} tokens)") for m, c in llm_configs]
 
     class AddAICalibrationForm(Form):
         feature_set = SelectField(
             "Calibration type",
-            choices=[("lexical", "Lexical (3D — MATTR, MTLD, sentence CV)"),
-                     ("full", "Full (4D — lexical + mean NLL)")],
+            choices=[("lexical", "Lexical (3D — MATTR, MTLD, sentence CV)"), ("full", "Full (4D — lexical + mean NLL)")],
             default="lexical",
-            description="Choose 'Full' to include NLL predictability metrics. "
-                        "A matching LLM configuration must be selected below.",
+            description="Choose 'Full' to include NLL predictability metrics. A matching LLM configuration must be selected below.",
         )
 
         llm_config = SelectField(
@@ -86,8 +82,8 @@ def AddAICalibrationFormFactory(tenant_id: int, llm_configs: list[tuple]):
             choices=llm_choices,
             default="",
             description="The (model, context-window) pair to use for full calibrations. "
-                        "Leave as '— none —' for lexical-only calibrations. "
-                        "Only configurations found in stored submission data are listed.",
+            "Leave as '— none —' for lexical-only calibrations. "
+            "Only configurations found in stored submission data are listed.",
         )
 
         project_classes = QuerySelectMultipleField(
@@ -95,14 +91,13 @@ def AddAICalibrationFormFactory(tenant_id: int, llm_configs: list[tuple]):
             query_factory=_get_pclasses,
             get_label=lambda p: p.name,
             description="Select project classes to include. Each project class may belong to "
-                        "at most one calibration per (feature set, LLM configuration) combination.",
+            "at most one calibration per (feature set, LLM configuration) combination.",
         )
 
         years = SelectMultipleField(
             "Academic years",
             coerce=int,
-            description="Select academic years to include in the calibration baseline. "
-                        "For lexical calibrations, prefer pre-LLM years (≤ 2022).",
+            description="Select academic years to include in the calibration baseline. For lexical calibrations, prefer pre-LLM years (≤ 2022).",
         )
 
         submit = SubmitField("Run and save calibration")
@@ -145,9 +140,9 @@ def RecalculateAIConcernFormFactory(tenant_id: int):
             "Full recalculation (re-process cached text and recompute all lexical metrics)",
             default=False,
             description="Re-process the cached extracted text through the current metric "
-                        "pipeline (MATTR, MTLD, burstiness, sentence CV) before reclassifying. "
-                        "Picks up algorithm improvements in the metric implementation. "
-                        "Slower than reclassification only.",
+            "pipeline (MATTR, MTLD, burstiness, sentence CV) before reclassifying. "
+            "Picks up algorithm improvements in the metric implementation. "
+            "Slower than reclassification only.",
         )
 
         submit = SubmitField("Recalculate AI concern")

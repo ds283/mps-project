@@ -97,14 +97,10 @@ class ProjectClass(
     id = db.Column(db.Integer(), primary_key=True)
 
     # project class name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # user-facing abbreviatiaon
-    abbreviation = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # publish to students/faculty?
     publish = db.Column(db.Boolean(), default=True)
@@ -217,9 +213,7 @@ class ProjectClass(
 
     # in which years should students be auto-enrolled as selectors?
     # takes values from AutoEnrolMixin (AUTO_ENROLL_FIRST_YEAR, AUTO_ENROLL_ALL_YEARS)
-    auto_enroll_years = db.Column(
-        db.Integer(), default=AutoEnrolMixin.AUTO_ENROLL_FIRST_YEAR
-    )
+    auto_enroll_years = db.Column(db.Integer(), default=AutoEnrolMixin.AUTO_ENROLL_FIRST_YEAR)
 
     @validates("auto_enroll_years")
     def _validate_auto_enroll_years(self, key, value):
@@ -389,20 +383,11 @@ class ProjectClass(
         if self._most_recent_config is not None:
             return self._most_recent_config
 
-        self._most_recent_config = (
-            db.session.query(ProjectClassConfig)
-            .filter_by(pclass_id=self.id)
-            .order_by(ProjectClassConfig.year.desc())
-            .first()
-        )
+        self._most_recent_config = db.session.query(ProjectClassConfig).filter_by(pclass_id=self.id).order_by(ProjectClassConfig.year.desc()).first()
         return self._most_recent_config
 
     def get_config(self, year):
-        return (
-            db.session.query(ProjectClassConfig)
-            .filter_by(pclass_id=self.id, year=year)
-            .first()
-        )
+        return db.session.query(ProjectClassConfig).filter_by(pclass_id=self.id, year=year).first()
 
     def disable(self):
         """
@@ -549,9 +534,7 @@ class ProjectClass(
         # have ascending serial numbers
         modified: bool = False
 
-        if (
-            self.periods is None or get_count(self.periods) == 0
-        ) and minimum_expected > 0:
+        if (self.periods is None or get_count(self.periods) == 0) and minimum_expected > 0:
             if current_user is not None:
                 data = SubmissionPeriodDefinition(
                     owner_id=self.id,
@@ -569,9 +552,7 @@ class ProjectClass(
                 raise RuntimeError("Cannot insert missing SubmissionPeriodDefinition")
 
         expected = 1
-        for item in self.periods.order_by(
-            SubmissionPeriodDefinition.period.asc()
-        ).all():
+        for item in self.periods.order_by(SubmissionPeriodDefinition.period.asc()).all():
             if item.period != expected:
                 item.period = expected
                 modified = True
@@ -587,9 +568,7 @@ class ProjectClass(
         modified: bool = False
 
         modified = self.validate_periods(minimum_expected=1) or modified
-        number_with_presentations = get_count(
-            self.periods.filter_by(has_presentation=True)
-        )
+        number_with_presentations = get_count(self.periods.filter_by(has_presentation=True))
 
         if number_with_presentations > 0:
             return modified
@@ -650,9 +629,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
         "ProjectClass",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "periods", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("periods", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # numerical submission period
@@ -687,9 +664,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
     morning_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # afternoon session times, eg 2pm-4pm
-    afternoon_session = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    afternoon_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -714,9 +689,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
 SubmissionPeriodDefinitionLike = Union[SubmissionPeriodDefinition, int]
 
 
-def _get_submission_period(
-    period: SubmissionPeriodDefinitionLike, pclass: ProjectClass
-) -> Optional[SubmissionPeriodDefinition]:
+def _get_submission_period(period: SubmissionPeriodDefinitionLike, pclass: ProjectClass) -> Optional[SubmissionPeriodDefinition]:
     if period is None:
         return None
 
@@ -726,9 +699,7 @@ def _get_submission_period(
     if isinstance(period, int):
         return pclass.get_period(period)
 
-    raise RuntimeError(
-        f'Could not convert identifier "{period}" to SubmissionPeriodDefinition instance'
-    )
+    raise RuntimeError(f'Could not convert identifier "{period}" to SubmissionPeriodDefinition instance')
 
 
 class ProjectClassConfig(
@@ -782,12 +753,8 @@ class ProjectClassConfig(
     creation_timestamp = db.Column(db.DateTime())
 
     # grading rubric for language analysis pipeline
-    grading_rubric_id = db.Column(
-        db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=True
-    )
-    grading_rubric = db.relationship(
-        "GradingRubric", uselist=False, foreign_keys=[grading_rubric_id]
-    )
+    grading_rubric_id = db.Column(db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=True)
+    grading_rubric = db.relationship("GradingRubric", uselist=False, foreign_keys=[grading_rubric_id])
 
     # LOCAL CONFIGURATION
 
@@ -856,9 +823,7 @@ class ProjectClassConfig(
 
     # who issued confirmation requests?
     requests_issued_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    requests_issued_by = db.relationship(
-        "User", uselist=False, foreign_keys=[requests_issued_id]
-    )
+    requests_issued_by = db.relationship("User", uselist=False, foreign_keys=[requests_issued_id])
 
     # requests issued timestamp
     requests_timestamp = db.Column(db.DateTime())
@@ -871,9 +836,7 @@ class ProjectClassConfig(
 
     # who skipped them?
     requests_skipped_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    requests_skipped_by = db.relationship(
-        "User", uselist=False, foreign_keys=[requests_skipped_id]
-    )
+    requests_skipped_by = db.relationship("User", uselist=False, foreign_keys=[requests_skipped_id])
 
     # requests skipped timestamp
     requests_skipped_timestamp = db.Column(db.DateTime())
@@ -891,9 +854,7 @@ class ProjectClassConfig(
 
     # track whether background CustomOfferHint generation has completed after Go Live
     offer_hints_generated = db.Column(db.Boolean(), default=False)
-    offer_hints_generated_timestamp = db.Column(
-        db.DateTime(), default=None, nullable=True
-    )
+    offer_hints_generated_timestamp = db.Column(db.DateTime(), default=None, nullable=True)
 
     # golive record of email notifications
     golive_notified = db.relationship("User", secondary=golive_emails, lazy="dynamic")
@@ -902,9 +863,7 @@ class ProjectClassConfig(
     live_deadline = db.Column(db.Date())
 
     # should we accommodate an existing matching when offering projects?
-    accommodate_matching_id = db.Column(
-        db.Integer(), db.ForeignKey("matching_attempts.id")
-    )
+    accommodate_matching_id = db.Column(db.Integer(), db.ForeignKey("matching_attempts.id"))
     accommodate_matching = db.relationship(
         "MatchingAttempt",
         uselist=False,
@@ -1002,11 +961,7 @@ class ProjectClassConfig(
 
         messages.append("Initial choices={m}".format(m=self.initial_choices))
         messages.append("Switch choices={m}".format(m=self.switch_choices))
-        messages.append(
-            "Max selectable projects with same supervisor={m}".format(
-                m=self.faculty_maximum
-            )
-        )
+        messages.append("Max selectable projects with same supervisor={m}".format(m=self.faculty_maximum))
         messages.append(
             "Start year Y{m} {level}".format(
                 m=self.start_year,
@@ -1082,10 +1037,7 @@ class ProjectClassConfig(
 
         # confirmation not required if faculty member is on sabbatical from this project type
         record = fac_data.get_enrollment_record(self.pclass_id)
-        if (
-            record is not None
-            and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
-        ):
+        if record is not None and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
             return 0
 
         # confirmation not required if project class doesn't use it
@@ -1119,10 +1071,7 @@ class ProjectClassConfig(
 
         # confirmation not required if faculty member is on sabbatical from this project type
         record = fac_data.get_enrollment_record(self.pclass_id)
-        if (
-            record is not None
-            and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
-        ):
+        if record is not None and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
             return False
 
         # confirmation not required if project class doesn't use it
@@ -1180,10 +1129,7 @@ class ProjectClassConfig(
 
         # confirmation required if there are outstanding project descriptions needing confirmation,
         # or if this user hasn't yet given confirmation for this ProjectClassConfig
-        return (
-            self.has_confirmations_outstanding(fac_data.id)
-            or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
-        )
+        return self.has_confirmations_outstanding(fac_data.id) or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
 
     def mark_confirmed(self, faculty, message=False):
         if isinstance(faculty, User):
@@ -1207,8 +1153,7 @@ class ProjectClassConfig(
             if message:
                 messages.append(
                     (
-                        "Thank you for confirming that your projects belonging to "
-                        'class "{name}" are ready to publish.'.format(
+                        'Thank you for confirming that your projects belonging to class "{name}" are ready to publish.'.format(
                             name=self.project_class.name
                         ),
                         "info",
@@ -1225,8 +1170,7 @@ class ProjectClassConfig(
             .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
             .filter(
                 EnrollmentRecord.pclass_id == self.pclass_id,
-                EnrollmentRecord.supervisor_state
-                == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
             )
             .join(User, User.id == FacultyData.id)
             .filter(User.active)
@@ -1235,9 +1179,7 @@ class ProjectClassConfig(
 
         # return a generator that loops through all these faculty, if they satisfy the
         # .is_confirmation_required() property
-        return (
-            f for f in faculty if f is not None and self.is_confirmation_required(f)
-        )
+        return (f for f in faculty if f is not None and self.is_confirmation_required(f))
 
     @property
     def faculty_waiting_confirmation(self):
@@ -1402,9 +1344,7 @@ class ProjectClassConfig(
 
     @property
     def template_periods(self):
-        return self.project_class.periods.order_by(
-            SubmissionPeriodDefinition.period.asc()
-        )
+        return self.project_class.periods.order_by(SubmissionPeriodDefinition.period.asc())
 
     @property
     def card_text_normal(self):
@@ -1496,9 +1436,7 @@ class ProjectClassConfig(
 
     @property
     def _previous_config_query(self):
-        return db.session.query(ProjectClassConfig).filter_by(
-            year=self.year - 1, pclass_id=self.pclass_id
-        )
+        return db.session.query(ProjectClassConfig).filter_by(year=self.year - 1, pclass_id=self.pclass_id)
 
     @property
     def previous_config(self):
@@ -1622,16 +1560,10 @@ class ProjectClassConfig(
         if self.year >= current_year:
             return False
 
-        if (
-            selector_status
-            != SelectorLifecycleStatesMixin.SELECTOR_LIFECYCLE_READY_ROLLOVER
-        ):
+        if selector_status != SelectorLifecycleStatesMixin.SELECTOR_LIFECYCLE_READY_ROLLOVER:
             return False
 
-        if (
-            submitter_status
-            != SubmitterLifecycleStatesMixin.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-        ):
+        if submitter_status != SubmitterLifecycleStatesMixin.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
             return False
 
         return True
@@ -1740,9 +1672,7 @@ class ProjectClassConfig(
 
         return {"have_submitted": submitted, "missing": missing, "total": total}
 
-    def most_popular_projects(
-        self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=3)
-    ):
+    def most_popular_projects(self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=3)):
         popularity_subq = (
             db.session.query(
                 PopularityRecord.liveproject_id.label("popq_liveproject_id"),
@@ -1772,8 +1702,7 @@ class ProjectClassConfig(
             .join(
                 PopularityRecord,
                 and_(
-                    PopularityRecord.liveproject_id
-                    == popularity_subq.c.popq_liveproject_id,
+                    PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
                     PopularityRecord.datestamp == popularity_subq.c.popq_datestamp,
                 ),
                 isouter=True,
@@ -1783,9 +1712,7 @@ class ProjectClassConfig(
         )
 
         now: datetime = datetime.now()
-        compare_cutoff: datetime = (
-            now - compare_interval if compare_interval is not None else None
-        )
+        compare_cutoff: datetime = now - compare_interval if compare_interval is not None else None
 
         def _build_item(p: LiveProject, pr: Optional[PopularityRecord]):
             if pr is None:
@@ -1824,14 +1751,10 @@ class ProjectClassConfig(
                         return a - b
 
                     delta = {
-                        "score_rank": compute_delta(
-                            pr.score_rank, compare_pr.score_rank
-                        ),
+                        "score_rank": compute_delta(pr.score_rank, compare_pr.score_rank),
                         "bookmarks": compute_delta(pr.bookmarks, compare_pr.bookmarks),
                         "views": compute_delta(pr.views, compare_pr.views),
-                        "selections": compute_delta(
-                            pr.selections, compare_pr.selections
-                        ),
+                        "selections": compute_delta(pr.selections, compare_pr.selections),
                     }
 
                     data.update({"compare": compare, "delta": delta})
@@ -2026,9 +1949,7 @@ class ProjectClassConfig(
             return self._canvas_course_URL
 
         URL_root = self.canvas_root_URL
-        course_URL = urljoin(
-            URL_root, "courses/{course_id}/".format(course_id=self.canvas_module_id)
-        )
+        course_URL = urljoin(URL_root, "courses/{course_id}/".format(course_id=self.canvas_module_id))
         self._canvas_course_URL = url_normalize(course_URL)
 
         return self._canvas_course_URL
@@ -2040,11 +1961,7 @@ def _ProjectClassConfig_insert_handler(mapper, connection, target: ProjectClassC
         if target.project_class is not None:
             target.project_class._most_recent_config = None
         else:
-            pclass = (
-                db.session.query(ProjectClass)
-                .filter(ProjectClass.id == target.pclass_id)
-                .first()
-            )
+            pclass = db.session.query(ProjectClass).filter(ProjectClass.id == target.pclass_id).first()
             if pclass is not None:
                 pclass._most_recent_config = None
 
@@ -2055,11 +1972,7 @@ def _ProjectClassConfig_delete_handler(mapper, connection, target: ProjectClassC
         if target.project_class is not None:
             target.project_class._most_recent_config = None
         else:
-            pclass = (
-                db.session.query(ProjectClass)
-                .filter(ProjectClass.id == target.pclass_id)
-                .first()
-            )
+            pclass = db.session.query(ProjectClass).filter(ProjectClass.id == target.pclass_id).first()
             if pclass is not None:
                 pclass._most_recent_config = None
 
@@ -2079,9 +1992,7 @@ class SubmissionPeriodRecord(db.Model):
         "ProjectClassConfig",
         foreign_keys=[config_id],
         uselist=False,
-        backref=db.backref(
-            "periods", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("periods", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # submission period
@@ -2123,9 +2034,7 @@ class SubmissionPeriodRecord(db.Model):
     morning_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # afternoon session times, eg 2pm-4pm
-    afternoon_session = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    afternoon_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -2238,9 +2147,7 @@ class SubmissionPeriodRecord(db.Model):
     @property
     def display_name(self):
         if self.name is not None and len(self.name) > 0:
-            return str(self.name).format(
-                year1=self.config.submit_year_a, year2=self.config.submit_year_b
-            )
+            return str(self.name).format(year1=self.config.submit_year_a, year2=self.config.submit_year_b)
 
         return "Submission Period #{n}".format(n=self.submission_period)
 
@@ -2292,11 +2199,7 @@ class SubmissionPeriodRecord(db.Model):
         elif isinstance(user, FacultyData) or isinstance(user, User):
             user_id = user.id
         else:
-            raise RuntimeError(
-                'Unknown faculty id type "{typ}" passed to SubmissionPeriodRecord.get_supervisor_records'.format(
-                    typ=type(user)
-                )
-            )
+            raise RuntimeError('Unknown faculty id type "{typ}" passed to SubmissionPeriodRecord.get_supervisor_records'.format(typ=type(user)))
 
         role_map = {
             "supervisor": SubmissionRole.ROLE_SUPERVISOR,
@@ -2316,9 +2219,7 @@ class SubmissionPeriodRecord(db.Model):
                 role_str = str(role).lower()
 
             if role_str not in role_map:
-                raise RuntimeError(
-                    f'Unknown role "{role}" passed to SubmissionPeriodRecord.get_supervisor_records'
-                )
+                raise RuntimeError(f'Unknown role "{role}" passed to SubmissionPeriodRecord.get_supervisor_records')
 
             return role_str
 
@@ -2327,9 +2228,7 @@ class SubmissionPeriodRecord(db.Model):
         elif isinstance(roles, Iterable):
             roles_list = [stringize_role(r) for r in roles]
         else:
-            raise RuntimeError(
-                f'Unknown roles type "{type(roles)}" passed to SubmissionPeriodRecord.get_supervisor_records'
-            )
+            raise RuntimeError(f'Unknown roles type "{type(roles)}" passed to SubmissionPeriodRecord.get_supervisor_records')
 
         role_ids = [role_map[role] for role in roles_list]
 
@@ -2345,9 +2244,7 @@ class SubmissionPeriodRecord(db.Model):
             )
         )
 
-    def _ordered_records_query(
-        self, user, roles: Union[Iterable[str], str], order_by: str
-    ):
+    def _ordered_records_query(self, user, roles: Union[Iterable[str], str], order_by: str):
         """
         Same as _unordered_records_query(), but now order by student name or exam number (as specified)
         :param user: identify staff member, either primary key for User, FacultyData or a User/FacultyData instance
@@ -2359,34 +2256,22 @@ class SubmissionPeriodRecord(db.Model):
         from .submissions import SubmissionRecord
 
         if order_by not in ["name", "exam"]:
-            raise KeyError(
-                f'Unknown order type "{order_by}" in SubmissionPeriodRecord._ordered_records_query()'
-            )
+            raise KeyError(f'Unknown order type "{order_by}" in SubmissionPeriodRecord._ordered_records_query()')
 
-        query = self._unordered_records_query(user, roles).join(
-            SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id
-        )
+        query = self._unordered_records_query(user, roles).join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         if order_by == "name":
-            query = query.join(User, User.id == SubmittingStudent.student_id).order_by(
-                User.last_name.asc(), User.first_name.asc()
-            )
+            query = query.join(User, User.id == SubmittingStudent.student_id).order_by(User.last_name.asc(), User.first_name.asc())
 
         if order_by == "exam":
-            query = query.join(
-                StudentData, StudentData.id == SubmittingStudent.student_id
-            ).order_by(StudentData.exam_number.asc())
+            query = query.join(StudentData, StudentData.id == SubmittingStudent.student_id).order_by(StudentData.exam_number.asc())
 
         return query
 
     def number_supervisor_records(self, user) -> int:
-        return get_count(
-            self._unordered_records_query(user, ["supervisor", "responsible"])
-        )
+        return get_count(self._unordered_records_query(user, ["supervisor", "responsible"]))
 
     def get_supervisor_records(self, user):
-        return self._ordered_records_query(
-            user, ["supervisor", "responsible"], "name"
-        ).all()
+        return self._ordered_records_query(user, ["supervisor", "responsible"], "name").all()
 
     def number_marker_records(self, user) -> int:
         return get_count(self._unordered_records_query(user, "marker"))
@@ -2421,11 +2306,7 @@ class SubmissionPeriodRecord(db.Model):
         records = self.submissions.subquery()
 
         # find all distinct projects in this submission period
-        return (
-            db.session.query(LiveProject)
-            .join(records, records.c.project_id == LiveProject.id)
-            .distinct()
-        )
+        return db.session.query(LiveProject).join(records, records.c.project_id == LiveProject.id).distinct()
 
     @property
     def number_projects(self):
@@ -2436,22 +2317,13 @@ class SubmissionPeriodRecord(db.Model):
         projects = self.projects_list.subquery()
 
         # find all faculty who are assessors for at least one project in this submission period
-        assessors = (
-            db.session.query(live_assessors.c.faculty_id)
-            .join(projects, projects.c.id == live_assessors.c.project_id)
-            .distinct()
-            .subquery()
-        )
+        assessors = db.session.query(live_assessors.c.faculty_id).join(projects, projects.c.id == live_assessors.c.project_id).distinct().subquery()
 
-        return db.session.query(FacultyData).join(
-            assessors, assessors.c.faculty_id == FacultyData.id
-        )
+        return db.session.query(FacultyData).join(assessors, assessors.c.faculty_id == FacultyData.id)
 
     @property
     def label(self):
-        return self.config.project_class.make_label(
-            self.config.abbreviation + ": " + self.display_name
-        )
+        return self.config.project_class.make_label(self.config.abbreviation + ": " + self.display_name)
 
     @property
     def has_deployed_schedule(self):
@@ -2471,9 +2343,7 @@ class SubmissionPeriodRecord(db.Model):
     def number_marking_events_closed(self) -> int:
         from .markingevent import MarkingEvent, MarkingEventWorkflowStates
 
-        return self.marking_events.filter(
-            MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED
-        ).count()
+        return self.marking_events.filter(MarkingEvent.workflow_state == MarkingEventWorkflowStates.CLOSED).count()
 
     def _number_workflows_for_role(self, role: int) -> int:
         from .markingevent import MarkingEvent, MarkingWorkflow
@@ -2495,9 +2365,7 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def number_presentation_assessor_workflows(self) -> int:
-        return self._number_workflows_for_role(
-            SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR
-        )
+        return self._number_workflows_for_role(SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR)
 
     @property
     def number_submitted_moderator_reports(self) -> int:
@@ -2535,9 +2403,7 @@ class SubmissionPeriodRecord(db.Model):
         from .submissions import SubmissionRecord
 
         return get_count(
-            self.submissions.join(
-                SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id
-            ).filter(
+            self.submissions.join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id).filter(
                 and_(
                     SubmissionRecord.report_id == None,
                     SubmissionRecord.canvas_submission_available.is_(True),
@@ -2579,11 +2445,7 @@ class SubmissionPeriodRecord(db.Model):
         """
         from .submissions import PeriodAttachment
 
-        return [
-            pa
-            for pa in self.attachments.order_by(PeriodAttachment.rank_order)
-            if pa.has_role_access(role)
-        ]
+        return [pa for pa in self.attachments.order_by(PeriodAttachment.rank_order) if pa.has_role_access(role)]
 
     def get_attachments_for_role_set(self, role_set) -> list:
         """
@@ -2593,20 +2455,14 @@ class SubmissionPeriodRecord(db.Model):
         """
         from .submissions import PeriodAttachment
 
-        return [
-            pa
-            for pa in self.attachments.order_by(PeriodAttachment.rank_order)
-            if pa.has_role_access_for_set(role_set)
-        ]
+        return [pa for pa in self.attachments.order_by(PeriodAttachment.rank_order) if pa.has_role_access_for_set(role_set)]
 
     @property
     def canvas_enabled(self):
         if not self.config.canvas_enabled:
             return False
 
-        return (
-            self.canvas_module_id is not None and self.canvas_assignment_id is not None
-        )
+        return self.canvas_module_id is not None and self.canvas_assignment_id is not None
 
     @property
     def canvas_assignment_URL(self):
@@ -2614,9 +2470,7 @@ class SubmissionPeriodRecord(db.Model):
             return self._canvas_assignment_URL
 
         URL_root = self.config.canvas_root_URL
-        course_URL = urljoin(
-            URL_root, "courses/{course_id}/".format(course_id=self.canvas_module_id)
-        )
+        course_URL = urljoin(URL_root, "courses/{course_id}/".format(course_id=self.canvas_module_id))
         assignment_URL = urljoin(
             course_URL,
             "assignments/{assign_id}/".format(assign_id=self.canvas_assignment_id),
@@ -2635,28 +2489,20 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def ordered_units(self):
-        return self.units.order_by(
-            SubmissionPeriodUnit.start_date, SubmissionPeriodUnit.end_date
-        )
+        return self.units.order_by(SubmissionPeriodUnit.start_date, SubmissionPeriodUnit.end_date)
 
     @property
     def validate(self):
         messages = []
 
         if self.start_date is None:
-            messages.append(
-                "A start date for this submission period has not yet been configured"
-            )
+            messages.append("A start date for this submission period has not yet been configured")
 
         if self.hand_in_date is None:
-            messages.append(
-                "A hand-in date for this submission period has not yet been configured"
-            )
+            messages.append("A hand-in date for this submission period has not yet been configured")
 
         if self.name is None or len(self.name) == 0:
-            messages.append(
-                "A unique name for this submission period has not yet been configured"
-            )
+            messages.append("A unique name for this submission period has not yet been configured")
 
         if not self.all_supervisors_assigned:
             messages.append("Some students still require projects to be assigned")
@@ -2668,9 +2514,7 @@ class SubmissionPeriodRecord(db.Model):
             if not self.config.canvas_enabled:
                 messages.append("Canvas integration is not yet set up for this cycle")
             elif not self.canvas_enabled:
-                messages.append(
-                    "Canvas integration is not yet set up for this submission period"
-                )
+                messages.append("Canvas integration is not yet set up for this submission period")
 
         return messages
 
@@ -2688,16 +2532,12 @@ class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent submission period
-    owner_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False
-    )
+    owner_id = db.Column(db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False)
     owner = db.relationship(
         "SubmissionPeriodRecord",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "units", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("units", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # text name
@@ -2723,9 +2563,7 @@ class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
         return get_count(self.events)
 
 
-class SupervisionEventTemplate(
-    db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SubmissionRoleTypesMixin
-):
+class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SubmissionRoleTypesMixin):
     """
     Capture a template (later to be replicated over all submitters) for a supervision event within a submission unit.
     In a typical Sussex supervision arrangement, events will be 1-to-1 supervision meetings
@@ -2737,22 +2575,16 @@ class SupervisionEventTemplate(
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent submission unit
-    unit_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_period_units.id"), nullable=False
-    )
+    unit_id = db.Column(db.Integer(), db.ForeignKey("submission_period_units.id"), nullable=False)
     unit = db.relationship(
         "SubmissionPeriodUnit",
         foreign_keys=[unit_id],
         uselist=False,
-        backref=db.backref(
-            "templates", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("templates", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # name of this event
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # assign this event to which submission roles?
     target_role = db.Column(db.Integer(), nullable=False)
@@ -2808,22 +2640,16 @@ class SupervisionEvent(
     id = db.Column(db.Integer(), primary_key=True)
 
     # parent submission unit
-    unit_id = db.Column(
-        db.Integer(), db.ForeignKey("submission_period_units.id"), nullable=False
-    )
+    unit_id = db.Column(db.Integer(), db.ForeignKey("submission_period_units.id"), nullable=False)
     unit = db.relationship(
         "SubmissionPeriodUnit",
         foreign_keys=[unit_id],
         uselist=False,
-        backref=db.backref(
-            "events", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("events", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # parent template
-    template_id = db.Column(
-        db.Integer(), db.ForeignKey("supervision_event_templates.id")
-    )
+    template_id = db.Column(db.Integer(), db.ForeignKey("supervision_event_templates.id"))
     template = db.relationship(
         "SupervisionEventTemplate",
         foreign_keys=[template_id],
@@ -2834,17 +2660,13 @@ class SupervisionEvent(
     ## EVENT PROPERTIES
 
     # name of this event
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # time of event
     time = db.Column(db.DateTime(), nullable=True)
 
     # location of event
-    location = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    location = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     ## ATTENDEES AND TEAM
 
@@ -2854,9 +2676,7 @@ class SupervisionEvent(
         "SubmissionRecord",
         foreign_keys=[sub_record_id],
         uselist=False,
-        backref=db.backref(
-            "events", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("events", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # responsible event owner, usually the responsible supervisor, but does not have to be
@@ -2927,9 +2747,7 @@ class SupervisionEvent(
     email_log = db.relationship("EmailLog", secondary=event_email_table, lazy="dynamic")
 
     # reminder emails (specifically) associated with this event
-    reminder_log = db.relationship(
-        "EmailLog", secondary=event_reminder_table, lazy="dynamic"
-    )
+    reminder_log = db.relationship("EmailLog", secondary=event_reminder_table, lazy="dynamic")
 
     @property
     def attendance_str(self):
@@ -2950,9 +2768,7 @@ class SupervisionEvent(
         else:
             start_date = unit_start_date
 
-        start_time: datetime = datetime.combine(
-            start_date, time(hour=12, minute=0, second=0, microsecond=0)
-        )
+        start_time: datetime = datetime.combine(start_date, time(hour=12, minute=0, second=0, microsecond=0))
         return start_time
 
     def is_in_past(self, now: datetime = None) -> bool:

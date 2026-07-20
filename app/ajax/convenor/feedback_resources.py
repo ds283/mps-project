@@ -207,9 +207,7 @@ def _build_templ(src: str) -> Template:
 
 
 def feedback_assets_data(pclass: ProjectClass):
-    base_query = db.session.query(FeedbackAsset).filter(
-        FeedbackAsset.pclass_id == pclass.id
-    )
+    base_query = db.session.query(FeedbackAsset).filter(FeedbackAsset.pclass_id == pclass.id)
 
     label_col = {
         "search": FeedbackAsset.label,
@@ -262,9 +260,7 @@ def feedback_assets_data(pclass: ProjectClass):
 
 
 def feedback_templates_data(pclass: ProjectClass):
-    base_query = db.session.query(FeedbackTemplate).filter(
-        FeedbackTemplate.pclass_id == pclass.id
-    )
+    base_query = db.session.query(FeedbackTemplate).filter(FeedbackTemplate.pclass_id == pclass.id)
 
     label_col = {
         "search": FeedbackTemplate.label,
@@ -317,9 +313,7 @@ def feedback_templates_data(pclass: ProjectClass):
 
 
 def feedback_recipes_data(pclass: ProjectClass):
-    base_query = db.session.query(FeedbackRecipe).filter(
-        FeedbackRecipe.pclass_id == pclass.id
-    )
+    base_query = db.session.query(FeedbackRecipe).filter(FeedbackRecipe.pclass_id == pclass.id)
 
     label_col = {
         "search": FeedbackRecipe.label,

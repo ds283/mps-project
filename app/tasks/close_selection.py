@@ -34,15 +34,11 @@ from ..task_queue import progress_update, register_task
 def register_close_selection_tasks(celery):
     @celery.task(bind=True)
     def pclass_close(self, task_id, config_id, convenor_id, notify_convenor):
-        progress_update(
-            task_id, TaskRecord.RUNNING, 0, "Preparing to close...", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to close...", autocommit=True)
 
         # get database records for this project class
         try:
-            config = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -52,9 +48,7 @@ def register_close_selection_tasks(celery):
             if config is None:
                 self.update_state(
                     "FAILURE",
-                    meta={
-                        "msg": "Could not load ProjectClassConfig record from database"
-                    },
+                    meta={"msg": "Could not load ProjectClassConfig record from database"},
                 )
             if convenor is None:
                 self.update_state(
@@ -72,9 +66,7 @@ def register_close_selection_tasks(celery):
         year = config.year
 
         # build group of parallel tasks to perform maintenance on each SelectingStudent
-        selectors_group = group(
-            selector_close.si(sel.id) for sel in config.selecting_students
-        )
+        selectors_group = group(selector_close.si(sel.id) for sel in config.selecting_students)
 
         # get backup task from Celery instance
         celery = current_app.extensions["celery"]
@@ -86,18 +78,14 @@ def register_close_selection_tasks(celery):
                 convenor_id,
                 type=BackupRecord.PROJECT_CLOSE_FALLBACK,
                 tag="close",
-                description="Rollback snapshot for {proj} close {yr}".format(
-                    proj=config.name, yr=year
-                ),
+                description="Rollback snapshot for {proj} close {yr}".format(proj=config.name, yr=year),
             ),
         )
 
         if len(selectors_group) > 0:
             seq = seq | selectors_group
 
-        seq = (
-                seq | close_finalize.si(task_id, config_id, convenor_id, notify_convenor)
-        ).on_error(close_fail.si(task_id, convenor_id))
+        seq = (seq | close_finalize.si(task_id, config_id, convenor_id, notify_convenor)).on_error(close_fail.si(task_id, convenor_id))
 
         return self.replace(seq)
 
@@ -123,9 +111,7 @@ def register_close_selection_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -169,9 +155,7 @@ def register_close_selection_tasks(celery):
                 recipients.add(user.email)
 
             data = config.selector_data
-            template = EmailTemplate.find_template_(
-                EmailTemplate.CLOSE_SELECTION_CONVENOR, pclass=config.project_class
-            )
+            template = EmailTemplate.find_template_(EmailTemplate.CLOSE_SELECTION_CONVENOR, pclass=config.project_class)
             workflow = EmailWorkflow.build_(
                 name=f"Close selection convenor notification: {config.project_class.name}",
                 template=template,
@@ -183,11 +167,13 @@ def register_close_selection_tasks(celery):
 
             item = EmailWorkflowItem.build_(
                 subject_payload=encode_email_payload({"name": config.project_class.name}),
-                body_payload=encode_email_payload({
-                    "pclass": config.project_class,
-                    "config": config,
-                    "data": data,
-                }),
+                body_payload=encode_email_payload(
+                    {
+                        "pclass": config.project_class,
+                        "config": config,
+                        "data": data,
+                    }
+                ),
                 recipient_list=list(recipients),
             )
             item.workflow = workflow
@@ -237,9 +223,7 @@ def register_close_selection_tasks(celery):
     @celery.task(bind=True)
     def selector_close(self, sel_id):
         try:
-            sel: SelectingStudent = (
-                db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-            )
+            sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

@@ -66,9 +66,7 @@ def email_templates(pclass_id):
     config = pclass.most_recent_config
     data = get_convenor_dashboard_data(pclass, config)
 
-    AJAX_endpoint = url_for(
-        "convenor.email_templates_ajax", pclass_id=pclass_id, url=url, text=text
-    )
+    AJAX_endpoint = url_for("convenor.email_templates_ajax", pclass_id=pclass_id, url=url, text=text)
 
     return render_template_context(
         "convenor/email_templates/list.html",
@@ -170,9 +168,7 @@ def email_templates_ajax(pclass_id):
     }
 
     with ServerSideInMemoryHandler(request, fake_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.email_templates.template_data_pclass_override, pclass)
-        )
+        return handler.build_payload(partial(ajax.email_templates.template_data_pclass_override, pclass))
 
 
 @convenor.route("/create_email_template/<int:pclass_id>/<int:template_type>")
@@ -261,9 +257,7 @@ def create_email_template(pclass_id, template_type):
     return redirect(url_for("convenor.email_templates", pclass_id=pclass_id))
 
 
-@convenor.route(
-    "/edit_email_template/<int:pclass_id>/<int:template_id>", methods=["GET", "POST"]
-)
+@convenor.route("/edit_email_template/<int:pclass_id>/<int:template_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_email_template(pclass_id, template_id):
     """
@@ -555,9 +549,7 @@ def view_default_template(pclass_id, template_type):
     if url is None:
         url = url_for("convenor.email_templates", pclass_id=pclass_id)
 
-    type_name = _TYPE_NAMES.get(
-        template_type, f"Unknown email template type ({template_type})"
-    )
+    type_name = _TYPE_NAMES.get(template_type, f"Unknown email template type ({template_type})")
 
     return render_template_context(
         "admin/email_templates/view_default.html",

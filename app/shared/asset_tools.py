@@ -147,18 +147,11 @@ class AssetCloudAdapter:
             bucket = getattr(self._asset, "bucket")
             store_bucket = self._storage.database_key
             if bucket != store_bucket:
-                raise RuntimeError(
-                    f"AssetCloudAdapter: asset was stored in bucket #{bucket}, but object storage is #{store_bucket}"
-                )
+                raise RuntimeError(f"AssetCloudAdapter: asset was stored in bucket #{bucket}, but object storage is #{store_bucket}")
 
-        if (
-                self._encryption is not None
-                and self._encryption != encryptions.ENCRYPTION_NONE
-        ):
+        if self._encryption is not None and self._encryption != encryptions.ENCRYPTION_NONE:
             if not self._storage_encrypted:
-                raise RuntimeError(
-                    "AssetCloudAdapter: asset was stored with encryption, but object storage is not encrypted"
-                )
+                raise RuntimeError("AssetCloudAdapter: asset was stored with encryption, but object storage is not encrypted")
 
             if self._storage.encryption_type != self._encryption:
                 raise RuntimeError(
@@ -215,9 +208,7 @@ class AssetCloudAdapter:
         if self._encryption == encryptions.ENCRYPTION_NONE:
             self._storage.copy(self._key, new_key, audit_data=self._audit_data)
         else:
-            meta: ObjectMeta = self._storage.head(
-                self._key, audit_data=self._audit_data
-            )
+            meta: ObjectMeta = self._storage.head(self._key, audit_data=self._audit_data)
             data: bytes = self.get()
             put_result = self._storage.put(
                 new_key,
@@ -264,9 +255,7 @@ class AssetCloudAdapter:
             offset += length
             total_bytes -= length
 
-            yield self._storage.get_range(
-                self._key, audit_data=self._audit_data, start=start, length=length
-            )
+            yield self._storage.get_range(self._key, audit_data=self._audit_data, start=start, length=length)
 
 
 class AssetUploadManager:
@@ -293,9 +282,9 @@ class AssetUploadManager:
         data,
         storage: ObjectStore,
         audit_data: str,
-            key: Union[str, None] = None,
-            length: Union[int, None] = None,
-            mimetype: Union[str, None] = None,
+        key: Union[str, None] = None,
+        length: Union[int, None] = None,
+        mimetype: Union[str, None] = None,
         key_attr: str = "unique_name",
         size_attr: str = "filesize",
         mimetype_attr: str = "mimetype",
@@ -357,15 +346,11 @@ class AssetUploadManager:
             nonce = put_result["nonce"]
 
         if self._storage.encrypted and nonce is None:
-            raise RuntimeError(
-                "AssetUploadManager: object storage is marked as encrypted, but returned nonce is empty"
-            )
+            raise RuntimeError("AssetUploadManager: object storage is marked as encrypted, but returned nonce is empty")
 
         if hasattr(self._asset, self._encryption_attr):
             if self._storage.encrypted:
-                setattr(
-                    self._asset, self._encryption_attr, self._storage.encryption_type
-                )
+                setattr(self._asset, self._encryption_attr, self._storage.encryption_type)
             else:
                 setattr(self._asset, self._encryption_attr, encryptions.ENCRYPTION_NONE)
 
@@ -401,10 +386,7 @@ class AssetUploadManager:
                 )
                 setattr(self._asset, self._size_attr, meta.size)
 
-            if (
-                    "compressed_size" in put_result
-                    and put_result["compressed_size"] != meta.size
-            ):
+            if "compressed_size" in put_result and put_result["compressed_size"] != meta.size:
                 print(
                     f"AssetUploadManager: stored filesize ({put_result['compressed_size']} bytes) does not match ObjectMeta size reported from cloud backend ({meta.size} bytes)."
                 )

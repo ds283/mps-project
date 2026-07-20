@@ -258,11 +258,7 @@ def reorder_rubric_bands(rubric_id):
 
     cases = case(*[(RubricBand.id == pk, i) for i, pk in enumerate(ordered_ids)])
     try:
-        db.session.execute(
-            update(RubricBand)
-            .where(RubricBand.id.in_(ordered_ids))
-            .values(position=cases)
-        )
+        db.session.execute(update(RubricBand).where(RubricBand.id.in_(ordered_ids)).values(position=cases))
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
@@ -381,11 +377,7 @@ def reorder_rubric_criteria(band_id):
 
     cases = case(*[(RubricCriterion.id == pk, i) for i, pk in enumerate(ordered_ids)])
     try:
-        db.session.execute(
-            update(RubricCriterion)
-            .where(RubricCriterion.id.in_(ordered_ids))
-            .values(position=cases, band_id=dest_band_id)
-        )
+        db.session.execute(update(RubricCriterion).where(RubricCriterion.id.in_(ordered_ids)).values(position=cases, band_id=dest_band_id))
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
@@ -423,9 +415,7 @@ def clone_grading_rubric(pclass_id):
     )
 
     form = CloneRubricForm()
-    form.source_rubric_id.choices = [
-        (r.id, f"{r.pclass.name} — {r.label}") for r in candidate_rubrics
-    ]
+    form.source_rubric_id.choices = [(r.id, f"{r.pclass.name} — {r.label}") for r in candidate_rubrics]
 
     if form.validate_on_submit():
         source_rubric: GradingRubric = db.session.get(GradingRubric, form.source_rubric_id.data)

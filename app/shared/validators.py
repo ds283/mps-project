@@ -62,9 +62,7 @@ def validate_data_dashboard_access(pclass: ProjectClass, roles: List[str], messa
             # (for backwards compatibility, allow access if pclass has no tenant)
             if pclass.tenant_id is None:
                 return True
-            if pclass.tenant is not None and any(
-                    [t.id == pclass.tenant_id for t in current_user.tenants]
-            ):
+            if pclass.tenant is not None and any([t.id == pclass.tenant_id for t in current_user.tenants]):
                 return True
 
     if message:
@@ -73,9 +71,7 @@ def validate_data_dashboard_access(pclass: ProjectClass, roles: List[str], messa
     return False
 
 
-def validate_is_convenor(
-    pclass: ProjectClass, message: bool = True, allow_roles: Optional[List[str]] = None
-):
+def validate_is_convenor(pclass: ProjectClass, message: bool = True, allow_roles: Optional[List[str]] = None):
     """
     Validate that the logged-in user is privileged to view a convenor dashboard or use other convenor functions
     :param pclass: Project class model instance
@@ -91,9 +87,7 @@ def validate_is_convenor(
         # (for backwards compatibility, allow access if pclass has no tenant)
         if pclass.tenant_id is None:
             return True
-        if pclass.tenant is not None and any(
-                [t.id == pclass.tenant_id for t in current_user.tenants]
-        ):
+        if pclass.tenant is not None and any([t.id == pclass.tenant_id for t in current_user.tenants]):
             return True
 
     # convenor for this pclass is ok
@@ -108,9 +102,7 @@ def validate_is_convenor(
                 if role in ["external_examiner", "exam_board"]:
                     if pclass.tenant_id is None:
                         return True
-                    if pclass.tenant is not None and any(
-                            [t.id == pclass.tenant_id for t in current_user.tenants]
-                    ):
+                    if pclass.tenant is not None and any([t.id == pclass.tenant_id for t in current_user.tenants]):
                         return True
                 else:
                     return True
@@ -181,16 +173,10 @@ def validate_view_project(project, *roles):
         return True
 
     # if current user has an exam-board related role, allow view
-    if (
-        current_user.has_role("exam_board")
-        or current_user.has_role("external_examiner")
-        or current_user.has_role("moderator")
-    ):
+    if current_user.has_role("exam_board") or current_user.has_role("external_examiner") or current_user.has_role("moderator"):
         return True
 
-    flash(
-        "This project belongs to another user. To view it, you must be a suitable convenor or an administrator."
-    )
+    flash("This project belongs to another user. To view it, you must be a suitable convenor or an administrator.")
     return False
 
 
@@ -217,9 +203,7 @@ def validate_edit_project(project, *roles):
     if any([item.is_convenor(current_user.id) for item in project.project_classes]):
         return True
 
-    flash(
-        "This project belongs to another user. To edit it, you must be a suitable convenor or an administrator."
-    )
+    flash("This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.")
     return False
 
 
@@ -247,9 +231,7 @@ def validate_edit_description(description, *roles):
     if any([item.is_convenor(current_user.id) for item in description.project_classes]):
         return True
 
-    flash(
-        "This project description belongs to another user. To edit it, you must be a suitable convenor or an administrator."
-    )
+    flash("This project description belongs to another user. To edit it, you must be a suitable convenor or an administrator.")
     return False
 
 
@@ -259,10 +241,7 @@ def validate_project_open(config):
     :param config:
     :return:
     """
-    if (
-        config.selector_lifecycle
-        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
             "{name} is not open for student selections.".format(name=config.name),
             "error",
@@ -279,11 +258,7 @@ def validate_project_class(pclass):
     :return:
     """
     if not pclass.publish:
-        flash(
-            "'{name}' is not published and is not available for certain lifecycle events.".format(
-                name=pclass.name
-            )
-        )
+        flash("'{name}' is not published and is not available for certain lifecycle events.".format(name=pclass.name))
         return False
 
     return True
@@ -412,18 +387,12 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
 
     # if a project has been specified and the current user is the owner of the project, then they are able
     # to view the submission
-    if (
-        record.project is not None
-        and not record.project.use_supervisor_pool
-        and record.project.owner_id is not None
-    ):
+    if record.project is not None and not record.project.use_supervisor_pool and record.project.owner_id is not None:
         if current_user.id == record.project.owner_id:
             return True
 
     # project convenors, root/admin users, and users with exam board privileges can always view
-    if current_user.allow_roles(
-        ["convenor", "admin", "root", "exam_board", "external_examiner"]
-    ):
+    if current_user.allow_roles(["convenor", "admin", "root", "exam_board", "external_examiner"]):
         return True
 
     # if this submission period has a presentation, and the logged-in user is one of the specified
@@ -487,9 +456,7 @@ def validate_assessment(data, current_year=None):
 
     if data.year != current_year:
         flash(
-            "Cannot edit presentation assessment {name} because it does not belong to the current year".format(
-                name=data.name
-            ),
+            "Cannot edit presentation assessment {name} because it does not belong to the current year".format(name=data.name),
             "info",
         )
         return False
@@ -540,5 +507,3 @@ def validate_presentation_assessor(record):
         "error",
     )
     return False
-
-

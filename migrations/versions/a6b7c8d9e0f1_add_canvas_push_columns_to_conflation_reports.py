@@ -14,6 +14,7 @@ Revision ID: a6b7c8d9e0f1
 Revises: e0f1a2b3c4d5
 Create Date: 2026-06-02
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -40,9 +41,7 @@ def upgrade():
                 server_default=sa.false(),
             )
         )
-        batch_op.add_column(
-            sa.Column("canvas_grade_push_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("canvas_grade_push_timestamp", sa.DateTime(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "canvas_feedback_pushed",
@@ -51,9 +50,7 @@ def upgrade():
                 server_default=sa.false(),
             )
         )
-        batch_op.add_column(
-            sa.Column("canvas_feedback_push_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("canvas_feedback_push_timestamp", sa.DateTime(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "canvas_file_ids",

@@ -34,26 +34,26 @@ from ..task_queue import progress_update
 
 # Map bucket_type int → human-readable label used as Box subfolder name
 BUCKET_LABEL_MAP: Dict[int, str] = {
-    buckets.ASSETS_BUCKET:             "assets",
-    buckets.BACKUP_BUCKET:             "backup",
-    buckets.FEEDBACK_BUCKET:           "feedback",
-    buckets.PROJECT_BUCKET:            "project",
+    buckets.ASSETS_BUCKET: "assets",
+    buckets.BACKUP_BUCKET: "backup",
+    buckets.FEEDBACK_BUCKET: "feedback",
+    buckets.PROJECT_BUCKET: "project",
     buckets.SUPERVISION_ASSETS_BUCKET: "supervision",
 }
 
 # Map bucket_type int → ORM model classes that carry nonce/encryption metadata
 # for objects in that bucket.  Order matters: check each class in turn.
 BUCKET_MODEL_MAP: Dict[int, List[type]] = {
-    buckets.ASSETS_BUCKET:             [SubmittedAsset, GeneratedAsset, TemporaryAsset],
-    buckets.BACKUP_BUCKET:             [],  # BackupRecord handled separately below
-    buckets.FEEDBACK_BUCKET:           [GeneratedAsset],
-    buckets.PROJECT_BUCKET:            [SubmittedAsset],
+    buckets.ASSETS_BUCKET: [SubmittedAsset, GeneratedAsset, TemporaryAsset],
+    buckets.BACKUP_BUCKET: [],  # BackupRecord handled separately below
+    buckets.FEEDBACK_BUCKET: [GeneratedAsset],
+    buckets.PROJECT_BUCKET: [SubmittedAsset],
     buckets.SUPERVISION_ASSETS_BUCKET: [SubmittedAsset],
 }
 
 # Box chunked-upload threshold (bytes).  Objects larger than this use
 # upsert_file_chunked instead of upsert_file.
-CHUNKED_UPLOAD_THRESHOLD = 20 * 1024 * 1024   # 20 MB
+CHUNKED_UPLOAD_THRESHOLD = 20 * 1024 * 1024  # 20 MB
 
 
 def _sanitize_key(key: str) -> str:
@@ -112,45 +112,48 @@ def _is_up_to_date(cloud_meta: Optional[dict], plaintext_size: int) -> bool:
 def _upsert_with_sidecar(location, folder_ref, key, data: bytes, cloud_items_index: dict):
     filename = _sanitize_key(key)
     meta_filename = filename + ".meta"
-    meta_payload = json.dumps({
-        "plaintext_size": len(data),
-        "object_key": key,
-        "backed_up_at": datetime.now().isoformat(),
-    }).encode("utf-8")
+    meta_payload = json.dumps(
+        {
+            "plaintext_size": len(data),
+            "object_key": key,
+            "backed_up_at": datetime.now().isoformat(),
+        }
+    ).encode("utf-8")
 
     size = len(data)
     if size >= CHUNKED_UPLOAD_THRESHOLD:
         location.upsert_file_chunked(
-            folder_ref, filename, BytesIO(data), size,
+            folder_ref,
+            filename,
+            BytesIO(data),
+            size,
             mimetype="application/octet-stream",
         )
     else:
-        location.upsert_file(folder_ref, filename, data,
-                             mimetype="application/octet-stream")
+        location.upsert_file(folder_ref, filename, data, mimetype="application/octet-stream")
 
-    location.upsert_file(folder_ref, meta_filename, meta_payload,
-                         mimetype="application/json")
+    location.upsert_file(folder_ref, meta_filename, meta_payload, mimetype="application/json")
 
 
-def _handle_tombstones(location, cloud_items_index: dict,
-                       bucket_keys: Set[str], tombstone_folder_ref: str) -> int:
+def _handle_tombstones(location, cloud_items_index: dict, bucket_keys: Set[str], tombstone_folder_ref: str) -> int:
     deleted_count = 0
     for filename, cloud_item in list(cloud_items_index.items()):
         if filename.endswith(".meta"):
             continue
-        key = filename.replace("__", "/")   # reverse _sanitize_key
+        key = filename.replace("__", "/")  # reverse _sanitize_key
         if key in bucket_keys:
             continue
         # Object deleted from MinIO — move to tombstones/
         try:
             data = location.download_file(cloud_item.ref)
             location.upsert_file(tombstone_folder_ref, filename, data)
-            tombstone_meta = json.dumps({
-                "deleted_at": datetime.now().isoformat(),
-                "original_key": key,
-            }).encode("utf-8")
-            location.upsert_file(tombstone_folder_ref, filename + ".tombstone",
-                                 tombstone_meta)
+            tombstone_meta = json.dumps(
+                {
+                    "deleted_at": datetime.now().isoformat(),
+                    "original_key": key,
+                }
+            ).encode("utf-8")
+            location.upsert_file(tombstone_folder_ref, filename + ".tombstone", tombstone_meta)
             location.delete_file(cloud_item.ref)
             # Also delete the sidecar if present
             meta_item = cloud_items_index.get(filename + ".meta")
@@ -158,9 +161,7 @@ def _handle_tombstones(location, cloud_items_index: dict,
                 location.delete_file(meta_item.ref)
             deleted_count += 1
         except Exception as exc:
-            current_app.logger.warning(
-                "object_store_backup: tombstone failed for key %s: %s", key, exc
-            )
+            current_app.logger.warning("object_store_backup: tombstone failed for key %s: %s", key, exc)
     return deleted_count
 
 
@@ -202,12 +203,7 @@ def _clear_lost_flags(bucket_type: int, restored_keys: Set[str]) -> int:
     updated = 0
     model_classes = BUCKET_MODEL_MAP.get(bucket_type, [])
     for cls in model_classes:
-        rows = (
-            db.session.query(cls)
-            .filter(cls.unique_name.in_(restored_keys))
-            .filter(cls.lost.is_(True))
-            .all()
-        )
+        rows = db.session.query(cls).filter(cls.unique_name.in_(restored_keys)).filter(cls.lost.is_(True)).all()
         for row in rows:
             row.lost = False
             updated += 1
@@ -269,7 +265,8 @@ def _do_bucket_restore(
                     orphaned += 1
                     current_app.logger.warning(
                         "cloud_restore: key %s has no ORM row in bucket %s",
-                        key, record.bucket_label,
+                        key,
+                        record.bucket_label,
                     )
             restored_keys.add(key)
             restored += 1
@@ -277,9 +274,7 @@ def _do_bucket_restore(
             if location.handle_auth_error(exc, notify_user=owner_user):
                 raise _CloudAuthError(str(exc)) from exc
             errors += 1
-            current_app.logger.warning(
-                "cloud_restore: error restoring key %s: %s", key, exc
-            )
+            current_app.logger.warning("cloud_restore: error restoring key %s: %s", key, exc)
 
         if task_id is not None and i % 50 == 0:
             pct = progress_start + int(progress_range * i / max(total, 1))
@@ -310,10 +305,7 @@ def register_object_store_backup_tasks(celery):
         db.session.commit()
 
         # Build folder index (one list_folder call per folder)
-        cloud_items: Dict[str, CloudItem] = {
-            item.name: item
-            for item in location.list_folder(objects_folder_ref)
-        }
+        cloud_items: Dict[str, CloudItem] = {item.name: item for item in location.list_folder(objects_folder_ref)}
         meta_index: Dict[str, dict] = {}
         _meta_items = [(name, item) for name, item in cloud_items.items() if name.endswith(".meta")]
         if _meta_items:
@@ -330,7 +322,7 @@ def register_object_store_backup_tasks(celery):
                     except Exception as exc:
                         _last_exc = exc
                         if _attempt < 2:
-                            time.sleep(2 ** _attempt)
+                            time.sleep(2**_attempt)
                 raise _last_exc
 
             _n_workers = min(5, len(_meta_items))
@@ -342,10 +334,7 @@ def register_object_store_backup_tasks(celery):
                         _key, _meta = _fut.result()
                         meta_index[_key] = _meta
                     except Exception as exc:
-                        current_app.logger.warning(
-                            "object_store_backup: could not read .meta sidecar %s: %s",
-                            _sidecar_name, exc
-                        )
+                        current_app.logger.warning("object_store_backup: could not read .meta sidecar %s: %s", _sidecar_name, exc)
 
         # Enumerate bucket
         bucket_meta: Dict[str, ObjectMeta] = object_store.list(audit_data="cloud_backup")
@@ -372,7 +361,9 @@ def register_object_store_backup_tasks(celery):
                     continue
                 current_app.logger.info(
                     "object_store_backup: uploading %s (stored_meta=%r, plaintext_size=%d)",
-                    key, meta_index.get(filename), len(data),
+                    key,
+                    meta_index.get(filename),
+                    len(data),
                 )
                 _upsert_with_sidecar(location, objects_folder_ref, key, data, cloud_items)
                 bytes_up += len(data)
@@ -382,7 +373,9 @@ def register_object_store_backup_tasks(celery):
                 error_messages.append(f"{key}: {exc}")
                 current_app.logger.warning(
                     "object_store_backup: error backing up key %s in bucket %s: %s",
-                    key, bucket_label, exc,
+                    key,
+                    bucket_label,
+                    exc,
                 )
 
         # Tombstone pass
@@ -390,16 +383,13 @@ def register_object_store_backup_tasks(celery):
 
         # Finalise record
         record.object_count_uploaded = uploaded
-        record.object_count_skipped  = skipped
-        record.object_count_error    = errors
+        record.object_count_skipped = skipped
+        record.object_count_error = errors
         record.object_count_orphaned = orphaned
-        record.object_count_deleted  = deleted
-        record.bytes_uploaded        = bytes_up
-        record.finished_at           = datetime.now()
-        record.status = (
-            ObjectStoreBackupRecord.SUCCESS if errors == 0
-            else ObjectStoreBackupRecord.PARTIAL
-        )
+        record.object_count_deleted = deleted
+        record.bytes_uploaded = bytes_up
+        record.finished_at = datetime.now()
+        record.status = ObjectStoreBackupRecord.SUCCESS if errors == 0 else ObjectStoreBackupRecord.PARTIAL
         if error_messages:
             record.error_detail = "\n".join(error_messages[:50])
         db.session.commit()
@@ -417,9 +407,7 @@ def register_object_store_backup_tasks(celery):
 
         owner_user = db.session.get(User, owner_id)
         if owner_user is None or not owner_user.box_token_valid:
-            current_app.logger.error(
-                "object_store_backup: owner_id=%s is invalid or has no valid Box token", owner_id
-            )
+            current_app.logger.error("object_store_backup: owner_id=%s is invalid or has no valid Box token", owner_id)
             raise Ignore()
 
         provider_name = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_PROVIDER", "box")
@@ -466,16 +454,13 @@ def register_object_store_backup_tasks(celery):
             db.session.add(record)
             records.append(record)
 
-        db.session.flush()   # populate record.id for all rows
+        db.session.flush()  # populate record.id for all rows
         db.session.commit()
 
         if not records:
             return
 
-        bucket_group = cgroup(
-            backup_single_bucket.si(record_id=record.id, owner_id=owner_id)
-            for record in records
-        )
+        bucket_group = cgroup(backup_single_bucket.si(record_id=record.id, owner_id=owner_id) for record in records)
         try:
             bucket_group.apply_async()
         except Exception as exc:
@@ -494,9 +479,7 @@ def register_object_store_backup_tasks(celery):
         """
         record = db.session.get(ObjectStoreBackupRecord, record_id)
         if record is None:
-            current_app.logger.error(
-                "object_store_backup: ObjectStoreBackupRecord #%s not found", record_id
-            )
+            current_app.logger.error("object_store_backup: ObjectStoreBackupRecord #%s not found", record_id)
             return
 
         owner_user = db.session.get(User, owner_id)
@@ -504,9 +487,7 @@ def register_object_store_backup_tasks(celery):
             record.status = ObjectStoreBackupRecord.FAILED
             record.error_detail = "Owner user is invalid or has no valid Box token"
             db.session.commit()
-            current_app.logger.error(
-                "object_store_backup: owner_id=%s is invalid or has no valid Box token", owner_id
-            )
+            current_app.logger.error("object_store_backup: owner_id=%s is invalid or has no valid Box token", owner_id)
             return
 
         bucket_type = record.bucket_type
@@ -542,7 +523,8 @@ def register_object_store_backup_tasks(celery):
             db.session.commit()
             current_app.logger.exception(
                 "object_store_backup: unhandled error for bucket_type=%d: %s",
-                bucket_type, exc,
+                bucket_type,
+                exc,
             )
 
     @celery.task(bind=True, default_retry_delay=60)
@@ -559,9 +541,7 @@ def register_object_store_backup_tasks(celery):
 
         owner_user = db.session.get(User, owner_id)
         if owner_user is None or not owner_user.box_token_valid:
-            current_app.logger.error(
-                "prune_object_store_tombstones: owner_id=%s is invalid or has no valid Box token", owner_id
-            )
+            current_app.logger.error("prune_object_store_tombstones: owner_id=%s is invalid or has no valid Box token", owner_id)
             return
 
         provider_name = current_app.config.get("OBJECT_STORE_CLOUD_BACKUP_PROVIDER", "box")
@@ -589,7 +569,8 @@ def register_object_store_backup_tasks(celery):
                 total_errors += 1
                 current_app.logger.warning(
                     "prune_object_store_tombstones: could not list tombstones for bucket %s: %s",
-                    bucket_label, exc,
+                    bucket_label,
+                    exc,
                 )
                 continue
 
@@ -617,20 +598,26 @@ def register_object_store_backup_tasks(celery):
                         errors += 1
                         current_app.logger.warning(
                             "prune_object_store_tombstones: failed to delete %s in bucket %s: %s",
-                            item.name, bucket_label, exc,
+                            item.name,
+                            bucket_label,
+                            exc,
                         )
                 deleted += 1
 
             current_app.logger.info(
                 "prune_object_store_tombstones: bucket %s — %d pairs deleted, %d errors",
-                bucket_label, deleted, errors,
+                bucket_label,
+                deleted,
+                errors,
             )
             total_deleted += deleted
             total_errors += errors
 
         current_app.logger.info(
             "prune_object_store_tombstones: complete — %d pairs deleted, %d errors across %d buckets",
-            total_deleted, total_errors, len(bucket_types),
+            total_deleted,
+            total_errors,
+            len(bucket_types),
         )
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -647,7 +634,9 @@ def register_object_store_backup_tasks(celery):
         records = [r for r in records if r is not None]
         if not records:
             progress_update(
-                task_id, TaskRecord.FAILURE, 100,
+                task_id,
+                TaskRecord.FAILURE,
+                100,
                 "No valid backup records found for the selected buckets.",
                 autocommit=True,
             )
@@ -656,7 +645,9 @@ def register_object_store_backup_tasks(celery):
         owner_user = db.session.get(User, owner_id)
         if owner_user is None or not owner_user.box_token_valid:
             progress_update(
-                task_id, TaskRecord.FAILURE, 100,
+                task_id,
+                TaskRecord.FAILURE,
+                100,
                 "Owner user is invalid or has no valid cloud storage token",
                 autocommit=True,
             )
@@ -686,19 +677,29 @@ def register_object_store_backup_tasks(celery):
             p_end = 15 + int(80 * (idx + 1) / n)
 
             progress_update(
-                task_id, TaskRecord.RUNNING, p_start,
+                task_id,
+                TaskRecord.RUNNING,
+                p_start,
                 f"Restoring {record.bucket_label} ({idx + 1}/{n})...",
                 autocommit=True,
             )
 
             try:
                 restored, skipped, errors, orphaned, _ = _do_bucket_restore(
-                    location, object_store, record, overwrite, owner_user,
-                    task_id=task_id, progress_start=p_start, progress_end=p_end,
+                    location,
+                    object_store,
+                    record,
+                    overwrite,
+                    owner_user,
+                    task_id=task_id,
+                    progress_start=p_start,
+                    progress_end=p_end,
                 )
             except _CloudAuthError as exc:
                 progress_update(
-                    task_id, TaskRecord.FAILURE, 100,
+                    task_id,
+                    TaskRecord.FAILURE,
+                    100,
                     f"Cloud storage authentication error: {exc}",
                     autocommit=True,
                 )
@@ -709,11 +710,7 @@ def register_object_store_backup_tasks(celery):
             total_errors += errors
             total_orphaned += orphaned
 
-        msg = (
-            f"Restore complete: {n} buckets — "
-            f"{total_restored} restored, {total_skipped} skipped, "
-            f"{total_orphaned} orphaned, {total_errors} errors."
-        )
+        msg = f"Restore complete: {n} buckets — {total_restored} restored, {total_skipped} skipped, {total_orphaned} orphaned, {total_errors} errors."
         progress_update(task_id, TaskRecord.SUCCESS, 100, msg, autocommit=True)
 
     return (

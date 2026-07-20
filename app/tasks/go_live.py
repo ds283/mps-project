@@ -51,13 +51,11 @@ def register_golive_tasks(celery):
         notify_selectors,
         accommodate_matching,
         full_CATS,
-            faculty_template_id=None,
-            selector_template_id=None,
-            convenor_template_id=None,
+        faculty_template_id=None,
+        selector_template_id=None,
+        convenor_template_id=None,
     ):
-        progress_update(
-            task_id, TaskRecord.RUNNING, 0, "Preparing to Go Live...", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to Go Live...", autocommit=True)
 
         if isinstance(deadline, str):
             deadline: date = parser.parse(deadline).date()
@@ -75,17 +73,11 @@ def register_golive_tasks(celery):
             notify_selectors = bool(notify_selectors)
 
         if isinstance(accommodate_matching, int):
-            accommodate_matching: MatchingAttempt = (
-                db.session.query(MatchingAttempt)
-                .filter_by(id=accommodate_matching)
-                .first()
-            )
+            accommodate_matching: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=accommodate_matching).first()
 
         # get database records for this project class
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
             convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -102,9 +94,7 @@ def register_golive_tasks(celery):
             if config is None:
                 self.update_state(
                     "FAILURE",
-                    meta={
-                        "msg": "Could not load ProjectClassConfig record from database"
-                    },
+                    meta={"msg": "Could not load ProjectClassConfig record from database"},
                 )
 
             if convenor is None:
@@ -120,26 +110,18 @@ def register_golive_tasks(celery):
 
         year = config.year
 
-        if (
-            config.selector_lifecycle
-            == ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
-        ):
+        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED:
             convenor.post_message(
-                "Cannot yet Go Live for {name} {yra}-{yrb} "
-                "because confirmation requests have not been "
-                "issued.".format(name=config.name, yra=year, yrb=year + 1),
+                "Cannot yet Go Live for {name} {yra}-{yrb} because confirmation requests have not been issued.".format(
+                    name=config.name, yra=year, yrb=year + 1
+                ),
                 "warning",
                 autocommit=True,
             )
-            self.update_state(
-                "FAILURE", meta={"msg": "Confirmation requests have not been issued"}
-            )
+            self.update_state("FAILURE", meta={"msg": "Confirmation requests have not been issued"})
             return self.replace(golive_fail.si(task_id, convenor_id))
 
-        if (
-            config.selector_lifecycle
-            == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
-        ):
+        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
             convenor.post_message(
                 "Cannot yet Go Live for {name} {yra}-{yrb} "
                 "because not all confirmation responses have not been "
@@ -176,8 +158,7 @@ def register_golive_tasks(celery):
                         User.active.is_(True),
                         FacultyData.id != None,
                         EnrollmentRecord.pclass_id == pclass_id,
-                        EnrollmentRecord.supervisor_state
-                        == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                        EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     ),
                 )
             )
@@ -190,16 +171,10 @@ def register_golive_tasks(celery):
 
         # weed out projects belonging to supervisors that are 'full' as defined by the accommodated matching
         if accommodate_matching is not None:
-            print(
-                '## Filtering projects to accommodate matching "{name}"'.format(
-                    name=accommodate_matching.name
-                )
-            )
+            print('## Filtering projects to accommodate matching "{name}"'.format(name=accommodate_matching.name))
 
             def is_full(supervisor_id):
-                sup_CATS, mark_CATS = accommodate_matching.get_faculty_CATS(
-                    supervisor_id
-                )
+                sup_CATS, mark_CATS = accommodate_matching.get_faculty_CATS(supervisor_id)
                 project_CATS = config.CATS_supervision
 
                 # a supervisor is full if their existing CATS allocation (from the matching we're accommodating)
@@ -217,8 +192,7 @@ def register_golive_tasks(celery):
 
             try:
                 log_db_commit(
-                    f'Stored accommodate_matching="{accommodate_matching.name}" and full_CATS={full_CATS} '
-                    f"on {config.name} config for Go Live",
+                    f'Stored accommodate_matching="{accommodate_matching.name}" and full_CATS={full_CATS} on {config.name} config for Go Live',
                     user=convenor,
                     project_classes=config.project_class,
                     endpoint=self.name,
@@ -233,9 +207,7 @@ def register_golive_tasks(celery):
                 if not p.use_supervisor_pool and p.owner_id is not None and is_full(p.owner_id):
                     print(
                         '## dropping project "{pname}" offered by supervisor "{sname}" because their CATS '
-                        "allocation exceeds the limit (full_CATS={fc})".format(
-                            sname=p.owner.user.name, pname=p.name, fc=full_CATS
-                        )
+                        "allocation exceeds the limit (full_CATS={fc})".format(sname=p.owner.user.name, pname=p.name, fc=full_CATS)
                     )
                 else:
                     filtered_projects.append(p)
@@ -256,10 +228,7 @@ def register_golive_tasks(celery):
             return golive_fail.apply_async(args=(task_id, convenor_id))
 
         # build group of parallel tasks to take each offerable attached project to a live counterpart
-        projects_group = group(
-            project_golive.si(n + 1, p.id, config_id)
-            for n, p in enumerate(attached_projects)
-        )
+        projects_group = group(project_golive.si(n + 1, p.id, config_id) for n, p in enumerate(attached_projects))
 
         # get backup task from Celery instance
         celery = current_app.extensions["celery"]
@@ -271,9 +240,7 @@ def register_golive_tasks(celery):
                 convenor_id,
                 type=BackupRecord.PROJECT_GOLIVE_FALLBACK,
                 tag="golive",
-                description="Rollback snapshot for {proj} Go Live {yr}".format(
-                    proj=config.name, yr=year
-                ),
+                description="Rollback snapshot for {proj} Go Live {yr}".format(proj=config.name, yr=year),
             ),
             golive_preprojects.si(task_id),
             projects_group,
@@ -284,7 +251,10 @@ def register_golive_tasks(celery):
         if not auto_close:
             if notify_faculty:
                 front_chain = front_chain | golive_notify_faculty.si(
-                    task_id, config_id, convenor_id, deadline,
+                    task_id,
+                    config_id,
+                    convenor_id,
+                    deadline,
                     faculty_template_id=faculty_template_id,
                 )
                 print("## email notifications to faculty enabled")
@@ -293,7 +263,10 @@ def register_golive_tasks(celery):
 
             if notify_selectors:
                 front_chain = front_chain | golive_notify_selectors.si(
-                    task_id, config_id, convenor_id, deadline,
+                    task_id,
+                    config_id,
+                    convenor_id,
+                    deadline,
                     selector_template_id=selector_template_id,
                 )
                 print("## email notifications to selectors enabled")
@@ -347,9 +320,7 @@ def register_golive_tasks(celery):
                 raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -386,9 +357,7 @@ def register_golive_tasks(celery):
         if faculty_template_id is not None:
             template = db.session.get(EmailTemplate, faculty_template_id)
         else:
-            template = EmailTemplate.find_template_(
-                EmailTemplate.GO_LIVE_FACULTY, pclass=config.project_class
-            )
+            template = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_FACULTY, pclass=config.project_class)
         workflow = EmailWorkflow.build_(
             name=f"Go Live faculty notifications: {config.project_class.name}",
             template=template,
@@ -406,11 +375,7 @@ def register_golive_tasks(celery):
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
-            group(
-                faculty_notification_email.si(d, config_id, deadline, workflow.id)
-                for d in faculty
-                if d is not None
-            ),
+            group(faculty_notification_email.si(d, config_id, deadline, workflow.id) for d in faculty if d is not None),
             notify.s(
                 convenor_id,
                 "{n} notification{pl} issued to faculty supervisors",
@@ -420,8 +385,7 @@ def register_golive_tasks(celery):
 
         try:
             log_db_commit(
-                f"Created Go Live faculty email workflow for {config.name} "
-                f"targeting {len(faculty)} enrolled supervisor(s)",
+                f"Created Go Live faculty email workflow for {config.name} targeting {len(faculty)} enrolled supervisor(s)",
                 project_classes=config.project_class,
                 endpoint=self.name,
             )
@@ -449,9 +413,7 @@ def register_golive_tasks(celery):
                 raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -465,18 +427,13 @@ def register_golive_tasks(celery):
         selectors = set()
 
         for sel in config.selecting_students.filter_by(retired=False).all():
-            if (
-                sel.student.user not in config.golive_notified
-                and sel.id not in selectors
-            ):
+            if sel.student.user not in config.golive_notified and sel.id not in selectors:
                 selectors.add(sel.id)
 
         if selector_template_id is not None:
             template = db.session.get(EmailTemplate, selector_template_id)
         else:
-            template = EmailTemplate.find_template_(
-                EmailTemplate.GO_LIVE_SELECTOR, pclass=config.project_class
-            )
+            template = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_SELECTOR, pclass=config.project_class)
         workflow = EmailWorkflow.build_(
             name=f"Go Live selector notifications: {config.project_class.name}",
             template=template,
@@ -494,20 +451,13 @@ def register_golive_tasks(celery):
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
-            group(
-                student_notification_email.si(d, config_id, deadline, workflow.id)
-                for d in selectors
-                if d is not None
-            ),
-            notify.s(
-                convenor_id, "{n} notification{pl} issued to student selectors", "info"
-            ),
+            group(student_notification_email.si(d, config_id, deadline, workflow.id) for d in selectors if d is not None),
+            notify.s(convenor_id, "{n} notification{pl} issued to student selectors", "info"),
         )
 
         try:
             log_db_commit(
-                f"Created Go Live selector email workflow for {config.name} "
-                f"targeting {len(selectors)} student selector(s)",
+                f"Created Go Live selector email workflow for {config.name} targeting {len(selectors)} student selector(s)",
                 project_classes=config.project_class,
                 endpoint=self.name,
             )
@@ -521,9 +471,7 @@ def register_golive_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def set_notified(self, config_id, user_id):
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
             user = User.query.filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -558,12 +506,8 @@ def register_golive_tasks(celery):
 
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
-            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(
-                id=workflow_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -604,8 +548,7 @@ def register_golive_tasks(celery):
 
         try:
             log_db_commit(
-                f"Created Go Live faculty notification email for {data.user.name} "
-                f"({config.name}, deadline {deadline})",
+                f"Created Go Live faculty notification email for {data.user.name} ({config.name}, deadline {deadline})",
                 user=data.user,
                 project_classes=config.project_class,
                 endpoint=self.name,
@@ -628,12 +571,8 @@ def register_golive_tasks(celery):
 
         try:
             data = SelectingStudent.query.filter_by(id=selector_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
-            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(
-                id=workflow_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -661,8 +600,7 @@ def register_golive_tasks(celery):
 
         try:
             log_db_commit(
-                f"Created Go Live selector notification email for {data.student.user.name} "
-                f"({config.name}, deadline {deadline})",
+                f"Created Go Live selector notification email for {data.student.user.name} ({config.name}, deadline {deadline})",
                 user=data.student.user,
                 project_classes=config.project_class,
                 endpoint=self.name,
@@ -677,9 +615,7 @@ def register_golive_tasks(celery):
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def golive_finalize(self, task_id, config_id, convenor_id, deadline, convenor_template_id=None):
-        progress_update(
-            task_id, TaskRecord.SUCCESS, 100, "Go Live complete", autocommit=False
-        )
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Go Live complete", autocommit=False)
 
         if isinstance(deadline, str):
             deadline = parser.parse(deadline).date()
@@ -689,9 +625,7 @@ def register_golive_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -699,9 +633,7 @@ def register_golive_tasks(celery):
         if convenor is not None:
             # send direct message to user announcing successful Go Live event
             convenor.post_message(
-                'Go Live "{proj}" for {yra}-{yrb} is now complete'.format(
-                    proj=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
-                ),
+                'Go Live "{proj}" for {yra}-{yrb} is now complete'.format(proj=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
                 "success",
                 autocommit=False,
             )
@@ -748,9 +680,7 @@ def register_golive_tasks(celery):
             if convenor_template_id is not None:
                 template = db.session.get(EmailTemplate, convenor_template_id)
             else:
-                template = EmailTemplate.find_template_(
-                    EmailTemplate.GO_LIVE_CONVENOR, pclass=config.project_class
-                )
+                template = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_CONVENOR, pclass=config.project_class)
             workflow = EmailWorkflow.build_(
                 name=f"Go Live convenor summary: {config.project_class.name}",
                 template=template,
@@ -762,9 +692,7 @@ def register_golive_tasks(celery):
             db.session.flush()
 
             item = EmailWorkflowItem.build_(
-                subject_payload=encode_email_payload(
-                    {"name": config.project_class.name}
-                ),
+                subject_payload=encode_email_payload({"name": config.project_class.name}),
                 body_payload=encode_email_payload(
                     {
                         "pclass": config.project_class,
@@ -820,8 +748,7 @@ def register_golive_tasks(celery):
 
         try:
             log_db_commit(
-                f"Recorded Go Live failure and posted error message to convenor "
-                f"{convenor.name if convenor else 'N/A'}",
+                f"Recorded Go Live failure and posted error message to convenor {convenor.name if convenor else 'N/A'}",
                 user=convenor,
                 endpoint=self.name,
             )
@@ -849,9 +776,7 @@ def register_golive_tasks(celery):
     def golive_close(self, config_id, convenor_id):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -863,8 +788,7 @@ def register_golive_tasks(celery):
 
         if convenor is not None:
             convenor.post_message(
-                'Student selections for "{name}" {yeara}-{yearb} have now been'
-                " closed".format(
+                'Student selections for "{name}" {yeara}-{yearb} have now been closed'.format(
                     name=config.name,
                     yeara=config.submit_year_a,
                     yearb=config.submit_year_b,
@@ -874,8 +798,7 @@ def register_golive_tasks(celery):
 
         try:
             log_db_commit(
-                f"Closed student selections for {config.name} "
-                f"{config.submit_year_a}-{config.submit_year_b}",
+                f"Closed student selections for {config.name} {config.submit_year_a}-{config.submit_year_b}",
                 user=convenor,
                 project_classes=config.project_class,
                 endpoint=self.name,

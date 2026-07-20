@@ -96,9 +96,7 @@ def pastproject_data(projects):
     truncate = get_template_attribute("macros.html", "truncate")
 
     project_metadata = get_template_attribute("faculty/macros.html", "project_metadata")
-    project_selection_data = get_template_attribute(
-        "faculty/macros.html", "project_selection_data"
-    )
+    project_selection_data = get_template_attribute("faculty/macros.html", "project_selection_data")
 
     name_templ: Template = _build_name_templ()
     pclass_templ: Template = _build_pclass_templ()

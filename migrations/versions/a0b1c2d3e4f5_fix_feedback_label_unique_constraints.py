@@ -35,26 +35,18 @@ depends_on = None
 def upgrade():
     with op.batch_alter_table("feedback_templates", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_feedback_templates_label"))
-        batch_op.create_index(
-            batch_op.f("ix_feedback_templates_label"), ["label"], unique=False
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_templates_label"), ["label"], unique=False)
 
     with op.batch_alter_table("feedback_recipes", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_feedback_recipes_label"))
-        batch_op.create_index(
-            batch_op.f("ix_feedback_recipes_label"), ["label"], unique=False
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_recipes_label"), ["label"], unique=False)
 
 
 def downgrade():
     with op.batch_alter_table("feedback_templates", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_feedback_templates_label"))
-        batch_op.create_index(
-            batch_op.f("ix_feedback_templates_label"), ["label"], unique=True
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_templates_label"), ["label"], unique=True)
 
     with op.batch_alter_table("feedback_recipes", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_feedback_recipes_label"))
-        batch_op.create_index(
-            batch_op.f("ix_feedback_recipes_label"), ["label"], unique=True
-        )
+        batch_op.create_index(batch_op.f("ix_feedback_recipes_label"), ["label"], unique=True)

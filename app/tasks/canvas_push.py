@@ -56,22 +56,18 @@ def register_canvas_push_tasks(celery):
 
         if not cr.canvas_push_ready:
             current_app.logger.warning(
-                f"push_cr_to_canvas: ConflationReport id={cr_id} not ready for Canvas push "
-                f"(canvas not enabled, missing user id, or no grade data)"
+                f"push_cr_to_canvas: ConflationReport id={cr_id} not ready for Canvas push (canvas not enabled, missing user id, or no grade data)"
             )
             return
 
         if cr.conflation_report_as_dict.get(grade_target) is None:
             current_app.logger.warning(
-                f"push_cr_to_canvas: grade target '{grade_target}' is absent or None "
-                f"in ConflationReport id={cr_id}, skipping Canvas push"
+                f"push_cr_to_canvas: grade target '{grade_target}' is absent or None in ConflationReport id={cr_id}, skipping Canvas push"
             )
             return
 
         if cr.canvas_grade_pushed:
-            current_app.logger.warning(
-                f"push_cr_to_canvas: grade already pushed for ConflationReport id={cr_id}, skipping"
-            )
+            current_app.logger.warning(f"push_cr_to_canvas: grade already pushed for ConflationReport id={cr_id}, skipping")
             return
 
         # --- extract credentials from ORM before any API calls ---
@@ -97,8 +93,7 @@ def register_canvas_push_tasks(celery):
             )
         except CanvasAPIError as e:
             current_app.logger.error(
-                f"push_cr_to_canvas: Canvas API error pushing grade for ConflationReport "
-                f"id={cr_id}: status={e.status_code}, body={e.response_body}"
+                f"push_cr_to_canvas: Canvas API error pushing grade for ConflationReport id={cr_id}: status={e.status_code}, body={e.response_body}"
             )
             raise self.retry(exc=e)
 
@@ -139,28 +134,21 @@ def register_canvas_push_tasks(celery):
             raise self.retry()
 
         if cr is None:
-            current_app.logger.warning(
-                f"push_cr_feedback_to_canvas: ConflationReport id={cr_id} not found"
-            )
+            current_app.logger.warning(f"push_cr_feedback_to_canvas: ConflationReport id={cr_id} not found")
             return
 
         if not cr.canvas_push_ready:
-            current_app.logger.warning(
-                f"push_cr_feedback_to_canvas: ConflationReport id={cr_id} not ready for Canvas push"
-            )
+            current_app.logger.warning(f"push_cr_feedback_to_canvas: ConflationReport id={cr_id} not ready for Canvas push")
             return
 
         if not cr.canvas_grade_pushed:
             current_app.logger.warning(
-                f"push_cr_feedback_to_canvas: grade not yet pushed for ConflationReport id={cr_id}; "
-                f"feedback must not be uploaded before the grade"
+                f"push_cr_feedback_to_canvas: grade not yet pushed for ConflationReport id={cr_id}; feedback must not be uploaded before the grade"
             )
             return
 
         if cr.canvas_feedback_pushed:
-            current_app.logger.warning(
-                f"push_cr_feedback_to_canvas: feedback already pushed for ConflationReport id={cr_id}, skipping"
-            )
+            current_app.logger.warning(f"push_cr_feedback_to_canvas: feedback already pushed for ConflationReport id={cr_id}, skipping")
             return
 
         # --- extract credentials from ORM before any API calls ---

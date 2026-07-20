@@ -127,8 +127,7 @@ def issue_confirm_requests(id):
                         project_classes=config.project_class,
                     )
                     flash(
-                        'The project confirmation deadline for "{proj}" has been successfully changed '
-                        "to {deadline}.".format(
+                        'The project confirmation deadline for "{proj}" has been successfully changed to {deadline}.'.format(
                             proj=config.name,
                             deadline=config.request_deadline.strftime("%a %d %b %Y"),
                         ),
@@ -136,9 +135,7 @@ def issue_confirm_requests(id):
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     flash(
                         "Could not modify confirmation deadline due to a database error. Please contact a system administrator",
                         "error",
@@ -155,13 +152,9 @@ def issue_confirm_requests(id):
 
                 # register as a new background task and push it to the scheduler
                 task_id = register_task(
-                    'Issue project confirmations for "{proj}" {yra}-{yrb}'.format(
-                        proj=config.name, yra=year, yrb=year + 1
-                    ),
+                    'Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
                     owner=current_user,
-                    description='Issue project confirmations for "{proj}"'.format(
-                        proj=config.name
-                    ),
+                    description='Issue project confirmations for "{proj}"'.format(proj=config.name),
                 )
 
                 if deadline < now:
@@ -265,20 +258,14 @@ def confirmation_reminder(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if (
-        config.selector_lifecycle
-        < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash(
             "Cannot issue reminder emails for this project class because confirmation requests have not yet been generated",
             "info",
         )
         return redirect(redirect_url())
 
-    if (
-        config.selector_lifecycle
-        > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
-    ):
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash(
             "Cannot issue reminder emails for this project class because no further confirmation requests are outstanding",
             "info",
@@ -329,20 +316,14 @@ def confirmation_reminder_individual(fac_id, config_id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if (
-        config.selector_lifecycle
-        < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
-    ):
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash(
             "Cannot issue reminder emails for this project class because confirmation requests have not yet been generated",
             "info",
         )
         return redirect(redirect_url())
 
-    if (
-        config.selector_lifecycle
-        > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
-    ):
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash(
             "Cannot issue reminder emails for this project class because no further confirmation requests are outstanding",
             "info",
@@ -415,15 +396,10 @@ def show_unofferable():
         pclass_filter = session["convenor_unofferable_pclass_filter"]
 
     if pclass_filter is not None and pclass_filter != "all":
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
         if pclass is None:
             pclass_filter = "all"
-        elif (
-            not current_user.has_role("root")
-            and pclass.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and pclass.tenant_id not in allowed_tenants:
             pclass_filter = "all"
 
     if pclass_filter is not None:
@@ -436,9 +412,7 @@ def show_unofferable():
         group_filter = session["convenor_unofferable_group_filter"]
 
     if group_filter is not None and group_filter != "all":
-        group: ResearchGroup = (
-            db.session.query(ResearchGroup).filter_by(id=group_filter).first()
-        )
+        group: ResearchGroup = db.session.query(ResearchGroup).filter_by(id=group_filter).first()
         if group is None:
             group_filter = "all"
         elif not current_user.has_role("root"):
@@ -469,12 +443,7 @@ def show_unofferable():
                 .all()
             )
         else:
-            pclasses = (
-                db.session.query(ProjectClass)
-                .filter(ProjectClass.active)
-                .order_by(ProjectClass.name.asc())
-                .all()
-            )
+            pclasses = db.session.query(ProjectClass).filter(ProjectClass.active).order_by(ProjectClass.name.asc()).all()
     else:
         if flag:
             pclasses = (
@@ -490,9 +459,7 @@ def show_unofferable():
         else:
             pclasses = (
                 db.session.query(ProjectClass)
-                .filter(
-                    ProjectClass.active, ProjectClass.tenant_id.in_(allowed_tenants)
-                )
+                .filter(ProjectClass.active, ProjectClass.tenant_id.in_(allowed_tenants))
                 .order_by(ProjectClass.name.asc())
                 .all()
             )
@@ -510,12 +477,7 @@ def show_unofferable():
                 .all()
             )
         else:
-            groups = (
-                db.session.query(ResearchGroup)
-                .filter(ResearchGroup.active)
-                .order_by(ResearchGroup.name.asc())
-                .all()
-            )
+            groups = db.session.query(ResearchGroup).filter(ResearchGroup.active).order_by(ResearchGroup.name.asc()).all()
     else:
         if flag:
             groups = (
@@ -575,21 +537,14 @@ def unofferable_ajax():
             tenant_filter = "all"
 
     if pclass_filter is not None and pclass_filter != "all":
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
         if pclass is None:
             pclass_filter = "all"
-        elif (
-            not current_user.has_role("root")
-            and pclass.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and pclass.tenant_id not in allowed_tenants:
             pclass_filter = "all"
 
     if group_filter is not None and group_filter != "all":
-        group: ResearchGroup = (
-            db.session.query(ResearchGroup).filter_by(id=group_filter).first()
-        )
+        group: ResearchGroup = db.session.query(ResearchGroup).filter_by(id=group_filter).first()
         if group is None:
             group_filter = "all"
         elif not current_user.has_role("root"):
@@ -617,9 +572,7 @@ def unofferable_ajax():
     flag, tenant_value = is_integer(tenant_filter)
 
     if flag:
-        base_query = base_query.filter(
-            Project.project_classes.any(ProjectClass.tenant_id == tenant_value)
-        )
+        base_query = base_query.filter(Project.project_classes.any(ProjectClass.tenant_id == tenant_value))
     elif not current_user.has_role("root"):
         base_query = base_query.filter(
             Project.project_classes.any(ProjectClass.tenant_id.in_(allowed_tenants)),
@@ -682,8 +635,7 @@ def force_confirm_all(id):
 
     if config.live:
         flash(
-            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(
+            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project has already gone live".format(
                 project=config.name,
                 yeara=config.submit_year_a,
                 yearb=config.submit_year_b,
@@ -721,8 +673,9 @@ def force_confirm_all(id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not force confirmations for project class "{pclass}" due to a database error. '
-            "Please contact a system administrator".format(pclass=config.name),
+            'Could not force confirmations for project class "{pclass}" due to a database error. Please contact a system administrator'.format(
+                pclass=config.name
+            ),
             "error",
         )
 
@@ -764,8 +717,7 @@ def force_confirm(id, uid):
 
     if config.live:
         flash(
-            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(
+            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project has already gone live".format(
                 project=config.name,
                 yeara=config.submit_year_a,
                 yearb=config.submit_year_b,
@@ -794,9 +746,7 @@ def force_confirm(id, uid):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             'Could not force confirmations for user "{user}" and project class "{pclass}" due to a database error. '
-            "Please contact a system administrator".format(
-                user=fac.user.name, pclass=config.name
-            ),
+            "Please contact a system administrator".format(user=fac.user.name, pclass=config.name),
             "error",
         )
 
@@ -830,8 +780,7 @@ def confirm_description(config_id, did):
 
     if config.live:
         flash(
-            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(
+            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project has already gone live".format(
                 project=config.name,
                 yeara=config.submit_year_a,
                 yearb=config.submit_year_b,
@@ -877,8 +826,7 @@ def confirm_description(config_id, did):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not confirm description "{desc}" for project "{proj}" due to a database error. '
-            "Please contact a system administrator".format(
+            'Could not confirm description "{desc}" for project "{proj}" due to a database error. Please contact a system administrator'.format(
                 desc=desc.label, proj=desc.parent.name
             ),
             "error",
@@ -903,8 +851,7 @@ def go_live(id):
 
     if config.live:
         flash(
-            'A request to Go Live was ignored, because project "{name}" is already '
-            "live.".format(name=config.project_class.name),
+            'A request to Go Live was ignored, because project "{name}" is already live.'.format(name=config.project_class.name),
             "error",
         )
         return request.referrer
@@ -952,9 +899,7 @@ def go_live(id):
                     deadline=deadline.isoformat(),
                     notify_faculty=int(notify_faculty),
                     notify_selectors=int(notify_selectors),
-                    accommodate_matching=accommodate_matching.id
-                    if accommodate_matching is not None
-                    else None,
+                    accommodate_matching=accommodate_matching.id if accommodate_matching is not None else None,
                     full_CATS=full_CATS if full_CATS is not None else None,
                     faculty_template_id=faculty_template.id if faculty_template is not None else None,
                     selector_template_id=selector_template.id if selector_template is not None else None,
@@ -975,9 +920,7 @@ def _flash_blocking_tasks(operation: str, blocking):
         if flashed_tasks >= max_tasks_to_flash:
             break
         flash(
-            'Submitter task "{name}" is blocking {operation}'.format(
-                name=task.name, operation=operation
-            ),
+            'Submitter task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
             "warning",
         )
         flashed_tasks += 1
@@ -990,9 +933,7 @@ def _flash_blocking_tasks(operation: str, blocking):
         if flashed_tasks >= max_tasks_to_flash:
             break
         flash(
-            'Selector task "{name}" is blocking {operation}'.format(
-                name=task.name, operation=operation
-            ),
+            'Selector task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
             "warning",
         )
         flashed_tasks += 1
@@ -1005,9 +946,7 @@ def _flash_blocking_tasks(operation: str, blocking):
         if flashed_tasks >= max_tasks_to_flash:
             break
         flash(
-            'Global project class task "{name}" is blocking {operation}'.format(
-                name=task.name, operation=operation
-            ),
+            'Global project class task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
             "warning",
         )
         flashed_tasks += 1
@@ -1029,8 +968,7 @@ def confirm_go_live(id):
 
     if config.live:
         flash(
-            'A request to Go Live was ignored, because project "{name}" is already '
-            "live.".format(name=config.project_class.name),
+            'A request to Go Live was ignored, because project "{name}" is already live.'.format(name=config.project_class.name),
             "error",
         )
         return redirect(url_for("convenor.status", id=config.pclass_id))
@@ -1071,9 +1009,7 @@ def confirm_go_live(id):
 
     year = get_current_year()
 
-    title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(
-        name=config.project_class.name, yeara=year, yearb=year + 1
-    )
+    title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(name=config.project_class.name, yeara=year, yearb=year + 1)
     action_url = url_for(
         "convenor.perform_go_live",
         id=id,
@@ -1127,8 +1063,7 @@ def perform_go_live(id):
 
     if config.live:
         flash(
-            'A request to Go Live was ignored, because project "{name}" is already '
-            "live.".format(name=config.project_class.name),
+            'A request to Go Live was ignored, because project "{name}" is already live.'.format(name=config.project_class.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1176,9 +1111,7 @@ def perform_go_live(id):
 
     # register Go Live as a new background task and push it to the celery scheduler
     task_id = register_task(
-        'Go Live for "{proj}" {yra}-{yrb}'.format(
-            proj=config.name, yra=year, yrb=year + 1
-        ),
+        'Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
         owner=current_user,
         description='Perform Go Live of "{proj}"'.format(proj=config.name),
     )
@@ -1271,8 +1204,9 @@ def adjust_selection_deadline(configid):
     # reject if project class is not live
     if not config.live:
         flash(
-            'A request to adjust the selection deadline for "{proj}" was ignored, because '
-            "this project class is not yet live.".format(proj=config.name),
+            'A request to adjust the selection deadline for "{proj}" was ignored, because this project class is not yet live.'.format(
+                proj=config.name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -1280,9 +1214,7 @@ def adjust_selection_deadline(configid):
     if config.live_deadline is None:
         flash(
             'A request to adjust the selection deadline for "{proj}" was ignored, because '
-            "the deadline has not yet been set for this project class.".format(
-                proj=config.name
-            ),
+            "the deadline has not yet been set for this project class.".format(proj=config.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1380,9 +1312,7 @@ def perform_close_selections(configid):
 
     # register as new background task and push to celery scheduler
     task_id = register_task(
-        'Close selections for "{proj}" {yra}-{yrb}'.format(
-            proj=config.name, yra=year, yrb=year + 1
-        ),
+        'Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
         owner=current_user,
         description='Close selections for "{proj}"'.format(proj=config.name),
     )
@@ -1440,12 +1370,14 @@ def submit_student_selection(sel_id):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"pcl": sel.config.project_class.name}),
-            body_payload=encode_email_payload({
-                "user": sel.student.user,
-                "pclass": sel.config.project_class,
-                "config": sel.config,
-                "sel": sel,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": sel.student.user,
+                    "pclass": sel.config.project_class,
+                    "config": sel.config,
+                    "sel": sel,
+                }
+            ),
             recipient_list=[sel.student.user.email, current_user.email],
             reply_to=[current_user.email],
         )
@@ -1529,9 +1461,7 @@ def confirm(sid, pid):
     if not validate_project_open(sel.config):
         return redirect(redirect_url())
 
-    if do_confirm(
-        sel, project, resolved_by=current_user, comment="Resolved by convenor action"
-    ):
+    if do_confirm(sel, project, resolved_by=current_user, comment="Resolved by convenor action"):
         try:
             log_db_commit(
                 f'Confirmed project "{project.name}" for selector "{sel.student.user.name}" in "{sel.config.name}"',
@@ -2129,9 +2059,7 @@ def email_submitters(configid):
     year_filter = request.args.get("year_filter")
     data_display = request.args.get("data_display")
 
-    data = build_submitters_data(
-        config, cohort_filter, prog_filter, state_filter, year_filter
-    )
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
     if len(data) > 0:
         to_list = []
@@ -2287,9 +2215,7 @@ def confirm_rollover(id):
 
     if not config.project_class.active:
         flash(
-            "{name} is not an active project class, and therefore cannot be rolled over.".format(
-                name=config.name
-            ),
+            "{name} is not an active project class, and therefore cannot be rolled over.".format(name=config.name),
             "error",
         )
         return redirect(redirect_url())
@@ -2299,16 +2225,10 @@ def confirm_rollover(id):
         _flash_blocking_tasks("roll-over to next academic year", blocking)
         return redirect(redirect_url())
 
-    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(
-        proj=config.name, yeara=year, yearb=year + 1
-    )
-    action_url = url_for(
-        "convenor.rollover", id=id, url=request.referrer, markers=int(use_markers)
-    )
+    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
+    action_url = url_for("convenor.rollover", id=id, url=request.referrer, markers=int(use_markers))
     message = (
-        '<p>Please confirm that you wish to rollover project class "{proj}" to '
-        "{yeara}&ndash;{yearb}.</p>"
-        "<p>This action cannot be undone.</p>".format(
+        '<p>Please confirm that you wish to rollover project class "{proj}" to {yeara}&ndash;{yearb}.</p><p>This action cannot be undone.</p>'.format(
             proj=config.name, yeara=year, yearb=year + 1
         )
     )
@@ -2384,13 +2304,9 @@ def rollover(id):
 
     # register rollover as a new background task and push it to the celery scheduler
     task_id = register_task(
-        'Rollover "{proj}" to {yra}-{yrb}'.format(
-            proj=config.name, yra=year, yrb=year + 1
-        ),
+        'Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
         owner=current_user,
-        description='Perform rollover of "{proj}" to new academic year'.format(
-            proj=config.name
-        ),
+        description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name),
     )
 
     backup_chain = chain(
@@ -2399,9 +2315,7 @@ def rollover(id):
             current_user.id,
             type=BackupRecord.PROJECT_ROLLOVER_FALLBACK,
             tag="rollover",
-            description="Rollback snapshot for {proj} rollover to {yr}".format(
-                proj=config.name, yr=year
-            ),
+            description="Rollback snapshot for {proj} rollover to {yr}".format(proj=config.name, yr=year),
         ),
     )
     backup_result = backup_chain.apply_async()
@@ -2531,8 +2445,7 @@ def dispatch_consent_invitations(config_id):
     )
     if tmpl is None:
         flash(
-            "No consent invitation email template is configured for this project class. "
-            "Please ask an administrator to create one.",
+            "No consent invitation email template is configured for this project class. Please ask an administrator to create one.",
             "danger",
         )
         return redirect(redirect_url())
@@ -2592,8 +2505,7 @@ def dispatch_consent_invitations(config_id):
 
     try:
         log_db_commit(
-            f"Dispatched consent invitations for {count} student(s) "
-            f"({pclass.name} {config.submit_year_a}–{config.submit_year_b})",
+            f"Dispatched consent invitations for {count} student(s) ({pclass.name} {config.submit_year_a}–{config.submit_year_b})",
             user=current_user,
             project_classes=pclass,
         )
@@ -2654,8 +2566,7 @@ def dispatch_consent_reminders(config_id):
     )
     if tmpl is None:
         flash(
-            "No consent reminder email template is configured for this project class. "
-            "Please ask an administrator to create one.",
+            "No consent reminder email template is configured for this project class. Please ask an administrator to create one.",
             "danger",
         )
         return redirect(redirect_url())
@@ -2715,8 +2626,7 @@ def dispatch_consent_reminders(config_id):
 
     try:
         log_db_commit(
-            f"Dispatched consent reminders for {count} student(s) "
-            f"({pclass.name} {config.submit_year_a}–{config.submit_year_b})",
+            f"Dispatched consent reminders for {count} student(s) ({pclass.name} {config.submit_year_a}–{config.submit_year_b})",
             user=current_user,
             project_classes=pclass,
         )

@@ -178,9 +178,7 @@ def assign_submitter_data(slots, old_slot, talk, url=None, text=None):
                 "sortvalue": s.session.date.isoformat(),
             },
             "room": render_template(room_templ, room=s.room, simple_label=simple_label),
-            "assessors": render_template(
-                assessors_templ, s=s, t=talk, url=url, text=text
-            ),
+            "assessors": render_template(assessors_templ, s=s, t=talk, url=url, text=text),
             "talks": render_template(talks_templ, s=s, url=url, text=text),
             "menu": render_template(
                 menu_templ,

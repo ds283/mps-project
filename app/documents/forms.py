@@ -57,9 +57,7 @@ class EditReportForm(Form, LicenseMixin, DownloadableAttachmentMixin, SaveChange
 
 def AttachmentMixinFactory(admin=False):
     class AttachmentMixin:
-        description = StringField(
-            "Comment", description="Give a short description of the attachment"
-        )
+        description = StringField("Comment", description="Give a short description of the attachment")
 
         if admin:
             _types = [
@@ -98,9 +96,7 @@ def AttachmentMixinFactory(admin=False):
 def UploadSubmitterAttachmentFormFactory(admin=False):
     AttachmentMixin = AttachmentMixinFactory(admin=admin)
 
-    class UploadSubmitterAttachmentForm(
-        Form, LicenseMixin, AttachmentMixin, DownloadableAttachmentMixin
-    ):
+    class UploadSubmitterAttachmentForm(Form, LicenseMixin, AttachmentMixin, DownloadableAttachmentMixin):
         submit = SubmitField("Upload attachment")
 
     return UploadSubmitterAttachmentForm
@@ -124,9 +120,7 @@ def EditSubmitterAttachmentFormFactory(admin=False):
 class PeriodAttachmentMixin:
     description = StringField(
         "Comment",
-        description="Give a short description of the attachment. This will be "
-        "included as an explanation if the document is published to "
-        "end-users.",
+        description="Give a short description of the attachment. This will be included as an explanation if the document is published to end-users.",
     )
 
     roles = SelectMultipleField(
@@ -153,9 +147,7 @@ class PeriodAttachmentMixin:
     )
 
 
-class UploadPeriodAttachmentForm(
-    Form, PeriodAttachmentMixin, DownloadableAttachmentMixin
-):
+class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin, DownloadableAttachmentMixin):
     submit = SubmitField("Upload attachment")
 
 

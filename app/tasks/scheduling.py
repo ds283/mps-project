@@ -70,9 +70,7 @@ NumberToTalkMap = Dict[int, int]
 TalkDictMap = Dict[int, SubmissionRecord]
 
 
-def _enumerate_talks(
-        schedule: ScheduleAttempt, read_serialized: bool = False
-) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
+def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool = False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
     # schedule is a ScheduleAttempt instance
     talk_to_number: TalkToNumberMap = {}
     number_to_talk: NumberToTalkMap = {}
@@ -84,18 +82,12 @@ def _enumerate_talks(
     # be scheduled into the make-up event.
     if not read_serialized:
         if len(schedule.owner.schedulable_talks) == 0:
-            raise RuntimeError(
-                f'No schedulable talks found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
-            )
+            raise RuntimeError(f'No schedulable talks found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
 
         talks = enumerate(schedule.owner.schedulable_talks)
 
     else:
-        talk_data = (
-            db.session.query(ScheduleEnumeration)
-            .filter_by(category=ScheduleEnumeration.SUBMITTER, schedule_id=schedule.id)
-            .subquery()
-        )
+        talk_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.SUBMITTER, schedule_id=schedule.id).subquery()
         talks = (
             db.session.query(talk_data.c.enumeration, SubmissionRecord)
             .select_from(SubmissionRecord)
@@ -126,24 +118,16 @@ def _enumerate_assessors(schedule: ScheduleAttempt, read_serialized: bool = Fals
     # one for each assessor who has been invited to attend
     if not read_serialized:
         if len(schedule.owner.ordered_assessors) == 0:
-            raise RuntimeError(
-                f'No assessors found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
-            )
+            raise RuntimeError(f'No assessors found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
 
         assessors = enumerate(schedule.owner.ordered_assessors)
 
     else:
-        assessor_data = (
-            db.session.query(ScheduleEnumeration)
-            .filter_by(category=ScheduleEnumeration.ASSESSOR, schedule_id=schedule.id)
-            .subquery()
-        )
+        assessor_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.ASSESSOR, schedule_id=schedule.id).subquery()
         assessors = (
             db.session.query(assessor_data.c.enumeration, AssessorAttendanceData)
             .select_from(AssessorAttendanceData)
-            .join(
-                assessor_data, assessor_data.c.key == AssessorAttendanceData.faculty_id
-            )
+            .join(assessor_data, assessor_data.c.key == AssessorAttendanceData.faculty_id)
             .order_by(assessor_data.c.enumeration.asc())
             .all()
         )
@@ -170,18 +154,12 @@ def _enumerate_periods(schedule: ScheduleAttempt, read_serialized: bool = False)
 
     if not read_serialized:
         if len(schedule.owner.available_periods) == 0:
-            raise RuntimeError(
-                f'No periods found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
-            )
+            raise RuntimeError(f'No periods found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
 
         periods = enumerate(schedule.owner.available_periods)
 
     else:
-        period_data = (
-            db.session.query(ScheduleEnumeration)
-            .filter_by(category=ScheduleEnumeration.PERIOD, schedule_id=schedule.id)
-            .subquery()
-        )
+        period_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.PERIOD, schedule_id=schedule.id).subquery()
         periods = (
             db.session.query(period_data.c.enumeration, SubmissionPeriodRecord)
             .select_from(SubmissionPeriodRecord)
@@ -209,18 +187,12 @@ def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool = False):
 
     if not read_serialized:
         if len(schedule.ordered_slots) == 0:
-            raise RuntimeError(
-                f'No slots found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
-            )
+            raise RuntimeError(f'No slots found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
 
         slots = enumerate(schedule.ordered_slots)
 
     else:
-        slot_data = (
-            db.session.query(ScheduleEnumeration)
-            .filter_by(category=ScheduleEnumeration.SLOT, schedule_id=schedule.id)
-            .subquery()
-        )
+        slot_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.SLOT, schedule_id=schedule.id).subquery()
         slots = (
             db.session.query(slot_data.c.enumeration, ScheduleSlot)
             .select_from(ScheduleSlot)
@@ -239,9 +211,7 @@ def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool = False):
     return n + 1, slot_to_number, number_to_slot, slot_dict
 
 
-def _build_faculty_availability_matrix(
-        number_assessors, assessor_dict, number_slots, slot_dict
-) -> Tuple[AvailabilityMatrix, AvailabilityMatrix]:
+def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict) -> Tuple[AvailabilityMatrix, AvailabilityMatrix]:
     """
     Construct a dictionary mapping from (assessing-faculty, slot) pairs to yes/no availabilities,
     coded as 0 = not available, 1 = available
@@ -280,9 +250,7 @@ def _build_faculty_availability_matrix(
     return A, C
 
 
-def _build_student_availability_matrix(
-        number_talks, talk_dict, number_slots, slot_dict
-) -> AvailabilityMatrix:
+def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict) -> AvailabilityMatrix:
     """
     Construct a dictionary mapping from (submitting-student, slot) pairs to yes/no availabilities,
     coded a 0 = not available, 1 = available
@@ -310,9 +278,7 @@ def _build_student_availability_matrix(
     return B
 
 
-def _generate_minimize_objective(
-        C: AvailabilityMatrix, X, Y, S, number_talks, number_assessors, number_slots, record
-):
+def _generate_minimize_objective(C: AvailabilityMatrix, X, Y, S, number_talks, number_assessors, number_slots, record):
     """
     Generate an objective function that tries to schedule as efficiently as possible,
     with workload balancing
@@ -332,11 +298,7 @@ def _generate_minimize_objective(
     objective += sum(S[idx] for idx in S)
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum(
-        Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost))
-        for i in range(number_assessors)
-        for j in range(number_slots)
-    )
+    objective += sum(Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors) for j in range(number_slots))
 
     # TODO: - minimize number of days used in schedule
     # TODO: - minimize number of rooms used in schedule
@@ -344,9 +306,7 @@ def _generate_minimize_objective(
     return objective
 
 
-def _generate_reschedule_objective(
-        C, oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots, record
-):
+def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots, record):
     """
     Generate an objective function that tries to produce a feasible schedule matching oldX, oldY
     as closely as possible
@@ -383,24 +343,20 @@ def _generate_reschedule_objective(
                 objective += 1 - Y[idx]
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum(
-        Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost))
-        for i in range(number_assessors)
-        for j in range(number_slots)
-    )
+    objective += sum(Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors) for j in range(number_slots))
 
     return objective
 
 
 def _reconstruct_XY(
-        self,
-        old_record,
-        number_talks,
-        number_assessors,
-        number_slots,
-        talk_to_number,
-        assessor_to_number,
-        slot_dict,
+    self,
+    old_record,
+    number_talks,
+    number_assessors,
+    number_slots,
+    talk_to_number,
+    assessor_to_number,
+    slot_dict,
 ):
     X = {}
     Y = {}
@@ -414,16 +370,12 @@ def _reconstruct_XY(
         k = reverse_slot_dict[(slot.session_id, slot.room_id)]
 
         for talk in slot.talks:
-            if (
-                    talk.id in talk_to_number
-            ):  # key might be missing if this talk has been removed; if so, just ignore
+            if talk.id in talk_to_number:  # key might be missing if this talk has been removed; if so, just ignore
                 i = talk_to_number[talk.id]
                 X[(i, k)] = 1
 
         for assessor in slot.assessors:
-            if (
-                    assessor.id in assessor_to_number
-            ):  # key might be missing if this assessor has been removed; if so, just ignore
+            if assessor.id in assessor_to_number:  # key might be missing if this assessor has been removed; if so, just ignore
                 j = assessor_to_number[assessor.id]
                 Y[(j, k)] = 1
 
@@ -439,27 +391,23 @@ def _reconstruct_XY(
     return X, Y
 
 
-def _forbid_unused_slots(
-        prob, X, Y, number_assessors, number_talks, slot_dict, old_record
-):
+def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record):
     for k in slot_dict:
         slot = slot_dict[k]
 
         present = (
-                get_count(
-                    db.session.query(ScheduleSlot).filter_by(
-                        owner_id=old_record.id,
-                        session_id=slot.session_id,
-                        room_id=slot.room_id,
-                    )
+            get_count(
+                db.session.query(ScheduleSlot).filter_by(
+                    owner_id=old_record.id,
+                    session_id=slot.session_id,
+                    room_id=slot.room_id,
                 )
-                > 0
+            )
+            > 0
         )
 
         if not present:
-            print(
-                f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}"
-            )
+            print(f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}")
             for i in range(number_talks):
                 prob += X[(i, k)] == 0
 
@@ -503,11 +451,7 @@ def _create_PuLP_problem(
     """
 
     print("Building PuLP problem for schedule:")
-    print(
-        " -- {l} talks, {m} assessors, {n} slots".format(
-            l=number_talks, m=number_assessors, n=number_slots
-        )
-    )
+    print(" -- {l} talks, {m} assessors, {n} slots".format(l=number_talks, m=number_assessors, n=number_slots))
 
     # generate PuLP problem
     prob = pulp.LpProblem(attempt.name, pulp.LpMinimize)
@@ -557,9 +501,7 @@ def _create_PuLP_problem(
 
     # OBJECTIVE FUNCTION
 
-    objective = make_objective(
-        X, Y, S, number_talks, number_assessors, number_slots, attempt
-    )
+    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, attempt)
     prob += objective, "objective function"
 
     # keep track of how many constraints we generate
@@ -597,14 +539,7 @@ def _create_PuLP_problem(
     # (corresponding to running different Zoom calls with different assessors)
     for session in attempt.owner.sessions:
         for j in range(number_assessors):
-            prob += (
-                    sum(
-                        Y[(j, k)]
-                        for k in range(number_slots)
-                        if slot_dict[k].session_id == session.id
-                    )
-                    <= attempt.assessor_multiplicity_per_session
-            )
+            prob += sum(Y[(j, k)] for k in range(number_slots) if slot_dict[k].session_id == session.id) <= attempt.assessor_multiplicity_per_session
             constraints += 1
 
     # number of times each faculty member is scheduled should fall below the hard limit, or the
@@ -612,16 +547,13 @@ def _create_PuLP_problem(
     for j in range(number_assessors):
         if j in assessor_limits:
             print(
-                '-- overwriting default assignment limit for assessor "{name}" with limit = '
-                "{lim}".format(name=assessor_dict[j].user.name, lim=assessor_limits[j])
+                '-- overwriting default assignment limit for assessor "{name}" with limit = {lim}'.format(
+                    name=assessor_dict[j].user.name, lim=assessor_limits[j]
+                )
             )
-            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(
-                assessor_limits[j]
-            )
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(assessor_limits[j])
         else:
-            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(
-                attempt.assessor_assigned_limit
-            )
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(attempt.assessor_assigned_limit)
         constraints += 1
 
     # if an assessor is scheduled in any slot, their occupation variable is allowed to become 1, otherwise
@@ -659,15 +591,9 @@ def _create_PuLP_problem(
         allowed_assessors = set()
         for j in range(number_assessors):
             assessor: FacultyData = assessor_dict[j]
-            enrolment: EnrollmentRecord = assessor.get_enrollment_record(
-                config.pclass_id
-            )
+            enrolment: EnrollmentRecord = assessor.get_enrollment_record(config.pclass_id)
 
-            if (
-                    enrolment is not None
-                    and enrolment.presentations_state
-                    == EnrollmentRecord.PRESENTATIONS_ENROLLED
-            ):
+            if enrolment is not None and enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
                 allowed_assessors.add(j)
 
         # if slot k is assigned to period m, then the sum of the assessor set should at least equal the expected
@@ -684,10 +610,7 @@ def _create_PuLP_problem(
 
     for k in range(number_slots):
         prob += sum([Y[(j, k)] for j in range(number_assessors)]) == sum(
-            [
-                S[(m, k)] * int(period_dict[m].number_assessors)
-                for m in range(number_periods)
-            ]
+            [S[(m, k)] * int(period_dict[m].number_assessors) for m in range(number_periods)]
         )
         constraints += 1
 
@@ -712,9 +635,7 @@ def _create_PuLP_problem(
 
             talk_set = sum(X[(i, k)] for i in allowed_talks)
 
-            max_capacity = min(
-                room_capacity - int(period.number_assessors), int(period.max_group_size)
-            )
+            max_capacity = min(room_capacity - int(period.number_assessors), int(period.max_group_size))
 
             prob += talk_set <= S[(m, k)] * max_capacity
             constraints += 1
@@ -751,9 +672,7 @@ def _create_PuLP_problem(
         nonlocal prob, constraints, objective
 
         if mode not in ["all", "one"]:
-            raise RuntimeError(
-                "Unknown assessor objective mode in _make_assessor_objective()"
-            )
+            raise RuntimeError("Unknown assessor objective mode in _make_assessor_objective()")
 
         talk: SubmissionRecord = talk_dict[i]
 
@@ -791,9 +710,7 @@ def _create_PuLP_problem(
 
     def _make_assessor_objective_pool(i, mode: str):
         if mode not in ["all", "one"]:
-            raise RuntimeError(
-                "Unknown assessor objective mode in _make_assessor_objective_pool()"
-            )
+            raise RuntimeError("Unknown assessor objective mode in _make_assessor_objective_pool()")
 
         def _not_available_predicate(talk: SubmissionRecord, assessor: FacultyData):
             # don't need to check enrolment status because that is enforced as part of the "TALKS" group above
@@ -803,9 +720,7 @@ def _create_PuLP_problem(
 
     def _make_assessor_objective_research_group(i, mode: str):
         if mode not in ["all", "one"]:
-            raise RuntimeError(
-                "Unknown assessor objective mode in _make_assessor_objective_research_group()"
-            )
+            raise RuntimeError("Unknown assessor objective mode in _make_assessor_objective_research_group()")
 
         def _not_available_predicate(talk: SubmissionRecord, assessor: FacultyData):
             # don't need to check enrolment status because that is enforced as part of the "TALKS" group above
@@ -819,9 +734,7 @@ def _create_PuLP_problem(
             if group is None:
                 return not talk.project.is_assessor(assessor.id)
 
-            return not assessor.has_affiliation(group) and not talk.project.is_assessor(
-                assessor.id
-            )
+            return not assessor.has_affiliation(group) and not talk.project.is_assessor(assessor.id)
 
         return _make_assessor_objective(i, mode, _not_available_predicate)
 
@@ -837,16 +750,12 @@ def _create_PuLP_problem(
         for i in range(number_talks):
             _make_assessor_objective_research_group(i, "all")
 
-    elif (
-            attempt.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP
-    ):
+    elif attempt.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP:
         for i in range(number_talks):
             _make_assessor_objective_research_group(i, "one")
 
     else:
-        raise RuntimeError(
-            "Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()"
-        )
+        raise RuntimeError("Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()")
 
     # TALKS CANNOT BE SCHEDULED WITH A SUPERVISOR AS AN ASSESSOR
 
@@ -877,9 +786,7 @@ def _create_PuLP_problem(
             slot_ok = True
 
             if not talk.period.has_presentation:
-                raise RuntimeError(
-                    "Inconsistent presentation state in SubmissionPeriodRecord"
-                )
+                raise RuntimeError("Inconsistent presentation state in SubmissionPeriodRecord")
 
             if talk.period.lecture_capture and not slot.room.lecture_capture:
                 slot_ok = False
@@ -907,15 +814,15 @@ def _create_PuLP_problem(
 
 
 def _store_PuLP_solution(
-        X,
-        Y,
-        record: ScheduleAttempt,
-        number_talks,
-        number_assessors,
-        number_slots,
-        talk_dict,
-        assessor_dict,
-        slot_dict,
+    X,
+    Y,
+    record: ScheduleAttempt,
+    number_talks,
+    number_assessors,
+    number_slots,
+    talk_dict,
+    assessor_dict,
+    slot_dict,
 ):
     """
     Store a solution to the talk scheduling problem
@@ -972,9 +879,7 @@ def _store_PuLP_solution(
 def _create_slots(self, record: ScheduleAttempt):
     # add database records for each available slot (meaning a combination of session+room);
     # the ones we don't use will be cleaned up later
-    print(
-        f' -- creating slots for ScheduleAttempt {record.id} (presentation="{record.owner.name}")'
-    )
+    print(f' -- creating slots for ScheduleAttempt {record.id} (presentation="{record.owner.name}")')
 
     count = 0
     for sess in record.owner.sessions:
@@ -983,14 +888,10 @@ def _create_slots(self, record: ScheduleAttempt):
 
         for room in sess.rooms:
             room: Room
-            print(
-                f' -- ## ## creating slots for room "{room.name}", max occupancy = {room.maximum_occupancy}'
-            )
+            print(f' -- ## ## creating slots for room "{room.name}", max occupancy = {room.maximum_occupancy}')
 
             if room.maximum_occupancy == 0:
-                print(
-                    f' !! WARNING: room "{room.name}" has maximum occupancy = 0 and will not be used'
-                )
+                print(f' !! WARNING: room "{room.name}" has maximum occupancy = 0 and will not be used')
 
             for s in range(0, room.maximum_occupancy):
                 slot = ScheduleSlot(
@@ -1023,12 +924,8 @@ def _initialize(self, record, read_serialized=False):
 
     try:
         with Timer() as talk_timer:
-            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(
-                record, read_serialized=read_serialized
-            )
-        print(
-            f" -- enumerated {number_talks} talks in time {talk_timer.interval:.5g} s"
-        )
+            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record, read_serialized=read_serialized)
+        print(f" -- enumerated {number_talks} talks in time {talk_timer.interval:.5g} s")
 
         with Timer() as assessor_timer:
             (
@@ -1038,46 +935,28 @@ def _initialize(self, record, read_serialized=False):
                 assessor_dict,
                 assessor_limits,
             ) = _enumerate_assessors(record, read_serialized=read_serialized)
-        print(
-            f" -- enumerated {number_assessors} assessors in time {assessor_timer.interval:.5g} s"
-        )
+        print(f" -- enumerated {number_assessors} assessors in time {assessor_timer.interval:.5g} s")
 
         with Timer() as periods_timer:
-            number_periods, period_to_number, number_to_period, period_dict = (
-                _enumerate_periods(record, read_serialized=read_serialized)
-            )
-        print(
-            f" -- enumerated {number_periods} periods in time {periods_timer.interval:.5g} s"
-        )
+            number_periods, period_to_number, number_to_period, period_dict = _enumerate_periods(record, read_serialized=read_serialized)
+        print(f" -- enumerated {number_periods} periods in time {periods_timer.interval:.5g} s")
 
         with Timer() as slots_timer:
-            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(
-                record, read_serialized=read_serialized
-            )
-        print(
-            f" -- enumerated {number_slots} slots in time {slots_timer.interval:.5g} s"
-        )
+            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record, read_serialized=read_serialized)
+        print(f" -- enumerated {number_slots} slots in time {slots_timer.interval:.5g} s")
 
         # build faculty availability and 'ifneeded' cost matrix
         with Timer() as fac_avail_timer:
             A: AvailabilityMatrix
             C: AvailabilityMatrix
-            A, C = _build_faculty_availability_matrix(
-                number_assessors, assessor_dict, number_slots, slot_dict
-            )
-        print(
-            f" -- computed faculty availabilities in time {fac_avail_timer.interval:.5g} s"
-        )
+            A, C = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
+        print(f" -- computed faculty availabilities in time {fac_avail_timer.interval:.5g} s")
 
         # build submitter availability matrix
         with Timer() as sub_avail_timer:
             B: AvailabilityMatrix
-            B = _build_student_availability_matrix(
-                number_talks, talk_dict, number_slots, slot_dict
-            )
-        print(
-            f" -- computed submitter availabilities in time {sub_avail_timer.interval:.5g} s"
-        )
+            B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
+        print(f" -- computed submitter availabilities in time {sub_avail_timer.interval:.5g} s")
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1108,18 +987,18 @@ def _initialize(self, record, read_serialized=False):
 
 
 def _execute_live(
-        self,
-        record,
-        prob,
-        X,
-        Y,
-        create_time,
-        number_talks,
-        number_assessors,
-        number_slots,
-        talk_dict,
-        assessor_dict,
-        slot_dict,
+    self,
+    record,
+    prob,
+    X,
+    Y,
+    create_time,
+    number_talks,
+    number_assessors,
+    number_slots,
+    talk_dict,
+    assessor_dict,
+    slot_dict,
 ):
     print("Solving PuLP problem for schedule")
 
@@ -1135,13 +1014,9 @@ def _execute_live(
         record.awaiting_upload = False
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(
-                pulp_apis.PULP_CBC_CMD(msg=1, timeLimit=3600, gapRel=0.25)
-            )
+            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, timeLimit=3600, gapRel=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(
-                pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25)
-            )
+            status = prob.solve(pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
@@ -1172,19 +1047,19 @@ def _execute_live(
 
 
 def _execute_from_solution(
-        self,
-        file,
-        record,
-        prob,
-        X,
-        Y,
-        create_time,
-        number_talks,
-        number_assessors,
-        number_slots,
-        talk_dict,
-        assessor_dict,
-        slot_dict,
+    self,
+    file,
+    record,
+    prob,
+    X,
+    Y,
+    create_time,
+    number_talks,
+    number_assessors,
+    number_slots,
+    talk_dict,
+    assessor_dict,
+    slot_dict,
 ):
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
@@ -1209,32 +1084,22 @@ def _execute_from_solution(
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
             solver = pulp_apis.PULP_CBC_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol_LP(file, prob, prob.variables())
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
             solver = pulp_apis.COIN_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol_LP(file, prob, prob.variables())
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             solver = pulp_apis.GLPK_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol(file)
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
             solver = pulp_apis.CPLEX_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol(file)
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_GUROBI_CMD:
             solver = pulp_apis.GUROBI_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_SCIP_CMD:
             solver = pulp_apis.SCIP_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol(file)
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         else:
             msg = "Unknown solver"
             progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
@@ -1269,20 +1134,20 @@ def _execute_from_solution(
 
 
 def _process_PuLP_solution(
-        self,
-        record,
-        prob,
-        status,
-        solve_time,
-        X,
-        Y,
-        create_time,
-        number_talks,
-        number_assessors,
-        number_slots,
-        talk_dict,
-        assessor_dict,
-        slot_dict,
+    self,
+    record,
+    prob,
+    status,
+    solve_time,
+    X,
+    Y,
+    create_time,
+    number_talks,
+    number_assessors,
+    number_slots,
+    talk_dict,
+    assessor_dict,
+    slot_dict,
 ):
     state = pulp.LpStatus[status]
 
@@ -1437,9 +1302,7 @@ def _write_LP_file(record: ScheduleAttempt, prob, user):
     return lp_asset
 
 
-def _store_enumeration_details(
-        record, number_to_talk, number_to_assessor, number_to_slot, number_to_period
-):
+def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period):
     def write_out(label, block):
         for number in block:
             data = ScheduleEnumeration(
@@ -1468,9 +1331,7 @@ def register_scheduling_tasks(celery):
         )
 
         try:
-            record: ScheduleAttempt = (
-                db.session.query(ScheduleAttempt).filter_by(id=id).first()
-            )
+            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1556,9 +1417,7 @@ def register_scheduling_tasks(celery):
 
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": f"Looking up ScheduleAttempt records for new_id={new_id}, old_id={old_id}"
-            },
+            meta={"msg": f"Looking up ScheduleAttempt records for new_id={new_id}, old_id={old_id}"},
         )
 
         try:
@@ -1637,12 +1496,8 @@ def register_scheduling_tasks(celery):
             )
 
             if not allow_new_slots:
-                print(
-                    " -- new slots are not allowed; disallowing use of any slots not present in original schedule"
-                )
-                _forbid_unused_slots(
-                    prob, X, Y, number_assessors, number_talks, slot_dict, old_record
-                )
+                print(" -- new slots are not allowed; disallowing use of any slots not present in original schedule")
+                _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record)
 
         print(f" -- creation complete in time {create_time.interval:.5g} s")
 
@@ -1666,11 +1521,7 @@ def register_scheduling_tasks(celery):
     def offline_schedule(self, schedule_id, user_id):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up ScheduleAttempt record for id={id}".format(
-                    id=schedule_id
-                )
-            },
+            meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=schedule_id)},
         )
 
         try:
@@ -1802,11 +1653,7 @@ def register_scheduling_tasks(celery):
     def process_offline_solution(self, schedule_id, asset_id, user_id):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up TemporaryAsset record for id={id}".format(
-                    id=asset_id
-                )
-            },
+            meta={"msg": "Looking up TemporaryAsset record for id={id}".format(id=asset_id)},
         )
 
         try:
@@ -2003,9 +1850,7 @@ def register_scheduling_tasks(celery):
         )
 
         try:
-            old_record: ScheduleAttempt = (
-                db.session.query(ScheduleAttempt).filter_by(id=id).first()
-            )
+            old_record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -2081,9 +1926,7 @@ def register_scheduling_tasks(celery):
                         if item.key in slot_map:
                             new_key = slot_map[item.key]
                         else:
-                            raise RuntimeError(
-                                "Could not map from old to new ScheduleSlot ids"
-                            )
+                            raise RuntimeError("Could not map from old to new ScheduleSlot ids")
 
                     en = ScheduleEnumeration(
                         category=item.category,
@@ -2146,9 +1989,7 @@ def register_scheduling_tasks(celery):
                     return new_asset
 
                 if old_record.lp_file is not None:
-                    new_record.lp_file = copy_asset(
-                        old_record.lp_file, "schedule.lp", ext="lp"
-                    )
+                    new_record.lp_file = copy_asset(old_record.lp_file, "schedule.lp", ext="lp")
 
             log_db_commit("Persist duplicated schedule attempt", endpoint=self.name)
 
@@ -2191,8 +2032,7 @@ def register_scheduling_tasks(celery):
 
         task = chain(
             group(
-                publish_email_to_submitter.si(id, a_id, not bool(record.deployed), submitter_template_id=submitter_template_id)
-                for a_id in recipients
+                publish_email_to_submitter.si(id, a_id, not bool(record.deployed), submitter_template_id=submitter_template_id) for a_id in recipients
             ),
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
             publish_to_submitter_finalize.si(task_id),
@@ -2214,9 +2054,7 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True)
     def publish_to_submitter_finalize(self, task_id):
-        progress_update(
-            task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
     def publish_email_to_submitter(self, schedule_id, attend_id, is_draft, submitter_template_id=None):
@@ -2225,11 +2063,7 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-            attend_data = (
-                db.session.query(SubmitterAttendanceData)
-                .filter_by(id=attend_id)
-                .first()
-            )
+            attend_data = db.session.query(SubmitterAttendanceData).filter_by(id=attend_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -2244,9 +2078,7 @@ def register_scheduling_tasks(celery):
         if attend_data is None:
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": "Could not load SubmitterAttendanceData record from database"
-                },
+                meta={"msg": "Could not load SubmitterAttendanceData record from database"},
             )
             raise self.retry()
 
@@ -2255,11 +2087,7 @@ def register_scheduling_tasks(celery):
         user = student.user
         event = record.owner
 
-        template_type = (
-            EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS
-            if is_draft
-            else EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS
-        )
+        template_type = EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS if is_draft else EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS
         if submitter_template_id is not None:
             template = db.session.get(EmailTemplate, submitter_template_id)
         else:
@@ -2274,13 +2102,15 @@ def register_scheduling_tasks(celery):
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"name": event.name}),
-            body_payload=encode_email_payload({
-                "user": user,
-                "event": event,
-                "slot": record.get_student_slot(sub_record.owner_id).first(),
-                "period": sub_record.period,
-                "schedule": record,
-            }),
+            body_payload=encode_email_payload(
+                {
+                    "user": user,
+                    "event": event,
+                    "slot": record.get_student_slot(sub_record.owner_id).first(),
+                    "period": sub_record.period,
+                    "schedule": record,
+                }
+            ),
             recipient_list=[user.email],
         )
         item.workflow = workflow
@@ -2323,7 +2153,9 @@ def register_scheduling_tasks(celery):
         task = chain(
             group(
                 publish_email_to_assessor.si(
-                    id, a.id, not bool(record.deployed),
+                    id,
+                    a.id,
+                    not bool(record.deployed),
                     notify_template_id=notify_template_id,
                     unneeded_template_id=unneeded_template_id,
                 )
@@ -2349,9 +2181,7 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True)
     def publish_to_assessors_finalize(self, task_id):
-        progress_update(
-            task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
     def publish_email_to_assessor(self, schedule_id, attend_id, is_draft, notify_template_id=None, unneeded_template_id=None):
@@ -2360,9 +2190,7 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-            attend_data = (
-                db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
-            )
+            attend_data = db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -2377,9 +2205,7 @@ def register_scheduling_tasks(celery):
         if attend_data is None:
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": "Could not load AssessorAttendanceData record from database"
-                },
+                meta={"msg": "Could not load AssessorAttendanceData record from database"},
             )
             raise self.retry()
 
@@ -2390,17 +2216,9 @@ def register_scheduling_tasks(celery):
         slots = record.get_faculty_slots(faculty.id).all()
 
         if is_draft:
-            template_type = (
-                EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY
-                if len(slots) > 0
-                else EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY
-            )
+            template_type = EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY if len(slots) > 0 else EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY
         else:
-            template_type = (
-                EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY
-                if len(slots) > 0
-                else EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY
-            )
+            template_type = EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY if len(slots) > 0 else EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY
 
         _supplied_template_id = notify_template_id if len(slots) > 0 else unneeded_template_id
         if _supplied_template_id is not None:
@@ -2416,12 +2234,14 @@ def register_scheduling_tasks(celery):
         db.session.flush()
 
         if len(slots) > 0:
-            body_payload = encode_email_payload({
-                "user": user,
-                "event": event,
-                "slots": slots,
-                "schedule": record,
-            })
+            body_payload = encode_email_payload(
+                {
+                    "user": user,
+                    "event": event,
+                    "slots": slots,
+                    "schedule": record,
+                }
+            )
         else:
             body_payload = encode_email_payload({"user": user, "event": event, "schedule": record})
 

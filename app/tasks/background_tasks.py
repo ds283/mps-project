@@ -48,9 +48,7 @@ def register_background_tasks(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in prune_background_tasks()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in prune_background_tasks()", exc_info=e)
             raise self.retry()
 
         # Terminate stale non-terminal tasks: any task still in PENDING or RUNNING state
@@ -91,9 +89,7 @@ def register_background_tasks(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception terminating stale tasks in prune_background_tasks()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception terminating stale tasks in prune_background_tasks()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="FINISHED")

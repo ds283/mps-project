@@ -86,9 +86,7 @@ def sql_script_populate(app, script):
     db.session.commit()
 
 
-def populate_table_if_empty(
-    app, inspector, bucket: ObjectStore, table: str, sql_script: Path
-):
+def populate_table_if_empty(app, inspector, bucket: ObjectStore, table: str, sql_script: Path):
     if not inspector.has_table(table):
         app.logger.error(
             f'!! FATAL: database is missing the "{table}" table and is not ready. '
@@ -103,15 +101,11 @@ def populate_table_if_empty(
     db.session.commit()
 
     if count == 0:
-        app.logger.info(
-            f'** table "{table}" is empty, beginning to auto-populate using script "{sql_script}"'
-        )
+        app.logger.info(f'** table "{table}" is empty, beginning to auto-populate using script "{sql_script}"')
 
         with ScratchFileManager(suffix=".sql") as scratch_path:
             with open(scratch_path.path, "wb") as f:
-                data: bytes = bucket.get(
-                    str(sql_script), audit_data="populate_table_if_empty"
-                )
+                data: bytes = bucket.get(str(sql_script), audit_data="populate_table_if_empty")
                 f.write(data)
 
             sql_script_populate(app, scratch_path.path)
@@ -150,16 +144,12 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: str | Path):
         contents_dict: Dict[str, TarInfo] = {x.name: x for x in contents_list}
 
         if "database.sql" not in contents_dict:
-            raise RuntimeError(
-                f"!! initdb tarfile {tarfile} did not contain a database.sql script"
-            )
+            raise RuntimeError(f"!! initdb tarfile {tarfile} did not contain a database.sql script")
 
         to: TarInfo = contents_dict["database.sql"]
         fo = tf.extractfile(to)
         if fo is None:
-            raise RuntimeError(
-                f'!! initdb tarfile {tarfile} contains a "database.sql" object, but it did not extract correctly from the archive'
-            )
+            raise RuntimeError(f'!! initdb tarfile {tarfile} contains a "database.sql" object, but it did not extract correctly from the archive')
 
         p: subprocess.CompletedProcess = subprocess.run(
             ["mysql", "-h", db_hostname, f"-u{user}", f"-p{password}", database],
@@ -167,9 +157,7 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: str | Path):
         )
 
         if p.returncode != 0:
-            print(
-                f"!! SQL database re-population did not complete successfully: return code = {p.returncode}"
-            )
+            print(f"!! SQL database re-population did not complete successfully: return code = {p.returncode}")
             print(f"!!")
             print(f"!! stdout output")
             print(p.stdout)
@@ -223,9 +211,7 @@ def _wait_until_unlocked(bucket: ObjectStore):
             break
 
         try:
-            data: ObjectMeta = bucket.head(
-                _LOCKFILE_NAME, audit_data="initial_populate_database"
-            )
+            data: ObjectMeta = bucket.head(_LOCKFILE_NAME, audit_data="initial_populate_database")
         except FileNotFoundError:
             print(f"** initdb bucket lock has been released")
             break
@@ -255,9 +241,7 @@ def initial_populate_database(app, inspector, initial_db=None):
             elif full_suffix in [".sql"]:
                 sql_files.append(fname)
             elif object != _LOCKFILE_NAME:
-                print(
-                    f'** ignored unmatched object in initial bucket with name "{object}"'
-                )
+                print(f'** ignored unmatched object in initial bucket with name "{object}"')
 
         if len(tar_files) > 1:
             print(f"** more than one tarfile was present in the initial object bucket")
@@ -301,16 +285,9 @@ def store_CATS_limits(app, bucket: ObjectStore, csv_file: str | Path):
             surname = str(row["Surname"])
             full_name = name + " " + surname
 
-            fd: FacultyData = (
-                db.session.query(FacultyData)
-                .join(User, User.id == FacultyData.id)
-                .filter(func.lower(User.email) == email)
-                .first()
-            )
+            fd: FacultyData = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(func.lower(User.email) == email).first()
             if fd is None:
-                print(
-                    f'-- !! could not find FacultyData record for user "{full_name}" <{email}>'
-                )
+                print(f'-- !! could not find FacultyData record for user "{full_name}" <{email}>')
                 continue
 
             CATS_supv_string = row["CATS supervision"]
@@ -332,15 +309,11 @@ def store_CATS_limits(app, bucket: ObjectStore, csv_file: str | Path):
                         f'-- !! "{full_name}" <{email}> ignoring new supervision CATS limit {new_supv_limit} because a limit of {fd.CATS_supervision} is already set'
                     )
                     if fd.CATS_supervision > new_supv_limit:
-                        print(
-                            f'-- !! "{full_name}" <{email}> existing supervision limit is larger than specified limit in CATS file'
-                        )
+                        print(f'-- !! "{full_name}" <{email}> existing supervision limit is larger than specified limit in CATS file')
 
                 else:
                     fd.CATS_supervision = new_supv_limit
-                    print(
-                        f'-- >> "{full_name}" <{email}> set supervision CATS limit to {new_supv_limit}'
-                    )
+                    print(f'-- >> "{full_name}" <{email}> set supervision CATS limit to {new_supv_limit}')
 
             if new_mark_limit is not None:
                 if fd.CATS_marking is not None:
@@ -348,47 +321,31 @@ def store_CATS_limits(app, bucket: ObjectStore, csv_file: str | Path):
                         f'-- !! "{full_name}" <{email}> ignoring new marking CATS limit {new_mark_limit} because a limit of {fd.CATS_marking} is already set'
                     )
                     if fd.CATS_marking > new_mark_limit:
-                        print(
-                            f'-- !! "{full_name}" <{email}> existing marking limit is larger than specified limit in CATS file'
-                        )
+                        print(f'-- !! "{full_name}" <{email}> existing marking limit is larger than specified limit in CATS file')
 
                 else:
                     fd.CATS_marking = new_mark_limit
-                    print(
-                        f'-- >> "{full_name}" <{email}> set marking CATS limit to {new_mark_limit}'
-                    )
+                    print(f'-- >> "{full_name}" <{email}> set marking CATS limit to {new_mark_limit}')
 
             ds_rec: EnrollmentRecord = fd.get_enrollment_record(pclass=7)
             hsds_rec: EnrollmentRecord = fd.get_enrollment_record(pclass=8)
 
             if ds_rec is not None:
-                if (
-                    ds_rec.CATS_supervision is not None
-                    and ds_rec.CATS_supervision < fd.CATS_supervision
-                ):
+                if ds_rec.CATS_supervision is not None and ds_rec.CATS_supervision < fd.CATS_supervision:
                     print(
                         f' -- !! "{full_name}" <{email}> supervision limit of {ds_rec.CATS_supervision} for DS is lower than global limit of {fd.CATS_supervision}'
                     )
-                if (
-                    ds_rec.CATS_marking is not None
-                    and ds_rec.CATS_marking < fd.CATS_marking
-                ):
+                if ds_rec.CATS_marking is not None and ds_rec.CATS_marking < fd.CATS_marking:
                     print(
                         f' -- !! "{full_name}" <{email}> supervision limit of {ds_rec.CATS_supervision} for DS is lower than global limit of {fd.CATS_supervision}'
                     )
 
             if hsds_rec is not None:
-                if (
-                    hsds_rec.CATS_supervision is not None
-                    and hsds_rec.CATS_supervision < fd.CATS_supervision
-                ):
+                if hsds_rec.CATS_supervision is not None and hsds_rec.CATS_supervision < fd.CATS_supervision:
                     print(
                         f' -- !! "{full_name}" <{email}> supervision limit of {hsds_rec.CATS_supervision} for HSDS is lower than global limit of {fd.CATS_supervision}'
                     )
-                if (
-                    hsds_rec.CATS_marking is not None
-                    and hsds_rec.CATS_marking < fd.CATS_marking
-                ):
+                if hsds_rec.CATS_marking is not None and hsds_rec.CATS_marking < fd.CATS_marking:
                     print(
                         f' -- !! "{full_name}" <{email}> supervision limit of {hsds_rec.CATS_supervision} for HSDS is lower than global limit of {fd.CATS_supervision}'
                     )
@@ -410,9 +367,7 @@ def populate_CATS_limits(app, initial_db=None):
         contents = init_bucket.list(audit_data="populate_CATS_limits")
 
         if CATS_csv not in contents:
-            print(
-                f'** ignored INITDB_CATS_LIMITS_FILE="{CATS_csv}", which was not present in the initdb object store'
-            )
+            print(f'** ignored INITDB_CATS_LIMITS_FILE="{CATS_csv}", which was not present in the initdb object store')
             return
 
         print(f'** using INITDB_CATS_LIMITS_FILE="{CATS_csv}" to set CATS limits')
@@ -506,12 +461,7 @@ def ensure_config_rubrics(app) -> None:
             if config.grading_rubric is not None:
                 continue
 
-            rubric = (
-                db.session.query(GradingRubric)
-                .filter(GradingRubric.pclass_id == config.pclass_id)
-                .order_by(GradingRubric.id.asc())
-                .first()
-            )
+            rubric = db.session.query(GradingRubric).filter(GradingRubric.pclass_id == config.pclass_id).order_by(GradingRubric.id.asc()).first()
             if rubric is None:
                 continue
 

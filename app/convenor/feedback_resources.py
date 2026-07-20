@@ -138,21 +138,14 @@ def add_feedback_asset(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass_id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass_id))
     text = request.args.get("text", "Feedback resources")
 
     form = UploadFeedbackAssetForm(request.form)
-    form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_asset_label_in_pclass(pclass_id)
-    ]
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_asset_label_in_pclass(pclass_id)]
 
     if form.validate_on_submit():
-        if (
-            "attachment" not in request.files
-            or request.files["attachment"].filename == ""
-        ):
+        if "attachment" not in request.files or request.files["attachment"].filename == "":
             flash("Please select a file to upload.", "error")
         else:
             attachment_file = request.files["attachment"]
@@ -220,9 +213,7 @@ def add_feedback_asset(pclass_id):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return redirect(url)
 
-            flash(
-                f'Feedback asset "{form.label.data}" was successfully uploaded.', "info"
-            )
+            flash(f'Feedback asset "{form.label.data}" was successfully uploaded.', "info")
             return redirect(url)
 
     config = pclass.most_recent_config
@@ -252,17 +243,11 @@ def edit_feedback_asset(asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
     text = request.args.get("text", "Feedback resources")
 
     form = EditFeedbackAssetForm(obj=feedback_asset)
-    form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_asset_label_in_pclass(
-            pclass.id, label=feedback_asset.label
-        )
-    ]
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_asset_label_in_pclass(pclass.id, label=feedback_asset.label)]
 
     if form.validate_on_submit():
         try:
@@ -318,9 +303,7 @@ def delete_feedback_asset(asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
 
     submitted_asset: SubmittedAsset = feedback_asset.asset
     label = feedback_asset.label
@@ -394,15 +377,11 @@ def add_feedback_template(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass_id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass_id))
     text = request.args.get("text", "Feedback resources")
 
     form = AddFeedbackTemplateForm()
-    form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_template_label_in_pclass(pclass_id)
-    ]
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_template_label_in_pclass(pclass_id)]
 
     if form.validate_on_submit():
         tag_list = create_new_template_tags(form)
@@ -466,17 +445,11 @@ def edit_feedback_template(template_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
     text = request.args.get("text", "Feedback resources")
 
     form = EditFeedbackTemplateForm(obj=fb_template)
-    form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_template_label_in_pclass(
-            pclass.id, label=fb_template.label
-        )
-    ]
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_template_label_in_pclass(pclass.id, label=fb_template.label)]
 
     if request.method == "GET":
         # pre-populate tags from existing assignments
@@ -537,9 +510,7 @@ def delete_feedback_template(template_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
     label = template.label
 
     # guard: refuse if referenced by any recipe
@@ -581,25 +552,19 @@ def add_feedback_recipe(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass_id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass_id))
     text = request.args.get("text", "Feedback resources")
 
     AddFeedbackRecipeForm, _ = FeedbackRecipeFormFactory(pclass)
     form = AddFeedbackRecipeForm()
-    form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_recipe_label_in_pclass(pclass_id)
-    ]
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_recipe_label_in_pclass(pclass_id)]
 
     if form.validate_on_submit():
         now = datetime.now()
         recipe = FeedbackRecipe(
             pclass_id=pclass_id,
             label=form.label.data,
-            template_id=form.template.data.id
-            if form.template.data is not None
-            else None,
+            template_id=form.template.data.id if form.template.data is not None else None,
             creator_id=current_user.id,
             creation_timestamp=now,
             last_edit_id=current_user.id,
@@ -652,23 +617,17 @@ def edit_feedback_recipe(recipe_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
     text = request.args.get("text", "Feedback resources")
 
     _, EditFeedbackRecipeForm = FeedbackRecipeFormFactory(pclass)
     form = EditFeedbackRecipeForm(obj=recipe)
-    form.label.validators = list(form.label.validators) + [
-        make_unique_feedback_recipe_label_in_pclass(pclass.id, label=recipe.label)
-    ]
+    form.label.validators = list(form.label.validators) + [make_unique_feedback_recipe_label_in_pclass(pclass.id, label=recipe.label)]
 
     if form.validate_on_submit():
         try:
             recipe.label = form.label.data
-            recipe.template_id = (
-                form.template.data.id if form.template.data is not None else None
-            )
+            recipe.template_id = form.template.data.id if form.template.data is not None else None
             recipe.last_edit_id = current_user.id
             recipe.last_edit_timestamp = datetime.now()
 
@@ -719,9 +678,7 @@ def delete_feedback_recipe(recipe_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.feedback_resources", pclass_id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.feedback_resources", pclass_id=pclass.id))
     label = recipe.label
 
     try:
@@ -751,15 +708,11 @@ def add_recipe_asset(recipe_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id)
-    )
+    url = request.args.get("url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id))
     text = request.args.get("text", "Edit recipe")
 
     already_attached_ids = {a.id for a in recipe.asset_list.all()}
-    available = [
-        a for a in pclass.feedback_assets.all() if a.id not in already_attached_ids
-    ]
+    available = [a for a in pclass.feedback_assets.all() if a.id not in already_attached_ids]
 
     config = pclass.most_recent_config
     if config is None:
@@ -788,9 +741,7 @@ def attach_recipe_asset(recipe_id, asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id)
-    )
+    url = request.args.get("url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id))
 
     asset: FeedbackAsset = FeedbackAsset.query.get_or_404(asset_id)
     if asset.pclass_id != pclass.id:
@@ -827,9 +778,7 @@ def remove_recipe_asset(recipe_id, asset_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id)
-    )
+    url = request.args.get("url", url_for("convenor.edit_feedback_recipe", recipe_id=recipe_id))
 
     asset: FeedbackAsset = FeedbackAsset.query.filter_by(id=asset_id).first()
     if asset is not None:

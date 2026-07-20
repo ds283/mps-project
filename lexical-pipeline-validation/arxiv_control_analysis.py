@@ -106,12 +106,12 @@ if TYPE_CHECKING:
 
 ARXIV_API_BASE = "https://export.arxiv.org/api/query"
 ARXIV_PDF_BASE = "https://arxiv.org/pdf"
-_API_DELAY = 3.0   # seconds between API requests (arXiv policy)
-_PDF_DELAY = 3.0   # seconds between PDF downloads
+_API_DELAY = 3.0  # seconds between API requests (arXiv policy)
+_PDF_DELAY = 3.0  # seconds between PDF downloads
 
 # Simple regex helpers for HTML scraping — avoids a BeautifulSoup dependency.
-_HTML_TAG = re.compile(r'<[^>]+>')
-_WHITESPACE = re.compile(r'\s+')
+_HTML_TAG = re.compile(r"<[^>]+>")
+_WHITESPACE = re.compile(r"\s+")
 
 # Patterns for the arXiv author page (https://arxiv.org/a/<id>.html)
 _PAGE_ENTRY_ID = re.compile(r'href="/abs/([0-9]+\.[0-9]+)"[^>]*title="Abstract"')
@@ -123,7 +123,7 @@ _PAGE_AUTHORS = re.compile(
     r'class="list-authors">(.*?)</div>',
     re.DOTALL,
 )
-_AUTHOR_LINK = re.compile(r'<a[^>]*>([^<]+)</a>')
+_AUTHOR_LINK = re.compile(r"<a[^>]*>([^<]+)</a>")
 
 
 def _strip_html(s: str) -> str:
@@ -132,7 +132,7 @@ def _strip_html(s: str) -> str:
 
 def _arxiv_id_approx_date(arxiv_id: str) -> str:
     """Derive an approximate submission date from a modern arXiv ID (YYMM.NNNNN)."""
-    m = re.match(r'^(\d{2})(\d{2})\.\d+$', arxiv_id)
+    m = re.match(r"^(\d{2})(\d{2})\.\d+$", arxiv_id)
     if not m:
         return ""
     yy, mm = int(m.group(1)), int(m.group(2))
@@ -213,9 +213,7 @@ def fetch_arxiv_papers(search_query: str, max_results: int) -> list[dict]:
 
         for entry in entries:
             arxiv_id = _arxiv_id_from_entry(entry)
-            authors = ", ".join(
-                a.get("name", "") for a in getattr(entry, "authors", [])
-            )
+            authors = ", ".join(a.get("name", "") for a in getattr(entry, "authors", []))
             papers.append(
                 {
                     "arxiv_id": arxiv_id,
@@ -292,6 +290,7 @@ def _run_analysis_with_cache(
                     if nll_cached is None or nll_cached.get("mean_nll") is None:
                         # Compute NLL now and store it.
                         from language_analysis_core import compute_nll, strip_math_lines, split_document  # noqa: PLC0415
+
                         _core, _, _appendices = split_document(raw_text)
                         content_text = (_core + "\n\n" + _appendices) if _appendices else _core
                         clean_content = strip_math_lines(content_text)
@@ -305,8 +304,7 @@ def _run_analysis_with_cache(
                         cached["nll_cv"] = nll_cached.get("nll_cv")
                 print("(cached)", end=" ", flush=True)
                 return cached
-            metrics = analyse_paper_from_text(raw_text, page_count=page_count,
-                                              llama_server_url=llama_server_url)
+            metrics = analyse_paper_from_text(raw_text, page_count=page_count, llama_server_url=llama_server_url)
             if not metrics.get("error"):
                 cache.store_metrics(
                     text_hash,
@@ -316,8 +314,7 @@ def _run_analysis_with_cache(
                     pymupdf_version=get_pymupdf_version(),
                 )
                 if llama_server_url is not None:
-                    nll_data = {"mean_nll": metrics.get("mean_nll"),
-                                "nll_cv": metrics.get("nll_cv")}
+                    nll_data = {"mean_nll": metrics.get("mean_nll"), "nll_cv": metrics.get("nll_cv")}
                     cache.store_nll(text_hash, nll_data=nll_data)
             return metrics
         except Exception as exc:
@@ -345,7 +342,7 @@ def process_paper_set(
 
     for idx, meta in enumerate(papers, 1):
         arxiv_id = meta["arxiv_id"]
-        print(f"  [{idx}/{total}] {arxiv_id}  \"{meta['title'][:60]}\"")
+        print(f'  [{idx}/{total}] {arxiv_id}  "{meta["title"][:60]}"')
 
         # Rate-limit PDF downloads; skip delay for already-cached files
         pdf_path = cache_dir / f"{arxiv_id.replace('/', '_')}.pdf"
@@ -377,19 +374,14 @@ def process_paper_set(
             )
         else:
             print(f"    Analysing …", end=" ", flush=True)
-            metrics = _run_analysis_with_cache(pdf_path, arxiv_id, cache,
-                                               llama_server_url=llama_server_url)
+            metrics = _run_analysis_with_cache(pdf_path, arxiv_id, cache, llama_server_url=llama_server_url)
             row.update(metrics)
             if metrics.get("error"):
                 print(f"ERROR: {metrics['error']}")
             else:
-                all_numeric = all(
-                    metrics.get(k) is not None
-                    for k in ("mattr", "mtld", "burstiness", "sentence_cv")
-                )
+                all_numeric = all(metrics.get(k) is not None for k in ("mattr", "mtld", "burstiness", "sentence_cv"))
                 if all_numeric:
-                    nll_str = (f"  NLL={metrics['mean_nll']:.3f}"
-                               if metrics.get("mean_nll") is not None else "")
+                    nll_str = f"  NLL={metrics['mean_nll']:.3f}" if metrics.get("mean_nll") is not None else ""
                     print(
                         f"MATTR={metrics['mattr']:.3f}  MTLD={metrics['mtld']:.1f}  "
                         f"B={metrics['burstiness']:.3f}  CV={metrics['sentence_cv']:.3f}"
@@ -438,19 +430,14 @@ def process_local_folder(
             "published": "",
         }
         print(f"    Analysing …", end=" ", flush=True)
-        metrics = _run_analysis_with_cache(pdf_path, arxiv_id=None, cache=cache,
-                                           llama_server_url=llama_server_url)
+        metrics = _run_analysis_with_cache(pdf_path, arxiv_id=None, cache=cache, llama_server_url=llama_server_url)
         row = meta | metrics
         if metrics.get("error"):
             print(f"ERROR: {metrics['error']}")
         else:
-            all_numeric = all(
-                metrics.get(k) is not None
-                for k in ("mattr", "mtld", "burstiness", "sentence_cv")
-            )
+            all_numeric = all(metrics.get(k) is not None for k in ("mattr", "mtld", "burstiness", "sentence_cv"))
             if all_numeric:
-                nll_str = (f"  NLL={metrics['mean_nll']:.3f}"
-                           if metrics.get("mean_nll") is not None else "")
+                nll_str = f"  NLL={metrics['mean_nll']:.3f}" if metrics.get("mean_nll") is not None else ""
                 print(
                     f"MATTR={metrics['mattr']:.3f}  MTLD={metrics['mtld']:.1f}  "
                     f"B={metrics['burstiness']:.3f}  CV={metrics['sentence_cv']:.3f}"
@@ -515,8 +502,8 @@ def _build_category_query(category: str, before_date: str | None) -> str:
 # ---------------------------------------------------------------------------
 
 _DEFAULT_AUTHORS = [
-    ["djs61",     "https://arxiv.org/a/seery_d_1.html"],
-    ["byrnes_c",  "https://arxiv.org/a/0000-0003-2583-6536.html"],
+    ["djs61", "https://arxiv.org/a/seery_d_1.html"],
+    ["byrnes_c", "https://arxiv.org/a/0000-0003-2583-6536.html"],
     ["burrage_c", "https://arxiv.org/a/burrage_c_1.html"],
 ]
 
@@ -526,9 +513,7 @@ _DEFAULT_PDF_FOLDERS = [
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run language analysis on arXiv papers and export to Excel."
-    )
+    parser = argparse.ArgumentParser(description="Run language analysis on arXiv papers and export to Excel.")
     parser.add_argument(
         "--output",
         default="arxiv_control_results.xlsx",
@@ -546,8 +531,7 @@ def main() -> None:
         metavar=("SHEET_NAME", "PAGE_URL"),
         action="append",
         dest="authors",
-        help="Worksheet name and arXiv author page URL (repeatable). "
-             "Default: Seery, Byrnes, Burrage.",
+        help="Worksheet name and arXiv author page URL (repeatable). Default: Seery, Byrnes, Burrage.",
     )
     parser.add_argument(
         "--category",
@@ -574,8 +558,7 @@ def main() -> None:
         metavar=("SHEET_NAME", "FOLDER_PATH"),
         action="append",
         dest="pdf_folders",
-        help="Worksheet name and path to a local folder of PDFs (repeatable). "
-             "Default: Claude-ai → ai_cache/",
+        help="Worksheet name and path to a local folder of PDFs (repeatable). Default: Claude-ai → ai_cache/",
     )
     parser.add_argument("--no-author", action="store_true", help="Skip all author paper sets")
     parser.add_argument("--no-category", action="store_true", help="Skip category paper set")
@@ -597,8 +580,7 @@ def main() -> None:
         default=None,
         dest="llama_server_url",
         metavar="URL",
-        help="Base URL of a running llama-server instance for NLL computation "
-             "(e.g. http://localhost:8080).  If omitted, NLL metrics are skipped.",
+        help="Base URL of a running llama-server instance for NLL computation (e.g. http://localhost:8080).  If omitted, NLL metrics are skipped.",
     )
     args = parser.parse_args()
 
@@ -627,6 +609,7 @@ def main() -> None:
     if not args.no_cache:
         try:
             from analysis_cache import AnalysisCache  # noqa: PLC0415
+
             cache = AnalysisCache(args.cache)
             print(f"Analysis cache: {args.cache}\n")
         except Exception as exc:
@@ -647,9 +630,9 @@ def main() -> None:
 
                 if author_papers:
                     print(f"=== Analysing {sheet_name} papers ({len(author_papers)}) ===")
-                    rows = process_paper_set(sheet_name, author_papers, cache_dir,
-                                             first_download=first_download, cache=cache,
-                                             llama_server_url=llama_server_url)
+                    rows = process_paper_set(
+                        sheet_name, author_papers, cache_dir, first_download=first_download, cache=cache, llama_server_url=llama_server_url
+                    )
                     sheets[sheet_name] = rows
                     first_download = False
 
@@ -666,8 +649,7 @@ def main() -> None:
                     )
                     continue
                 print(f"\n=== Analysing local PDFs: {folder_path}  →  sheet '{sheet_name}' ===")
-                rows = process_local_folder(sheet_name, folder_path, cache=cache,
-                                            llama_server_url=llama_server_url)
+                rows = process_local_folder(sheet_name, folder_path, cache=cache, llama_server_url=llama_server_url)
                 if rows:
                     sheets[sheet_name] = rows
 
@@ -682,8 +664,11 @@ def main() -> None:
             if cat_papers:
                 print(f"=== Analysing {args.category} papers ({len(cat_papers)}) ===")
                 rows = process_paper_set(
-                    args.category, cat_papers, cache_dir,
-                    first_download=first_download, cache=cache,
+                    args.category,
+                    cat_papers,
+                    cache_dir,
+                    first_download=first_download,
+                    cache=cache,
                     llama_server_url=llama_server_url,
                 )
                 sheets[args.category] = rows

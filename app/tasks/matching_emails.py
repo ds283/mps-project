@@ -40,9 +40,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def publish_to_selectors(self, match_id, user_id, task_id, selector_template_id=None):
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -71,7 +69,9 @@ def register_matching_email_tasks(celery):
         task = chain(
             group(
                 publish_email_to_selector.si(
-                    match_id, sel_id, not bool(record.selected),
+                    match_id,
+                    sel_id,
+                    not bool(record.selected),
                     selector_template_id=selector_template_id,
                 )
                 for sel_id in recipients
@@ -85,9 +85,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True)
     def publish_to_selectors_finalize(self, match_id, task_id):
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -131,14 +129,9 @@ def register_matching_email_tasks(celery):
             is_draft = strtobool(is_draft)
 
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
             matches: List[MatchingRecord] = (
-                db.session.query(MatchingRecord)
-                .filter_by(matching_id=match_id, selector_id=sel_id)
-                .order_by(MatchingRecord.submission_period)
-                .all()
+                db.session.query(MatchingRecord).filter_by(matching_id=match_id, selector_id=sel_id).order_by(MatchingRecord.submission_period).all()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -162,11 +155,7 @@ def register_matching_email_tasks(celery):
         config: ProjectClassConfig = matches[0].selector.config
         pclass: ProjectClass = config.project_class
 
-        template_type = (
-            EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS
-            if is_draft
-            else EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS
-        )
+        template_type = EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS if is_draft else EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS
         if selector_template_id is not None:
             template = db.session.get(EmailTemplate, selector_template_id)
         else:
@@ -181,19 +170,23 @@ def register_matching_email_tasks(celery):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({
-                "name": config.name,
-                "yra": record.submit_year_a,
-                "yrb": record.submit_year_b,
-            }),
-            body_payload=encode_email_payload({
-                "user": user,
-                "config": config,
-                "pclass": pclass,
-                "attempt": record,
-                "matches": matches,
-                "number": len(matches),
-            }),
+            subject_payload=encode_email_payload(
+                {
+                    "name": config.name,
+                    "yra": record.submit_year_a,
+                    "yrb": record.submit_year_b,
+                }
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "user": user,
+                    "config": config,
+                    "pclass": pclass,
+                    "attempt": record,
+                    "matches": matches,
+                    "number": len(matches),
+                }
+            ),
             recipient_list=[user.email],
         )
         item.workflow = workflow
@@ -216,9 +209,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def publish_to_supervisors(self, match_id, user_id, task_id, notify_template_id=None, unneeded_template_id=None):
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -247,7 +238,9 @@ def register_matching_email_tasks(celery):
         task = chain(
             group(
                 publish_email_to_supervisor.si(
-                    match_id, fac_id, not bool(record.selected),
+                    match_id,
+                    fac_id,
+                    not bool(record.selected),
                     notify_template_id=notify_template_id,
                     unneeded_template_id=unneeded_template_id,
                 )
@@ -262,9 +255,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True)
     def publish_to_supervisors_finalize(self, match_id, task_id):
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -308,12 +299,8 @@ def register_matching_email_tasks(celery):
             is_draft = strtobool(is_draft)
 
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
-            fac: FacultyData = (
-                db.session.query(FacultyData).filter_by(id=fac_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            fac: FacultyData = db.session.query(FacultyData).filter_by(id=fac_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -364,26 +351,16 @@ def register_matching_email_tasks(celery):
             email_tenant: Tenant = tenants.pop()
 
         if is_draft:
-            template_type = (
-                EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY
-                if len(matches) > 0
-                else EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY
-            )
+            template_type = EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY if len(matches) > 0 else EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY
         else:
-            template_type = (
-                EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY
-                if len(matches) > 0
-                else EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY
-            )
+            template_type = EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY if len(matches) > 0 else EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY
 
         # use the explicitly supplied template if provided; otherwise fall back to find_template_()
         _supplied_template_id = notify_template_id if len(matches) > 0 else unneeded_template_id
         if _supplied_template_id is not None:
             template = db.session.get(EmailTemplate, _supplied_template_id)
         else:
-            template = EmailTemplate.find_template_(
-                template_type, pclass=email_pclass, tenant=email_tenant
-            )
+            template = EmailTemplate.find_template_(template_type, pclass=email_pclass, tenant=email_tenant)
         workflow = EmailWorkflow.build_(
             name=f"Matching supervisor notification: {record.name} — {user.name}",
             template=template,
@@ -394,29 +371,35 @@ def register_matching_email_tasks(celery):
         db.session.flush()
 
         if len(matches) > 0:
-            body_payload = encode_email_payload({
-                "user": user,
-                "fac": fac,
-                "attempt": record,
-                "matches": matched_ids_by_pclass,
-                "convenors": list(convenors),
-                "yra": record.submit_year_a,
-                "yrb": record.submit_year_b,
-            })
+            body_payload = encode_email_payload(
+                {
+                    "user": user,
+                    "fac": fac,
+                    "attempt": record,
+                    "matches": matched_ids_by_pclass,
+                    "convenors": list(convenors),
+                    "yra": record.submit_year_a,
+                    "yrb": record.submit_year_b,
+                }
+            )
         else:
-            body_payload = encode_email_payload({
-                "user": user,
-                "fac": fac,
-                "attempt": record,
-                "yra": record.submit_year_a,
-                "yrb": record.submit_year_b,
-            })
+            body_payload = encode_email_payload(
+                {
+                    "user": user,
+                    "fac": fac,
+                    "attempt": record,
+                    "yra": record.submit_year_a,
+                    "yrb": record.submit_year_b,
+                }
+            )
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({
-                "yra": record.submit_year_a,
-                "yrb": record.submit_year_b,
-            }),
+            subject_payload=encode_email_payload(
+                {
+                    "yra": record.submit_year_a,
+                    "yrb": record.submit_year_b,
+                }
+            ),
             body_payload=body_payload,
             recipient_list=[user.email],
         )

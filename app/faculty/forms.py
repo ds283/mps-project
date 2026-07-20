@@ -91,9 +91,7 @@ def ProjectMixinFactory(
             @staticmethod
             def validate_owner(form, field):
                 if field.data is None and not form.use_supervisor_pool.data:
-                    raise ValidationError(
-                        "This project does not use a supervisor pool. Please assign an owner."
-                    )
+                    raise ValidationError("This project does not use a supervisor pool. Please assign an owner.")
 
         if uses_tags:
             get_tags = partial(GetActiveTags, allowed_tenants=allowed_tenants)
@@ -128,8 +126,7 @@ def ProjectMixinFactory(
 
                         if not found:
                             raise ValidationError(
-                                "Projects attached to class '{cl}' must be tagged with at least "
-                                "one tag from the group '{group}'".format(
+                                "Projects attached to class '{cl}' must be tagged with at least one tag from the group '{group}'".format(
                                     cl=pclass.name, group=group.name
                                 )
                             )
@@ -354,24 +351,19 @@ class DescriptionContentMixin:
     reading = TextAreaField(
         "Suggested resources",
         render_kw={"rows": 7},
-        description="Optional. The same styling and LaTeX options are available. "
-        "To embed internet links, use the Markdown syntax [link text](URL).",
+        description="Optional. The same styling and LaTeX options are available. To embed internet links, use the Markdown syntax [link text](URL).",
         validators=[Optional()],
     )
 
 
 def AddDescriptionFormFactory(project_id):
-    Mixin = DescriptionSettingsMixinFactory(
-        partial(AvailableProjectDescriptionClasses, project_id, None)
-    )
+    Mixin = DescriptionSettingsMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, None))
 
     class AddDescriptionForm(Form, Mixin):
         label = StringField(
             "Label",
             validators=[
-                InputRequired(
-                    message="Please enter a label to identify this description"
-                ),
+                InputRequired(message="Please enter a label to identify this description"),
                 Length(max=DEFAULT_STRING_LENGTH),
                 project_unique_label,
             ],
@@ -384,17 +376,13 @@ def AddDescriptionFormFactory(project_id):
 
 
 def EditDescriptionSettingsFormFactory(project_id, desc_id):
-    Mixin = DescriptionSettingsMixinFactory(
-        partial(AvailableProjectDescriptionClasses, project_id, desc_id)
-    )
+    Mixin = DescriptionSettingsMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, desc_id))
 
     class EditDescriptionForm(Form, Mixin, SaveChangesMixin):
         label = StringField(
             "Label",
             validators=[
-                InputRequired(
-                    message="Please enter a label to identify this description"
-                ),
+                InputRequired(message="Please enter a label to identify this description"),
                 Length(max=DEFAULT_STRING_LENGTH),
                 project_unique_or_original_label,
             ],
@@ -416,9 +404,7 @@ def MoveDescriptionFormFactory(user_id, project_id, pclass_id=None):
 
     class MoveDescriptionForm(Form, SaveChangesMixin):
         # field for destination project
-        destination = QuerySelectField(
-            "Move this description to project", query_factory=qf, get_label="name"
-        )
+        destination = QuerySelectField("Move this description to project", query_factory=qf, get_label="name")
 
         # optionally leave a copy of the description attached to this project
         copy = BooleanField(
@@ -430,9 +416,7 @@ def MoveDescriptionFormFactory(user_id, project_id, pclass_id=None):
 
 
 class SkillSelectorMixin:
-    selector = QuerySelectField(
-        "Skill group", query_factory=GetSkillGroups, get_label="name"
-    )
+    selector = QuerySelectField("Skill group", query_factory=GetSkillGroups, get_label="name")
 
 
 class SkillSelectorForm(Form, SkillSelectorMixin):
@@ -464,9 +448,7 @@ class CommentMixin:
 
 
 def FacultyPreviewFormFactory(project_id, show_selector):
-    SelectorMixin = DescriptionSelectorMixinFactory(
-        show_selector, partial(ProjectDescriptionClasses, project_id)
-    )
+    SelectorMixin = DescriptionSelectorMixinFactory(show_selector, partial(ProjectDescriptionClasses, project_id))
 
     class DescriptionSelectorForm(Form, SelectorMixin, CommentMixin):
         pass

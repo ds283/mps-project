@@ -296,9 +296,7 @@ def _resolve_tenant_and_pclass(tenant, pclass) -> Tuple[Optional[int], Optional[
     elif isinstance(tenant, Tenant):
         tenant_id = tenant.id
     elif tenant is not None:
-        raise RuntimeError(
-            f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()'
-        )
+        raise RuntimeError(f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()')
 
     pclass_id = None
     if isinstance(pclass, int):
@@ -307,21 +305,15 @@ def _resolve_tenant_and_pclass(tenant, pclass) -> Tuple[Optional[int], Optional[
         if tenant_id is None:
             tenant_id = pclass_obj.tenant_id
         elif tenant_id != pclass_obj.tenant_id:
-            raise RuntimeError(
-                f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant in EmailTemplate.apply_()'
-            )
+            raise RuntimeError(f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant in EmailTemplate.apply_()')
     elif isinstance(pclass, ProjectClass):
         pclass_id = pclass.id
         if tenant_id is None:
             tenant_id = pclass.tenant_id
         elif tenant_id != pclass.tenant_id:
-            raise RuntimeError(
-                f'Tenant mismatch between pclass "{pclass.name}" and tenant in EmailTemplate.apply_()'
-            )
+            raise RuntimeError(f'Tenant mismatch between pclass "{pclass.name}" and tenant in EmailTemplate.apply_()')
     elif pclass is not None:
-        raise RuntimeError(
-            f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()'
-        )
+        raise RuntimeError(f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()')
 
     return tenant_id, pclass_id
 
@@ -335,17 +327,11 @@ def _find_template(
     Find the active EmailTemplate that best matches the given type, tenant, and pclass,
     preferring the most-specific (pclass > tenant > global) and highest-versioned entry.
     """
-    query = db.session.query(EmailTemplate).filter(
-        EmailTemplate.type == template_type, EmailTemplate.active.is_(True)
-    )
+    query = db.session.query(EmailTemplate).filter(EmailTemplate.type == template_type, EmailTemplate.active.is_(True))
     if tenant_id is not None:
-        query = query.filter(
-            or_(EmailTemplate.tenant_id == tenant_id, EmailTemplate.tenant_id.is_(None))
-        )
+        query = query.filter(or_(EmailTemplate.tenant_id == tenant_id, EmailTemplate.tenant_id.is_(None)))
     if pclass_id is not None:
-        query = query.filter(
-            or_(EmailTemplate.pclass_id == pclass_id, EmailTemplate.pclass_id.is_(None))
-        )
+        query = query.filter(or_(EmailTemplate.pclass_id == pclass_id, EmailTemplate.pclass_id.is_(None)))
     query = query.order_by(
         EmailTemplate.pclass_id.desc(),
         EmailTemplate.tenant_id.desc(),
@@ -354,9 +340,7 @@ def _find_template(
 
     template = query.first()
     if template is None:
-        raise RuntimeError(
-            f"No active template found for EmailTemplate type {template_type}"
-        )
+        raise RuntimeError(f"No active template found for EmailTemplate type {template_type}")
     return template
 
 
@@ -381,9 +365,7 @@ def _process_attachments(
     elif isinstance(attachments, Iterable):
         attachment_list = list(attachments)
     else:
-        raise RuntimeError(
-            f'Invalid attachments type "{type(attachments)}" in EmailTemplate.apply_()'
-        )
+        raise RuntimeError(f'Invalid attachments type "{type(attachments)}" in EmailTemplate.apply_()')
 
     buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS", {})
     current_size = 0
@@ -405,9 +387,7 @@ def _process_attachments(
 
         object_store = buckets.get(asset.bucket)
         if object_store is None:
-            current_app.logger.warning(
-                f"_process_attachments: no object store for bucket '{asset.bucket}'; skipping"
-            )
+            current_app.logger.warning(f"_process_attachments: no object store for bucket '{asset.bucket}'; skipping")
             continue
 
         storage = AssetCloudAdapter(
@@ -416,19 +396,11 @@ def _process_attachments(
             audit_data=f"EmailTemplate.apply_() attachment id={attachment.id}",
         )
         if not storage.exists():
-            current_app.logger.warning(
-                f"_process_attachments: asset {asset.id} not found in object store; skipping"
-            )
+            current_app.logger.warning(f"_process_attachments: asset {asset.id} not found in object store; skipping")
             continue
 
         asset_size = asset.filesize or 0
-        display_name = (
-            attachment.name
-            if attachment.name
-            else (
-                str(asset.target_name) if asset.target_name else str(asset.unique_name)
-            )
-        )
+        display_name = attachment.name if attachment.name else (str(asset.target_name) if asset.target_name else str(asset.unique_name))
 
         if current_size + asset_size > max_attachment_size:
             download_url: Optional[str] = None
@@ -441,9 +413,7 @@ def _process_attachments(
                 )
             manifest.append((False, display_name, download_url, attachment.description))
         else:
-            msg.attach(
-                filename=display_name, mimetype=asset.mimetype, content=storage.get()
-            )
+            msg.attach(filename=display_name, mimetype=asset.mimetype, content=storage.get())
             current_size += asset_size
             manifest.append((True, display_name, None, attachment.description))
 
@@ -489,10 +459,7 @@ def _build_attachments_footer(
         if description:
             sub_items.append(description)
         if not attached:
-            sub_items.append(
-                "<strong>This file is too large to be sent as an attachment.</strong>"
-                " Please download using the link provided."
-            )
+            sub_items.append("<strong>This file is too large to be sent as an attachment.</strong> Please download using the link provided.")
 
         if sub_items:
             lines.append('<ul style="line-height: 100%">')
@@ -517,9 +484,7 @@ class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of label
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     def make_label(self, text=None):
         label_text = text if text is not None else self.name
@@ -548,34 +513,24 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
     # if not specified, this template is taken to apply globally
     # otherwise it is taken to apply to all project classes in the tenant, unless they in turn have an override
     tenant_id = db.Column(db.Integer(), db.ForeignKey("tenants.id"), nullable=True)
-    tenant = db.relationship(
-        "Tenant", backref=db.backref("email_templates", lazy="dynamic")
-    )
+    tenant = db.relationship("Tenant", backref=db.backref("email_templates", lazy="dynamic"))
 
     # project class, if specified
-    pclass_id = db.Column(
-        db.Integer(), db.ForeignKey("project_classes.id"), nullable=True
-    )
-    pclass = db.relationship(
-        "ProjectClass", backref=db.backref("email_templates", lazy="dynamic")
-    )
+    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"), nullable=True)
+    pclass = db.relationship("ProjectClass", backref=db.backref("email_templates", lazy="dynamic"))
 
     # specify the type of this email, drawn from EmailTemplateTypesMixin
     type = db.Column(db.Integer(), nullable=False)
 
     # specify the subject line
-    subject = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    subject = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # specify the body of the email in HTML format
     # we autogenerate a text equivalent
     html_body = db.Column(db.Text(), nullable=False)
 
     # comment/description field
-    comment = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # version number, allowing multiple versions of an email to exist simultaneously, rather than over-writing previous versions
     version = db.Column(db.Integer(), nullable=False)
@@ -625,17 +580,11 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             reply_to = [current_app.config["MAIL_REPLY_TO"]]
 
         if not isinstance(to, Iterable):
-            raise RuntimeError(
-                f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()'
-            )
+            raise RuntimeError(f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()')
         if not isinstance(reply_to, Iterable):
-            raise RuntimeError(
-                f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()'
-            )
+            raise RuntimeError(f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()')
 
-        branding_label = current_app.config.get(
-            "BRANDING_LABEL", "MPS projects management"
-        )
+        branding_label = current_app.config.get("BRANDING_LABEL", "MPS projects management")
         if subject_kwargs is None:
             subject_kwargs = {}
         if body_kwargs is None:
@@ -643,15 +592,9 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         subject_kwargs["branding_label"] = branding_label
         body_kwargs["branding_label"] = branding_label
 
-        subject_str: str = (
-            template.subject.format(**subject_kwargs)
-            if subject_kwargs is not None
-            else template.subject
-        )
+        subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
 
-        msg = EmailMultiAlternatives(
-            subject=subject_str, from_email=from_email, reply_to=reply_to, to=to
-        )
+        msg = EmailMultiAlternatives(subject=subject_str, from_email=from_email, reply_to=reply_to, to=to)
 
         # perform any legacy body_attachments, injecting results into body_kwargs
         if body_attachments is not None:
@@ -660,11 +603,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                 if label not in body_kwargs:
                     body_kwargs[label] = output
 
-        html_str: str = (
-            render_template_string(template.html_body, **body_kwargs)
-            if body_kwargs is not None
-            else template.html_body
-        )
+        html_str: str = render_template_string(template.html_body, **body_kwargs) if body_kwargs is not None else template.html_body
 
         # attach files / generate download links and append manifest footer
         if attachments is not None:
@@ -714,17 +653,11 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             reply_to = [current_app.config["MAIL_REPLY_TO"]]
 
         if not isinstance(to, Iterable):
-            raise RuntimeError(
-                f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_raw_()'
-            )
+            raise RuntimeError(f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_raw_()')
         if not isinstance(reply_to, Iterable):
-            raise RuntimeError(
-                f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_raw_()'
-            )
+            raise RuntimeError(f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_raw_()')
 
-        msg = EmailMultiAlternatives(
-            subject=subject, from_email=from_email, reply_to=reply_to, to=to
-        )
+        msg = EmailMultiAlternatives(subject=subject, from_email=from_email, reply_to=reply_to, to=to)
 
         if attachments is not None:
             manifest = _process_attachments(msg, attachments, max_attachment_size)
@@ -759,16 +692,8 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         Returns (subject_str, html_str).
         Use this when you need the rendered output for preview or inspection purposes.
         """
-        subject_str: str = (
-            template.subject.format(**subject_kwargs)
-            if subject_kwargs is not None
-            else template.subject
-        )
-        html_str: str = (
-            render_template_string(template.html_body, **body_kwargs)
-            if body_kwargs is not None
-            else template.html_body
-        )
+        subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
+        html_str: str = render_template_string(template.html_body, **body_kwargs) if body_kwargs is not None else template.html_body
         return subject_str, html_str
 
 
@@ -790,15 +715,11 @@ class EmailWorkflowItemAttachment(db.Model):
         "EmailWorkflowItem",
         foreign_keys=[workflow_item_id],
         uselist=False,
-        backref=db.backref(
-            "attachments", lazy="dynamic", cascade="all, delete", passive_deletes=True
-        ),
+        backref=db.backref("attachments", lazy="dynamic", cascade="all, delete", passive_deletes=True),
     )
 
     # link to generated asset
-    generated_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True
-    )
+    generated_asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True)
     generated_asset = db.relationship(
         "GeneratedAsset",
         foreign_keys=[generated_asset_id],
@@ -807,9 +728,7 @@ class EmailWorkflowItemAttachment(db.Model):
     )
 
     # link to submitted asset
-    submitted_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), nullable=True
-    )
+    submitted_asset_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), nullable=True)
     submitted_asset = db.relationship(
         "SubmittedAsset",
         foreign_keys=[submitted_asset_id],
@@ -818,9 +737,7 @@ class EmailWorkflowItemAttachment(db.Model):
     )
 
     # link to temporary asset
-    temporary_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("temporary_assets.id"), nullable=True
-    )
+    temporary_asset_id = db.Column(db.Integer(), db.ForeignKey("temporary_assets.id"), nullable=True)
     temporary_asset = db.relationship(
         "TemporaryAsset",
         foreign_keys=[temporary_asset_id],
@@ -829,14 +746,10 @@ class EmailWorkflowItemAttachment(db.Model):
     )
 
     # manifest name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # manifest comment/description
-    description = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     @classmethod
     def build_(
@@ -848,25 +761,17 @@ class EmailWorkflowItemAttachment(db.Model):
         temporary_asset=None,
     ):
         # check that at only one of generated_asset, submitted_asset, and temporary_asset is specified
-        num_assets = (
-            (1 if generated_asset is not None else 0)
-            + (1 if submitted_asset is not None else 0)
-            + (1 if temporary_asset is not None else 0)
-        )
+        num_assets = (1 if generated_asset is not None else 0) + (1 if submitted_asset is not None else 0) + (1 if temporary_asset is not None else 0)
         if num_assets != 1:
             raise RuntimeError(
                 f"Exactly one of generated_asset, submitted_asset, and temporary_asset must be specified, but got {num_assets} instead"
             )
 
         if name is None or len(name) == 0:
-            raise RuntimeError(
-                f'Invalid name "{name}" (value="{name}") in EmailWorkflowItemAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid name "{name}" (value="{name}") in EmailWorkflowItemAttachment.build_()')
 
         if description is None or len(description) == 0:
-            raise RuntimeError(
-                f'Invalid description "{description}" (value="{description}") in EmailWorkflowItemAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid description "{description}" (value="{description}") in EmailWorkflowItemAttachment.build_()')
 
         generated_asset_id: Optional[int] = None
         submitted_asset_id: Optional[int] = None
@@ -926,18 +831,14 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         "EmailWorkflow",
         foreign_keys=[workflow_id],
         uselist=False,
-        backref=db.backref(
-            "items", lazy="dynamic", cascade="all, delete", passive_deletes=True
-        ),
+        backref=db.backref("items", lazy="dynamic", cascade="all, delete", passive_deletes=True),
     )
 
     # recipient list, formatted as a JSON-serialized list of email address strings
     recipient_list = db.Column(db.Text())
 
     # optional sender address override; if None, MAIL_DEFAULT_SENDER is used
-    from_email = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    from_email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # optional reply-to override, formatted as a JSON-serialized list of address strings;
     # if None, [MAIL_REPLY_TO] is used
@@ -965,9 +866,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     send_in_progress_timestamp = db.Column(db.DateTime(), index=True)
 
     # celery id of sending task
-    celery_send_in_progress_task_id = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    celery_send_in_progress_task_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # number of send attempts that have been made
     send_attempts = db.Column(db.Integer(), nullable=False, default=0)
@@ -996,9 +895,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         "EmailLog",
         foreign_keys=[email_log_id],
         uselist=False,
-        backref=db.backref(
-            "email_workflow_items", lazy="dynamic", cascade="all, delete-orphan"
-        ),
+        backref=db.backref("email_workflow_items", lazy="dynamic", cascade="all, delete-orphan"),
     )
 
     @property
@@ -1072,9 +969,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         elif isinstance(recipient_list, str):
             recipient_list = [recipient_list]
         elif not isinstance(recipient_list, Iterable):
-            raise RuntimeError(
-                f'Invalid recipient_list type "{type(recipient_list)}" (value="{recipient_list}") in EmailWorkflowItem.build_()'
-            )
+            raise RuntimeError(f'Invalid recipient_list type "{type(recipient_list)}" (value="{recipient_list}") in EmailWorkflowItem.build_()')
         else:
             recipient_list = list(recipient_list)
 
@@ -1082,9 +977,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             if isinstance(reply_to, str):
                 reply_to = [reply_to]
             elif not isinstance(reply_to, Iterable):
-                raise RuntimeError(
-                    f'Invalid reply_to type "{type(reply_to)}" (value="{reply_to}") in EmailWorkflowItem.build_()'
-                )
+                raise RuntimeError(f'Invalid reply_to type "{type(reply_to)}" (value="{reply_to}") in EmailWorkflowItem.build_()')
             else:
                 reply_to = list(reply_to)
 
@@ -1094,9 +987,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         if isinstance(attachments, EmailWorkflowItemAttachment):
             attachments = [attachments]
         elif not isinstance(attachments, Iterable):
-            raise RuntimeError(
-                f'Invalid attachments type "{type(attachments)}" (value="{attachments}") in EmailWorkflowItem.build_()'
-            )
+            raise RuntimeError(f'Invalid attachments type "{type(attachments)}" (value="{attachments}") in EmailWorkflowItem.build_()')
 
         creator_id_ = None
         if isinstance(creator, User):
@@ -1187,24 +1078,16 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
     )
 
     # name of workflow
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # creation datestamp, userid and last edited datestamp, userid are recorded via the EditingMetadataMixin
 
     # link to EmailTemplate to be used
-    template_id = db.Column(
-        db.Integer(), db.ForeignKey("email_templates.id"), nullable=False
-    )
-    template = db.relationship(
-        "EmailTemplate", backref=db.backref("workflows", lazy="dynamic")
-    )
+    template_id = db.Column(db.Integer(), db.ForeignKey("email_templates.id"), nullable=False)
+    template = db.relationship("EmailTemplate", backref=db.backref("workflows", lazy="dynamic"))
 
     # maximum attachment size
-    max_attachment_size = db.Column(
-        db.Integer(), nullable=False, default=DEFAULT_MAX_ATTACHMENT_SIZE
-    )
+    max_attachment_size = db.Column(db.Integer(), nullable=False, default=DEFAULT_MAX_ATTACHMENT_SIZE)
 
     @classmethod
     def build_(
@@ -1218,30 +1101,20 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         creator=None,
     ):
         if name is None or not isinstance(name, str) or len(name) == 0:
-            raise RuntimeError(
-                f"Workflow must have a non-null name in EmailWorkflow.build_()"
-            )
+            raise RuntimeError(f"Workflow must have a non-null name in EmailWorkflow.build_()")
 
         if template is None:
-            raise RuntimeError(
-                "Template parameter provided to workflow cannot be null in EmailWorkflow.build_()"
-            )
+            raise RuntimeError("Template parameter provided to workflow cannot be null in EmailWorkflow.build_()")
 
         if send_time is not None and defer is not None:
-            raise RuntimeError(
-                "EmailWorkflow.build_(): send_time and defer cannot both be specified"
-            )
+            raise RuntimeError("EmailWorkflow.build_(): send_time and defer cannot both be specified")
 
         if send_time is None and defer is None:
-            raise RuntimeError(
-                "EmailWorkflow.build_(): exactly one of send_time or defer must be specified"
-            )
+            raise RuntimeError("EmailWorkflow.build_(): exactly one of send_time or defer must be specified")
 
         if defer is not None:
             if not isinstance(defer, timedelta):
-                raise RuntimeError(
-                    f'Invalid defer type "{type(defer)}" (value="{defer}") in EmailWorkflow.build_(): defer must be a timedelta'
-                )
+                raise RuntimeError(f'Invalid defer type "{type(defer)}" (value="{defer}") in EmailWorkflow.build_(): defer must be a timedelta')
             send_time = datetime.now() + defer
 
         template_kwargs: dict = {}
@@ -1277,9 +1150,7 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         elif isinstance(pclasses, ProjectClass):
             pclasses = [pclasses]
         elif not isinstance(pclasses, Iterable):
-            raise RuntimeError(
-                f'Invalid pclasses type "{type(pclasses)}" (value="{pclasses}") in EmailWorkflow.build_()'
-            )
+            raise RuntimeError(f'Invalid pclasses type "{type(pclasses)}" (value="{pclasses}") in EmailWorkflow.build_()')
 
         return cls(
             name=name,
@@ -1346,9 +1217,7 @@ def _encode_payload_value(value) -> Any:
         for k, v in value.items():
             encoded[str(k)] = _encode_payload_value(v)
         return encoded
-    raise ValueError(
-        f"encode_email_payload: cannot encode value of type {type(value).__name__!r}: {value!r}"
-    )
+    raise ValueError(f"encode_email_payload: cannot encode value of type {type(value).__name__!r}: {value!r}")
 
 
 def encode_email_payload(kwargs: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:

@@ -28,8 +28,8 @@ class TenantAICalibration(db.Model):
     # Calibration provenance
     calibrated_at = db.Column(db.DateTime, nullable=False)
     n_samples = db.Column(db.Integer, nullable=False)
-    included_years = db.Column(db.Text(collation="utf8_bin"))        # JSON list[int]
-    included_pclass_ids = db.Column(db.Text(collation="utf8_bin"))   # JSON list[int]
+    included_years = db.Column(db.Text(collation="utf8_bin"))  # JSON list[int]
+    included_pclass_ids = db.Column(db.Text(collation="utf8_bin"))  # JSON list[int]
 
     # LLM configuration (null for lexical-only calibrations)
     llm_model_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
@@ -40,8 +40,8 @@ class TenantAICalibration(db.Model):
     feature_set = db.Column(db.String(32, collation="utf8_bin"), nullable=False, default="lexical")
 
     # Mahalanobis parameters stored as JSON; dimensions implied by feature_set
-    mu = db.Column(db.Text(collation="utf8_bin"), nullable=False)           # JSON list
-    sigma_inv = db.Column(db.Text(collation="utf8_bin"), nullable=False)    # JSON row-major matrix
+    mu = db.Column(db.Text(collation="utf8_bin"), nullable=False)  # JSON list
+    sigma_inv = db.Column(db.Text(collation="utf8_bin"), nullable=False)  # JSON row-major matrix
 
     tenant = db.relationship(
         "Tenant",
@@ -84,14 +84,11 @@ class TenantAICalibration(db.Model):
     def validate_pclass_exclusivity(self, session) -> list[int]:
         """Return pclass IDs already assigned to a sibling calibration for this tenant/feature_set/llm combo."""
         my_ids = set(json.loads(self.included_pclass_ids or "[]"))
-        q = (
-            session.query(TenantAICalibration)
-            .filter_by(
-                tenant_id=self.tenant_id,
-                feature_set=self.feature_set,
-                llm_model_name=self.llm_model_name,
-                llm_context_window=self.llm_context_window,
-            )
+        q = session.query(TenantAICalibration).filter_by(
+            tenant_id=self.tenant_id,
+            feature_set=self.feature_set,
+            llm_model_name=self.llm_model_name,
+            llm_context_window=self.llm_context_window,
         )
         # Only exclude self when it has been persisted; for a new (unsaved) object
         # self.id is None and there is nothing to exclude.

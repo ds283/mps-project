@@ -149,9 +149,7 @@ def add_room():
 
         return redirect(url_for("admin.edit_rooms"))
 
-    return render_template_context(
-        "admin/presentations/edit_room.html", form=form, title="Add new venue"
-    )
+    return render_template_context("admin/presentations/edit_room.html", form=form, title="Add new venue")
 
 
 @admin.route("/edit_room/<int:id>", methods=["GET", "POST"])
@@ -177,9 +175,7 @@ def edit_room(id):
 
         return redirect(url_for("admin.edit_rooms"))
 
-    return render_template_context(
-        "admin/presentations/edit_room.html", form=form, room=data, title="Edit venue"
-    )
+    return render_template_context("admin/presentations/edit_room.html", form=form, room=data, title="Edit venue")
 
 
 @admin.route("/activate_room/<int:id>")
@@ -214,9 +210,7 @@ def edit_buildings():
     Essentially used to identify rooms in the same building with a coloured tag.
     :return:
     """
-    return render_template_context(
-        "admin/presentations/edit_buildings.html", pane="buildings"
-    )
+    return render_template_context("admin/presentations/edit_buildings.html", pane="buildings")
 
 
 @admin.route("/buildings_ajax")
@@ -250,9 +244,7 @@ def add_building():
 
         return redirect(url_for("admin.edit_buildings"))
 
-    return render_template_context(
-        "admin/presentations/edit_building.html", form=form, title="Add new building"
-    )
+    return render_template_context("admin/presentations/edit_building.html", form=form, title="Add new building")
 
 
 @admin.route("/edit_building/<int:id>", methods=["GET", "POST"])
@@ -310,9 +302,7 @@ def deactivate_building(id):
 @admin.route("/launch_test_task")
 @roles_required("root")
 def launch_test_task():
-    task_id = register_task(
-        "Test task", owner=current_user, description="Long-running test task"
-    )
+    task_id = register_task("Test task", owner=current_user, description="Long-running test task")
 
     celery = current_app.extensions["celery"]
     test_task = celery.tasks["app.tasks.test.test_task"]
@@ -332,11 +322,7 @@ def login_as(id):
     # variables can not be edited, inspected or faked by the user
     session["previous_login"] = current_user.id
 
-    current_app.logger.info(
-        "{real} used superuser powers to log in as alternative user {fake}".format(
-            real=current_user.name, fake=user.name
-        )
-    )
+    current_app.logger.info("{real} used superuser powers to log in as alternative user {fake}".format(real=current_user.name, fake=user.name))
 
     login_user(user, remember=False)
     # don't commit changes to database to avoid confusing this with a real login
@@ -372,28 +358,23 @@ def download_generated_asset(asset_id):
     # log this download
     download_item_id = request.args.get("download_item_id", None)
     if download_item_id is not None:
-        download_item: DownloadCentreItem = DownloadCentreItem.query.get_or_404(
-            download_item_id
-        )
+        download_item: DownloadCentreItem = DownloadCentreItem.query.get_or_404(download_item_id)
 
         download_item.last_downloaded_at = datetime.now()
         download_item.number_downloads += 1
 
-    record = GeneratedAssetDownloadRecord(
-        asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now()
-    )
+    record = GeneratedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
 
     try:
         db.session.add(record)
-        log_db_commit(
-            f"Logged download of generated asset #{asset_id}", user=current_user
-        )
+        log_db_commit(f"Logged download of generated asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            "Could not serve download request for asset_id={number} because of a database error. "
-            "Please contact a system administrator".format(number=asset_id),
+            "Could not serve download request for asset_id={number} because of a database error. Please contact a system administrator".format(
+                number=asset_id
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -437,13 +418,7 @@ def download_submitted_asset(asset_id):
     sub_attachment: SubmissionAttachment = asset.submission_attachment
     period_attachment: PeriodAttachment = asset.period_attachment
 
-    attachment = (
-        sub_attachment
-        if sub_attachment is not None
-        else period_attachment
-        if period_attachment is not None
-        else None
-    )
+    attachment = sub_attachment if sub_attachment is not None else period_attachment if period_attachment is not None else None
 
     # attachment may be 'None' if this is an asset that does not have a specific attachment record, e.g., the
     # unprocessed report is usually of this type
@@ -474,21 +449,18 @@ def download_submitted_asset(asset_id):
         return redirect(redirect_url())
 
     # log this download
-    record = SubmittedAssetDownloadRecord(
-        asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now()
-    )
+    record = SubmittedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
 
     try:
         db.session.add(record)
-        log_db_commit(
-            f"Logged download of submitted asset #{asset_id}", user=current_user
-        )
+        log_db_commit(f"Logged download of submitted asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            "Could not serve download request for asset_id={number} because of a database error. "
-            "Please contact a system administrator".format(number=asset_id),
+            "Could not serve download request for asset_id={number} because of a database error. Please contact a system administrator".format(
+                number=asset_id
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -658,8 +630,7 @@ def upload_schedule(schedule_id):
 
             if extension in (".sol", ".lp", ".mps"):
                 if (
-                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
-                    or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
+                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
                 ) and extension not in (".lp",):
                     flash(
                         "Solution files for the CBC optimizer must be in .LP format",
@@ -668,9 +639,7 @@ def upload_schedule(schedule_id):
 
                 else:
                     now = datetime.now()
-                    asset = TemporaryAsset(
-                        timestamp=now, expiry=now + timedelta(days=1)
-                    )
+                    asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
 
                     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                     with AssetUploadManager(
@@ -685,9 +654,7 @@ def upload_schedule(schedule_id):
                     asset.grant_user(current_user)
 
                     uuid = register_task(
-                        'Process offline solution for "{name}"'.format(
-                            name=record.name
-                        ),
+                        'Process offline solution for "{name}"'.format(name=record.name),
                         owner=current_user,
                         description="Import a solution file that has been produced offline and convert to a schedule",
                     )
@@ -709,25 +676,15 @@ def upload_schedule(schedule_id):
                             "Could not upload offline solution due to a database issue. Please contact an administrator.",
                             "error",
                         )
-                        current_app.logger.exception(
-                            "SQLAlchemyError exception", exc_info=e
-                        )
-                        return redirect(
-                            url_for("admin.assessment_schedules", id=record.owner_id)
-                        )
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                        return redirect(url_for("admin.assessment_schedules", id=record.owner_id))
 
                     celery = current_app.extensions["celery"]
-                    schedule_task = celery.tasks[
-                        "app.tasks.scheduling.process_offline_solution"
-                    ]
+                    schedule_task = celery.tasks["app.tasks.scheduling.process_offline_solution"]
 
-                    schedule_task.apply_async(
-                        args=(record.id, asset.id, current_user.id), task_id=uuid
-                    )
+                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
 
-                    return redirect(
-                        url_for("admin.assessment_schedules", id=record.owner_id)
-                    )
+                    return redirect(url_for("admin.assessment_schedules", id=record.owner_id))
 
             else:
                 flash(
@@ -739,9 +696,7 @@ def upload_schedule(schedule_id):
         if request.method == "GET":
             form.solver.data = record.solver
 
-    return render_template_context(
-        "admin/presentations/scheduling/upload.html", schedule=record, form=form
-    )
+    return render_template_context("admin/presentations/scheduling/upload.html", schedule=record, form=form)
 
 
 @admin.route("/upload_match/<int:match_id>", methods=["GET", "POST"])
@@ -762,8 +717,7 @@ def upload_match(match_id):
 
             if extension in (".sol", ".lp", ".mps"):
                 if (
-                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
-                    or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
+                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
                 ) and extension not in (".lp",):
                     flash(
                         "Solution files for the CBC optimizer must be in .LP format",
@@ -772,9 +726,7 @@ def upload_match(match_id):
 
                 else:
                     now = datetime.now()
-                    asset = TemporaryAsset(
-                        timestamp=now, expiry=now + timedelta(days=1)
-                    )
+                    asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
 
                     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                     with AssetUploadManager(
@@ -789,9 +741,7 @@ def upload_match(match_id):
                     asset.grant_user(current_user)
 
                     uuid = register_task(
-                        'Process offline solution for "{name}"'.format(
-                            name=record.name
-                        ),
+                        'Process offline solution for "{name}"'.format(name=record.name),
                         owner=current_user,
                         description="Import a solution file that has been produced offline and convert to a project match",
                     )
@@ -813,19 +763,13 @@ def upload_match(match_id):
                             "Could not upload offline solution due to a database issue. Please contact an administrator.",
                             "error",
                         )
-                        current_app.logger.exception(
-                            "SQLAlchemyError exception", exc_info=e
-                        )
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                         return redirect(url_for("admin.manage_matching"))
 
                     celery = current_app.extensions["celery"]
-                    schedule_task = celery.tasks[
-                        "app.tasks.matching.process_offline_solution"
-                    ]
+                    schedule_task = celery.tasks["app.tasks.matching.process_offline_solution"]
 
-                    schedule_task.apply_async(
-                        args=(record.id, asset.id, current_user.id), task_id=uuid
-                    )
+                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
 
                     return redirect(url_for("admin.manage_matching"))
 
@@ -839,16 +783,12 @@ def upload_match(match_id):
         if request.method == "GET":
             form.solver.data = record.solver
 
-    return render_template_context(
-        "admin/matching/upload.html", match=record, form=form
-    )
+    return render_template_context("admin/matching/upload.html", match=record, form=form)
 
 
 @admin.route("/view_schedule/<string:tag>", methods=["GET", "POST"])
 def view_schedule(tag):
-    schedule: ScheduleAttempt = (
-        db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
-    )
+    schedule: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
     if schedule is None:
         abort(404)
 
@@ -927,11 +867,7 @@ def move_selector(sid):
 
     available = set()
 
-    pclasses: List[ProjectClass] = (
-        db.session.query(ProjectClass)
-        .filter(ProjectClass.active, ProjectClass.id != sel.config.pclass_id)
-        .all()
-    )
+    pclasses: List[ProjectClass] = db.session.query(ProjectClass).filter(ProjectClass.active, ProjectClass.id != sel.config.pclass_id).all()
 
     for pcl in pclasses:
         config: ProjectClassConfig = pcl.most_recent_config
@@ -941,14 +877,7 @@ def move_selector(sid):
             continue
 
         # reject if this student is already a selector for this project class
-        if (
-            get_count(
-                config.selecting_students.filter(
-                    SelectingStudent.student_id == sel.student_id
-                )
-            )
-            > 0
-        ):
+        if get_count(config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
             continue
 
         available.add(config)
@@ -956,9 +885,7 @@ def move_selector(sid):
     if len(available) == 0:
         flash(
             'Selector <i class="fas fa-user-circle"></i> {name} cannot be moved at this time because there are no '
-            "live project classes available as destinations.".format(
-                name=sel.student.user.name
-            ),
+            "live project classes available as destinations.".format(name=sel.student.user.name),
             "info",
         )
         return redirect(url)
@@ -986,8 +913,7 @@ def do_move_selector(sid, dest_id):
     # reject if source and destination are the same
     if sel.config_id == dest_config.id:
         flash(
-            'Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" because it '
-            "is already attached.".format(
+            'Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" because it is already attached.'.format(
                 name=sel.student.user.name, pcl=dest_config.name
             ),
             "error",
@@ -1005,14 +931,7 @@ def do_move_selector(sid, dest_id):
         return redirect(url)
 
     # reject is this student is already selecting for destination
-    if (
-        get_count(
-            dest_config.selecting_students.filter(
-                SelectingStudent.student_id == sel.student_id
-            )
-        )
-        > 0
-    ):
+    if get_count(dest_config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
         flash(
             'Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" '
             "because this student is already selecting for "
@@ -1026,9 +945,7 @@ def do_move_selector(sid, dest_id):
     move_selector = celery.tasks["app.tasks.selecting.move_selector"]
 
     tk_name = "Move selector"
-    tk_description = 'Move selector {name} to project class "{pcl}"'.format(
-        name=sel.student.user.name, pcl=dest_config.name
-    )
+    tk_description = 'Move selector {name} to project class "{pcl}"'.format(name=sel.student.user.name, pcl=dest_config.name)
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
@@ -1081,9 +998,7 @@ def inspect_assets():
         db.session.query(GeneratedAsset).filter_by(thumbnail_error=True).count()
         + db.session.query(SubmittedAsset).filter_by(thumbnail_error=True).count()
     ) > 0
-    return render_template_context(
-        "admin/inspect_assets.html", has_thumbnail_errors=has_thumbnail_errors
-    )
+    return render_template_context("admin/inspect_assets.html", has_thumbnail_errors=has_thumbnail_errors)
 
 
 @admin.route("/assets_ajax", methods=["POST"])
@@ -1214,9 +1129,7 @@ def asset_add_expiry(asset_type, asset_id):
     asset.expiry = datetime.now() + timedelta(days=7)
 
     try:
-        log_db_commit(
-            f"Added expiry date to {asset_type} asset #{asset_id}", user=current_user
-        )
+        log_db_commit(f"Added expiry date to {asset_type} asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1293,15 +1206,9 @@ def generate_all_thumbnails():
     then dispatch the thumbnail_maintenance Celery task to regenerate any missing thumbnails.
     """
     try:
-        db.session.query(GeneratedAsset).update(
-            {"thumbnail_error": False, "thumbnail_error_message": None}
-        )
-        db.session.query(SubmittedAsset).update(
-            {"thumbnail_error": False, "thumbnail_error_message": None}
-        )
-        log_db_commit(
-            "Cleared all thumbnail errors prior to maintenance run", user=current_user
-        )
+        db.session.query(GeneratedAsset).update({"thumbnail_error": False, "thumbnail_error_message": None})
+        db.session.query(SubmittedAsset).update({"thumbnail_error": False, "thumbnail_error_message": None})
+        log_db_commit("Cleared all thumbnail errors prior to maintenance run", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1550,9 +1457,7 @@ def duplicate_global_email_template(id):
     """
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
 
-    new_template = clone_email_template(
-        template, template.pclass_id, template.tenant_id, current_user
-    )
+    new_template = clone_email_template(template, template.pclass_id, template.tenant_id, current_user)
 
     try:
         db.session.add(new_template)
@@ -1608,9 +1513,7 @@ def delete_global_email_template(id):
     title = "Delete email template"
     panel_title = f"Delete email template: <strong>{template.subject}</strong>"
 
-    action_url = url_for(
-        "admin.perform_delete_global_email_template", id=id, url=redirect_url()
-    )
+    action_url = url_for("admin.perform_delete_global_email_template", id=id, url=redirect_url())
     message = (
         f"<p>Please confirm that you wish to delete the email template "
         f"<strong>{template.subject}</strong> (version {template.version}).</p>"

@@ -71,9 +71,7 @@ class ThumbnailAsset(
 
 class AssetThumbnailMixin:
     # (optional) thumbnail asset at small 200x200 size; if None, no thumbnail exists
-    small_thumbnail_id = db.Column(
-        db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None
-    )
+    small_thumbnail_id = db.Column(db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None)
 
     @declared_attr
     def small_thumbnail(cls):
@@ -83,9 +81,7 @@ class AssetThumbnailMixin:
         )
 
     # (optional) thumbnail asset at medium 400x400 size; if None, no thumbnail exists
-    medium_thumbnail_id = db.Column(
-        db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None
-    )
+    medium_thumbnail_id = db.Column(db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None)
 
     @declared_attr
     def medium_thumbnail(cls):
@@ -100,9 +96,7 @@ class AssetThumbnailMixin:
     thumbnail_error = db.Column(db.Boolean(), default=False, nullable=False)
 
     # thumbnail error message
-    thumbnail_error_message = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    thumbnail_error_message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # could consider setting an explicit timestamp, but that is really captured by the ThumbnailAsset timestamp
 
@@ -124,9 +118,7 @@ class GeneratedAsset(
     id = db.Column(db.Integer(), primary_key=True)
 
     # optional link to SubmittedAsset from which this asset was generated
-    parent_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), default=None
-    )
+    parent_asset_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     parent_asset = db.relationship(
         "SubmittedAsset",
         foreign_keys=[parent_asset_id],
@@ -135,9 +127,7 @@ class GeneratedAsset(
     )
 
     # optional license applied to this asset
-    license_id = db.Column(
-        db.Integer(), db.ForeignKey("asset_licenses.id"), default=None
-    )
+    license_id = db.Column(db.Integer(), db.ForeignKey("asset_licenses.id"), default=None)
     license = db.relationship(
         "AssetLicense",
         foreign_keys=[license_id],
@@ -186,9 +176,7 @@ class SubmittedAsset(
     )
 
     # (optional) license applied to this asset
-    license_id = db.Column(
-        db.Integer(), db.ForeignKey("asset_licenses.id"), default=None
-    )
+    license_id = db.Column(db.Integer(), db.ForeignKey("asset_licenses.id"), default=None)
     license = db.relationship(
         "AssetLicense",
         foreign_keys=[license_id],
@@ -221,9 +209,7 @@ class SubmittedAssetDownloadRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # asset downloaded
-    asset_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), default=None
-    )
+    asset_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     asset = db.relationship(
         "SubmittedAsset",
         foreign_keys=[asset_id],
@@ -255,9 +241,7 @@ class GeneratedAssetDownloadRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # asset downloaded
-    asset_id = db.Column(
-        db.Integer(), db.ForeignKey("generated_assets.id"), default=None
-    )
+    asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)
     asset = db.relationship(
         "GeneratedAsset",
         foreign_keys=[asset_id],
@@ -297,9 +281,7 @@ class DownloadCentreItem(db.Model):
     )
 
     # generated asset item
-    asset_id = db.Column(
-        db.Integer(), db.ForeignKey("generated_assets.id"), default=None
-    )
+    asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)
     asset = db.relationship(
         "GeneratedAsset",
         foreign_keys=[asset_id],

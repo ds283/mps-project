@@ -19,6 +19,7 @@ Adds three columns to conflation_reports:
   - feedback_celery_id: Celery task ID for an in-progress PDF generation
   - feedback_generation_failed: True when the last PDF generation attempt failed
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -32,12 +33,8 @@ depends_on = None
 
 def upgrade():
     with op.batch_alter_table("conflation_reports", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("recipe", sa.String(255, collation="utf8_bin"), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("feedback_celery_id", sa.String(255, collation="utf8_bin"), nullable=True)
-        )
+        batch_op.add_column(sa.Column("recipe", sa.String(255, collation="utf8_bin"), nullable=True))
+        batch_op.add_column(sa.Column("feedback_celery_id", sa.String(255, collation="utf8_bin"), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "feedback_generation_failed",

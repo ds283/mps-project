@@ -162,19 +162,10 @@ def email_workflow_data(workflows):
     data = []
     for w in workflows:
         pclasses = list(w.pclasses.all())
-        max_attach = (
-            humanize.naturalsize(w.max_attachment_size)
-            if w.max_attachment_size
-            else "None"
-        )
+        max_attach = humanize.naturalsize(w.max_attachment_size) if w.max_attachment_size else "None"
 
         # Item counts via sub-queries for efficiency
-        total = (
-            db.session.query(func.count(EmailWorkflowItem.id))
-            .filter(EmailWorkflowItem.workflow_id == w.id)
-            .scalar()
-            or 0
-        )
+        total = db.session.query(func.count(EmailWorkflowItem.id)).filter(EmailWorkflowItem.workflow_id == w.id).scalar() or 0
         sent = (
             db.session.query(func.count(EmailWorkflowItem.id))
             .filter(
@@ -214,13 +205,9 @@ def email_workflow_data(workflows):
 
         data.append(
             {
-                "name": render_template_string(
-                    _workflow_name_col, w=w, pclasses=pclasses
-                ),
+                "name": render_template_string(_workflow_name_col, w=w, pclasses=pclasses),
                 "status": render_template_string(_workflow_status_col, w=w),
-                "template": render_template_string(
-                    _workflow_template_col, w=w, max_attach=max_attach
-                ),
+                "template": render_template_string(_workflow_template_col, w=w, max_attach=max_attach),
                 "send_time": render_template_string(_workflow_send_time_col, w=w),
                 "items": render_template_string(
                     _workflow_items_col,

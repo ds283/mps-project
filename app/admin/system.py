@@ -131,12 +131,8 @@ def confirm_global_rollover():
 
     next_year = get_current_year() + 1
 
-    title = "Global rollover to {yeara}&ndash;{yearb}".format(
-        yeara=next_year, yearb=next_year + 1
-    )
-    panel_title = "Global rollover of academic year to {yeara}&ndash;{yearb}".format(
-        yeara=next_year, yearb=next_year + 1
-    )
+    title = "Global rollover to {yeara}&ndash;{yearb}".format(yeara=next_year, yearb=next_year + 1)
+    panel_title = "Global rollover of academic year to {yeara}&ndash;{yearb}".format(yeara=next_year, yearb=next_year + 1)
     action_url = url_for("admin.perform_global_rollover")
     message = (
         "<p><strong>Please confirm that you wish to advance the global academic year to "
@@ -146,13 +142,9 @@ def confirm_global_rollover():
         '<p class="mt-1">After the current academic year has been incremented, '
         "a routine database maintenance process will be "
         "run.</p>"
-        '<p class="mt-2">This action cannot be undone.</p>'.format(
-            yeara=next_year, yearb=next_year + 1
-        )
+        '<p class="mt-2">This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
     )
-    submit_label = "Rollover to {yra}&ndash;{yrb}".format(
-        yra=next_year, yrb=next_year + 1
-    )
+    submit_label = "Rollover to {yra}&ndash;{yrb}".format(yra=next_year, yrb=next_year + 1)
 
     form = ConfirmActionForm()
     return render_template_context(
@@ -217,9 +209,7 @@ def perform_global_rollover():
         db.session.rollback()
 
     else:
-        tk_name = "Perform global rollover to academic year {yra}-{yrb}".format(
-            yra=next_year, yrb=next_year + 1
-        )
+        tk_name = "Perform global rollover to academic year {yra}-{yrb}".format(yra=next_year, yrb=next_year + 1)
         tk_description = "Perform global rollover"
         uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
@@ -260,9 +250,7 @@ def email_log():
 
     if form is not None and form.validate_on_submit():
         if form.delete_age.data is True:
-            return redirect(
-                url_for("admin.confirm_delete_email_cutoff", cutoff=(form.weeks.data))
-            )
+            return redirect(url_for("admin.confirm_delete_email_cutoff", cutoff=(form.weeks.data)))
 
     return render_template_context("admin/email_log.html", form=form)
 
@@ -326,9 +314,7 @@ def display_email(id):
         url = url_for("admin.email_log")
         text = "email log"
 
-    return render_template_context(
-        "admin/display_email.html", email=email, text=text, url=url
-    )
+    return render_template_context("admin/display_email.html", email=email, text=text, url=url)
 
 
 @admin.route("/delete_email/<int:id>")
@@ -370,10 +356,7 @@ def confirm_delete_all_emails():
     panel_title = "Confirm delete of all emails retained in log"
 
     action_url = url_for("admin.delete_all_emails")
-    message = (
-        "<p>Please confirm that you wish to delete all emails retained in the log.</p>"
-        "<p>This action cannot be undone.</p>"
-    )
+    message = "<p>Please confirm that you wish to delete all emails retained in the log.</p><p>This action cannot be undone.</p>"
     submit_label = "Delete all"
 
     form = ConfirmActionForm()
@@ -431,14 +414,11 @@ def confirm_delete_email_cutoff(cutoff):
         pl = ""
 
     title = "Confirm delete"
-    panel_title = "Confirm delete all emails older than {c} week{pl}".format(
-        c=cutoff, pl=pl
-    )
+    panel_title = "Confirm delete all emails older than {c} week{pl}".format(c=cutoff, pl=pl)
 
     action_url = url_for("admin.delete_email_cutoff", cutoff=cutoff)
-    message = (
-        "<p>Please confirm that you wish to delete all emails older than {c} week{pl}.</p>"
-        "<p>This action cannot be undone.</p>".format(c=cutoff, pl=pl)
+    message = "<p>Please confirm that you wish to delete all emails older than {c} week{pl}.</p><p>This action cannot be undone.</p>".format(
+        c=cutoff, pl=pl
     )
     submit_label = "Delete"
 
@@ -472,9 +452,7 @@ def delete_email_cutoff(cutoff):
     prune_email = celery.tasks["app.tasks.prune_email.prune_email_log"]
 
     tk_name = "Manual delete email"
-    tk_description = "Manually delete email older than {c} week{pl}".format(
-        c=cutoff, pl=pl
-    )
+    tk_description = "Manually delete email older than {c} week{pl}".format(c=cutoff, pl=pl)
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
@@ -508,9 +486,7 @@ def scheduled_email_ajax():
     AJAX data point for scheduled email list
     :return:
     """
-    base_query = db.session.query(EmailNotification).join(
-        User, User.id == EmailNotification.owner_id
-    )
+    base_query = db.session.query(EmailNotification).join(User, User.id == EmailNotification.owner_id)
 
     recipient = {
         "search": func.concat(User.first_name, " ", User.last_name),
@@ -739,9 +715,7 @@ def add_message():
 
         return redirect(url_for("admin.edit_messages"))
 
-    return render_template_context(
-        "admin/edit_message.html", form=form, title="Add new broadcast message"
-    )
+    return render_template_context("admin/edit_message.html", form=form, title="Add new broadcast message")
 
 
 @admin.route("/edit_message/<int:id>", methods=["GET", "POST"])
@@ -871,9 +845,7 @@ def reset_dismissals(id):
     # convenors can only reset their own messages
     if not current_user.has_role("admin") and not current_user.has_role("root"):
         if message.user_id != current_user.id:
-            flash(
-                "Only administrative users can reset dismissals for messages that are not their own."
-            )
+            flash("Only administrative users can reset dismissals for messages that are not their own.")
             return home_dashboard()
 
     message.dismissed_by = []
@@ -926,14 +898,10 @@ def add_scheduled_task():
             return redirect(url_for("admin.add_crontab_task"))
 
         else:
-            flash(
-                "The task type was not recognized. If this error persists, please contact the system administrator."
-            )
+            flash("The task type was not recognized. If this error persists, please contact the system administrator.")
             return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template_context(
-        "admin/scheduled_type.html", form=form, title="Select schedule type"
-    )
+    return render_template_context("admin/scheduled_type.html", form=form, title="Select schedule type")
 
 
 @admin.route("/add_interval_task", methods=["GET", "POST"])
@@ -948,9 +916,7 @@ def add_interval_task():
 
     if form.validate_on_submit():
         # build or lookup an appropriate IntervalSchedule record from the database
-        sch = IntervalSchedule.query.filter_by(
-            every=form.every.data, period=form.period.data
-        ).first()
+        sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
 
         if sch is None:
             sch = IntervalSchedule(every=form.every.data, period=form.period.data)
@@ -987,9 +953,7 @@ def add_interval_task():
 
         return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template_context(
-        "admin/edit_scheduled_task.html", form=form, title="Add new fixed-interval task"
-    )
+    return render_template_context("admin/edit_scheduled_task.html", form=form, title="Add new fixed-interval task")
 
 
 @admin.route("/add_crontab_task", methods=["GET", "POST"])
@@ -1053,9 +1017,7 @@ def add_crontab_task():
 
         return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template_context(
-        "admin/edit_scheduled_task.html", form=form, title="Add new crontab task"
-    )
+    return render_template_context("admin/edit_scheduled_task.html", form=form, title="Add new crontab task")
 
 
 @admin.route("/edit_interval_task/<int:id>", methods=["GET", "POST"])
@@ -1071,9 +1033,7 @@ def edit_interval_task(id):
 
     if form.validate_on_submit():
         # build or lookup an appropriate IntervalSchedule record from the database
-        sch = IntervalSchedule.query.filter_by(
-            every=form.every.data, period=form.period.data
-        ).first()
+        sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
 
         if sch is None:
             sch = IntervalSchedule(every=form.every.data, period=form.period.data)
@@ -1251,9 +1211,7 @@ def launch_scheduled_task(id):
 
     record = DatabaseSchedulerEntry.query.get_or_404(id)
 
-    task_id = register_task(
-        record.name, current_user, "Scheduled task launched from web user interface"
-    )
+    task_id = register_task(record.name, current_user, "Scheduled task launched from web user interface")
 
     celery = current_app.extensions["celery"]
     tk = celery.tasks[record.task]
@@ -1313,17 +1271,9 @@ def backups_overview():
     # if there are enough datapoints, generate some plots showing how the backup size is scaling with time
     if backup_count > 1:
         # extract lists of data points
-        backup_dates = (
-            db.session.query(BackupRecord.date).order_by(BackupRecord.date).all()
-        )
-        archive_size = (
-            db.session.query(BackupRecord.archive_size)
-            .order_by(BackupRecord.date)
-            .all()
-        )
-        backup_size = (
-            db.session.query(BackupRecord.backup_size).order_by(BackupRecord.date).all()
-        )
+        backup_dates = db.session.query(BackupRecord.date).order_by(BackupRecord.date).all()
+        archive_size = db.session.query(BackupRecord.archive_size).order_by(BackupRecord.date).all()
+        backup_size = db.session.query(BackupRecord.backup_size).order_by(BackupRecord.date).all()
 
         MB_SIZE = 1024 * 1024
 
@@ -1443,20 +1393,9 @@ def backups_overview():
         gauge_div = None
 
     # Latest cloud backup run summary
-    latest_cloud_run_id = (
-        db.session.query(ObjectStoreBackupRecord.run_id)
-        .order_by(ObjectStoreBackupRecord.timestamp.desc())
-        .limit(1)
-        .scalar()
-    )
-    latest_cloud_records = (
-        db.session.query(ObjectStoreBackupRecord).filter_by(run_id=latest_cloud_run_id).all()
-        if latest_cloud_run_id
-        else []
-    )
-    cloud_backup_alert = any(
-        r.status in (ObjectStoreBackupRecord.FAILED, ObjectStoreBackupRecord.PARTIAL) for r in latest_cloud_records
-    )
+    latest_cloud_run_id = db.session.query(ObjectStoreBackupRecord.run_id).order_by(ObjectStoreBackupRecord.timestamp.desc()).limit(1).scalar()
+    latest_cloud_records = db.session.query(ObjectStoreBackupRecord).filter_by(run_id=latest_cloud_run_id).all() if latest_cloud_run_id else []
+    cloud_backup_alert = any(r.status in (ObjectStoreBackupRecord.FAILED, ObjectStoreBackupRecord.PARTIAL) for r in latest_cloud_records)
 
     return render_template_context(
         "admin/backup_dashboard/overview.html",
@@ -1520,9 +1459,7 @@ def manage_backups():
     form = BackupManageForm(request.form)
 
     if form.validate_on_submit() and form.delete_age.data is True:
-        return redirect(
-            url_for("admin.confirm_delete_backup_cutoff", cutoff=(form.weeks.data))
-        )
+        return redirect(url_for("admin.confirm_delete_backup_cutoff", cutoff=(form.weeks.data)))
 
     return render_template_context(
         "admin/backup_dashboard/manage.html",
@@ -1544,34 +1481,20 @@ def manage_backups_ajax():
     type_filter = request.args.get("type_filter")
     property_filter = request.args.get("property_filter")
 
-    base_query = db.session.query(BackupRecord).join(
-        User, User.id == BackupRecord.owner_id
-    )
+    base_query = db.session.query(BackupRecord).join(User, User.id == BackupRecord.owner_id)
 
     if type_filter == "scheduled":
-        base_query = base_query.filter(
-            BackupRecord.type == BackupRecord.SCHEDULED_BACKUP
-        )
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.SCHEDULED_BACKUP)
     elif type_filter == "rollover":
-        base_query = base_query.filter(
-            BackupRecord.type == BackupRecord.PROJECT_ROLLOVER_FALLBACK
-        )
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ROLLOVER_FALLBACK)
     elif type_filter == "golive":
-        base_query = base_query.filter(
-            BackupRecord.type == BackupRecord.PROJECT_GOLIVE_FALLBACK
-        )
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_GOLIVE_FALLBACK)
     elif type_filter == "close":
-        base_query = base_query.filter(
-            BackupRecord.type == BackupRecord.PROJECT_CLOSE_FALLBACK
-        )
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_CLOSE_FALLBACK)
     elif type_filter == "confirm":
-        base_query = base_query.filter(
-            BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK
-        )
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK)
     elif type_filter == "batch-student":
-        base_query = base_query.filter(
-            BackupRecord.type == BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK
-        )
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK)
 
     if property_filter == "labels":
         base_query = base_query.filter(BackupRecord.labels.any(BackupLabel.id != None))
@@ -1639,9 +1562,7 @@ def manual_backup():
         final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
         error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-        unlock_date_str = (
-            str(form.unlock_date.data) if form.unlock_date.data is not None else None
-        )
+        unlock_date_str = str(form.unlock_date.data) if form.unlock_date.data is not None else None
         args = (
             current_user.id,
             BackupRecord.MANUAL_BACKUP,
@@ -1741,14 +1662,11 @@ def confirm_delete_backup_cutoff(cutoff):
         pl = ""
 
     title = "Confirm delete"
-    panel_title = "Confirm delete all backups older than {c} week{pl}".format(
-        c=cutoff, pl=pl
-    )
+    panel_title = "Confirm delete all backups older than {c} week{pl}".format(c=cutoff, pl=pl)
 
     action_url = url_for("admin.delete_backup_cutoff", cutoff=cutoff)
-    message = (
-        "<p>Please confirm that you wish to delete all backups older than {c} week{pl}.</p>"
-        "<p>This action cannot be undone.</p>".format(c=cutoff, pl=pl)
+    message = "<p>Please confirm that you wish to delete all backups older than {c} week{pl}.</p><p>This action cannot be undone.</p>".format(
+        c=cutoff, pl=pl
     )
     submit_label = "Delete"
 
@@ -1781,9 +1699,7 @@ def delete_backup_cutoff(cutoff):
     del_backup = celery.tasks["app.tasks.backup.prune_backup_cutoff"]
 
     tk_name = "Manual delete backups"
-    tk_description = "Manually delete backups older than {c} week{pl}".format(
-        c=cutoff, pl=pl
-    )
+    tk_description = "Manually delete backups older than {c} week{pl}".format(c=cutoff, pl=pl)
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
@@ -1825,16 +1741,11 @@ def confirm_delete_backup(id):
         return redirect(redirect_url())
 
     title = "Confirm delete"
-    panel_title = "Confirm delete of backup {d}".format(
-        d=backup.date.strftime("%a %d %b %Y %H:%M:%S")
-    )
+    panel_title = "Confirm delete of backup {d}".format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
 
     action_url = url_for("admin.delete_backup", id=id)
-    message = (
-        "<p>Please confirm that you wish to delete the backup {d}.</p>"
-        "<p>This action cannot be undone.</p>".format(
-            d=backup.date.strftime("%a %d %b %Y %H:%M:%S")
-        )
+    message = "<p>Please confirm that you wish to delete the backup {d}.</p><p>This action cannot be undone.</p>".format(
+        d=backup.date.strftime("%a %d %b %Y %H:%M:%S")
     )
     submit_label = "Delete"
 
@@ -1891,9 +1802,7 @@ def background_tasks():
             status_filter = "all"
         session["background_task_status_filter"] = status_filter
 
-    return render_template_context(
-        "admin/background_tasks.html", status_filter=status_filter
-    )
+    return render_template_context("admin/background_tasks.html", status_filter=status_filter)
 
 
 @admin.route("/background_ajax", methods=["POST"])
@@ -1963,15 +1872,9 @@ def background_ajax():
 def terminate_background_task(id):
     record = TaskRecord.query.get_or_404(id)
 
-    if (
-        record.status == TaskRecord.SUCCESS
-        or record.status == TaskRecord.FAILURE
-        or record.status == TaskRecord.TERMINATED
-    ):
+    if record.status == TaskRecord.SUCCESS or record.status == TaskRecord.FAILURE or record.status == TaskRecord.TERMINATED:
         flash(
-            'Could not terminate background task "{name}" because it has finished.'.format(
-                name=record.name
-            ),
+            'Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1997,8 +1900,7 @@ def terminate_background_task(id):
         )
     except SQLAlchemyError as e:
         flash(
-            'Could not terminate task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Could not terminate task "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2014,9 +1916,7 @@ def delete_background_task(id):
 
     if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
         flash(
-            'Could not delete match "{name}" because it has not terminated.'.format(
-                name=record.name
-            ),
+            'Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -2031,8 +1931,7 @@ def delete_background_task(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Could not delete match "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Could not delete match "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2061,16 +1960,9 @@ def notifications_ajax():
     redis.hset("_pings", str(current_user.id), str((datetime.now().isoformat(), since)))
 
     # query for all notifications associated with the current user
-    notifications = (
-        current_user.notifications.filter(Notification.timestamp >= since)
-        .order_by(Notification.timestamp.asc())
-        .all()
-    )
+    notifications = current_user.notifications.filter(Notification.timestamp >= since).order_by(Notification.timestamp.asc()).all()
 
-    data = [
-        {"uuid": n.uuid, "type": n.type, "payload": n.payload, "timestamp": n.timestamp}
-        for n in notifications
-    ]
+    data = [{"uuid": n.uuid, "type": n.type, "payload": n.payload, "timestamp": n.timestamp} for n in notifications]
 
     return jsonify(data)
 
@@ -2127,12 +2019,7 @@ def workflow_log():
 
     if is_root:
         tenants = db.session.query(Tenant).order_by(Tenant.name).all()
-        pclasses = (
-            db.session.query(ProjectClass)
-            .filter_by(active=True)
-            .order_by(ProjectClass.name)
-            .all()
-        )
+        pclasses = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name).all()
     elif is_admin:
         tenants = current_user.tenants.order_by(Tenant.name).all()
         user_tenant_ids = [t.id for t in tenants]
@@ -2149,15 +2036,8 @@ def workflow_log():
         tenants = None
         fd = current_user.faculty_data
         if fd is not None:
-            convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [
-                pc.id for pc in fd.coconvenor_for
-            ]
-            pclasses = (
-                db.session.query(ProjectClass)
-                .filter(ProjectClass.id.in_(convenor_pclass_ids))
-                .order_by(ProjectClass.name)
-                .all()
-            )
+            convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [pc.id for pc in fd.coconvenor_for]
+            pclasses = db.session.query(ProjectClass).filter(ProjectClass.id.in_(convenor_pclass_ids)).order_by(ProjectClass.name).all()
         else:
             pclasses = []
 
@@ -2199,46 +2079,28 @@ def workflow_log_ajax():
     if not is_root:
         if is_admin:
             user_tenant_ids = [t.id for t in current_user.tenants]
-            base_query = base_query.filter(
-                WorkflowLogEntry.project_classes.any(
-                    ProjectClass.tenant_id.in_(user_tenant_ids)
-                )
-            )
+            base_query = base_query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.tenant_id.in_(user_tenant_ids)))
         else:  # convenor
             fd = current_user.faculty_data
             if fd is not None:
-                convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [
-                    pc.id for pc in fd.coconvenor_for
-                ]
+                convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [pc.id for pc in fd.coconvenor_for]
             else:
                 convenor_pclass_ids = []
-            base_query = base_query.filter(
-                WorkflowLogEntry.project_classes.any(
-                    ProjectClass.id.in_(convenor_pclass_ids)
-                )
-            )
+            base_query = base_query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.id.in_(convenor_pclass_ids)))
 
     try:
         pclass_value = int(pclass_filter)
-        base_query = base_query.filter(
-            WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass_value)
-        )
+        base_query = base_query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass_value))
     except (TypeError, ValueError):
         try:
             tenant_value = int(tenant_filter)
-            base_query = base_query.filter(
-                WorkflowLogEntry.project_classes.any(
-                    ProjectClass.tenant_id == tenant_value
-                )
-            )
+            base_query = base_query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.tenant_id == tenant_value))
         except (TypeError, ValueError):
             pass
 
     columns = {
         "user": {
-            "search": func.concat(
-                initiator_user.first_name, " ", initiator_user.last_name
-            ),
+            "search": func.concat(initiator_user.first_name, " ", initiator_user.last_name),
             "search_collation": "utf8_general_ci",
         },
         "student": {
@@ -2252,9 +2114,7 @@ def workflow_log_ajax():
             "search_collation": "utf8_bin",
         },
         "timestamp": {
-            "search": func.date_format(
-                WorkflowLogEntry.timestamp, "%a %d %b %Y %H:%M:%S"
-            ),
+            "search": func.date_format(WorkflowLogEntry.timestamp, "%a %d %b %Y %H:%M:%S"),
             "order": WorkflowLogEntry.timestamp,
         },
         "summary": {
@@ -2301,8 +2161,7 @@ def workflow_log_export():
     )
 
     flash(
-        "Your workflow log export is being prepared and will appear in your "
-        "<strong>Download Centre</strong> when ready.",
+        "Your workflow log export is being prepared and will appear in your <strong>Download Centre</strong> when ready.",
         "info",
     )
     return redirect(
@@ -2351,8 +2210,7 @@ def workflow_log_export_csv():
     )
 
     flash(
-        "Your workflow log CSV export is being prepared and will appear in your "
-        "<strong>Download Centre</strong> when ready.",
+        "Your workflow log CSV export is being prepared and will appear in your <strong>Download Centre</strong> when ready.",
         "info",
     )
     return redirect(
@@ -2372,11 +2230,7 @@ def workflow_log_export_csv():
 @admin.route("/cloud_backup", methods=["GET", "POST"])
 @roles_required("root")
 def cloud_backup():
-    schedule_entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter_by(name="object-store-cloud-backup")
-        .first()
-    )
+    schedule_entry = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-cloud-backup").first()
 
     form = CloudBackupConfigForm(request.form)
 
@@ -2400,22 +2254,10 @@ def cloud_backup():
         flash("Cloud backup configuration saved.", "success")
         return redirect(url_for("admin.cloud_backup"))
 
-    latest_run_id = (
-        db.session.query(ObjectStoreBackupRecord.run_id)
-        .order_by(ObjectStoreBackupRecord.timestamp.desc())
-        .limit(1)
-        .scalar()
-    )
-    latest_records = (
-        db.session.query(ObjectStoreBackupRecord).filter_by(run_id=latest_run_id).all()
-        if latest_run_id
-        else []
-    )
+    latest_run_id = db.session.query(ObjectStoreBackupRecord.run_id).order_by(ObjectStoreBackupRecord.timestamp.desc()).limit(1).scalar()
+    latest_records = db.session.query(ObjectStoreBackupRecord).filter_by(run_id=latest_run_id).all() if latest_run_id else []
 
-    cloud_backup_alert = any(
-        r.status in (ObjectStoreBackupRecord.FAILED, ObjectStoreBackupRecord.PARTIAL)
-        for r in latest_records
-    )
+    cloud_backup_alert = any(r.status in (ObjectStoreBackupRecord.FAILED, ObjectStoreBackupRecord.PARTIAL) for r in latest_records)
 
     run_now_form = ConfirmActionForm()
 
@@ -2458,11 +2300,7 @@ def apply_cloud_backup_config_change():
         flash("No pending configuration change.", "warning")
         return redirect(url_for("admin.cloud_backup"))
 
-    entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter_by(name="object-store-cloud-backup")
-        .first()
-    )
+    entry = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-cloud-backup").first()
     if entry:
         entry.owner_id = pending["owner_id"]
 
@@ -2517,11 +2355,7 @@ def cloud_backup_ajax():
 @admin.route("/cloud_backup_run_now", methods=["POST"])
 @roles_required("root")
 def cloud_backup_run_now():
-    schedule_entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter_by(name="object-store-cloud-backup")
-        .first()
-    )
+    schedule_entry = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-cloud-backup").first()
     owner_id = schedule_entry.owner_id if schedule_entry else None
 
     task_id = register_task(
@@ -2554,11 +2388,7 @@ def cloud_backup_restore_select():
             ObjectStoreBackupRecord.bucket_type,
             func.max(ObjectStoreBackupRecord.timestamp).label("max_ts"),
         )
-        .filter(
-            ObjectStoreBackupRecord.status.in_(
-                [ObjectStoreBackupRecord.SUCCESS, ObjectStoreBackupRecord.PARTIAL]
-            )
-        )
+        .filter(ObjectStoreBackupRecord.status.in_([ObjectStoreBackupRecord.SUCCESS, ObjectStoreBackupRecord.PARTIAL]))
         .group_by(ObjectStoreBackupRecord.bucket_type)
         .subquery()
     )
@@ -2566,8 +2396,7 @@ def cloud_backup_restore_select():
         db.session.query(ObjectStoreBackupRecord)
         .join(
             subq,
-            (ObjectStoreBackupRecord.bucket_type == subq.c.bucket_type)
-            & (ObjectStoreBackupRecord.timestamp == subq.c.max_ts),
+            (ObjectStoreBackupRecord.bucket_type == subq.c.bucket_type) & (ObjectStoreBackupRecord.timestamp == subq.c.max_ts),
         )
         .order_by(ObjectStoreBackupRecord.bucket_label)
         .all()
@@ -2577,11 +2406,7 @@ def cloud_backup_restore_select():
         flash("No completed cloud backup records found.", "warning")
         return redirect(url_for("admin.cloud_backup"))
 
-    schedule_entry = (
-        db.session.query(DatabaseSchedulerEntry)
-        .filter_by(name="object-store-cloud-backup")
-        .first()
-    )
+    schedule_entry = db.session.query(DatabaseSchedulerEntry).filter_by(name="object-store-cloud-backup").first()
 
     choices = [(r.bucket_type, r.bucket_label or str(r.bucket_type)) for r in latest_records]
     record_by_type = {r.bucket_type: r for r in latest_records}
@@ -2603,11 +2428,7 @@ def cloud_backup_restore_select():
             )
 
         selected_record_ids = [record_by_type[bt].id for bt in selected_types if bt in record_by_type]
-        bucket_names = ", ".join(
-            record_by_type[bt].bucket_label or str(bt)
-            for bt in selected_types
-            if bt in record_by_type
-        )
+        bucket_names = ", ".join(record_by_type[bt].bucket_label or str(bt) for bt in selected_types if bt in record_by_type)
         tk_name = f"Restore cloud backup: {bucket_names}"
         task_id = register_task(
             tk_name,

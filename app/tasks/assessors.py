@@ -48,24 +48,16 @@ def register_assessor_tasks(celery):
 
         faculty = record.owner
 
-        if (
-                record.marker_state != EnrollmentRecord.MARKER_ENROLLED
-                and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
-        ):
+        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             err_msg = (
-                'Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
-                "do not have an appropriate enrolment.".format(
+                'Cannot attach {name} as an assessor for projects in class "{pclass}" because they do not have an appropriate enrolment.'.format(
                     name=faculty.user.name, pclass=record.pclass.name
                 )
             )
             user.post_message(err_msg, "error", autocommit=True)
             raise Exception(err_msg)
 
-        projects = (
-            db.session.query(Project)
-            .filter(Project.project_classes.any(id=pclass_id))
-            .all()
-        )
+        projects = db.session.query(Project).filter(Project.project_classes.any(id=pclass_id)).all()
 
         count = 0
         for p in projects:
@@ -75,16 +67,12 @@ def register_assessor_tasks(celery):
 
         if count > 0:
             user.post_message(
-                "Attached {name} as an assessor for {n} library projects.".format(
-                    name=faculty.user.name, n=count
-                ),
+                "Attached {name} as an assessor for {n} library projects.".format(name=faculty.user.name, n=count),
                 "info",
             )
         else:
             user.post_message(
-                "{name} has already been attached as an assessor to all library projects in this class.".format(
-                    name=faculty.user.name
-                ),
+                "{name} has already been attached as an assessor to all library projects in this class.".format(name=faculty.user.name),
                 "info",
             )
 
@@ -127,13 +115,9 @@ def register_assessor_tasks(celery):
 
         faculty = record.owner
 
-        if (
-                record.marker_state != EnrollmentRecord.MARKER_ENROLLED
-                and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
-        ):
+        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             err_msg = (
-                'Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
-                "do not have an appropriate enrolment.".format(
+                'Cannot attach {name} as an assessor for projects in class "{pclass}" because they do not have an appropriate enrolment.'.format(
                     name=faculty.user.name, pclass=record.pclass.name
                 )
             )
@@ -158,16 +142,12 @@ def register_assessor_tasks(celery):
 
         if count > 0:
             user.post_message(
-                "Attached {name} as an assessor for {n} live projects.".format(
-                    name=faculty.user.name, n=count
-                ),
+                "Attached {name} as an assessor for {n} live projects.".format(name=faculty.user.name, n=count),
                 "info",
             )
         else:
             user.post_message(
-                "{name} has already been attached as an assessor to all live projects in this class.".format(
-                    name=faculty.user.name
-                ),
+                "{name} has already been attached as an assessor to all live projects in this class.".format(name=faculty.user.name),
                 "info",
             )
 

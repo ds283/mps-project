@@ -60,9 +60,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
     # primary key is same as users.id for this student member
     id = db.Column(db.Integer(), db.ForeignKey("users.id"), primary_key=True)
-    user = db.relationship(
-        "User", foreign_keys=[id], backref=db.backref("student_data", uselist=False)
-    )
+    user = db.relationship("User", foreign_keys=[id], backref=db.backref("student_data", uselist=False))
 
     # ATAS CONFIGURATION
 
@@ -77,9 +75,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # exam number is needed for marking
     # we store this encrypted out of prudence. Note that we use AesEngine which is the less secure of the two
     # AES choices provided by SQLAlchemyUtils, but which can perform queries against the field
-    exam_number = db.Column(
-        EncryptedType(db.Integer(), get_AES_key, AesEngine, "oneandzeroes")
-    )
+    exam_number = db.Column(EncryptedType(db.Integer(), get_AES_key, AesEngine, "oneandzeroes"))
 
     # STUDENT INFORMATION
 
@@ -136,13 +132,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         if repeat_years is None:
             repeat_years = 0
 
-        return (
-            current_year
-            - cohort
-            + 1
-            - (1 if self.has_foundation_year else 0)
-            - repeat_years
-        )
+        return current_year - cohort + 1 - (1 if self.has_foundation_year else 0) - repeat_years
 
     def _get_provisional_year(self, cohort, repeat_years):
         from .academic import DegreeProgramme
@@ -222,9 +212,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
             provisional_year = self._get_provisional_year(value, self.repeated_years)
 
-            if provisional_year is not None and provisional_year < (
-                0 if self.has_foundation_year else 1
-            ):
+            if provisional_year is not None and provisional_year < (0 if self.has_foundation_year else 1):
                 diff = self.repeated_years - abs(provisional_year)
 
                 if diff >= 0:
@@ -252,9 +240,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             with db.session.no_autoflush:
                 self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
 
-                provisional_year = self._get_provisional_year(
-                    self.cohort, self.repeated_years
-                )
+                provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
 
                 self.disable_validate = True
 
@@ -294,9 +280,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
             provisional_year = self._get_provisional_year(self.cohort, value)
 
-            if provisional_year is not None and provisional_year < (
-                0 if self.has_foundation_year else 1
-            ):
+            if provisional_year is not None and provisional_year < (0 if self.has_foundation_year else 1):
                 raise ValueError
 
             self.disable_validate = True
@@ -328,11 +312,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 if self.programme_id is None:
                     return value
 
-                current_programme: DegreeProgramme = (
-                    db.session.query(DegreeProgramme)
-                    .filter_by(id=self.programme_id)
-                    .first()
-                )
+                current_programme: DegreeProgramme = db.session.query(DegreeProgramme).filter_by(id=self.programme_id).first()
 
             if current_programme is None:
                 return value
@@ -340,9 +320,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             if not current_programme.foundation_year:
                 return value
 
-            programme: DegreeProgramme = (
-                db.session.query(DegreeProgramme).filter_by(id=value).first()
-            )
+            programme: DegreeProgramme = db.session.query(DegreeProgramme).filter_by(id=value).first()
 
             if not programme.foundation_year:
                 self.disable_validate = True
@@ -378,11 +356,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             return True
 
         if self.programme_id is not None:
-            programme = (
-                db.session.query(DegreeProgramme)
-                .filter_by(id=self.programme_id)
-                .first()
-            )
+            programme = db.session.query(DegreeProgramme).filter_by(id=self.programme_id).first()
             if programme is not None and programme.foundation_year:
                 return True
 
@@ -393,11 +367,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         if self.academic_year is None:
             return None
 
-        diff = (
-            self.academic_year
-            - self.programme.degree_type.duration
-            - (1 if self.programme.year_out else 0)
-        )
+        diff = self.academic_year - self.programme.degree_type.duration - (1 if self.programme.year_out else 0)
 
         if diff <= 0:
             return False
@@ -420,13 +390,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
         return self.academic_year + diff
 
-    def academic_year_label(
-        self, desired_year=None, show_details=False, current_year=None
-    ):
+    def academic_year_label(self, desired_year=None, show_details=False, current_year=None):
         if desired_year is not None:
-            academic_year = self.compute_academic_year(
-                desired_year, current_year=current_year
-            )
+            academic_year = self.compute_academic_year(desired_year, current_year=current_year)
         else:
             academic_year = self.academic_year
 
@@ -448,9 +414,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                     type = "warning"
 
                 elif self.programme is not None and self.programme.year_out:
-                    check_year = self._get_raw_provisional_year(
-                        self.cohort, self.repeated_years
-                    )
+                    check_year = self._get_raw_provisional_year(self.cohort, self.repeated_years)
 
                     if check_year == self.programme.year_out_value:
                         text = "Year out"
@@ -478,18 +442,13 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     @property
     def has_timeline(self):
         # we allow published or unpublished records in the timeline
-        return (
-            self.selecting.filter_by(retired=True).first() is not None
-            or self.submitting.filter_by(retired=True).first() is not None
-        )
+        return self.selecting.filter_by(retired=True).first() is not None or self.submitting.filter_by(retired=True).first() is not None
 
     @property
     def has_previous_submissions(self):
         # this is intended to count "real" submissions, so we drop any records that
         # have not been published
-        return (
-            self.submitting.filter_by(retired=True, published=True).first() is not None
-        )
+        return self.submitting.filter_by(retired=True, published=True).first() is not None
 
     def collect_student_records(self):
         selector_records = {}
@@ -525,9 +484,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         from .project_class import ProjectClass, ProjectClassConfig
 
         return (
-            self.selecting.join(
-                ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id
-            )
+            self.selecting.join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
             .order_by(ProjectClass.name.asc())
         )
@@ -538,9 +495,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         from .project_class import ProjectClass, ProjectClassConfig
 
         return (
-            self.submitting.join(
-                ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id
-            )
+            self.submitting.join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
             .order_by(ProjectClass.name.asc())
         )
@@ -670,9 +625,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         # check current academic year
         provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
         if provisional_year != self.academic_year:
-            if provisional_year is not None and provisional_year < (
-                0 if self.has_foundation_year else 1
-            ):
+            if provisional_year is not None and provisional_year < (0 if self.has_foundation_year else 1):
                 diff = self.repeated_years - abs(provisional_year)
 
                 if diff >= 0:
@@ -774,9 +727,7 @@ class StudentBatchItem(db.Model):
         "StudentBatch",
         foreign_keys=[parent_id],
         uselist=False,
-        backref=db.backref(
-            "items", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("items", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # optional link to an existing StudentData instance
@@ -808,9 +759,7 @@ class StudentBatchItem(db.Model):
 
     # degree programme
     programme_id = db.Column(db.Integer, db.ForeignKey("degree_programmes.id"))
-    programme = db.relationship(
-        "DegreeProgramme", foreign_keys=[programme_id], uselist=False
-    )
+    programme = db.relationship("DegreeProgramme", foreign_keys=[programme_id], uselist=False)
 
     # did this student do a foundation year? if so, their admission cohort
     # needs to be treated differently when calculating academic years
@@ -835,11 +784,7 @@ class StudentBatchItem(db.Model):
             return True
 
         if self.programme_id is not None:
-            programme = (
-                db.session.query(DegreeProgramme)
-                .filter_by(id=self.programme_id)
-                .first()
-            )
+            programme = db.session.query(DegreeProgramme).filter_by(id=self.programme_id).first()
             if programme is not None and programme.foundation_year:
                 return True
 
@@ -870,13 +815,7 @@ class StudentBatchItem(db.Model):
         if parent_year is None:
             return None
 
-        current_year = (
-            parent_year
-            - self.cohort
-            + 1
-            - (1 if self.has_foundation_year else 0)
-            - self.repeated_years
-        )
+        current_year = parent_year - self.cohort + 1 - (1 if self.has_foundation_year else 0) - self.repeated_years
 
         if self.programme is not None and self.programme.year_out:
             if current_year == self.programme.year_out_value:
@@ -921,66 +860,31 @@ class StudentBatchItem(db.Model):
         if self.existing_record is None:
             return w
 
-        if (
-            self.first_name is not None
-            and self.existing_record.user.first_name != self.first_name
-        ):
-            w.append(
-                f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")'
-            )
+        if self.first_name is not None and self.existing_record.user.first_name != self.first_name:
+            w.append(f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")')
 
-        if (
-            self.last_name is not None
-            and self.existing_record.user.last_name != self.last_name
-        ):
-            w.append(
-                f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")'
-            )
+        if self.last_name is not None and self.existing_record.user.last_name != self.last_name:
+            w.append(f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")')
 
-        if (
-            self.user_id is not None
-            and self.existing_record.user.username != self.user_id
-        ):
-            w.append(
-                f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")'
-            )
+        if self.user_id is not None and self.existing_record.user.username != self.user_id:
+            w.append(f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")')
 
         if self.email is not None and self.existing_record.user.email != self.email:
-            w.append(
-                f'Current email "{self.existing_record.user.email}" (imported "{self.email}")'
-            )
+            w.append(f'Current email "{self.existing_record.user.email}" (imported "{self.email}")')
 
-        if (
-            self.registration_number is not None
-            and self.existing_record.registration_number != self.registration_number
-        ):
-            w.append(
-                f'Current registration number "{self.existing_record.registration_number}"'
-            )
+        if self.registration_number is not None and self.existing_record.registration_number != self.registration_number:
+            w.append(f'Current registration number "{self.existing_record.registration_number}"')
 
         if self.cohort is not None and self.existing_record.cohort != self.cohort:
             w.append(f"Current cohort {self.existing_record.cohort}")
 
-        if (
-            self.foundation_year is not None
-            and self.existing_record.foundation_year != self.foundation_year
-        ):
-            w.append(
-                f"Current foundation year flag ({str(self.existing_record.foundation_year)})"
-            )
+        if self.foundation_year is not None and self.existing_record.foundation_year != self.foundation_year:
+            w.append(f"Current foundation year flag ({str(self.existing_record.foundation_year)})")
 
-        if (
-            self.repeated_years is not None
-            and self.existing_record.repeated_years != self.repeated_years
-        ):
+        if self.repeated_years is not None and self.existing_record.repeated_years != self.repeated_years:
             w.append(f"Current repeated years ({self.existing_record.repeated_years})")
 
-        if (
-            self.programme_id is not None
-            and self.existing_record.programme_id != self.programme_id
-        ):
-            w.append(
-                f'Current degree programme "{self.existing_record.programme.full_name}"'
-            )
+        if self.programme_id is not None and self.existing_record.programme_id != self.programme_id:
+            w.append(f'Current degree programme "{self.existing_record.programme.full_name}"')
 
         return w

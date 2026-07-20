@@ -81,9 +81,7 @@ class StudentJournalEntry(db.Model, JournalEntryTypesMixin):
     )
 
     # Academic year at the time of creation, via MainConfig
-    config_year = db.Column(
-        db.Integer(), db.ForeignKey("main_config.year"), default=None, nullable=True
-    )
+    config_year = db.Column(db.Integer(), db.ForeignKey("main_config.year"), default=None, nullable=True)
     main_config = db.relationship(
         "MainConfig",
         foreign_keys=[config_year],
@@ -95,14 +93,10 @@ class StudentJournalEntry(db.Model, JournalEntryTypesMixin):
     created_timestamp = db.Column(db.DateTime(), index=True, default=datetime.now)
 
     # Timestamp for the last edit
-    last_edit_timestamp = db.Column(
-        db.DateTime(), index=True, default=None, nullable=True
-    )
+    last_edit_timestamp = db.Column(db.DateTime(), index=True, default=None, nullable=True)
 
     # The user who created this entry (nullable for auto-created entries)
-    owner_id = db.Column(
-        db.Integer(), db.ForeignKey("users.id"), default=None, nullable=True
-    )
+    owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None, nullable=True)
     owner = db.relationship(
         "User",
         foreign_keys=[owner_id],

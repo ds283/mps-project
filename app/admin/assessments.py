@@ -93,9 +93,7 @@ def presentation_assessments_ajax():
         return jsonify({})
 
     current_year = get_current_year()
-    assessments = (
-        db.session.query(PresentationAssessment).filter_by(year=current_year).all()
-    )
+    assessments = db.session.query(PresentationAssessment).filter_by(year=current_year).all()
 
     return ajax.admin.presentation_assessments_data(assessments)
 
@@ -115,9 +113,7 @@ def add_assessment():
     form = AddPresentationAssessmentForm(request.form)
 
     if not hasattr(form, "submission_periods"):
-        flash(
-            "An internal error occurred. Please contact a system administrator", "error"
-        )
+        flash("An internal error occurred. Please contact a system administrator", "error")
         return redirect(redirect_url())
 
     if form.validate_on_submit():
@@ -171,9 +167,7 @@ def edit_assessment(id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(
-        current_year, assessment
-    )
+    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(current_year, assessment)
     form = EditPresentationAssessmentForm(obj=assessment)
     form.assessment = assessment
 
@@ -217,23 +211,17 @@ def delete_assessment(id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(
-                name=assessment.name
-            ),
+            'Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
 
     title = "Delete presentation assessment"
-    panel_title = "Delete presentation assessment <strong>{name}</strong>".format(
-        name=assessment.name
-    )
+    panel_title = "Delete presentation assessment <strong>{name}</strong>".format(name=assessment.name)
 
     action_url = url_for("admin.perform_delete_assessment", id=id, url=request.referrer)
-    message = (
-        "<p>Please confirm that you wish to delete the assessment "
-        "<strong>{name}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=assessment.name)
+    message = "<p>Please confirm that you wish to delete the assessment <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+        name=assessment.name
     )
     submit_label = "Delete assessment"
 
@@ -268,9 +256,7 @@ def perform_delete_assessment(id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(
-                name=assessment.name
-            ),
+            'Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
@@ -320,15 +306,11 @@ def close_assessment(id):
         return redirect(redirect_url())
 
     title = "Close assessment"
-    panel_title = "Close assessment <strong>{name}</strong>".format(
-        name=assessment.name
-    )
+    panel_title = "Close assessment <strong>{name}</strong>".format(name=assessment.name)
 
     action_url = url_for("admin.perform_close_assessment", id=id, url=request.referrer)
-    message = (
-        "<p>Please confirm that you wish to close the assessment "
-        "<strong>{name}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=assessment.name)
+    message = "<p>Please confirm that you wish to close the assessment <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+        name=assessment.name
     )
     submit_label = "Close assessment"
 
@@ -406,11 +388,7 @@ def initialize_assessment(id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if (
-        not assessment.is_valid
-        and assessment.availability_lifecycle
-        < PresentationAssessment.AVAILABILITY_REQUESTED
-    ):
+    if not assessment.is_valid and assessment.availability_lifecycle < PresentationAssessment.AVAILABILITY_REQUESTED:
         flash(
             "Cannot request availability for an invalid assessment. Correct any validation errors before attempting to proceed.",
             "info",
@@ -459,9 +437,7 @@ def initialize_assessment(id):
                 availability_template_id = availability_template.id if availability_template is not None else None
 
                 _do_initialize_assessment(
-                    'Issue availability requests for "{name}"'.format(
-                        name=assessment.name
-                    ),
+                    'Issue availability requests for "{name}"'.format(name=assessment.name),
                     "Issue availability requests to faculty assessors",
                     assessment.id,
                     form.availability_deadline.data,
@@ -477,17 +453,11 @@ def initialize_assessment(id):
                 form.availability_deadline.data = date.today() + timedelta(weeks=2)
             form.availability_template.data = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST, tenant=_tenant_id)
 
-    if (
-        PresentationAssessment.AVAILABILITY_NOT_REQUESTED
-        < assessment.availability_lifecycle
-        < PresentationAssessment.AVAILABILITY_SKIPPED
-    ):
+    if PresentationAssessment.AVAILABILITY_NOT_REQUESTED < assessment.availability_lifecycle < PresentationAssessment.AVAILABILITY_SKIPPED:
         if hasattr(form, "issue_requests"):
             form.issue_requests.label.text = "Save changes"
 
-    return render_template_context(
-        "admin/presentations/availability.html", form=form, assessment=assessment
-    )
+    return render_template_context("admin/presentations/availability.html", form=form, assessment=assessment)
 
 
 def _do_initialize_assessment(
@@ -496,7 +466,7 @@ def _do_initialize_assessment(
     assessment_id: int,
     deadline: datetime,
     skip_availability: bool,
-        availability_template_id: int = None,
+    availability_template_id: int = None,
 ):
     uuid = register_task(title, owner=current_user, description=description)
     celery = current_app.extensions["celery"]
@@ -532,9 +502,7 @@ def skip_availability(id):
 
     if not assessment.skip_availability:
         _do_initialize_assessment(
-            'Attach assessor and submitter records for "{name}"'.format(
-                name=assessment.name
-            ),
+            'Attach assessor and submitter records for "{name}"'.format(name=assessment.name),
             "Attach assessor and submitter records",
             assessment.id,
             None,
@@ -683,9 +651,7 @@ def availability_reminder_individual(id):
         email_task = celery.tasks["app.tasks.availability.send_reminder_email"]
         notify_task = celery.tasks["app.tasks.utilities.email_notification"]
 
-        tk = email_task.si(record.id, reminder_template_id=template_id) | notify_task.s(
-            current_user.id, "Reminder email has been sent", "info"
-        )
+        tk = email_task.si(record.id, reminder_template_id=template_id) | notify_task.s(current_user.id, "Reminder email has been sent", "info")
         tk.apply_async()
 
         return redirect(url)
@@ -772,9 +738,7 @@ def outstanding_availability(id):
         )
         return redirect(redirect_url())
 
-    return render_template_context(
-        "admin/presentations/availability/outstanding.html", assessment=assessment
-    )
+    return render_template_context("admin/presentations/availability/outstanding.html", assessment=assessment)
 
 
 @admin.route("/outstanding_availability_ajax/<int:id>")
@@ -796,9 +760,7 @@ def outstanding_availability_ajax(id):
         )
         return jsonify({})
 
-    return ajax.admin.outstanding_availability_data(
-        assessment.outstanding_assessors.all(), assessment
-    )
+    return ajax.admin.outstanding_availability_data(assessment.outstanding_assessors.all(), assessment)
 
 
 @admin.route("/force_confirm_availability/<int:assessment_id>/<int:faculty_id>")
@@ -807,9 +769,7 @@ def force_confirm_availability(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
-        assessment_id
-    )
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
@@ -833,15 +793,14 @@ def force_confirm_availability(assessment_id, faculty_id):
 
     if not assessment.includes_faculty(faculty_id):
         flash(
-            "Cannot force confirm availability response for {name} because this faculty member is not attached "
-            "to this assessment".format(name=faculty.user.name),
+            "Cannot force confirm availability response for {name} because this faculty member is not attached to this assessment".format(
+                name=faculty.user.name
+            ),
             "error",
         )
         return redirect(redirect_url())
 
-    record = assessment.assessor_list.filter_by(
-        faculty_id=faculty_id, confirmed=False
-    ).first()
+    record = assessment.assessor_list.filter_by(faculty_id=faculty_id, confirmed=False).first()
 
     if record is not None:
         record.confirmed = True
@@ -860,9 +819,7 @@ def schedule_set_limit(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
-        assessment_id
-    )
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
@@ -893,8 +850,7 @@ def schedule_set_limit(assessment_id, faculty_id):
 
     if not assessment.includes_faculty(faculty_id):
         flash(
-            'Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
-            "to this assessment".format(
+            'Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached to this assessment'.format(
                 name=faculty.user.name, assess_name=assessment.name
             ),
             "error",
@@ -931,9 +887,7 @@ def remove_assessor(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
-        assessment_id
-    )
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
@@ -957,8 +911,7 @@ def remove_assessor(assessment_id, faculty_id):
 
     if not assessment.includes_faculty(faculty_id):
         flash(
-            'Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
-            "to this assessment".format(
+            'Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached to this assessment'.format(
                 name=faculty.user.name, assess_name=assessment.name
             ),
             "error",
@@ -1025,9 +978,7 @@ def assessment_manage_sessions(id):
     if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    return render_template_context(
-        "admin/presentations/manage_sessions.html", assessment=assessment
-    )
+    return render_template_context("admin/presentations/manage_sessions.html", assessment=assessment)
 
 
 @admin.route("/manage_sessions_ajax/<int:id>")
@@ -1062,9 +1013,7 @@ def add_session(id):
 
     if not assessment.is_closed:
         flash(
-            'Event "{name}" has been closed and its sessions can no longer be edited'.format(
-                name=assessment.name
-            ),
+            'Event "{name}" has been closed and its sessions can no longer be edited'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1102,9 +1051,7 @@ def add_session(id):
 
         return redirect(url_for("admin.assessment_manage_sessions", id=id))
 
-    return render_template_context(
-        "admin/presentations/edit_session.html", form=form, assessment=assessment
-    )
+    return render_template_context("admin/presentations/edit_session.html", form=form, assessment=assessment)
 
 
 @admin.route("/edit_session/<int:id>", methods=["GET", "POST"])
@@ -1125,9 +1072,7 @@ def edit_session(id):
 
     if sess.owner.is_closed:
         flash(
-            'Event "{name}" has been closed to feedback and its sessions can no longer be edited'.format(
-                name=sess.owner.name
-            ),
+            'Event "{name}" has been closed to feedback and its sessions can no longer be edited'.format(name=sess.owner.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1182,9 +1127,7 @@ def delete_session(id):
 
     if sess.owner.is_closed:
         flash(
-            'Event "{name}" has been closed to feedback and its sessions can no longer be edited'.format(
-                name=sess.owner.name
-            ),
+            'Event "{name}" has been closed to feedback and its sessions can no longer be edited'.format(name=sess.owner.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1242,9 +1185,7 @@ def manage_attendees_ajax(id):
     elif attend_filter == "not-attending":
         talks = [t for t in talks if not t.attending]
 
-    return ajax.admin.presentation_attendees_data(
-        data, talks, editable=not data.is_deployed
-    )
+    return ajax.admin.presentation_attendees_data(data, talks, editable=not data.is_deployed)
 
 
 @admin.route("/assessment_attending/<int:a_id>/<int:s_id>")
@@ -1265,8 +1206,7 @@ def assessment_attending(a_id, s_id):
 
     if data.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-            "altered".format(name=data.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=data.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1304,8 +1244,7 @@ def assessment_not_attending(a_id, s_id):
 
     if data.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-            "altered".format(name=data.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=data.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1419,8 +1358,7 @@ def submitter_session_availability(id):
 
     if sess.owner.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
-            " altered".format(name=sess.owner.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=sess.owner.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1469,16 +1407,12 @@ def submitter_session_availability_ajax(id):
     pclass_filter = request.args.get("pclass_filter")
 
     data = sess.owner
-    talks = data.submitter_list.filter_by(
-        attending=True
-    )  # only include students who are marked as attending
+    talks = data.submitter_list.filter_by(attending=True)  # only include students who are marked as attending
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
         talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
 
-    return ajax.admin.submitter_session_availability_data(
-        data, sess, talks, editable=not sess.owner.is_deployed
-    )
+    return ajax.admin.submitter_session_availability_data(data, sess, talks, editable=not sess.owner.is_deployed)
 
 
 @admin.route("/submitter_available/<int:sess_id>/<int:s_id>")
@@ -1495,8 +1429,7 @@ def submitter_available(sess_id, s_id):
 
     if data.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=data.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(name=data.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1530,8 +1463,7 @@ def submitter_unavailable(sess_id, s_id):
 
     if data.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=data.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(name=data.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1564,8 +1496,7 @@ def submitter_available_all_sessions(a_id, s_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1607,8 +1538,7 @@ def submitter_unavailable_all_sessions(a_id, s_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1651,8 +1581,9 @@ def session_all_submitters_available(sess_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1689,8 +1620,9 @@ def session_all_submitters_unavailable(sess_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1782,9 +1714,7 @@ def manage_assessors_ajax(id):
     else:
         assessors = data.assessor_list.all()
 
-    return ajax.admin.presentation_assessors_data(
-        data, assessors, editable=not data.is_deployed
-    )
+    return ajax.admin.presentation_assessors_data(data, assessors, editable=not data.is_deployed)
 
 
 @admin.route("/assessor_session_availability/<int:id>")
@@ -1802,9 +1732,7 @@ def assessor_session_availability(id):
 
     if sess.owner.is_closed:
         flash(
-            'Event "{name}" has been closed and its sessions can no longer be edited'.format(
-                name=sess.owner.name
-            ),
+            'Event "{name}" has been closed and its sessions can no longer be edited'.format(name=sess.owner.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1870,9 +1798,7 @@ def assessor_session_availability_ajax(id):
     else:
         assessors = data.assessor_list.all()
 
-    return ajax.admin.assessor_session_availability_data(
-        data, sess, assessors, editable=not sess.owner.is_deployed
-    )
+    return ajax.admin.assessor_session_availability_data(data, sess, assessors, editable=not sess.owner.is_deployed)
 
 
 @admin.route("/assessor_available/<int:sess_id>/<int:f_id>")
@@ -1890,8 +1816,9 @@ def assessor_available(sess_id, f_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1926,8 +1853,9 @@ def assessor_ifneeded(sess_id, f_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1962,8 +1890,9 @@ def assessor_unavailable(sess_id, f_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1997,8 +1926,7 @@ def assessor_available_all_sessions(a_id, f_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2034,8 +1962,7 @@ def assessor_unavailable_all_sessions(a_id, f_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be altered'.format(name=assessment.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2071,8 +1998,9 @@ def session_all_assessors_available(sess_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -2109,8 +2037,9 @@ def session_all_assessors_unavailable(sess_id):
 
     if assessment.is_deployed:
         flash(
-            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-            "altered".format(name=assessment.name),
+            'Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be altered'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())

@@ -765,9 +765,7 @@ def _details_context(record: SubmissionRecord) -> Dict:
         "other_rf_has_any": other_rf_has_any,
         "feedback_links": feedback_links,
         "rf": rf,
-        "has_details": bool(
-            metrics_available or genai_status is not None or report_summary or rf["has_any_present"] or feedback_links or restricted
-        ),
+        "has_details": bool(metrics_available or genai_status is not None or report_summary or rf["has_any_present"] or feedback_links or restricted),
     }
 
 

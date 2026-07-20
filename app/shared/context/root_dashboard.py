@@ -62,8 +62,6 @@ def _get_config_capacity_data(configs=None):
         if capacity < 1.15 * config.number_selectors:
             config_warning = True
 
-        config_list.append(
-            {"config": config, "capacity": capacity, "is_bounded": capacity_bounded}
-        )
+        config_list.append({"config": config, "capacity": capacity, "is_bounded": capacity_bounded})
 
     return {"config_list": config_list, "config_warning": config_warning}

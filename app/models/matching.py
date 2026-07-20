@@ -122,10 +122,7 @@ class PuLPMixin(PuLPStatusMixin):
     @property
     def solution_usable(self):
         # we are happy to use a solution if it is OPTIMAL or FEASIBLE
-        return (
-            self.outcome == PuLPMixin.OUTCOME_OPTIMAL
-            or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
-        )
+        return self.outcome == PuLPMixin.OUTCOME_OPTIMAL or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
 
 
 class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
@@ -149,17 +146,13 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     )
 
     # a name for this matching attempt
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # flag matching attempts that have been selected for use during rollover
     selected = db.Column(db.Boolean())
 
     # is this match based on another one?
-    base_id = db.Column(
-        db.Integer(), db.ForeignKey("matching_attempts.id"), nullable=True
-    )
+    base_id = db.Column(db.Integer(), db.ForeignKey("matching_attempts.id"), nullable=True)
     base = db.relationship(
         "MatchingAttempt",
         foreign_keys=[base_id],
@@ -410,11 +403,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         elif isinstance(fd, FacultyData) or isinstance(fd, User):
             fac_id = fd.id
         else:
-            raise RuntimeError(
-                "Cannot interpret parameter fac of type {n} in get_faculty_CATS()".format(
-                    n=type(fd)
-                )
-            )
+            raise RuntimeError("Cannot interpret parameter fac of type {n} in get_faculty_CATS()".format(n=type(fd)))
 
         return _MatchingAttempt_get_faculty_CATS(self.id, fac_id, pclass_id)
 
@@ -444,9 +433,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         selectors = self.selector_list_query().all()
 
         def _get_deltas(s):
-            records: List[MatchingRecord] = s.matching_records.filter(
-                MatchingRecord.matching_id == self.id
-            ).all()
+            records: List[MatchingRecord] = s.matching_records.filter(MatchingRecord.matching_id == self.id).all()
 
             deltas = [r.delta for r in records]
             return sum(deltas) if None not in deltas else None
@@ -527,9 +514,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     def number_project_assignments(self, project):
         return _MatchingAttempt_number_project_assignments(self.id, project.id)
 
-    def is_supervisor_overassigned(
-        self, faculty, include_matches=False, pclass_id=None
-    ):
+    def is_supervisor_overassigned(self, faculty, include_matches=False, pclass_id=None):
         from .faculty import EnrollmentRecord
         from .project_class import ProjectClass
 
@@ -537,9 +522,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         if pclass_id is not None:
             pclass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
             if pclass is None:
-                raise RuntimeError(
-                    f"Could not load ProjectClass record for pclass_id={pclass_id}"
-                )
+                raise RuntimeError(f"Could not load ProjectClass record for pclass_id={pclass_id}")
         else:
             pclass = None
 
@@ -570,11 +553,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds CATS limit {self.supervising_limit} for this match"
             rval = True
 
-        if (
-            not self.ignore_per_faculty_limits
-            and faculty.CATS_supervision is not None
-            and faculty.CATS_supervision >= 0
-        ):
+        if not self.ignore_per_faculty_limits and faculty.CATS_supervision is not None and faculty.CATS_supervision >= 0:
             if sup > faculty.CATS_supervision:
                 message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_supervision} for this supervisor"
                 rval = True
@@ -585,10 +564,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         if pclass is not None:
             enrolment_rec: EnrollmentRecord = faculty.get_enrollment_record(pclass)
             if enrolment_rec is not None:
-                if (
-                    not self.ignore_per_faculty_limits
-                    and enrolment_rec.CATS_supervision is not None
-                ):
+                if not self.ignore_per_faculty_limits and enrolment_rec.CATS_supervision is not None:
                     if 0 <= enrolment_rec.CATS_supervision < sup:
                         message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_supervision} for this supervisor"
                         rval = True
@@ -596,11 +572,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                     if enrolment_rec.CATS_supervision < limit:
                         limit = enrolment_rec.CATS_supervision
 
-                if (
-                    sup > 0
-                    and enrolment_rec.supervisor_state
-                    != EnrollmentRecord.SUPERVISOR_ENROLLED
-                ):
+                if sup > 0 and enrolment_rec.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                     message = f"{name}{pclass_label} is not enrolled to supervise for {pclass.abbreviation}, but has been assigned a supervising workload {sup}"
                     rval = True
 
@@ -625,13 +597,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         from .project_class import ProjectClass
 
         if pclass_id is not None:
-            pclass: Optional[ProjectClass] = (
-                db.session.query(ProjectClass).filter_by(id=pclass_id).first()
-            )
+            pclass: Optional[ProjectClass] = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
             if pclass is None:
-                raise RuntimeError(
-                    f"Could not load ProjectClass record for pclass_id={pclass_id}"
-                )
+                raise RuntimeError(f"Could not load ProjectClass record for pclass_id={pclass_id}")
         else:
             pclass: Optional[ProjectClass] = None
 
@@ -661,13 +629,11 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds CATS limit {self.marking_limit} for this match"
             rval = True
 
-        if (
-            not self.ignore_per_faculty_limits
-            and faculty.CATS_marking is not None
-            and faculty.CATS_marking >= 0
-        ):
+        if not self.ignore_per_faculty_limits and faculty.CATS_marking is not None and faculty.CATS_marking >= 0:
             if mark > faculty.CATS_marking:
-                message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
+                message = (
+                    f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
+                )
                 rval = True
 
             if faculty.CATS_marking < limit:
@@ -676,10 +642,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         if pclass is not None:
             enrolment_rec: EnrollmentRecord = faculty.get_enrollment_record(pclass)
             if enrolment_rec is not None:
-                if (
-                    not self.ignore_per_faculty_limits
-                    and enrolment_rec.CATS_marking is not None
-                ):
+                if not self.ignore_per_faculty_limits and enrolment_rec.CATS_marking is not None:
                     if 0 <= enrolment_rec.CATS_marking < mark:
                         message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_marking} for this marker"
                         rval = True
@@ -687,11 +650,10 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                     if enrolment_rec.CATS_marking < limit:
                         limit = enrolment_rec.CATS_marking
 
-                if (
-                    mark > 0
-                    and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED
-                ):
-                    message = f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
+                if mark > 0 and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+                    message = (
+                        f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
+                    )
                     rval = True
 
         if not rval and total > limit:
@@ -726,9 +688,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             ) = _MatchingAttempt_is_valid(self.id)
             self._validated = True
         except Exception as e:
-            current_app.logger.exception(
-                "** Exception in MatchingAttempt.is_valid", exc_info=e
-            )
+            current_app.logger.exception("** Exception in MatchingAttempt.is_valid", exc_info=e)
             return None
 
         return flag
@@ -832,11 +792,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         configs = self.config_members.subquery()
         pclass_ids = db.session.query(configs.c.pclass_id).distinct().subquery()
 
-        return (
-            db.session.query(ProjectClass)
-            .join(pclass_ids, ProjectClass.id == pclass_ids.c.pclass_id)
-            .all()
-        )
+        return db.session.query(ProjectClass).join(pclass_ids, ProjectClass.id == pclass_ids.c.pclass_id).all()
 
     @property
     def is_modified(self):
@@ -847,9 +803,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         from .live_projects import SelectingStudent
 
         # check whether any MatchingRecords are associated with selectors who are not converting
-        no_convert_query = self.records.join(
-            SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id
-        ).filter(SelectingStudent.convert_to_submitter.is_(False))
+        no_convert_query = self.records.join(SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id).filter(
+            SelectingStudent.convert_to_submitter.is_(False)
+        )
 
         if get_count(no_convert_query) > 0:
             return True
@@ -965,16 +921,10 @@ def _MatchingRecord_current_score(id):
     # we score 0
     if sel.has_accepted_offers():
         accepted_offers = sel.accepted_offers()
-        return (
-            1.0
-            if any(offer.liveproject.id == obj.project_id for offer in accepted_offers)
-            else 0.0
-        )
+        return 1.0 if any(offer.liveproject.id == obj.project_id for offer in accepted_offers) else 0.0
 
     # find selection record corresponding to our project
-    record: SelectionRecord = sel.selections.filter_by(
-        liveproject_id=obj.project_id
-    ).first()
+    record: SelectionRecord = sel.selections.filter_by(liveproject_id=obj.project_id).first()
 
     # if there isn't one, presumably a convenor has reallocated us to a project for which
     # we score 0
@@ -1089,17 +1039,11 @@ def _MatchingRecord_is_valid(id):
     if uses_supervisor:
         # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
         if len(supervisor_ids) == 0:
-            errors[("supervisors", 0)] = (
-                "No supervision roles are assigned for this project"
-            )
+            errors[("supervisors", 0)] = "No supervision roles are assigned for this project"
 
         # 1B. USUALLY THERE SHOULD BE JUST ONE SUPERVISOR ROLE
         if len(supervisor_ids) > 1:
-            warnings[("supervisors", 0)] = (
-                "There are {n} supervision roles assigned for this project".format(
-                    n=len(supervisor_ids)
-                )
-            )
+            warnings[("supervisors", 0)] = "There are {n} supervision roles assigned for this project".format(n=len(supervisor_ids))
 
         # 1C. SUPERVISORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
         for u_id in supervisor_counts:
@@ -1107,27 +1051,19 @@ def _MatchingRecord_is_valid(id):
             if count > 1:
                 user: User = supervisor_dict[u_id]
 
-                errors[("supervisors", 1)] = (
-                    'Supervisor "{name}" is assigned {n} times for this selector'.format(
-                        name=user.name, n=count
-                    )
-                )
+                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
 
     if uses_marker:
         # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
         if len(marker_ids) < markers_needed:
-            errors[("markers", 0)] = (
-                "Fewer marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                    assgn=len(marker_ids), exp=markers_needed
-                )
+            errors[("markers", 0)] = "Fewer marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
+                assgn=len(marker_ids), exp=markers_needed
             )
 
         # 1E. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
         if len(marker_ids) > markers_needed:
-            warnings[("markers", 0)] = (
-                "More marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                    assgn=len(marker_ids), exp=markers_needed
-                )
+            warnings[("markers", 0)] = "More marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
+                assgn=len(marker_ids), exp=markers_needed
             )
 
         # 1F. MARKERS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
@@ -1136,11 +1072,7 @@ def _MatchingRecord_is_valid(id):
             if count > 1:
                 user: User = marker_dict[u_id]
 
-                errors[("markers", 1)] = (
-                    'Marker "{name}" is assigned {n} times for this selector'.format(
-                        name=user.name, n=count
-                    )
-                )
+                errors[("markers", 1)] = 'Marker "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
 
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST, UNLESS IT IS AN ALTERNATIVE FOR ONE
     # OF THE SELECTED PROJECTED
@@ -1148,15 +1080,11 @@ def _MatchingRecord_is_valid(id):
         if sel.project_rank(obj.project_id) is None:
             alt_data = sel.alternative_priority(obj.project_id)
             if alt_data is None:
-                errors[("assignment", 0)] = (
-                    "Assigned project did not appear in this selector's choices"
-                )
+                errors[("assignment", 0)] = "Assigned project did not appear in this selector's choices"
             else:
                 alt_lp: LiveProject = alt_data["project"]
                 alt_priority: int = alt_data["priority"]
-                warnings[("assignment", 0)] = (
-                    f'Assigned project is an alternative for "{alt_lp.name}" with priority={alt_priority}'
-                )
+                warnings[("assignment", 0)] = f'Assigned project is an alternative for "{alt_lp.name}" with priority={alt_priority}'
 
     # 3. IF THERE WAS AN ACCEPTED CUSTOM OFFER, WARN IF ASSIGNED SUPERVISOR IS NOT THE ONE IN THE OFFER
     if obj.selector.has_accepted_offers():
@@ -1188,119 +1116,71 @@ def _MatchingRecord_is_valid(id):
 
     # 4. ASSIGNED PROJECT MUST BE PART OF THE PROJECT CLASS
     if project.config_id != obj.selector.config_id:
-        errors[("pclass", 0)] = (
-            "Assigned project does not belong to the correct class for this selector"
-        )
+        errors[("pclass", 0)] = "Assigned project does not belong to the correct class for this selector"
 
     # 5. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in supervisor_roles:
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
-            if (
-                enrolment is None
-                or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
-            ):
+            if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                 errors[("enrolment", 0)] = (
-                    '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(
-                        name=u.name
-                    )
+                    '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(name=u.name)
                 )
         else:
-            warnings[("enrolment", 0)] = (
-                '"{name}" has been assigned a supervision role, but is not a faculty member'
-            )
+            warnings[("enrolment", 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
     # 6. STAFF WITH MARKER ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in marker_roles:
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
-            if (
-                enrolment is None
-                or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED
-            ):
-                errors[("enrolment", 1)] = (
-                    '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(
-                        name=u.name
-                    )
+            if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+                errors[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(
+                    name=u.name
                 )
         else:
-            warnings[("enrolment", 1)] = (
-                '"{name}" has been assigned a marking role, but is not a faculty member'
-            )
+            warnings[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
 
     # 7. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
-    count = get_count(
-        attempt.records.filter_by(
-            selector_id=obj.selector_id, project_id=obj.project_id
-        )
-    )
+    count = get_count(attempt.records.filter_by(selector_id=obj.selector_id, project_id=obj.project_id))
 
     if count != 1:
         # only refuse to validate if we are the first member of the multiplet;
         # this prevents errors being reported multiple times
         lo_rec = (
-            attempt.records.filter_by(
-                selector_id=obj.selector_id, project_id=obj.project_id
-            )
-            .order_by(MatchingRecord.submission_period.asc())
-            .first()
+            attempt.records.filter_by(selector_id=obj.selector_id, project_id=obj.project_id).order_by(MatchingRecord.submission_period.asc()).first()
         )
 
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
-            errors[("assignment", 2)] = (
-                'Project "{name}" is duplicated in multiple submission periods'.format(
-                    name=project.name
-                )
-            )
+            errors[("assignment", 2)] = 'Project "{name}" is duplicated in multiple submission periods'.format(name=project.name)
 
     # 9. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     # (unambiguous to use config here since #4 checks config agrees with obj.selector.config)
     if uses_marker:
         for u in marker_roles:
-            count = get_count(
-                project.assessor_list_query.filter(FacultyData.id == u.id)
-            )
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
             if count != 1:
-                errors[("markers", 2)] = (
-                    'Assigned marker "{name}" is not in assessor pool for assigned project'.format(
-                        name=u.name
-                    )
-                )
+                errors[("markers", 2)] = 'Assigned marker "{name}" is not in assessor pool for assigned project'.format(name=u.name)
 
     # 10. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if not project.use_supervisor_pool:
         if project.owner is not None and project.owner_id not in supervisor_ids:
-            warnings[("supervisors", 2)] = (
-                'Assigned project owner "{name}" does not have a supervision role'.format(
-                    name=project.owner.user.name
-                )
-            )
+            warnings[("supervisors", 2)] = 'Assigned project owner "{name}" does not have a supervision role'.format(name=project.owner.user.name)
 
     # 11. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
     if project.use_supervisor_pool:
         for u in supervisor_roles:
             if not any(u.id == fd.id for fd in project.supervisors):
-                errors[("supervisors", 3)] = (
-                    'Assigned supervisor "{name}" is not in supervision pool for assigned project'.format(
-                        name=u.name
-                    )
-                )
+                errors[("supervisors", 3)] = 'Assigned supervisor "{name}" is not in supervision pool for assigned project'.format(name=u.name)
 
     # 12. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
         # only refuse to validate if we are the first member of the multiplet
-        lo_rec = (
-            attempt.records.filter_by(selector_id=obj.selector_id)
-            .order_by(MatchingRecord.submission_period.asc())
-            .first()
-        )
+        lo_rec = attempt.records.filter_by(selector_id=obj.selector_id).order_by(MatchingRecord.submission_period.asc()).first()
 
         if lo_rec is not None and lo_rec.id == obj.id:
-            warnings[("conversion", 1)] = (
-                'Selector "{name}" is not marked for conversion to submitter, but is present in this matching'.format(
-                    name=obj.selector.student.user.name
-                )
+            warnings[("conversion", 1)] = 'Selector "{name}" is not marked for conversion to submitter, but is present in this matching'.format(
+                name=obj.selector.student.user.name
             )
 
     # 13. THE PROJECT SHOULD NOT BE OVERASSIGNED
@@ -1347,9 +1227,7 @@ def _MatchingRecord_is_valid(id):
 
                 if lo_rec is not None and lo_rec.id == obj.id:
                     errors[("overassigned", 5)] = (
-                        'Project "{name}" has maximum capacity {max} but has been assigned to '
-                        'supervisor "{supv_name}" with {num} '
-                        "selectors".format(
+                        'Project "{name}" has maximum capacity {max} but has been assigned to supervisor "{supv_name}" with {num} selectors'.format(
                             name=project.name,
                             max=project.capacity,
                             supv_name=supv.name,
@@ -1377,9 +1255,7 @@ class MatchingRecord(db.Model):
         "MatchingAttempt",
         foreign_keys=[matching_id],
         uselist=False,
-        backref=db.backref(
-            "records", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("records", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # owning SelectingStudent
@@ -1411,9 +1287,7 @@ class MatchingRecord(db.Model):
 
     # if this project is an alternative, link to the project it was an alternative for, or None if it is not an alternative
     # (anyway ignored unless the alternative flag is set to True)
-    parent_id = db.Column(
-        db.Integer(), db.ForeignKey("live_projects.id"), nullable=True, default=None
-    )
+    parent_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"), nullable=True, default=None)
     parent = db.relationship("LiveProject", foreign_keys=[parent_id], uselist=False)
 
     # if this project is an alternative, record its priority, or None if it is not an alternative
@@ -1421,9 +1295,7 @@ class MatchingRecord(db.Model):
 
     # keep copies of the original alternative fields so that revert_record() can restore them exactly
     original_alternative = db.Column(db.Boolean(), nullable=False, default=False)
-    original_parent_id = db.Column(
-        db.Integer(), db.ForeignKey("live_projects.id"), nullable=True, default=None
-    )
+    original_parent_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"), nullable=True, default=None)
     original_parent = db.relationship("LiveProject", foreign_keys=[original_parent_id], uselist=False)
     original_priority = db.Column(db.Integer(), nullable=True, default=None)
 
@@ -1479,9 +1351,7 @@ class MatchingRecord(db.Model):
             flag, self._errors, self._warnings = _MatchingRecord_is_valid(self.id)
             self._validated = True
         except Exception as e:
-            current_app.logger.exception(
-                "** Exception in MatchingRecord.is_valid", exc_info=e
-            )
+            current_app.logger.exception("** Exception in MatchingRecord.is_valid", exc_info=e)
             return None
 
         return flag

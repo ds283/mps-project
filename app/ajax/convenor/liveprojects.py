@@ -327,9 +327,7 @@ def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None)
                 url=url,
                 text=text,
             ),
-            "menu": render_template(
-                menu_templ, project=p, config=config, url=url, text=text
-            ),
+            "menu": render_template(menu_templ, project=p, config=config, url=url, text=text),
         }
         for p in projects
     ]

@@ -111,16 +111,10 @@ class DatabaseSchedulerEntry(db.Model):
     date_changed = db.Column(db.DateTime)
 
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    owner = db.relationship(
-        "User", backref=db.backref("scheduled_tasks", lazy="dynamic")
-    )
+    owner = db.relationship("User", backref=db.backref("scheduled_tasks", lazy="dynamic"))
 
-    interval = db.relationship(
-        IntervalSchedule, backref=db.backref("entries", lazy="dynamic")
-    )
-    crontab = db.relationship(
-        CrontabSchedule, backref=db.backref("entries", lazy="dynamic")
-    )
+    interval = db.relationship(IntervalSchedule, backref=db.backref("entries", lazy="dynamic"))
+    crontab = db.relationship(CrontabSchedule, backref=db.backref("entries", lazy="dynamic"))
 
     @property
     def args(self):
@@ -131,11 +125,13 @@ class DatabaseSchedulerEntry(db.Model):
         self.arguments = json.dumps(value)
 
     # Tasks whose `owner_id` is stored in the owner_id column and injected at read time
-    _OWNER_ID_TASKS = frozenset({
-        "app.tasks.backup.backup",
-        "app.tasks.object_store_backup.backup_object_stores",
-        "app.tasks.object_store_backup.prune_object_store_tombstones",
-    })
+    _OWNER_ID_TASKS = frozenset(
+        {
+            "app.tasks.backup.backup",
+            "app.tasks.object_store_backup.backup_object_stores",
+            "app.tasks.object_store_backup.prune_object_store_tombstones",
+        }
+    )
 
     @property
     def kwargs(self):

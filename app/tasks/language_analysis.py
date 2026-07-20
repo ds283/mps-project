@@ -109,34 +109,19 @@ class _RubricSnapshot:
             {
                 "id": b.id,
                 "label": b.label,
-                "criteria": [
-                    {"id": c.id, "text": c.text, "tag": c.tag} for c in b.criteria
-                ],
+                "criteria": [{"id": c.id, "text": c.text, "tag": c.tag} for c in b.criteria],
             }
             for b in rubric.bands
         ]
 
     def to_prompt_bands(self):
-        return [
-            {"band": b["label"], "criteria": [c["text"] for c in b["criteria"]]}
-            for b in self._bands
-        ]
+        return [{"band": b["label"], "criteria": [c["text"] for c in b["criteria"]]} for b in self._bands]
 
     def negative_criteria(self):
-        return frozenset(
-            c["text"]
-            for b in self._bands
-            for c in b["criteria"]
-            if c["tag"] == "negative"
-        )
+        return frozenset(c["text"] for b in self._bands for c in b["criteria"] if c["tag"] == "negative")
 
     def positive_floor_criteria(self):
-        return frozenset(
-            c["text"]
-            for b in self._bands
-            for c in b["criteria"]
-            if c["tag"] == "positive_floor"
-        )
+        return frozenset(c["text"] for b in self._bands for c in b["criteria"] if c["tag"] == "positive_floor")
 
 
 # ---------------------------------------------------------------------------
@@ -337,8 +322,6 @@ _ARXIV_ID = re.compile(r"\barXiv:\d{4}\.\d{4,5}\b", re.IGNORECASE)
 _DOI = re.compile(r"\bdoi:\s*10\.\d{4,}", re.IGNORECASE)
 
 
-
-
 def _word_count(main_text: str) -> int:
     """
     Count words in *main_text*, excluding caption lines.
@@ -386,19 +369,11 @@ def _count_bibliography(biblio_text: str) -> tuple[int, list[str]]:
     # Heuristic: count non-blank lines after the heading as a rough entry count.
     lines = [ln.strip() for ln in biblio_text.splitlines() if ln.strip()]
     # Skip the heading line itself.
-    body_lines = [
-        ln
-        for ln in lines[1:]
-        if ln and not ln.lower().startswith(("ref", "biblio", "works"))
-    ]
+    body_lines = [ln for ln in lines[1:] if ln and not ln.lower().startswith(("ref", "biblio", "works"))]
 
     # Stage 1: prefer lines that look like author-year reference entries.
     # Signals: year in parentheses, arXiv identifier, or a DOI.
-    entry_candidates = [
-        ln
-        for ln in body_lines
-        if _REF_YEAR.search(ln) or _ARXIV_ID.search(ln) or _DOI.search(ln)
-    ]
+    entry_candidates = [ln for ln in body_lines if _REF_YEAR.search(ln) or _ARXIV_ID.search(ln) or _DOI.search(ln)]
 
     # Stage 2: if too few candidates found, fall back to the total line count.
     if len(entry_candidates) >= 3:
@@ -452,16 +427,8 @@ def _check_figure_table_refs(text: str) -> tuple[list[str], list[str]]:
     def _cited(pattern: str) -> bool:
         return len(re.findall(pattern, text, re.IGNORECASE)) > 1
 
-    uncaptioned_figs = [
-        label
-        for n, label in fig_labels.items()
-        if not _cited(rf"\b(?:figure|fig\.)\s+{re.escape(n)}[a-z]?\b")
-    ]
-    uncaptioned_tabs = [
-        label
-        for n, label in tab_labels.items()
-        if not _cited(rf"\btable\s+{re.escape(n)}[a-z]?\b")
-    ]
+    uncaptioned_figs = [label for n, label in fig_labels.items() if not _cited(rf"\b(?:figure|fig\.)\s+{re.escape(n)}[a-z]?\b")]
+    uncaptioned_tabs = [label for n, label in tab_labels.items() if not _cited(rf"\btable\s+{re.escape(n)}[a-z]?\b")]
 
     return uncaptioned_figs, uncaptioned_tabs
 
@@ -480,17 +447,13 @@ def _compute_mattr_mtld(main_text: str) -> tuple[float | None, float | None]:
 
         lex = LexicalRichness(_strip_code_blocks(main_text))
         if lex.words < 100:
-            print(
-                f"_compute_matr_mtld: too few words to compute MATTR and MTLD statistics ({lex.words} words detected)"
-            )
+            print(f"_compute_matr_mtld: too few words to compute MATTR and MTLD statistics ({lex.words} words detected)")
             return None, None
         mattr = float(lex.mattr(window_size=100))
         mtld = float(lex.mtld(threshold=0.72))
         return mattr, mtld
     except Exception as exc:
-        current_app.logger.warning(
-            f"language_analysis: MATTR/MTLD computation failed: {exc}"
-        )
+        current_app.logger.warning(f"language_analysis: MATTR/MTLD computation failed: {exc}")
         return None, None
 
 
@@ -507,9 +470,7 @@ def _compute_burstiness(text: str) -> tuple[dict, float | None]:
     # spaCy processes the text; we only need token lemmas and positions.
     # Restrict to alphabetic tokens to avoid punctuation noise.
     doc = nlp(text)
-    token_lemmas = [
-        (i, token.lemma_.lower()) for i, token in enumerate(doc) if token.is_alpha
-    ]
+    token_lemmas = [(i, token.lemma_.lower()) for i, token in enumerate(doc) if token.is_alpha]
 
     group_results: dict[str, float | None] = {}
     eligible_values: list[float] = []
@@ -552,11 +513,7 @@ def _compute_sentence_cv(text: str) -> float | None:
     nlp = _get_nlp()
     doc = nlp(text)
 
-    lengths = [
-        sum(1 for tok in sent if not tok.is_punct and not tok.is_space)
-        for sent in doc.sents
-        if not _looks_like_code(sent.text)
-    ]
+    lengths = [sum(1 for tok in sent if not tok.is_punct and not tok.is_space) for sent in doc.sents if not _looks_like_code(sent.text)]
     # Discard empty or single-token sentences (e.g. section headings misread as sentences)
     lengths = [ln for ln in lengths if ln > 1]
 
@@ -973,10 +930,7 @@ def _make_llm_response_schema(rubric) -> dict:
             "overall_reasoning": {"type": "string"},
             "bands": {
                 "type": "object",
-                "properties": {
-                    band["band"]: _make_band_schema(band_idx, band["criteria"])
-                    for band_idx, band in enumerate(prompt_bands, start=1)
-                },
+                "properties": {band["band"]: _make_band_schema(band_idx, band["criteria"]) for band_idx, band in enumerate(prompt_bands, start=1)},
                 "required": [band["band"] for band in prompt_bands],
             },
             "caveats": {"type": "string"},
@@ -1171,11 +1125,7 @@ def _extract_metadata_regions(text: str) -> str:
             body = paragraphs[j].strip()
             # Stop when we reach what looks like the next section heading:
             # a single short line without terminal punctuation.
-            is_next_heading = (
-                "\n" not in body
-                and len(body.split()) <= 10
-                and not body.endswith((".", ",", ";", ":", "?", "!"))
-            )
+            is_next_heading = "\n" not in body and len(body.split()) <= 10 and not body.endswith((".", ",", ";", ":", "?", "!"))
             if is_next_heading and j > i + 1:
                 break
             candidate_indices.add(j)
@@ -1184,16 +1134,11 @@ def _extract_metadata_regions(text: str) -> str:
 
     # If no named AI section was found, append any AI-keyword sentences from the
     # full document as a last-resort fallback.
-    ai_section_found = any(
-        _AI_HEADING_RE.match(paragraphs[i].strip()) for i in candidate_indices
-    )
+    ai_section_found = any(_AI_HEADING_RE.match(paragraphs[i].strip()) for i in candidate_indices)
     if not ai_section_found:
         ai_sentences = _AI_KEYWORD_SENTENCE_RE.findall(text)
         if ai_sentences:
-            region_text += (
-                "\n\n---\n\nPossible AI use statements found elsewhere in document:\n"
-                + "\n".join(s.strip() for s in ai_sentences[:5])
-            )
+            region_text += "\n\n---\n\nPossible AI use statements found elsewhere in document:\n" + "\n".join(s.strip() for s in ai_sentences[:5])
 
     return region_text
 
@@ -1297,10 +1242,7 @@ If no genuine evidence exists for a criterion in this chunk, do not record an en
 
 
 def _build_chunk_user_prompt(chunk_text: str, chunk_idx: int, total_chunks: int) -> str:
-    return (
-        f"Please extract evidence from the following text "
-        f"(chunk {chunk_idx + 1} of {total_chunks}):\n\n---\n\n{chunk_text}\n\n---"
-    )
+    return f"Please extract evidence from the following text (chunk {chunk_idx + 1} of {total_chunks}):\n\n---\n\n{chunk_text}\n\n---"
 
 
 # ---------------------------------------------------------------------------
@@ -1343,10 +1285,7 @@ Record items not found as: stated_word_count_found = false, stated_word_count = 
 
 
 def _build_metadata_user_prompt(candidate_text: str) -> str:
-    return (
-        f"Please extract metadata from the following document excerpt:\n\n"
-        f"---\n\n{candidate_text}\n\n---"
-    )
+    return f"Please extract metadata from the following document excerpt:\n\n---\n\n{candidate_text}\n\n---"
 
 
 # ---------------------------------------------------------------------------
@@ -1386,9 +1325,7 @@ def _merge_chunk_evidence(chunk_results: dict, all_criterion_codes: frozenset) -
     """
     from collections import defaultdict
 
-    raw: dict[str, dict[str, list]] = defaultdict(
-        lambda: {"supports": [], "undermines": [], "neutral": []}
-    )
+    raw: dict[str, dict[str, list]] = defaultdict(lambda: {"supports": [], "undermines": [], "neutral": []})
     chunks_with_evidence: dict[str, set] = defaultdict(set)
     metadata: dict = {
         "stated_word_count_found": False,
@@ -1404,10 +1341,7 @@ def _merge_chunk_evidence(chunk_results: dict, all_criterion_codes: frozenset) -
 
         # Merge metadata (OR / first-found).
         hits = chunk_data.get("metadata_hits", {})
-        if (
-            hits.get("stated_word_count_found")
-            and not metadata["stated_word_count_found"]
-        ):
+        if hits.get("stated_word_count_found") and not metadata["stated_word_count_found"]:
             metadata["stated_word_count_found"] = True
             metadata["stated_word_count"] = hits.get("stated_word_count")
         if hits.get("genai_statement_found") and not metadata["genai_statement_found"]:
@@ -1557,9 +1491,7 @@ def _dispatch_process_report(record_id: int) -> None:
         task = celery.tasks["app.tasks.process_report.process"]
         task.apply_async(args=[record_id])
     except Exception as exc:
-        current_app.logger.exception(
-            f"Failed to dispatch process_report for record_id={record_id}", exc_info=exc
-        )
+        current_app.logger.exception(f"Failed to dispatch process_report for record_id={record_id}", exc_info=exc)
 
 
 def register_language_analysis_tasks(celery):
@@ -1571,9 +1503,7 @@ def register_language_analysis_tasks(celery):
         extract plain text from it.  The extracted text is stored in the
         MongoDB scraped-text cache for use by subsequent pipeline stages.
         """
-        self.update_state(
-            state=states.STARTED, meta={"msg": "Downloading report asset"}
-        )
+        self.update_state(state=states.STARTED, meta={"msg": "Downloading report asset"})
 
         _r = None
         try:
@@ -1583,14 +1513,10 @@ def register_language_analysis_tasks(celery):
         _t0 = record_step_start(_r, record_id, "download_and_extract")
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
             record_step_end(_r, record_id, "download_and_extract", _t0, error=repr(exc))
-            current_app.logger.exception(
-                "SQLAlchemyError in download_and_extract", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in download_and_extract", exc_info=exc)
             raise self.retry()
 
         if record is None:
@@ -1601,9 +1527,7 @@ def register_language_analysis_tasks(celery):
                 _t0,
                 error="SubmissionRecord not found",
             )
-            raise Exception(
-                f"language_analysis.download_and_extract: SubmissionRecord #{record_id} not found"
-            )
+            raise Exception(f"language_analysis.download_and_extract: SubmissionRecord #{record_id} not found")
 
         if record.report is None:
             record_step_end(
@@ -1613,9 +1537,7 @@ def register_language_analysis_tasks(celery):
                 _t0,
                 error="SubmissionRecord has no report",
             )
-            raise Exception(
-                f"language_analysis.download_and_extract: SubmissionRecord #{record_id} has no report"
-            )
+            raise Exception(f"language_analysis.download_and_extract: SubmissionRecord #{record_id} has no report")
 
         asset = record.report
 
@@ -1639,9 +1561,7 @@ def register_language_analysis_tasks(celery):
         )
 
         if not adapter.exists():
-            raise Exception(
-                f"language_analysis.download_and_extract: report asset not found in object store for record #{record_id}"
-            )
+            raise Exception(f"language_analysis.download_and_extract: report asset not found in object store for record #{record_id}")
 
         raw_text = ""
         page_count = 0
@@ -1655,17 +1575,11 @@ def register_language_analysis_tasks(celery):
                 path = str(scratch.path)
                 if "pdf" in mimetype or path.lower().endswith(".pdf"):
                     raw_text, page_count = _extract_pdf_text(path)
-                elif (
-                    "word" in mimetype
-                    or "officedocument" in mimetype
-                    or path.lower().endswith((".docx", ".doc"))
-                ):
+                elif "word" in mimetype or "officedocument" in mimetype or path.lower().endswith((".docx", ".doc")):
                     raw_text, page_count = _extract_docx_text(path)
                 else:
                     # Fall back to PDF extraction and log a warning
-                    current_app.logger.warning(
-                        f"language_analysis: unknown mimetype '{mimetype}' for record #{record_id}; attempting PDF extraction"
-                    )
+                    current_app.logger.warning(f"language_analysis: unknown mimetype '{mimetype}' for record #{record_id}; attempting PDF extraction")
                     try:
                         raw_text, page_count = _extract_pdf_text(path)
                     except Exception as exc2:
@@ -1677,9 +1591,7 @@ def register_language_analysis_tasks(celery):
                             }
                         )
         except Exception as exc:
-            errors.append(
-                {"stage": "download", "type": type(exc).__name__, "message": str(exc)}
-            )
+            errors.append({"stage": "download", "type": type(exc).__name__, "message": str(exc)})
 
         # Cache extracted text in MongoDB for use by subsequent pipeline stages
         # and future pairwise similarity analysis.
@@ -1690,9 +1602,7 @@ def register_language_analysis_tasks(celery):
         data["_page_count"] = page_count
         if errors:
             data.setdefault("errors", []).extend(errors)
-        data.setdefault("timings", {})["extraction_s"] = round(
-            time.monotonic() - _t_extraction, 1
-        )
+        data.setdefault("timings", {})["extraction_s"] = round(time.monotonic() - _t_extraction, 1)
         record.set_language_analysis_data(data)
 
         try:
@@ -1700,9 +1610,7 @@ def register_language_analysis_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             record_step_end(_r, record_id, "download_and_extract", _t0, error=repr(exc))
-            current_app.logger.exception(
-                "SQLAlchemyError committing extracted text", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError committing extracted text", exc_info=exc)
             raise self.retry()
 
         record_step_end(_r, record_id, "download_and_extract", _t0)
@@ -1716,9 +1624,7 @@ def register_language_analysis_tasks(celery):
         the extracted text stored in the JSON blob.  Errors in individual
         computation steps are caught and recorded; the task does not abort.
         """
-        self.update_state(
-            state=states.STARTED, meta={"msg": "Computing language statistics"}
-        )
+        self.update_state(state=states.STARTED, meta={"msg": "Computing language statistics"})
 
         _r = None
         try:
@@ -1728,14 +1634,10 @@ def register_language_analysis_tasks(celery):
         _t0 = record_step_start(_r, record_id, "compute_statistics")
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
             record_step_end(_r, record_id, "compute_statistics", _t0, error=repr(exc))
-            current_app.logger.exception(
-                "SQLAlchemyError in compute_statistics", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in compute_statistics", exc_info=exc)
             raise self.retry()
 
         if record is None:
@@ -1746,15 +1648,10 @@ def register_language_analysis_tasks(celery):
                 _t0,
                 error="SubmissionRecord not found",
             )
-            raise Exception(
-                f"language_analysis.compute_statistics: SubmissionRecord #{record_id} not found"
-            )
+            raise Exception(f"language_analysis.compute_statistics: SubmissionRecord #{record_id} not found")
 
         # Idempotency check: skip if statistics are already present at the current version
-        if (
-            record.stats_present
-            and record.stats_algorithm_version == STATS_ALGORITHM_VERSION
-        ):
+        if record.stats_present and record.stats_algorithm_version == STATS_ALGORITHM_VERSION:
             current_app.logger.info(
                 f"language_analysis.compute_statistics: skipping record #{record_id} — "
                 f"stats already present at algorithm_version={STATS_ALGORITHM_VERSION}"
@@ -1803,9 +1700,7 @@ def register_language_analysis_tasks(celery):
                 if appendix_wc > 0:
                     metrics["appendix_word_count"] = appendix_wc
         except Exception as exc:
-            errors.append(
-                {"stage": "word_count", "type": type(exc).__name__, "message": str(exc)}
-            )
+            errors.append({"stage": "word_count", "type": type(exc).__name__, "message": str(exc)})
             metrics["word_count"] = None
 
         # --- bibliography count and citation check ----------------------------
@@ -1816,9 +1711,7 @@ def register_language_analysis_tasks(celery):
             uncited = _check_uncited(_core, ref_keys)
             references_info["uncited"] = uncited
         except Exception as exc:
-            errors.append(
-                {"stage": "references", "type": type(exc).__name__, "message": str(exc)}
-            )
+            errors.append({"stage": "references", "type": type(exc).__name__, "message": str(exc)})
             metrics["reference_count"] = None
             references_info["uncited"] = []
 
@@ -1855,9 +1748,7 @@ def register_language_analysis_tasks(celery):
             metrics["mattr"] = mattr
             metrics["mtld"] = mtld
         except Exception as exc:
-            errors.append(
-                {"stage": "mattr_mtld", "type": type(exc).__name__, "message": str(exc)}
-            )
+            errors.append({"stage": "mattr_mtld", "type": type(exc).__name__, "message": str(exc)})
             metrics["mattr"] = None
             metrics["mtld"] = None
 
@@ -1867,9 +1758,7 @@ def register_language_analysis_tasks(celery):
             metrics["burstiness"] = burstiness_aggregate
             metrics["burstiness_by_group"] = burstiness_groups
         except Exception as exc:
-            errors.append(
-                {"stage": "burstiness", "type": type(exc).__name__, "message": str(exc)}
-            )
+            errors.append({"stage": "burstiness", "type": type(exc).__name__, "message": str(exc)})
             metrics["burstiness"] = None
             metrics["burstiness_by_group"] = {}
 
@@ -1890,9 +1779,7 @@ def register_language_analysis_tasks(celery):
         try:
             patterns_info = _count_patterns(raw_text)
         except Exception as exc:
-            errors.append(
-                {"stage": "patterns", "type": type(exc).__name__, "message": str(exc)}
-            )
+            errors.append({"stage": "patterns", "type": type(exc).__name__, "message": str(exc)})
 
         # --- classification flags --------------------------------------------
         mattr_flag = classify_mattr(metrics.get("mattr"))
@@ -1951,18 +1838,14 @@ def register_language_analysis_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             record_step_end(_r, record_id, "compute_statistics", _t0, error=repr(exc))
-            current_app.logger.exception(
-                "SQLAlchemyError committing statistics", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError committing statistics", exc_info=exc)
             raise self.retry()
 
         record_step_end(_r, record_id, "compute_statistics", _t0)
 
     # -----------------------------------------------------------------------
 
-    @celery.task(
-        bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260
-    )
+    @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
     def submit_to_llm(self, record_id: int):
         """
         Stage 3 (llm_tasks queue): submit the extracted report text to the LLM
@@ -2001,25 +1884,17 @@ def register_language_analysis_tasks(celery):
         _t0 = record_step_start(_r, record_id, "submit_to_llm")
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError in submit_to_llm", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in submit_to_llm", exc_info=exc)
             raise self.retry()
 
         if record is None:
-            raise Exception(
-                f"language_analysis.submit_to_llm: SubmissionRecord #{record_id} not found"
-            )
+            raise Exception(f"language_analysis.submit_to_llm: SubmissionRecord #{record_id} not found")
 
         # Do not re-attempt if a human administrator has not yet cleared the failure flag
         if record.llm_analysis_failed:
-            current_app.logger.info(
-                f"language_analysis.submit_to_llm: skipping record #{record_id} — llm_analysis_failed is set"
-            )
+            current_app.logger.info(f"language_analysis.submit_to_llm: skipping record #{record_id} — llm_analysis_failed is set")
             record_step_end(_r, record_id, "submit_to_llm", _t0)
             return
 
@@ -2030,8 +1905,7 @@ def register_language_analysis_tasks(celery):
         # re-grading across all records.
         if record.llm_grading_present and record.llm_prompt_version == PROMPT_VERSION:
             current_app.logger.info(
-                f"language_analysis.submit_to_llm: skipping record #{record_id} — "
-                f"grading result already present at prompt_version={PROMPT_VERSION}"
+                f"language_analysis.submit_to_llm: skipping record #{record_id} — grading result already present at prompt_version={PROMPT_VERSION}"
             )
             record_step_end(_r, record_id, "submit_to_llm", _t0)
             return
@@ -2041,9 +1915,7 @@ def register_language_analysis_tasks(celery):
 
         # Load rubric while session is still open; snapshot before session.close().
         _rubric_orm = record.period.config.grading_rubric
-        rubric_snap: _RubricSnapshot | None = (
-            _RubricSnapshot(_rubric_orm) if _rubric_orm is not None else None
-        )
+        rubric_snap: _RubricSnapshot | None = _RubricSnapshot(_rubric_orm) if _rubric_orm is not None else None
 
         # Build the text for grade-band assessment: core body + appendices.
         # The reference list is excluded (bibliographic entries are noise for
@@ -2052,14 +1924,10 @@ def register_language_analysis_tasks(celery):
         _core, _references, _appendices = _split_document(raw_text)
         clean_text = _strip_toc_lines(_strip_math_lines(_core))
         if _appendices:
-            clean_text = (
-                clean_text + "\n\n" + _strip_toc_lines(_strip_math_lines(_appendices))
-            )
+            clean_text = clean_text + "\n\n" + _strip_toc_lines(_strip_math_lines(_appendices))
 
         context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 18432)
-        base_url: str = current_app.config.get(
-            "OLLAMA_BASE_URL", "http://localhost:11434"
-        )
+        base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
         model: str = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
 
         # Release the DB connection back to the pool before the long-running LLM call.
@@ -2093,10 +1961,7 @@ def register_language_analysis_tasks(celery):
             if meta_parsed is not None:
                 data["_llm_metadata"] = meta_parsed
             else:
-                current_app.logger.warning(
-                    f"language_analysis.submit_to_llm: metadata-only extraction failed "
-                    f"for record #{record_id}: {meta_exc}"
-                )
+                current_app.logger.warning(f"language_analysis.submit_to_llm: metadata-only extraction failed for record #{record_id}: {meta_exc}")
 
             # Store NLL metrics and re-evaluate AI concern with NLL features.
             metrics = data.get("metrics", {})
@@ -2108,16 +1973,10 @@ def register_language_analysis_tasks(celery):
                 "context_size": context_size,
                 "num_chunks": 0,
             }
-            data.setdefault("timings", {})["llm_s"] = round(
-                time.monotonic() - _t_llm, 1
-            )
+            data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
 
             try:
-                _pclass = (
-                    record.period.config.project_class
-                    if record.period and record.period.config
-                    else None
-                )
+                _pclass = record.period.config.project_class if record.period and record.period.config else None
                 _tenant = _pclass.tenant if _pclass else None
                 _calibrations = list(_tenant.ai_calibrations) if _tenant else []
             except Exception:
@@ -2139,9 +1998,7 @@ def register_language_analysis_tasks(celery):
             _flags["mahalanobis_pvalue"] = _ai_result["p_value"]
             _flags["calibration_results"] = _ai_result.get("calibration_results", [])
             _flags["bonferroni_k"] = _ai_result.get("bonferroni_k", 0)
-            _flags["bonferroni_alpha_medium"] = _ai_result.get(
-                "bonferroni_alpha_medium"
-            )
+            _flags["bonferroni_alpha_medium"] = _ai_result.get("bonferroni_alpha_medium")
             _flags["bonferroni_alpha_high"] = _ai_result.get("bonferroni_alpha_high")
             data["flags"] = _flags
 
@@ -2152,9 +2009,7 @@ def register_language_analysis_tasks(celery):
             data.pop("llm_feedback", None)
             record = db.session.get(SubmissionRecord, record_id)
             if record is None:
-                raise Exception(
-                    f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (no-rubric)"
-                )
+                raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (no-rubric)")
             record.llm_model_name = model
             record.llm_context_size = context_size
             record.llm_grading_present = True
@@ -2166,9 +2021,7 @@ def register_language_analysis_tasks(celery):
                 db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
-                current_app.logger.exception(
-                    "SQLAlchemyError committing no-rubric metadata result", exc_info=exc
-                )
+                current_app.logger.exception("SQLAlchemyError committing no-rubric metadata result", exc_info=exc)
                 raise self.retry()
             record_step_end(_r, record_id, "submit_to_llm", _t0)
             return
@@ -2177,9 +2030,7 @@ def register_language_analysis_tasks(celery):
         # Rubric-present grading path.
         # ----------------------------------------------------------------
         all_criterion_codes: frozenset = frozenset(
-            f"{band_idx}.{crit_idx}"
-            for band_idx, band in enumerate(rubric_snap._bands, start=1)
-            for crit_idx in range(1, len(band["criteria"]) + 1)
+            f"{band_idx}.{crit_idx}" for band_idx, band in enumerate(rubric_snap._bands, start=1) for crit_idx in range(1, len(band["criteria"]) + 1)
         )
         n_criteria = sum(len(band["criteria"]) for band in rubric_snap._bands)
         llm_response_schema = _make_llm_response_schema(rubric_snap)
@@ -2191,9 +2042,7 @@ def register_language_analysis_tasks(celery):
         _single_pass_response_tokens = max(2200, 700 + n_criteria * 130)
         _single_pass_overhead = _grading_prompt_tokens + _single_pass_response_tokens
         single_pass_word_budget = max(
-            int(
-                (context_size - _single_pass_overhead) / _TOKENS_PER_WORD_CONTENT * 0.85
-            ),
+            int((context_size - _single_pass_overhead) / _TOKENS_PER_WORD_CONTENT * 0.85),
             0,
         )
         doc_words = len(clean_text.split())
@@ -2231,10 +2080,7 @@ def register_language_analysis_tasks(celery):
             if meta_parsed is not None:
                 metadata_result = meta_parsed
             else:
-                current_app.logger.warning(
-                    f"language_analysis.submit_to_llm: metadata extraction failed "
-                    f"for record #{record_id}: {meta_exc}"
-                )
+                current_app.logger.warning(f"language_analysis.submit_to_llm: metadata extraction failed for record #{record_id}: {meta_exc}")
 
             # Step 2: grading call (grading fields only).
             document_text, was_truncated = _truncate_text(clean_text)
@@ -2283,9 +2129,7 @@ def register_language_analysis_tasks(celery):
             # Chunked map-reduce path: document exceeds single-pass budget.
             # ----------------------------------------------------------------
             _sample_chunk_prompt = _build_chunk_system_prompt(0, 1, rubric_snap)
-            _chunk_prompt_tokens = int(
-                len(_sample_chunk_prompt.split()) * _TOKENS_PER_WORD
-            )
+            _chunk_prompt_tokens = int(len(_sample_chunk_prompt.split()) * _TOKENS_PER_WORD)
             # Per criterion: up to _MAX_EVIDENCE_PER_CRITERION entries.  Each entry carries a
             # 2-sentence verbatim excerpt (~80 tokens) + observation (~30 tokens) + overhead,
             # so ~220 tokens/criterion at the average 2-entry density is more realistic than the
@@ -2338,17 +2182,13 @@ def register_language_analysis_tasks(celery):
                 data["_llm_metadata"] = metadata_result
                 record = db.session.get(SubmissionRecord, record_id)
                 if record is None:
-                    raise Exception(
-                        f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (metadata)"
-                    )
+                    raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (metadata)")
                 record.set_language_analysis_data(data)
                 try:
                     db.session.commit()
                 except SQLAlchemyError as exc:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError committing metadata result", exc_info=exc
-                    )
+                    current_app.logger.exception("SQLAlchemyError committing metadata result", exc_info=exc)
                     raise self.retry()
                 db.session.close()
 
@@ -2394,12 +2234,8 @@ def register_language_analysis_tasks(celery):
                     break
 
                 _chunk_est_tokens.append(est_tok)
-                _chunk_actual_tokens.append(
-                    _chunk_actual_usage.get("prompt_tokens") if _chunk_actual_usage else None
-                )
-                _chunk_completion_tokens.append(
-                    _chunk_actual_usage.get("completion_tokens") if _chunk_actual_usage else None
-                )
+                _chunk_actual_tokens.append(_chunk_actual_usage.get("prompt_tokens") if _chunk_actual_usage else None)
+                _chunk_completion_tokens.append(_chunk_actual_usage.get("completion_tokens") if _chunk_actual_usage else None)
                 chunk_results[str(idx)] = chunk_parsed
                 completed_chunks.add(idx)
                 chunk_state = {
@@ -2411,9 +2247,7 @@ def register_language_analysis_tasks(celery):
                 data["_llm_chunks"] = chunk_state
                 record = db.session.get(SubmissionRecord, record_id)
                 if record is None:
-                    raise Exception(
-                        f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (chunk {idx + 1})"
-                    )
+                    raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (chunk {idx + 1})")
                 record.set_language_analysis_data(data)
                 try:
                     db.session.commit()
@@ -2434,9 +2268,7 @@ def register_language_analysis_tasks(celery):
                 # Reload record — the session was closed after the last successful chunk commit.
                 record = db.session.get(SubmissionRecord, record_id)
                 if record is None:
-                    raise Exception(
-                        f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (chunk failure)"
-                    )
+                    raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (chunk failure)")
                 record.llm_analysis_failed = True
                 record.llm_failure_reason = chunk_failure_reason
                 if accumulated:
@@ -2448,19 +2280,14 @@ def register_language_analysis_tasks(celery):
                         "message": chunk_failure_reason,
                     }
                 )
-                current_app.logger.error(
-                    f"language_analysis.submit_to_llm: {chunk_failure_reason} "
-                    f"for record #{record_id}"
-                )
+                current_app.logger.error(f"language_analysis.submit_to_llm: {chunk_failure_reason} for record #{record_id}")
                 data["errors"] = errors
                 record.set_language_analysis_data(data)
                 try:
                     db.session.commit()
                 except SQLAlchemyError as exc:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError committing chunk failure", exc_info=exc
-                    )
+                    current_app.logger.exception("SQLAlchemyError committing chunk failure", exc_info=exc)
                     raise self.retry()
                 return
 
@@ -2470,21 +2297,15 @@ def register_language_analysis_tasks(celery):
             # Override aggregated metadata with the dedicated extraction result,
             # which is more reliable (regex-located, purpose-built prompt).
             merged["metadata"] = {
-                "stated_word_count_found": metadata_result.get(
-                    "stated_word_count_found", False
-                ),
+                "stated_word_count_found": metadata_result.get("stated_word_count_found", False),
                 "stated_word_count": metadata_result.get("stated_word_count"),
-                "genai_statement_found": metadata_result.get(
-                    "genai_statement_found", False
-                ),
+                "genai_statement_found": metadata_result.get("genai_statement_found", False),
                 "genai_statement": metadata_result.get("genai_statement", ""),
                 "preface_found": metadata_result.get("preface_found", False),
                 "preface_precis": metadata_result.get("preface_precis", ""),
             }
 
-            evidence_text = _build_synthesis_evidence_text(
-                merged, total_chunks, rubric_snap
-            )
+            evidence_text = _build_synthesis_evidence_text(merged, total_chunks, rubric_snap)
 
             _system_prompt = _build_system_prompt(False, rubric_snap)
             prompt_hash_val = _prompt_hash(_system_prompt)
@@ -2549,9 +2370,7 @@ def register_language_analysis_tasks(celery):
         # The session was closed before the LLM call to prevent connection staleness.
         record = db.session.get(SubmissionRecord, record_id)
         if record is None:
-            raise Exception(
-                f"submit_to_llm: SubmissionRecord #{record_id} not found on final reload"
-            )
+            raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on final reload")
         record.llm_model_name = model
         record.llm_context_size = context_size
         record.llm_num_chunks = num_chunks
@@ -2559,11 +2378,7 @@ def register_language_analysis_tasks(celery):
         # Re-evaluate the AI concern flag now that NLL is available, so full
         # (4D) calibrations can be applied alongside lexical ones.
         try:
-            _pclass = (
-                record.period.config.project_class
-                if record.period and record.period.config
-                else None
-            )
+            _pclass = record.period.config.project_class if record.period and record.period.config else None
             _tenant = _pclass.tenant if _pclass else None
             _calibrations = list(_tenant.ai_calibrations) if _tenant else []
         except Exception:
@@ -2618,11 +2433,7 @@ def register_language_analysis_tasks(celery):
             record.llm_feedback_present = False
             record.llm_feedback_prompt_version = None
         else:
-            failure_reason = (
-                f"{last_exc} (~{est_tok} est. input tokens)"
-                if last_exc
-                else "Unknown error"
-            )
+            failure_reason = f"{last_exc} (~{est_tok} est. input tokens)" if last_exc else "Unknown error"
             record.llm_analysis_failed = True
             record.llm_failure_reason = failure_reason
             record_step_end(_r, record_id, "submit_to_llm", _t0, error=failure_reason)
@@ -2634,10 +2445,7 @@ def register_language_analysis_tasks(celery):
                     "message": failure_reason,
                 }
             )
-            current_app.logger.error(
-                f"language_analysis.submit_to_llm: LLM submission failed for "
-                f"record #{record_id}: {failure_reason}"
-            )
+            current_app.logger.error(f"language_analysis.submit_to_llm: LLM submission failed for record #{record_id}: {failure_reason}")
 
         data["errors"] = errors
         record.set_language_analysis_data(data)
@@ -2646,9 +2454,7 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError committing LLM result", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError committing LLM result", exc_info=exc)
             raise self.retry()
 
         if not record.llm_analysis_failed:
@@ -2670,9 +2476,7 @@ def register_language_analysis_tasks(celery):
 
     # -----------------------------------------------------------------------
 
-    @celery.task(
-        bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260
-    )
+    @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
     def submit_to_llm_feedback(self, record_id: int):
         """
         Stage 4 (llm_tasks queue): submit the extracted report text to the LLM
@@ -2700,35 +2504,24 @@ def register_language_analysis_tasks(celery):
         _t0 = record_step_start(_r, record_id, "submit_to_llm_feedback")
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError in submit_to_llm_feedback", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in submit_to_llm_feedback", exc_info=exc)
             raise self.retry()
 
         if record is None:
-            raise Exception(
-                f"language_analysis.submit_to_llm_feedback: SubmissionRecord #{record_id} not found"
-            )
+            raise Exception(f"language_analysis.submit_to_llm_feedback: SubmissionRecord #{record_id} not found")
 
         # Do not re-attempt if a human administrator has not yet cleared the failure flag
         if record.llm_feedback_failed:
-            current_app.logger.info(
-                f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — llm_feedback_failed is set"
-            )
+            current_app.logger.info(f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — llm_feedback_failed is set")
             record_step_end(_r, record_id, "submit_to_llm_feedback", _t0)
             return
 
         # Idempotency check: skip if feedback is already present at the current prompt version.
         # Note: submit_to_llm clears llm_feedback_present whenever grading re-runs, ensuring
         # feedback is always regenerated after a grading change.
-        if (
-            record.llm_feedback_present
-            and record.llm_feedback_prompt_version == PROMPT_VERSION
-        ):
+        if record.llm_feedback_present and record.llm_feedback_prompt_version == PROMPT_VERSION:
             current_app.logger.info(
                 f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — "
                 f"feedback already present at prompt_version={PROMPT_VERSION}"
@@ -2747,16 +2540,10 @@ def register_language_analysis_tasks(celery):
         # The reference list is never submitted (same rationale as submit_to_llm).
         _core, _, _appendices = _split_document(raw_text)
         clean_core = _strip_math_lines(_core)
-        clean_full = (
-            clean_core + "\n\n" + _strip_math_lines(_appendices)
-            if _appendices
-            else clean_core
-        )
+        clean_full = clean_core + "\n\n" + _strip_math_lines(_appendices) if _appendices else clean_core
 
         context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 18432)
-        base_url: str = current_app.config.get(
-            "OLLAMA_BASE_URL", "http://localhost:11434"
-        )
+        base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
         model: str = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
 
         # Release the DB connection before the long-running LLM call (same rationale
@@ -2766,11 +2553,7 @@ def register_language_analysis_tasks(celery):
         _t_feedback = time.monotonic()
 
         feedback_word_budget = max(
-            int(
-                (context_size - _FEEDBACK_OVERHEAD_TOKENS)
-                / _TOKENS_PER_WORD_CONTENT
-                * 0.90
-            ),
+            int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD_CONTENT * 0.90),
             500,
         )
         full_words = len(clean_full.split())
@@ -2816,52 +2599,36 @@ def register_language_analysis_tasks(celery):
                 _LLM_FEEDBACK_RESPONSE_SCHEMA,
                 options={"num_ctx": context_size},
                 validate_fn=_validate_feedback_response,
-                label=(
-                    f"submit_to_llm_feedback/chunk {chunk_idx + 1}/{len(chunk_texts)} "
-                    f"(record #{record_id})"
-                ),
+                label=(f"submit_to_llm_feedback/chunk {chunk_idx + 1}/{len(chunk_texts)} (record #{record_id})"),
                 user_tokens_per_word=_TOKENS_PER_WORD_FEEDBACK_CONTENT,
             )
             _fb_chunk_est_tokens.append(est_tok)
-            _fb_chunk_actual_tokens.append(
-                _fb_actual_usage.get("prompt_tokens") if _fb_actual_usage else None
-            )
-            _fb_chunk_completion_tokens.append(
-                _fb_actual_usage.get("completion_tokens") if _fb_actual_usage else None
-            )
+            _fb_chunk_actual_tokens.append(_fb_actual_usage.get("prompt_tokens") if _fb_actual_usage else None)
+            _fb_chunk_completion_tokens.append(_fb_actual_usage.get("completion_tokens") if _fb_actual_usage else None)
             if chunk_parsed is not None:
                 feedback_results.append(chunk_parsed)
             else:
                 last_exc = chunk_exc
                 current_app.logger.warning(
-                    f"language_analysis.submit_to_llm_feedback: chunk {chunk_idx + 1}/"
-                    f"{len(chunk_texts)} failed for record #{record_id}: {chunk_exc}"
+                    f"language_analysis.submit_to_llm_feedback: chunk {chunk_idx + 1}/{len(chunk_texts)} failed for record #{record_id}: {chunk_exc}"
                 )
 
         _fb_actual_available = [t for t in _fb_chunk_actual_tokens if t is not None]
         _fb_peak_prompt_tokens: int | None = max(_fb_actual_available) if _fb_actual_available else None
-        _fb_peak_context_pressure: float | None = (
-            _fb_peak_prompt_tokens / context_size if _fb_peak_prompt_tokens is not None else None
-        )
+        _fb_peak_context_pressure: float | None = _fb_peak_prompt_tokens / context_size if _fb_peak_prompt_tokens is not None else None
         _fb_total_est_tokens: int | None = sum(_fb_chunk_est_tokens) if _fb_chunk_est_tokens else None
-        _fb_total_actual_prompt_tokens: int | None = (
-            sum(_fb_actual_available) if _fb_actual_available else None
-        )
+        _fb_total_actual_prompt_tokens: int | None = sum(_fb_actual_available) if _fb_actual_available else None
         _fb_ct_available = [t for t in _fb_chunk_completion_tokens if t is not None]
         _fb_peak_completion_tokens: int | None = max(_fb_ct_available) if _fb_ct_available else None
         _fb_total_completion_tokens: int | None = sum(_fb_ct_available) if _fb_ct_available else None
 
-        data.setdefault("timings", {})["llm_feedback_s"] = round(
-            time.monotonic() - _t_feedback, 1
-        )
+        data.setdefault("timings", {})["llm_feedback_s"] = round(time.monotonic() - _t_feedback, 1)
         errors: list = data.get("errors", [])
 
         # Reload the record with a fresh DB connection before writing results.
         record = db.session.get(SubmissionRecord, record_id)
         if record is None:
-            raise Exception(
-                f"submit_to_llm_feedback: SubmissionRecord #{record_id} not found on reload"
-            )
+            raise Exception(f"submit_to_llm_feedback: SubmissionRecord #{record_id} not found on reload")
 
         if feedback_results:
             # Merge all successful chunk results.
@@ -2881,11 +2648,7 @@ def register_language_analysis_tasks(celery):
             record.llm_feedback_present = True
             record.llm_feedback_prompt_version = PROMPT_VERSION
         else:
-            failure_reason = (
-                f"{last_exc} (~{est_tok} est. input tokens)"
-                if last_exc
-                else "Unknown error"
-            )
+            failure_reason = f"{last_exc} (~{est_tok} est. input tokens)" if last_exc else "Unknown error"
             record.llm_feedback_failed = True
             record.llm_feedback_failure_reason = failure_reason
             errors.append(
@@ -2895,10 +2658,7 @@ def register_language_analysis_tasks(celery):
                     "message": failure_reason,
                 }
             )
-            current_app.logger.error(
-                f"language_analysis.submit_to_llm_feedback: all chunks failed for "
-                f"record #{record_id}: {failure_reason}"
-            )
+            current_app.logger.error(f"language_analysis.submit_to_llm_feedback: all chunks failed for record #{record_id}: {failure_reason}")
 
         data["errors"] = errors
         record.set_language_analysis_data(data)
@@ -2907,9 +2667,7 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError committing feedback result", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError committing feedback result", exc_info=exc)
             raise self.retry()
 
         _fb_meta = {
@@ -2953,13 +2711,9 @@ def register_language_analysis_tasks(celery):
         _t0 = record_step_start(_r, record_id, "finalize_language_step")
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
-            record_step_end(
-                _r, record_id, "finalize_language_step", _t0, error=repr(exc)
-            )
+            record_step_end(_r, record_id, "finalize_language_step", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in language_analysis.finalize_language_step",
                 exc_info=exc,
@@ -2974,9 +2728,7 @@ def register_language_analysis_tasks(celery):
                 _t0,
                 error="SubmissionRecord not found",
             )
-            raise Exception(
-                f"language_analysis.finalize_language_step: SubmissionRecord #{record_id} not found"
-            )
+            raise Exception(f"language_analysis.finalize_language_step: SubmissionRecord #{record_id} not found")
 
         record.language_analysis_complete = True
 
@@ -2989,9 +2741,7 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            record_step_end(
-                _r, record_id, "finalize_language_step", _t0, error=repr(exc)
-            )
+            record_step_end(_r, record_id, "finalize_language_step", _t0, error=repr(exc))
             current_app.logger.exception(
                 "SQLAlchemyError in language_analysis.finalize_language_step commit",
                 exc_info=exc,
@@ -3018,14 +2768,10 @@ def register_language_analysis_tasks(celery):
         _t0 = record_step_start(_r, record_id, "finalize_risk_flags")
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
             record_step_end(_r, record_id, "finalize_risk_flags", _t0, error=repr(exc))
-            current_app.logger.exception(
-                "SQLAlchemyError in language_analysis.finalize_risk_flags", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in language_analysis.finalize_risk_flags", exc_info=exc)
             raise self.retry()
 
         if record is None:
@@ -3036,9 +2782,7 @@ def register_language_analysis_tasks(celery):
                 _t0,
                 error="SubmissionRecord not found",
             )
-            raise Exception(
-                f"language_analysis.finalize_risk_flags: SubmissionRecord #{record_id} not found"
-            )
+            raise Exception(f"language_analysis.finalize_risk_flags: SubmissionRecord #{record_id} not found")
 
         # Compute/refresh risk factors using current analysis data and project configuration.
         try:
@@ -3055,9 +2799,7 @@ def register_language_analysis_tasks(celery):
             log_db_commit(
                 "Language analysis workflow completed",
                 student=record.owner.student if record.owner else None,
-                project_classes=record.owner.config.project_class
-                if record.owner and record.owner.config
-                else None,
+                project_classes=record.owner.config.project_class if record.owner and record.owner.config else None,
                 endpoint=self.name,
             )
         except SQLAlchemyError as exc:
@@ -3088,19 +2830,13 @@ def register_language_analysis_tasks(celery):
         inference and JSON parsing failures only.
         """
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError in language_analysis.error_handler", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in language_analysis.error_handler", exc_info=exc)
             return
 
         if record is None:
-            current_app.logger.error(
-                f"language_analysis.error_handler: SubmissionRecord #{record_id} not found"
-            )
+            current_app.logger.error(f"language_analysis.error_handler: SubmissionRecord #{record_id} not found")
             return
 
         # Reset progress flags so the analysis can be re-triggered
@@ -3164,9 +2900,7 @@ def register_language_analysis_tasks(celery):
             config = record.period.config if record.period else None
             record.compute_risk_factors(config)
         except Exception as exc:
-            current_app.logger.warning(
-                f"recalculate_ai_concern: could not recompute risk factors for record #{record.id}: {exc}"
-            )
+            current_app.logger.warning(f"recalculate_ai_concern: could not recompute risk factors for record #{record.id}: {exc}")
         return True
 
     # ---------------------------------------------------------------------------
@@ -3174,9 +2908,7 @@ def register_language_analysis_tasks(celery):
     # ---------------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30)
-    def recalculate_ai_concern_batch(
-        self, task_id: str, tenant_id: int, record_ids: list
-    ):
+    def recalculate_ai_concern_batch(self, task_id: str, tenant_id: int, record_ids: list):
         """
         Process a batch of SubmissionRecord IDs for full lexical-metrics recomputation.
 
@@ -3209,27 +2941,19 @@ def register_language_analysis_tasks(celery):
             return {"updated": 0, "skipped": len(record_ids), "errors": 0}
 
         if tenant is None:
-            current_app.logger.error(
-                f"recalculate_ai_concern_batch: Tenant #{tenant_id} not found"
-            )
+            current_app.logger.error(f"recalculate_ai_concern_batch: Tenant #{tenant_id} not found")
             return {"updated": 0, "skipped": len(record_ids), "errors": 0}
 
         calibrations = list(tenant.ai_calibrations)
         if not calibrations:
-            current_app.logger.warning(
-                "recalculate_ai_concern_batch: no calibration data — skipping batch"
-            )
+            current_app.logger.warning("recalculate_ai_concern_batch: no calibration data — skipping batch")
             return {"updated": 0, "skipped": len(record_ids), "errors": 0}
 
         for i, record_id in enumerate(record_ids, start=1):
             try:
-                record = (
-                    db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-                )
+                record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
                 if record is None:
-                    current_app.logger.warning(
-                        f"recalculate_ai_concern_batch: record #{record_id} not found"
-                    )
+                    current_app.logger.warning(f"recalculate_ai_concern_batch: record #{record_id} not found")
                     skipped += 1
                     continue
 
@@ -3240,9 +2964,7 @@ def register_language_analysis_tasks(celery):
                 if not raw_text:
                     # Cache miss — re-download from object store and populate the MongoDB cache.
                     if record.report is None:
-                        current_app.logger.warning(
-                            f"recalculate_ai_concern_batch: record #{record_id} has no report asset — skipping"
-                        )
+                        current_app.logger.warning(f"recalculate_ai_concern_batch: record #{record_id} has no report asset — skipping")
                         skipped += 1
                         continue
 
@@ -3266,18 +2988,12 @@ def register_language_analysis_tasks(celery):
                         path = str(scratch.path)
                         if "pdf" in mimetype or path.lower().endswith(".pdf"):
                             raw_text, page_count = _extract_pdf_text(path)
-                        elif (
-                            "word" in mimetype
-                            or "officedocument" in mimetype
-                            or path.lower().endswith((".docx", ".doc"))
-                        ):
+                        elif "word" in mimetype or "officedocument" in mimetype or path.lower().endswith((".docx", ".doc")):
                             raw_text, page_count = _extract_docx_text(path)
                         else:
                             raw_text, page_count = _extract_pdf_text(path)
                     raw_text = unicodedata.normalize("NFKC", raw_text)
-                    store_scraped_text(
-                        record_id, asset.id, mimetype, raw_text, page_count
-                    )
+                    store_scraped_text(record_id, asset.id, mimetype, raw_text, page_count)
 
                 # Re-process from text using the current pipeline.
                 _core, _references, _appendices = _split_document(raw_text)
@@ -3316,9 +3032,7 @@ def register_language_analysis_tasks(celery):
                 flags["mahalanobis_pvalue"] = ai_result["p_value"]
                 flags["calibration_results"] = ai_result.get("calibration_results", [])
                 flags["bonferroni_k"] = ai_result.get("bonferroni_k", 0)
-                flags["bonferroni_alpha_medium"] = ai_result.get(
-                    "bonferroni_alpha_medium"
-                )
+                flags["bonferroni_alpha_medium"] = ai_result.get("bonferroni_alpha_medium")
                 flags["bonferroni_alpha_high"] = ai_result.get("bonferroni_alpha_high")
                 la["flags"] = flags
                 record.set_language_analysis_data(la)
@@ -3327,9 +3041,7 @@ def register_language_analysis_tasks(celery):
                     config = record.period.config if record.period else None
                     record.compute_risk_factors(config)
                 except Exception as exc:
-                    current_app.logger.warning(
-                        f"recalculate_ai_concern_batch: could not recompute risk factors for record #{record.id}: {exc}"
-                    )
+                    current_app.logger.warning(f"recalculate_ai_concern_batch: could not recompute risk factors for record #{record.id}: {exc}")
 
                 updated += 1
 
@@ -3344,18 +3056,14 @@ def register_language_analysis_tasks(celery):
                         )
 
             except Exception as exc:
-                current_app.logger.warning(
-                    f"recalculate_ai_concern_batch: error on record #{record_id}: {exc}"
-                )
+                current_app.logger.warning(f"recalculate_ai_concern_batch: error on record #{record_id}: {exc}")
                 errors += 1
 
         try:
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "recalculate_ai_concern_batch: final commit error", exc_info=exc
-            )
+            current_app.logger.exception("recalculate_ai_concern_batch: final commit error", exc_info=exc)
 
         return {"updated": updated, "skipped": skipped, "errors": errors}
 
@@ -3422,18 +3130,14 @@ def register_language_analysis_tasks(celery):
         batch via a Celery chord.  Records without cached extracted text are
         skipped.
         """
-        self.update_state(
-            state="STARTED", meta={"msg": "Preparing AI concern recalculation"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Preparing AI concern recalculation"})
         progress_update(task_id, TaskRecord.RUNNING, 5, "Querying submissions…")
 
         # Fetch tenant and its calibration.
         try:
             tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_id).first()
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "recalculate_ai_concern: DB error loading tenant", exc_info=exc
-            )
+            current_app.logger.exception("recalculate_ai_concern: DB error loading tenant", exc_info=exc)
             progress_update(
                 task_id,
                 TaskRecord.FAILURE,
@@ -3444,19 +3148,13 @@ def register_language_analysis_tasks(celery):
             return
 
         if tenant is None:
-            current_app.logger.error(
-                f"recalculate_ai_concern: Tenant #{tenant_id} not found"
-            )
-            progress_update(
-                task_id, TaskRecord.FAILURE, 100, "Tenant not found", autocommit=True
-            )
+            current_app.logger.error(f"recalculate_ai_concern: Tenant #{tenant_id} not found")
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Tenant not found", autocommit=True)
             return
 
         calibrations = list(tenant.ai_calibrations)
         if not calibrations:
-            current_app.logger.warning(
-                "recalculate_ai_concern: tenant has no calibration data — aborting"
-            )
+            current_app.logger.warning("recalculate_ai_concern: tenant has no calibration data — aborting")
             progress_update(
                 task_id,
                 TaskRecord.FAILURE,
@@ -3469,9 +3167,7 @@ def register_language_analysis_tasks(celery):
         # Build query for target records, fetching pclass_id and year for grouping.
         try:
             q = (
-                db.session.query(
-                    SubmissionRecord, ProjectClass.id, ProjectClassConfig.year
-                )
+                db.session.query(SubmissionRecord, ProjectClass.id, ProjectClassConfig.year)
                 .join(
                     SubmissionPeriodRecord,
                     SubmissionRecord.period_id == SubmissionPeriodRecord.id,
@@ -3491,9 +3187,7 @@ def register_language_analysis_tasks(celery):
 
             rows = q.all()
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "recalculate_ai_concern: DB error querying records", exc_info=exc
-            )
+            current_app.logger.exception("recalculate_ai_concern: DB error querying records", exc_info=exc)
             progress_update(
                 task_id,
                 TaskRecord.FAILURE,
@@ -3535,9 +3229,7 @@ def register_language_analysis_tasks(celery):
 
             if n_batches == 1:
                 # Only one batch — run inline to avoid chord overhead.
-                result = recalculate_ai_concern_batch.run(
-                    task_id, tenant_id, batches[0]
-                )
+                result = recalculate_ai_concern_batch.run(task_id, tenant_id, batches[0])
                 updated = result.get("updated", 0)
                 skipped = result.get("skipped", 0)
                 errors = result.get("errors", 0)
@@ -3550,20 +3242,13 @@ def register_language_analysis_tasks(celery):
                     task_id,
                     TaskRecord.SUCCESS,
                     100,
-                    "Full lexical-metrics recalculation complete — "
-                    + ", ".join(parts)
-                    + ".",
+                    "Full lexical-metrics recalculation complete — " + ", ".join(parts) + ".",
                     autocommit=True,
                 )
                 return
 
             # Two or more batches — fan out via chord.
-            sub_tasks = cgroup(
-                [
-                    recalculate_ai_concern_batch.si(task_id, tenant_id, batch_ids)
-                    for batch_ids in batches
-                ]
-            )
+            sub_tasks = cgroup([recalculate_ai_concern_batch.si(task_id, tenant_id, batch_ids) for batch_ids in batches])
             finalize = recalculate_ai_concern_finalize.s(task_id, total)
             error_cb = recalculate_ai_concern_error.si(task_id)
             self.replace(chord(sub_tasks, finalize).on_error(error_cb))
@@ -3595,22 +3280,16 @@ def register_language_analysis_tasks(celery):
                         )
 
                 pct = 10 + int(85 * i / total)
-                progress_update(
-                    task_id, TaskRecord.RUNNING, pct, f"Processed {i}/{total}…"
-                )
+                progress_update(task_id, TaskRecord.RUNNING, pct, f"Processed {i}/{total}…")
 
             except Exception as exc:
-                current_app.logger.warning(
-                    f"recalculate_ai_concern: error processing record #{record.id}: {exc}"
-                )
+                current_app.logger.warning(f"recalculate_ai_concern: error processing record #{record.id}: {exc}")
 
         try:
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "recalculate_ai_concern: final commit error", exc_info=exc
-            )
+            current_app.logger.exception("recalculate_ai_concern: final commit error", exc_info=exc)
             progress_update(
                 task_id,
                 TaskRecord.FAILURE,

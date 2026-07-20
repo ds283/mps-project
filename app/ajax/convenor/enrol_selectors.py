@@ -83,9 +83,7 @@ def enrol_selectors_data(config: ProjectClassConfig, students: List[StudentData]
         {
             "name": s.user.name,
             "userid": s.user.username,
-            "programme": render_template(
-                programme_templ, s=s, simple_label=simple_label
-            ),
+            "programme": render_template(programme_templ, s=s, simple_label=simple_label),
             "cohort": render_template(cohort_templ, s=s, simple_label=simple_label),
             "current_year": render_template(
                 academic_year_templ,

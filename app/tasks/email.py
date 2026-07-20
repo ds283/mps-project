@@ -39,9 +39,7 @@ def register_email(celery):
             # need to use SQLAlchemy session.delete() if we want the ORM unit of work to remove rows from the
             # email_log_recipients association table; if we just build a query and execute it as a DELETE command, we don't
             # get any session support from SQLAlchemy to manage related objects
-            to_delete: List[EmailLog] = db.session.query(EmailLog).filter(
-                EmailLog.send_date < limit
-            )
+            to_delete: List[EmailLog] = db.session.query(EmailLog).filter(EmailLog.send_date < limit)
             for email in to_delete:
                 email: EmailLog
                 db.session.delete(email)
@@ -50,9 +48,7 @@ def register_email(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in prune_email_log()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in prune_email_log()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="FINISHED")
@@ -67,9 +63,7 @@ def register_email(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in delete_all_email()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in delete_all_email()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="FINISHED")
@@ -84,9 +78,7 @@ def register_email(celery):
 
                 # if label is not used, prune it
                 if get_count(label.templates) == 0:
-                    print(
-                        f'@@ prune_email_template_labels: removing unused tag "{label.name}"'
-                    )
+                    print(f'@@ prune_email_template_labels: removing unused tag "{label.name}"')
                     db.session.delete(label)
 
                 db.session.commit()  # intentionally not logged: periodic maintenance task
@@ -132,9 +124,7 @@ def register_email(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in prune_email_workflows()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in prune_email_workflows()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="FINISHED", meta={"deleted": deleted})

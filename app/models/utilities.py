@@ -138,9 +138,7 @@ class ConvenorTask(db.Model, EditingMetadataMixin):
     type = db.Column(db.Integer(), default=0, nullable=False)
 
     # task description
-    description = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # task notes
     notes = db.Column(db.Text())
@@ -336,9 +334,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
         "User",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "email_notifications", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("email_notifications", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # notification type
@@ -387,14 +383,11 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
         if req is None:
             return "<missing database row>"
 
-        return (
-            '{student} requested a meeting confirmation for project "{proj}" ({pclass}, requested at '
-            "{time}).".format(
-                student=req.owner.student.user.name,
-                proj=req.project.name,
-                pclass=req.project.config.project_class.name,
-                time=req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
-            )
+        return '{student} requested a meeting confirmation for project "{proj}" ({pclass}, requested at {time}).'.format(
+            student=req.owner.student.user.name,
+            proj=req.project.name,
+            pclass=req.project.config.project_class.name,
+            time=req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
         )
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CANCELLED)
@@ -406,11 +399,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
         if user is None or proj is None:
             return "<missing database row>"
 
-        return (
-            "{student} cancelled their confirmation request for project "
-            '"{proj}" ({pclass}).'.format(
-                student=user.name, proj=proj.name, pclass=proj.config.project_class.name
-            )
+        return '{student} cancelled their confirmation request for project "{proj}" ({pclass}).'.format(
+            student=user.name, proj=proj.name, pclass=proj.config.project_class.name
         )
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_DELETED)
@@ -536,9 +526,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
             "This has occurred because you previously had a buyout or sabbatical arrangement, "
             "but according to our records it is expected that you will become available for normal "
             "activities in the *next* academic year. If you wish to offer projects, "
-            "you will need to do so in the next selection cycle.".format(
-                proj=record.pclass.name
-            )
+            "you will need to do so in the next selection cycle.".format(proj=record.pclass.name)
         )
 
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MARKER)
@@ -638,18 +626,14 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
         try:
             method = self.str_operations[self.event_type].__get__(self, type(self))
         except KeyError as k:
-            assert self.event_type in self.str_operations, (
-                "invalid notification type: " + repr(k)
-            )
+            assert self.event_type in self.str_operations, "invalid notification type: " + repr(k)
         return method()
 
     def msg_subject(self):
         try:
             method = self.subject_operations[self.event_type].__get__(self, type(self))
         except KeyError as k:
-            assert self.event_type in self.subject_operations, (
-                "invalid notification type: " + repr(k)
-            )
+            assert self.event_type in self.subject_operations, "invalid notification type: " + repr(k)
         return method()
 
 
@@ -663,17 +647,11 @@ def _get_object_id(obj):
     return obj.id
 
 
-def add_notification(
-    user, event, object_1, object_2=None, autocommit=True, notification_id=None
-):
+def add_notification(user, event, object_1, object_2=None, autocommit=True, notification_id=None):
     from .faculty import FacultyData
     from .students import StudentData
 
-    if (
-        isinstance(user, User)
-        or isinstance(user, FacultyData)
-        or isinstance(user, StudentData)
-    ):
+    if isinstance(user, User) or isinstance(user, FacultyData) or isinstance(user, StudentData):
         user_id = user.id
     else:
         user_id = user
@@ -698,55 +676,37 @@ def add_notification(
         # object_1 = SelectingStudent, object_2 = LiveProject
         # this one has to be done by hand; we want to search for an EmailNotification with the given particulars
         if notification_id is not None and isinstance(notification_id, int):
-            check_list.append(
-                (EmailNotification.CONFIRMATION_REQUEST_CREATED, notification_id, None)
-            )
+            check_list.append((EmailNotification.CONFIRMATION_REQUEST_CREATED, notification_id, None))
 
     if event == EmailNotification.CONFIRMATION_GRANT_DELETED:
         # object_1 = ConfirmRequest, object2 = None
         # this one has to be done by hand; we want to search for an EmailNotification with the given particulars
         if notification_id is not None and isinstance(notification_id, int):
-            check_list.append(
-                (EmailNotification.CONFIRMATION_GRANTED, notification_id, None)
-            )
+            check_list.append((EmailNotification.CONFIRMATION_GRANTED, notification_id, None))
 
     if event == EmailNotification.CONFIRMATION_GRANTED:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append(
-            (EmailNotification.CONFIRMATION_GRANT_DELETED, object_1.project_id, None)
-        )
-        check_list.append(
-            (EmailNotification.CONFIRMATION_TO_PENDING, object_1.project_id, None)
-        )
+        check_list.append((EmailNotification.CONFIRMATION_GRANT_DELETED, object_1.project_id, None))
+        check_list.append((EmailNotification.CONFIRMATION_TO_PENDING, object_1.project_id, None))
 
     if event == EmailNotification.CONFIRMATION_DECLINE_DELETED:
         # object_1 = ConfirmRequest, object2 = None
         # this one has to be done by hand; we want to search for an EmailNotification with the given particulars
         if notification_id is not None and isinstance(notification_id, int):
-            check_list.append(
-                (EmailNotification.CONFIRMATION_DECLINED, notification_id, None)
-            )
+            check_list.append((EmailNotification.CONFIRMATION_DECLINED, notification_id, None))
 
     if event == EmailNotification.CONFIRMATION_DECLINED:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append(
-            (EmailNotification.CONFIRMATION_DECLINE_DELETED, object_1.project_id, None)
-        )
+        check_list.append((EmailNotification.CONFIRMATION_DECLINE_DELETED, object_1.project_id, None))
 
     if event == EmailNotification.CONFIRMATION_TO_PENDING:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append(
-            (EmailNotification.CONFIRMATION_GRANTED, object_1.project_id, None)
-        )
-        check_list.append(
-            (EmailNotification.CONFIRMATION_DECLINED, object_1.project_id, None)
-        )
+        check_list.append((EmailNotification.CONFIRMATION_GRANTED, object_1.project_id, None))
+        check_list.append((EmailNotification.CONFIRMATION_DECLINED, object_1.project_id, None))
 
     dont_save = False
     for t, obj1_id, obj2_id in check_list:
-        q = db.session.query(EmailNotification).filter_by(
-            owner_id=user_id, data_1=obj1_id, data_2=obj2_id, event_type=t
-        )
+        q = db.session.query(EmailNotification).filter_by(owner_id=user_id, data_1=obj1_id, data_2=obj2_id, event_type=t)
 
         if get_count(q) > 0:
             q.delete()
@@ -757,9 +717,7 @@ def add_notification(
         return
 
     # check whether an existing message with the same content already exists
-    q = db.session.query(EmailNotification).filter_by(
-        owner_id=user_id, data_1=object_1_id, data_2=object_2_id, event_type=event
-    )
+    q = db.session.query(EmailNotification).filter_by(owner_id=user_id, data_1=object_1_id, data_2=object_2_id, event_type=event)
     if get_count(q) > 0:
         return
 
@@ -793,9 +751,7 @@ def add_notification(
             id=task_id,
             name="Generate notification email",
             owner_id=None,
-            description="Automatically triggered notification email to {r}".format(
-                r=user_obj.name
-            ),
+            description="Automatically triggered notification email to {r}".format(r=user_obj.name),
             start_date=datetime.now(),
             status=TaskRecord.PENDING,
             progress=None,
@@ -816,11 +772,7 @@ def delete_notification(user, event, object_1, object_2=None):
     from .faculty import FacultyData
     from .students import StudentData
 
-    if (
-        isinstance(user, User)
-        or isinstance(user, FacultyData)
-        or isinstance(user, StudentData)
-    ):
+    if isinstance(user, User) or isinstance(user, FacultyData) or isinstance(user, StudentData):
         user_id = user.id
     else:
         user_id = user
@@ -883,15 +835,11 @@ class EmailLogAttachment(db.Model):
         "EmailLog",
         foreign_keys=[log_id],
         uselist=False,
-        backref=db.backref(
-            "attachments", lazy="dynamic", cascade="all, delete", passive_deletes=True
-        ),
+        backref=db.backref("attachments", lazy="dynamic", cascade="all, delete", passive_deletes=True),
     )
 
     # link to generated asset
-    generated_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True
-    )
+    generated_asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True)
     generated_asset = db.relationship(
         "GeneratedAsset",
         foreign_keys=[generated_asset_id],
@@ -900,9 +848,7 @@ class EmailLogAttachment(db.Model):
     )
 
     # link to submitted asset
-    submitted_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), nullable=True
-    )
+    submitted_asset_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), nullable=True)
     submitted_asset = db.relationship(
         "SubmittedAsset",
         foreign_keys=[submitted_asset_id],
@@ -911,9 +857,7 @@ class EmailLogAttachment(db.Model):
     )
 
     # link to temporary asset
-    temporary_asset_id = db.Column(
-        db.Integer(), db.ForeignKey("temporary_assets.id"), nullable=True
-    )
+    temporary_asset_id = db.Column(db.Integer(), db.ForeignKey("temporary_assets.id"), nullable=True)
     temporary_asset = db.relationship(
         "TemporaryAsset",
         foreign_keys=[temporary_asset_id],
@@ -922,45 +866,33 @@ class EmailLogAttachment(db.Model):
     )
 
     # manifest name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     # manifest comment/description
-    description = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
-    )
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
 
     @classmethod
     def build_(
-            cls,
-            log,
-            name,
-            description,
-            generated_asset=None,
-            submitted_asset=None,
-            temporary_asset=None,
+        cls,
+        log,
+        name,
+        description,
+        generated_asset=None,
+        submitted_asset=None,
+        temporary_asset=None,
     ):
         # check that exactly one of generated_asset, submitted_asset, and temporary_asset is specified
-        num_assets = (
-                (1 if generated_asset is not None else 0)
-                + (1 if submitted_asset is not None else 0)
-                + (1 if temporary_asset is not None else 0)
-        )
+        num_assets = (1 if generated_asset is not None else 0) + (1 if submitted_asset is not None else 0) + (1 if temporary_asset is not None else 0)
         if num_assets != 1:
             raise RuntimeError(
                 f"Exactly one of generated_asset, submitted_asset, and temporary_asset must be specified, but got {num_assets} instead"
             )
 
         if name is None or len(name) == 0:
-            raise RuntimeError(
-                f'Invalid name "{name}" (value="{name}") in EmailLogAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid name "{name}" (value="{name}") in EmailLogAttachment.build_()')
 
         if description is None or len(description) == 0:
-            raise RuntimeError(
-                f'Invalid description "{description}" (value="{description}") in EmailLogAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid description "{description}" (value="{description}") in EmailLogAttachment.build_()')
 
         generated_asset_id: Optional[int] = None
         submitted_asset_id: Optional[int] = None
@@ -971,27 +903,21 @@ class EmailLogAttachment(db.Model):
         elif isinstance(generated_asset, int):
             generated_asset_id = generated_asset
         elif generated_asset is not None:
-            raise RuntimeError(
-                f'Invalid generated_asset type "{type(generated_asset)}" (value="{generated_asset}") in EmailLogAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid generated_asset type "{type(generated_asset)}" (value="{generated_asset}") in EmailLogAttachment.build_()')
 
         if isinstance(submitted_asset, SubmittedAsset):
             submitted_asset_id = submitted_asset.id
         elif isinstance(submitted_asset, int):
             submitted_asset_id = submitted_asset
         elif submitted_asset is not None:
-            raise RuntimeError(
-                f'Invalid submitted_asset type "{type(submitted_asset)}" (value="{submitted_asset}") in EmailLogAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid submitted_asset type "{type(submitted_asset)}" (value="{submitted_asset}") in EmailLogAttachment.build_()')
 
         if isinstance(temporary_asset, TemporaryAsset):
             temporary_asset_id = temporary_asset.id
         elif isinstance(temporary_asset, int):
             temporary_asset_id = temporary_asset
         elif temporary_asset is not None:
-            raise RuntimeError(
-                f'Invalid temporary_asset type "{type(temporary_asset)}" (value="{temporary_asset}") in EmailLogAttachment.build_()'
-            )
+            raise RuntimeError(f'Invalid temporary_asset type "{type(temporary_asset)}" (value="{temporary_asset}") in EmailLogAttachment.build_()')
 
         return cls(
             log=log,
@@ -1015,9 +941,7 @@ class MessageOfTheDay(db.Model):
 
     # id of issuing user
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    user = db.relationship(
-        "User", uselist=False, backref=db.backref("messages", lazy="dynamic")
-    )
+    user = db.relationship("User", uselist=False, backref=db.backref("messages", lazy="dynamic"))
 
     # date of issue
     issue_date = db.Column(db.DateTime(), index=True)
@@ -1193,9 +1117,7 @@ class BackupRecord(db.Model, BackupTypesMixin):
     comment = db.Column(db.Text())
 
     # is this record encrypted?
-    encryption = db.Column(
-        db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE
-    )
+    encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
     # file size after encryption
     encrypted_size = db.Column(db.Integer())
@@ -1230,17 +1152,11 @@ class BackupRecord(db.Model, BackupTypesMixin):
 
     @property
     def readable_archive_size(self):
-        return (
-            format_size(self.archive_size)
-            if self.archive_size is not None
-            else "<unset>"
-        )
+        return format_size(self.archive_size) if self.archive_size is not None else "<unset>"
 
     @property
     def readable_total_backup_size(self):
-        return (
-            format_size(self.backup_size) if self.backup_size is not None else "<unset>"
-        )
+        return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
 
 
 class ObjectStoreBackupRecord(db.Model):
@@ -1346,9 +1262,7 @@ class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of label
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     def make_label(self, text=None):
         label_text = text if text is not None else self.name
@@ -1361,15 +1275,11 @@ class TaskRecord(db.Model, TaskWorkflowStatesMixin):
     __tablename__ = "tasks"
 
     # unique identifier used by task queue
-    id = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), primary_key=True
-    )
+    id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), primary_key=True)
 
     # task owner
     owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    owner = db.relationship(
-        "User", uselist=False, backref=db.backref("tasks", lazy="dynamic")
-    )
+    owner = db.relationship("User", uselist=False, backref=db.backref("tasks", lazy="dynamic"))
 
     # task launch date
     start_date = db.Column(db.DateTime())
@@ -1404,9 +1314,7 @@ class Notification(db.Model, NotificationTypesMixin):
     # notifications are identified by the user they are intended for, plus a tag identifying
     # the source of the notification (eg. a task UUID)
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    user = db.relationship(
-        "User", uselist=False, backref=db.backref("notifications", lazy="dynamic")
-    )
+    user = db.relationship("User", uselist=False, backref=db.backref("notifications", lazy="dynamic"))
 
     # uuid identifies a set of notifications (eg. task progress updates for the same task, or messages for the same subject)
     uuid = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
@@ -1441,15 +1349,11 @@ class PopularityRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tag LiveProject to which this record applies
-    liveproject_id = db.Column(
-        db.Integer(), db.ForeignKey("live_projects.id"), index=True
-    )
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"), index=True)
     liveproject = db.relationship(
         "LiveProject",
         uselist=False,
-        backref=db.backref(
-            "popularity_data", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("popularity_data", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # tag ProjectClassConfig to which this record applies
@@ -1457,9 +1361,7 @@ class PopularityRecord(db.Model):
     config = db.relationship(
         "ProjectClassConfig",
         uselist=False,
-        backref=db.backref(
-            "popularity_data", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("popularity_data", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # date stamp for this calculation
@@ -1529,14 +1431,10 @@ class FilterRecord(db.Model):
     )
 
     # active research group filters
-    group_filters = db.relationship(
-        "ResearchGroup", secondary=convenor_group_filter_table, lazy="dynamic"
-    )
+    group_filters = db.relationship("ResearchGroup", secondary=convenor_group_filter_table, lazy="dynamic")
 
     # active transferable skill group filters
-    skill_filters = db.relationship(
-        "TransferableSkill", secondary=convenor_skill_filter_table, lazy="dynamic"
-    )
+    skill_filters = db.relationship("TransferableSkill", secondary=convenor_skill_filter_table, lazy="dynamic")
 
 
 @cache.memoize()
@@ -1545,11 +1443,7 @@ def _MatchingAttempt_current_score(id):
 
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
-    if (
-        obj.levelling_bias is None
-        or obj.mean_CATS_per_project is None
-        or obj.intra_group_tension is None
-    ):
+    if obj.levelling_bias is None or obj.mean_CATS_per_project is None or obj.intra_group_tension is None:
         return None
 
     # build objective function: this is the reward function that measures how well the student
@@ -1704,8 +1598,7 @@ def _MatchingAttempt_is_valid(id):
 
             if len(record_errors) == 0 and len(record_warnings) == 0:
                 current_app.logger.info(
-                    "** Internal inconsistency in response from _MatchingRecord_is_valid: "
-                    "record_errors = {x}, record_warnings = {y}".format(
+                    "** Internal inconsistency in response from _MatchingRecord_is_valid: record_errors = {x}, record_warnings = {y}".format(
                         x=record_errors, y=record_warnings
                     )
                 )
@@ -1749,22 +1642,16 @@ def _MatchingAttempt_is_valid(id):
                 sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
                 if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                    errors[("custom_sup", fac.id)] = (
-                        "{pclass} assignment to {name} violates their custom supervising CATS limit"
-                        " = {n}".format(
-                            pclass=config.name,
-                            name=fac.user.name,
-                            n=rec.CATS_supervision,
-                        )
+                    errors[("custom_sup", fac.id)] = "{pclass} assignment to {name} violates their custom supervising CATS limit = {n}".format(
+                        pclass=config.name,
+                        name=fac.user.name,
+                        n=rec.CATS_supervision,
                     )
                     faculty_issues = True
 
                 if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                    errors[("custom_mark", fac.id)] = (
-                        "{pclass} assignment to {name} violates their custom marking CATS limit"
-                        " = {n}".format(
-                            pclass=config.name, name=fac.user.name, n=rec.CATS_marking
-                        )
+                    errors[("custom_mark", fac.id)] = "{pclass} assignment to {name} violates their custom marking CATS limit = {n}".format(
+                        pclass=config.name, name=fac.user.name, n=rec.CATS_marking
                     )
                     faculty_issues = True
 
@@ -1773,9 +1660,7 @@ def _MatchingAttempt_is_valid(id):
     is_valid = (not student_issues) and (not faculty_issues)
 
     if not is_valid and len(errors) == 0:
-        current_app.logger.info(
-            "** Internal inconsistency in _MatchingAttempt_is_valid: not valid, but len(errors) == 0"
-        )
+        current_app.logger.info("** Internal inconsistency in _MatchingAttempt_is_valid: not valid, but len(errors) == 0")
 
     return is_valid, student_issues, faculty_issues, errors, warnings
 
@@ -1805,9 +1690,7 @@ class ScheduleEnumeration(db.Model, ScheduleEnumerationTypesMixin):
         "ScheduleAttempt",
         foreign_keys=[schedule_id],
         uselist=False,
-        backref=db.backref(
-            "enumerations", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("enumerations", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
 
@@ -1839,7 +1722,5 @@ class MatchingEnumeration(db.Model, MatchingEnumerationTypesMixin):
         "MatchingAttempt",
         foreign_keys=[matching_id],
         uselist=False,
-        backref=db.backref(
-            "enumerations", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("enumerations", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )

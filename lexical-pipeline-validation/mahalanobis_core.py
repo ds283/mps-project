@@ -65,12 +65,8 @@ def build_reference(pre):
     inv_corr = inv(corr_3)
     cond_num = np.linalg.cond(corr_3)
     print(f"\nPre-LLM reference (n={len(pre_3)} complete cases):")
-    print(
-        f"  Centroid: MATTR={mean_3[0]:.6f}, MTLD={mean_3[1]:.4f}, CV={mean_3[2]:.6f}"
-    )
-    print(
-        f"  Correlation matrix condition number: {cond_num:.2f}  (well-conditioned < 100)"
-    )
+    print(f"  Centroid: MATTR={mean_3[0]:.6f}, MTLD={mean_3[1]:.4f}, CV={mean_3[2]:.6f}")
+    print(f"  Correlation matrix condition number: {cond_num:.2f}  (well-conditioned < 100)")
     return mean_3, std_3, corr_3, inv_corr
 
 
@@ -118,13 +114,11 @@ def load_production_calibration(
         if cal_llm:
             desc += f", llm_model_name={cal_llm!r}"
         raise ValueError(
-            f"No calibration found in {cal_file!r} matching {desc}. "
-            f"Available rows:\n{df[['feature_set', 'llm_model_name']].to_string()}"
+            f"No calibration found in {cal_file!r} matching {desc}. Available rows:\n{df[['feature_set', 'llm_model_name']].to_string()}"
         )
     if len(candidates) > 1:
         raise ValueError(
-            f"Multiple calibrations match feature_set={cal_type!r} in {cal_file!r}. "
-            "Use --calibration-llm to select one by LLM model name."
+            f"Multiple calibrations match feature_set={cal_type!r} in {cal_file!r}. Use --calibration-llm to select one by LLM model name."
         )
 
     row = candidates.iloc[0]
@@ -136,16 +130,13 @@ def load_production_calibration(
         if n == 0:
             n = 4  # fallback for very old exports that lack feature_i columns
     _full_labels = ["MATTR", "MTLD", "sentence_cv", "mean_nll", "nll_cv"]
-    expected_labels = (
-        ["MATTR", "MTLD", "sentence_cv"] if cal_type == "lexical" else _full_labels[:n]
-    )
+    expected_labels = ["MATTR", "MTLD", "sentence_cv"] if cal_type == "lexical" else _full_labels[:n]
 
     for i, exp in enumerate(expected_labels):
         got = str(row.get(f"feature_{i}", ""))
         if got != exp:
             raise ValueError(
-                f"Feature label mismatch at index {i}: expected {exp!r}, got {got!r}. "
-                "The export may be from an incompatible pipeline version."
+                f"Feature label mismatch at index {i}: expected {exp!r}, got {got!r}. The export may be from an incompatible pipeline version."
             )
 
     mu = np.array([float(row[f"mu_{i}"]) for i in range(n)], dtype=float)
@@ -157,9 +148,7 @@ def load_production_calibration(
     n_samples = int(row.get("n_samples", 0))
     calibrated_at = str(row.get("calibrated_at", "unknown"))
     print(f"\nProduction calibration loaded from {cal_file!r}:")
-    print(
-        f"  feature_set={cal_type!r}  n_samples={n_samples}  calibrated_at={calibrated_at}"
-    )
+    print(f"  feature_set={cal_type!r}  n_samples={n_samples}  calibrated_at={calibrated_at}")
     print(f"  mu = {mu}")
     print(f"  sigma_inv shape = {sigma_inv.shape}")
     print(

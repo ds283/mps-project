@@ -47,10 +47,7 @@ _NEW_COLOUR = "#1a8a8a"
 def upgrade():
     bind = op.get_bind()
     bind.execute(
-        sa.text(
-            "UPDATE roles SET name = :new_name, description = :description, colour = :colour "
-            "WHERE name = :old_name"
-        ),
+        sa.text("UPDATE roles SET name = :new_name, description = :description, colour = :colour WHERE name = :old_name"),
         {
             "new_name": _NEW_NAME,
             "description": _NEW_DESCRIPTION,

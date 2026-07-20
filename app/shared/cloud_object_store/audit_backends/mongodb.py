@@ -33,12 +33,12 @@ class MongoDBAuditBackend(AuditBackend):
         self._collection = self._db[self._collection_name]
 
     def store_audit_record(
-            self,
-            type: str,
-            audit_data: str,
-            driver: str = None,
-            bucket: str = None,
-            host_uri: str = None,
+        self,
+        type: str,
+        audit_data: str,
+        driver: str = None,
+        bucket: str = None,
+        host_uri: str = None,
     ) -> None:
         now = datetime.now()
         audit_record = {
@@ -69,8 +69,6 @@ class MongoDBAuditBackend(AuditBackend):
             filter_data = filter_data | {"timestamp": {"$lt": latest}}
 
         if len(filter_data) == 0:
-            raise ValueError(
-                "cloud_object_store: delete_audit_records requires a non-empty filter"
-            )
+            raise ValueError("cloud_object_store: delete_audit_records requires a non-empty filter")
 
         self._collection.delete_many(filter=filter_data)

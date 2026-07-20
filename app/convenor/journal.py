@@ -73,9 +73,7 @@ def _build_convenor_entry_filter(base_query):
     current user convenes or co-convenes.
     """
     faculty_data = current_user.faculty_data
-    convenor_pclass_ids = (
-        [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
-    )
+    convenor_pclass_ids = [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
 
     if not convenor_pclass_ids:
         # Convenor with no project classes: show nothing
@@ -128,11 +126,7 @@ def student_journal_ajax(student_id):
         .filter(StudentJournalEntry.student_id == student_id)
     )
 
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("office")
-    ):
+    if not (current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office")):
         base_query = _build_convenor_entry_filter(base_query)
 
     columns = {
@@ -170,11 +164,7 @@ def student_journal_ajax(student_id):
         return_text = None
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            lambda items: ajax.convenor.journal_data(
-                items, return_url=return_url, return_text=return_text
-            )
-        )
+        return handler.build_payload(lambda items: ajax.convenor.journal_data(items, return_url=return_url, return_text=return_text))
 
 
 @convenor.route("/view_journal_entry/<int:entry_id>")
@@ -186,9 +176,7 @@ def view_journal_entry(entry_id):
     if not _check_access(student):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.student_journal_inspector", student_id=student.id)
-    )
+    url = request.args.get("url", url_for("convenor.student_journal_inspector", student_id=student.id))
     text = request.args.get("text", "Back to journal")
 
     return render_template_context(
@@ -208,9 +196,7 @@ def add_journal_entry(student_id):
     if not _check_access(student):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.student_journal_inspector", student_id=student_id)
-    )
+    url = request.args.get("url", url_for("convenor.student_journal_inspector", student_id=student_id))
     text = request.args.get("text", "Back to journal")
 
     JournalForm = AddJournalEntryFormFactory(current_user)

@@ -103,10 +103,7 @@ def force_convert_bookmarks(sel_id):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
-    if (
-        sel.config.selector_lifecycle
-        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
+    if sel.config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
             "Forced conversion of bookmarks can be performed only after project selection is open.",
             "info",
@@ -115,18 +112,14 @@ def force_convert_bookmarks(sel_id):
 
     if not force and sel.has_submitted:
         flash(
-            'Cannot force conversion of bookmarks for selector "{name}" because an existing submission exists.'.format(
-                name=sel.student.user.name
-            ),
+            'Cannot force conversion of bookmarks for selector "{name}" because an existing submission exists.'.format(name=sel.student.user.name),
             "error",
         )
         return redirect(redirect_url())
 
     if not sel.has_bookmarks:
         flash(
-            'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks exist.'.format(
-                name=sel.student.user.name
-            ),
+            'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks exist.'.format(name=sel.student.user.name),
             "error",
         )
         return redirect(redirect_url())
@@ -292,8 +285,7 @@ def submission_period_documents(pid):
 
     state = config.submitter_lifecycle
     deletable = (current_user.has_role("root") or current_user.has_role("admin")) or (
-        not record.closed
-        and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+        not record.closed and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
     )
     pclass = config.project_class
     convenor_data = get_convenor_dashboard_data(pclass, config)
@@ -364,21 +356,13 @@ def delete_period_attachment(aid):
     text = request.args.get("text", None)
 
     title = "Delete submission period attachment"
-    action_url = url_for(
-        "convenor.perform_delete_period_attachment", aid=aid, url=url, text=text
-    )
+    action_url = url_for("convenor.perform_delete_period_attachment", aid=aid, url=url, text=text)
 
-    name = (
-        attachment.attachment.target_name
-        if attachment.attachment.target_name is not None
-        else attachment.attachment.filename
-    )
+    name = attachment.attachment.target_name if attachment.attachment.target_name is not None else attachment.attachment.filename
     message = (
         "<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for "
         "{period}.</p>"
-        "<p>This action cannot be undone.</p>".format(
-            name=name, period=record.display_name
-        )
+        "<p>This action cannot be undone.</p>".format(name=name, period=record.display_name)
     )
     submit_label = "Remove attachment"
 
@@ -467,11 +451,7 @@ def perform_delete_period_attachment(aid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(
-        url_for(
-            "convenor.submission_period_documents", pid=record.id, url=url, text=text
-        )
-    )
+    return redirect(url_for("convenor.submission_period_documents", pid=record.id, url=url, text=text))
 
 
 @convenor.route("/upload_period_attachment/<int:pid>", methods=["GET", "POST"])
@@ -571,9 +551,7 @@ def upload_period_attachment(pid):
 
             # if all roles selected
             if len(selected_roles) == 0:
-                asset.grant_roles(
-                    ["student", "faculty", "moderator", "exam_board", "external"]
-                )
+                asset.grant_roles(["student", "faculty", "moderator", "exam_board", "external"])
 
             # grant asset-level access based on selected roles
             if SubmissionRoleTypesMixin.ROLE_STUDENT in selected_roles:
@@ -614,17 +592,11 @@ def upload_period_attachment(pid):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
             flash(
-                'Attachment "{file}" was successfully uploaded.'.format(
-                    file=attachment_file.filename
-                ),
+                'Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename),
                 "info",
             )
 
-            return redirect(
-                url_for(
-                    "convenor.submission_period_documents", pid=pid, url=url, text=text
-                )
-            )
+            return redirect(url_for("convenor.submission_period_documents", pid=pid, url=url, text=text))
 
     else:
         if request.method == "GET":
@@ -746,9 +718,7 @@ def update_period_attachments():
     period_id = data["period_id"]
 
     # attach_id is a SubmissionPeriodRecord
-    record: SubmissionPeriodRecord = (
-        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-    )
+    record: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
 
     if record is None:
         return jsonify({"status": "data_missing"})

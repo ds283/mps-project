@@ -155,9 +155,4 @@ def upgrade():
 
 def downgrade():
     bind = op.get_bind()
-    bind.execute(
-        sa.text(
-            "DELETE FROM email_templates "
-            "WHERE type IN (70, 71, 72) AND tenant_id IS NULL AND pclass_id IS NULL"
-        )
-    )
+    bind.execute(sa.text("DELETE FROM email_templates WHERE type IN (70, 71, 72) AND tenant_id IS NULL AND pclass_id IS NULL"))

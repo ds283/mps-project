@@ -43,9 +43,7 @@ def register_supervision_event_tasks(celery):
         )
 
         try:
-            period: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-            )
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -97,9 +95,7 @@ def register_supervision_event_tasks(celery):
                         # the day-to-day supervision)
                         target_roles = set([template.target_role])
                         if SupervisionEventTemplate.ROLE_SUPERVISOR in target_roles:
-                            target_roles.add(
-                                SupervisionEventTemplate.ROLE_RESPONSIBLE_SUPERVISOR
-                            )
+                            target_roles.add(SupervisionEventTemplate.ROLE_RESPONSIBLE_SUPERVISOR)
 
                         # NOTE: this query assumes ROLE_SUPERVISOR is numerically before ROLE_RESPONSIBLE_SUPERVISOR
                         # it may need changing if ever we are in a situation where that is no longer true
@@ -129,9 +125,7 @@ def register_supervision_event_tasks(celery):
                             .all()
                         )
 
-                        other_attendees_string = ", ".join(
-                            [x.user.name for x in other_attendees]
-                        )
+                        other_attendees_string = ", ".join([x.user.name for x in other_attendees])
                         print(
                             f'** event.populate [{period.config.name}]: Created event for submission #{submission.id} ({suser.name}) for template "{template.name}" in submission unit "{unit.name}" in period "{period.display_name}" | event owner = {role.user.name} | other attendees = [{other_attendees_string}]'
                         )

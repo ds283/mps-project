@@ -42,9 +42,7 @@ class Role(db.Model, RoleMixin, ColouredLabelMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # role name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # role description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -83,29 +81,19 @@ class User(db.Model, UserMixin):
     )
 
     # primary email address
-    email = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
-    )
+    email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
 
     # username
-    username = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
-    )
+    username = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
 
     # password
-    password = db.Column(
-        db.String(PASSWORD_HASH_LENGTH, collation="utf8_bin"), nullable=False
-    )
+    password = db.Column(db.String(PASSWORD_HASH_LENGTH, collation="utf8_bin"), nullable=False)
 
     # first name
-    first_name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
-    )
+    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # last (family) name
-    last_name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
-    )
+    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # active flag
     active = db.Column(db.Boolean(), nullable=False)
@@ -133,9 +121,7 @@ class User(db.Model, UserMixin):
     # ROLES
 
     # assigned roles
-    roles = db.relationship(
-        "Role", secondary=roles_to_users, backref=db.backref("users", lazy="dynamic")
-    )
+    roles = db.relationship("Role", secondary=roles_to_users, backref=db.backref("users", lazy="dynamic"))
 
     # masked roles (currently available only to 'root' users)
     mask_roles = db.relationship("Role", secondary=mask_roles_to_users, lazy="dynamic")
@@ -154,9 +140,7 @@ class User(db.Model, UserMixin):
     # DEFAULT CONTENT LICENSE
 
     # default license id
-    default_license_id = db.Column(
-        db.Integer(), db.ForeignKey("asset_licenses.id", use_alter=True)
-    )
+    default_license_id = db.Column(db.Integer(), db.ForeignKey("asset_licenses.id", use_alter=True))
     default_license = db.relationship(
         "AssetLicense",
         foreign_keys=[default_license_id],
@@ -432,9 +416,9 @@ class User(db.Model, UserMixin):
     def unheld_email_notifications(self):
         from .utilities import EmailNotification
 
-        return self.email_notifications.filter(
-            or_(EmailNotification.held.is_(False), EmailNotification.held == None)
-        ).order_by(EmailNotification.timestamp)
+        return self.email_notifications.filter(or_(EmailNotification.held.is_(False), EmailNotification.held == None)).order_by(
+            EmailNotification.timestamp
+        )
 
     @property
     def number_download_items(self) -> int:

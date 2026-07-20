@@ -22,6 +22,7 @@ Add three new tables for the database-backed grading rubric:
 Also add grading_rubric_id (nullable FK) to project_class_config so each
 ProjectClassConfig can reference the rubric to use for language analysis.
 """
+
 from alembic import op
 import sqlalchemy as sa
 

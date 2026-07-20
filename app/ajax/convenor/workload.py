@@ -27,9 +27,7 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
 
         data.append(
             {
-                "name": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(
-                    email=u.email, name=u.name
-                ),
+                "name": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                 "supervising": render_template(
                     "convenor/workload/_supervising.html",
                     f=fd,

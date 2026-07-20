@@ -68,12 +68,8 @@ def box_login():
     scheme = current_app.config.get("PREFERRED_URL_SCHEME", "https")
     redirect_url = url_for("oauth2.box_callback", _external=True, _scheme=scheme)
 
-    box_oauth = BoxOAuth(
-        config=OAuthConfig(client_id=client_id, client_secret=client_secret)
-    )
-    auth_url = box_oauth.get_authorize_url(
-        options=GetAuthorizeUrlOptions(redirect_uri=redirect_url, state=csrf_token)
-    )
+    box_oauth = BoxOAuth(config=OAuthConfig(client_id=client_id, client_secret=client_secret))
+    auth_url = box_oauth.get_authorize_url(options=GetAuthorizeUrlOptions(redirect_uri=redirect_url, state=csrf_token))
 
     return redirect(auth_url)
 
@@ -95,9 +91,7 @@ def box_callback():
     # Verify CSRF state.
     returned_state = request.args.get("state")
     if not expected_state or returned_state != expected_state:
-        flash(
-            "Box authorisation failed: invalid state token. Please try again.", "error"
-        )
+        flash("Box authorisation failed: invalid state token. Please try again.", "error")
         return redirect(fallback_url)
 
     auth_code = request.args.get("code")
@@ -112,9 +106,7 @@ def box_callback():
     client_secret = current_app.config.get("BOX_CLIENT_SECRET")
 
     try:
-        box_oauth = BoxOAuth(
-            config=OAuthConfig(client_id=client_id, client_secret=client_secret)
-        )
+        box_oauth = BoxOAuth(config=OAuthConfig(client_id=client_id, client_secret=client_secret))
         token = box_oauth.get_tokens_authorization_code_grant(auth_code)
     except Exception as e:
         current_app.logger.exception("Box OAuth2 authentication error", exc_info=e)

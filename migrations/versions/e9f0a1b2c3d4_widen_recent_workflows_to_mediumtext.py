@@ -20,14 +20,8 @@ depends_on = None
 
 
 def upgrade():
-    op.execute(
-        "ALTER TABLE llm_orchestration_job "
-        "MODIFY COLUMN recent_workflows MEDIUMTEXT CHARACTER SET utf8 COLLATE utf8_bin"
-    )
+    op.execute("ALTER TABLE llm_orchestration_job MODIFY COLUMN recent_workflows MEDIUMTEXT CHARACTER SET utf8 COLLATE utf8_bin")
 
 
 def downgrade():
-    op.execute(
-        "ALTER TABLE llm_orchestration_job "
-        "MODIFY COLUMN recent_workflows TEXT CHARACTER SET utf8 COLLATE utf8_bin"
-    )
+    op.execute("ALTER TABLE llm_orchestration_job MODIFY COLUMN recent_workflows TEXT CHARACTER SET utf8 COLLATE utf8_bin")

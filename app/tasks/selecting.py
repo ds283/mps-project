@@ -30,9 +30,7 @@ def _reassign_liveprojects(item_list, dest_config):
     delete_items = set()
 
     for item in item_list:
-        new_liveproject = dest_config.live_projects.filter_by(
-            parent_id=item.liveproject.parent_id
-        ).first()
+        new_liveproject = dest_config.live_projects.filter_by(parent_id=item.liveproject.parent_id).first()
 
         # delete record if no match; otherwise reassign
         if new_liveproject is None:
@@ -90,12 +88,8 @@ def register_selecting_tasks(celery):
     @celery.task(bind=True, default_retry_delay=10)
     def move_selector(self, sel_id, dest_id, user_id):
         try:
-            sel: SelectingStudent = (
-                db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-            )
-            dest_config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=dest_id).first()
-            )
+            sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
+            dest_config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=dest_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
 
         except SQLAlchemyError as e:
@@ -145,9 +139,7 @@ def register_selecting_tasks(celery):
             raise self.retry()
 
         user.post_message(
-            'Selector "{name}" has been moved to project class "{pcl}".'.format(
-                name=sel.student.user.name, pcl=dest_config.name
-            ),
+            'Selector "{name}" has been moved to project class "{pcl}".'.format(name=sel.student.user.name, pcl=dest_config.name),
             "success",
             autocommit=True,
         )
@@ -158,9 +150,7 @@ def register_selecting_tasks(celery):
         return {"msg": "Successfully moved selector to new project class"}
 
     @celery.task(bind=True, default_retry_delay=10)
-    def approve_outstanding_confirms(
-        self, task_id: str, config_id: int, approver_id: int
-    ):
+    def approve_outstanding_confirms(self, task_id: str, config_id: int, approver_id: int):
         post_task_update_msg(
             self,
             task_id,
@@ -171,9 +161,7 @@ def register_selecting_tasks(celery):
         )
 
         try:
-            config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -190,18 +178,11 @@ def register_selecting_tasks(celery):
             )
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": f"Could not load specified ProjectClassConfig instance id={config_id}"
-                },
+                meta={"msg": f"Could not load specified ProjectClassConfig instance id={config_id}"},
             )
-            return {
-                "msg": f"Could not load specified ProjectClassConfig instance id={config_id}"
-            }
+            return {"msg": f"Could not load specified ProjectClassConfig instance id={config_id}"}
 
-        if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-        ):
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
             post_task_update_msg(
                 self,
                 task_id,
@@ -212,18 +193,11 @@ def register_selecting_tasks(celery):
             )
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": "Approval of all outstanding confirmation requests can be performed only after student choices have opened"
-                },
+                meta={"msg": "Approval of all outstanding confirmation requests can be performed only after student choices have opened"},
             )
-            return {
-                "msg": "Approval of all outstanding confirmation requests can be performed only after student choices have opened"
-            }
+            return {"msg": "Approval of all outstanding confirmation requests can be performed only after student choices have opened"}
 
-        if (
-            config.selector_lifecycle
-            > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
-        ):
+        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
             post_task_update_msg(
                 self,
                 task_id,
@@ -234,13 +208,9 @@ def register_selecting_tasks(celery):
             )
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": "Approval of all outstanding confirmation requests can not be performed after matching has been completed"
-                },
+                meta={"msg": "Approval of all outstanding confirmation requests can not be performed after matching has been completed"},
             )
-            return {
-                "msg": "Approval of all outstanding confirmation requests can not be performed after matching has been completed"
-            }
+            return {"msg": "Approval of all outstanding confirmation requests can not be performed after matching has been completed"}
 
         post_task_update_msg(
             self,
@@ -309,9 +279,7 @@ def register_selecting_tasks(celery):
         )
 
         try:
-            config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -328,18 +296,11 @@ def register_selecting_tasks(celery):
             )
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": f"Could not load specified ProjectClassConfig instance id={config_id}"
-                },
+                meta={"msg": f"Could not load specified ProjectClassConfig instance id={config_id}"},
             )
-            return {
-                "msg": f"Could not load specified ProjectClassConfig instance id={config_id}"
-            }
+            return {"msg": f"Could not load specified ProjectClassConfig instance id={config_id}"}
 
-        if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-        ):
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
             post_task_update_msg(
                 self,
                 task_id,
@@ -350,18 +311,11 @@ def register_selecting_tasks(celery):
             )
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": "Deletion of all outstanding confirmation requests can be performed only after student choices have opened"
-                },
+                meta={"msg": "Deletion of all outstanding confirmation requests can be performed only after student choices have opened"},
             )
-            return {
-                "msg": "Deletion of all outstanding confirmation requests can be performed only after student choices have opened"
-            }
+            return {"msg": "Deletion of all outstanding confirmation requests can be performed only after student choices have opened"}
 
-        if (
-            config.selector_lifecycle
-            > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
-        ):
+        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
             post_task_update_msg(
                 self,
                 task_id,
@@ -372,13 +326,9 @@ def register_selecting_tasks(celery):
             )
             self.update_state(
                 "FAILURE",
-                meta={
-                    "msg": "Deletion of all outstanding confirmation requests can not be performed after matching has been completed"
-                },
+                meta={"msg": "Deletion of all outstanding confirmation requests can not be performed after matching has been completed"},
             )
-            return {
-                "msg": "Deletion of all outstanding confirmation requests can not be performed after matching has been completed"
-            }
+            return {"msg": "Deletion of all outstanding confirmation requests can not be performed after matching has been completed"}
 
         post_task_update_msg(
             self,

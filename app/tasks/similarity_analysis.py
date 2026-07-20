@@ -123,11 +123,7 @@ Rules:
 
 def _build_heading_classification_user_prompt(headings: list[str]) -> str:
     numbered = "\n".join(f"{i + 1}. {h}" for i, h in enumerate(headings))
-    return (
-        "The following are the top-level section headings from a physics project report.\n"
-        "Classify each one.\n\n"
-        f"{numbered}"
-    )
+    return f"The following are the top-level section headings from a physics project report.\nClassify each one.\n\n{numbered}"
 
 
 def _build_heading_classification_schema(headings: list[str]) -> dict:
@@ -186,21 +182,15 @@ def register_similarity_analysis_tasks(celery):
             record: SubmissionRecord = db.session.get(SubmissionRecord, record_id)
         except SQLAlchemyError as exc:
             record_step_end(_r, record_id, "extract_chunks", _t0, error=repr(exc))
-            current_app.logger.exception(
-                f"extract_chunks: SQLAlchemyError loading SubmissionRecord #{record_id}"
-            )
+            current_app.logger.exception(f"extract_chunks: SQLAlchemyError loading SubmissionRecord #{record_id}")
             raise self.retry(exc=exc)
 
         if record is None:
-            current_app.logger.warning(
-                f"extract_chunks: SubmissionRecord #{record_id} not found — skipping"
-            )
+            current_app.logger.warning(f"extract_chunks: SubmissionRecord #{record_id} not found — skipping")
             return
 
         if not record.language_analysis_complete:
-            current_app.logger.warning(
-                f"extract_chunks: SubmissionRecord #{record_id} language analysis not complete — skipping"
-            )
+            current_app.logger.warning(f"extract_chunks: SubmissionRecord #{record_id} language analysis not complete — skipping")
             return
 
         # ------------------------------------------------------------------
@@ -209,9 +199,7 @@ def register_similarity_analysis_tasks(celery):
         # is the mechanism to force re-extraction across all records.
         # ------------------------------------------------------------------
         if record.chunks_present and record.chunks_prompt_version == CHUNK_EXTRACTION_PROMPT_VERSION:
-            current_app.logger.info(
-                f"extract_chunks: SubmissionRecord #{record_id} already has current chunk extraction — skipping"
-            )
+            current_app.logger.info(f"extract_chunks: SubmissionRecord #{record_id} already has current chunk extraction — skipping")
             record_step_end(_r, record_id, "extract_chunks", _t0)
             return
 
@@ -238,24 +226,17 @@ def register_similarity_analysis_tasks(celery):
                 db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
-                current_app.logger.warning(
-                    f"extract_chunks: could not clear stale similarity data for "
-                    f"record #{record_id}: {exc}"
-                )
+                current_app.logger.warning(f"extract_chunks: could not clear stale similarity data for record #{record_id}: {exc}")
 
         scraped = get_scraped_text(record_id)
 
         if scraped is None:
-            current_app.logger.warning(
-                f"extract_chunks: no scraped text in cache for SubmissionRecord #{record_id} — skipping"
-            )
+            current_app.logger.warning(f"extract_chunks: no scraped text in cache for SubmissionRecord #{record_id} — skipping")
             return
 
         raw_text: str = scraped.get("scraped_text", "")
         if not raw_text:
-            current_app.logger.warning(
-                f"extract_chunks: empty scraped text for SubmissionRecord #{record_id} — skipping"
-            )
+            current_app.logger.warning(f"extract_chunks: empty scraped text for SubmissionRecord #{record_id} — skipping")
             return
 
         # ------------------------------------------------------------------
@@ -278,9 +259,7 @@ def register_similarity_analysis_tasks(celery):
                 f"extract_chunks: no top-level sections detected for SubmissionRecord #{record_id} "
                 f"(heading_style=none) — storing all chunks as absent"
             )
-            store_similarity_chunks(
-                record_id, _empty_sections, model, CHUNK_EXTRACTION_PROMPT_VERSION, "none", 0
-            )
+            store_similarity_chunks(record_id, _empty_sections, model, CHUNK_EXTRACTION_PROMPT_VERSION, "none", 0)
             try:
                 record = db.session.get(SubmissionRecord, record_id)
                 if record is not None:
@@ -289,9 +268,7 @@ def register_similarity_analysis_tasks(celery):
                     db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
-                current_app.logger.warning(
-                    f"extract_chunks: could not set chunks_present for record #{record_id}: {exc}"
-                )
+                current_app.logger.warning(f"extract_chunks: could not set chunks_present for record #{record_id}: {exc}")
             record_step_end(_r, record_id, "extract_chunks", _t0)
             return
 
@@ -319,9 +296,7 @@ def register_similarity_analysis_tasks(celery):
             raise
 
         if parsed_result is None:
-            current_app.logger.error(
-                f"extract_chunks: LLM classification failed for SubmissionRecord #{record_id}"
-            )
+            current_app.logger.error(f"extract_chunks: LLM classification failed for SubmissionRecord #{record_id}")
             try:
                 rec = db.session.get(SubmissionRecord, record_id)
                 if rec is not None:
@@ -332,9 +307,7 @@ def register_similarity_analysis_tasks(celery):
                     db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
-                current_app.logger.warning(
-                    f"extract_chunks: could not set llm_chunking_failed for record #{record_id}: {exc}"
-                )
+                current_app.logger.warning(f"extract_chunks: could not set llm_chunking_failed for record #{record_id}: {exc}")
             record_step_end(_r, record_id, "extract_chunks", _t0, error="LLM heading classification returned no result")
             return
 
@@ -348,8 +321,7 @@ def register_similarity_analysis_tasks(celery):
             if assigned_type and assigned_type in CHUNK_TYPES:
                 if len(section["full_text"].split()) < MIN_CHUNK_WORDS:
                     current_app.logger.debug(
-                        f"extract_chunks: section '{heading}' for record #{record_id} "
-                        f"has fewer than {MIN_CHUNK_WORDS} words — treating as absent"
+                        f"extract_chunks: section '{heading}' for record #{record_id} has fewer than {MIN_CHUNK_WORDS} words — treating as absent"
                     )
                     continue
                 chunk_texts[assigned_type].append(section["full_text"])
@@ -381,15 +353,12 @@ def register_similarity_analysis_tasks(celery):
                 record.chunks_prompt_version = CHUNK_EXTRACTION_PROMPT_VERSION
                 db.session.commit()
         except SQLAlchemyError as exc:
-            current_app.logger.warning(
-                f"extract_chunks: SQLAlchemyError on session reload for record #{record_id}: {exc}"
-            )
+            current_app.logger.warning(f"extract_chunks: SQLAlchemyError on session reload for record #{record_id}: {exc}")
             db.session.rollback()
             raise self.retry(exc=exc)
 
         current_app.logger.info(
-            f"extract_chunks: completed for SubmissionRecord #{record_id} "
-            f"(style={heading_style}, sections={len(top_level_sections)})"
+            f"extract_chunks: completed for SubmissionRecord #{record_id} (style={heading_style}, sections={len(top_level_sections)})"
         )
 
         record_step_end(_r, record_id, "extract_chunks", _t0)
@@ -420,16 +389,12 @@ def register_similarity_analysis_tasks(celery):
 
         chunks = get_similarity_chunks(record_id)
         if chunks is None:
-            current_app.logger.warning(
-                f"compute_minhash: no similarity_chunks in cache for SubmissionRecord #{record_id} — skipping"
-            )
+            current_app.logger.warning(f"compute_minhash: no similarity_chunks in cache for SubmissionRecord #{record_id} — skipping")
             return
 
         sections = chunks.get("sections", {})
         if not sections:
-            current_app.logger.warning(
-                f"compute_minhash: empty sections for SubmissionRecord #{record_id} — skipping"
-            )
+            current_app.logger.warning(f"compute_minhash: empty sections for SubmissionRecord #{record_id} — skipping")
             return
 
         extracted_at = chunks.get("extracted_at")
@@ -438,16 +403,11 @@ def register_similarity_analysis_tasks(celery):
         # MinHash signatures — skip if already current
         # ------------------------------------------------------------------
         minhash_current = (
-            chunks.get("minhash_signatures")
-            and chunks.get("minhash_computed_at")
-            and extracted_at
-            and chunks["minhash_computed_at"] >= extracted_at
+            chunks.get("minhash_signatures") and chunks.get("minhash_computed_at") and extracted_at and chunks["minhash_computed_at"] >= extracted_at
         )
 
         if minhash_current:
-            current_app.logger.info(
-                f"compute_minhash: signatures already current for SubmissionRecord #{record_id} — skipping"
-            )
+            current_app.logger.info(f"compute_minhash: signatures already current for SubmissionRecord #{record_id} — skipping")
         else:
             signatures: dict[str, list[int]] = {}
 
@@ -462,8 +422,7 @@ def register_similarity_analysis_tasks(celery):
                     words = text.lower().split()
                     if len(words) < MIN_CHUNK_WORDS:
                         current_app.logger.debug(
-                            f"compute_minhash: chunk '{chunk_type}' for record #{record_id} "
-                            f"has fewer than {MIN_CHUNK_WORDS} words — skipping MinHash"
+                            f"compute_minhash: chunk '{chunk_type}' for record #{record_id} has fewer than {MIN_CHUNK_WORDS} words — skipping MinHash"
                         )
                         continue
                     shingles = set()
@@ -476,20 +435,13 @@ def register_similarity_analysis_tasks(celery):
 
                     signatures[chunk_type] = mh.hashvalues.tolist()
                 except Exception as exc:
-                    current_app.logger.warning(
-                        f"compute_minhash: failed for chunk '{chunk_type}' of record #{record_id}: {exc}"
-                    )
+                    current_app.logger.warning(f"compute_minhash: failed for chunk '{chunk_type}' of record #{record_id}: {exc}")
 
             if signatures:
                 store_minhash_signatures(record_id, signatures)
-                current_app.logger.info(
-                    f"compute_minhash: stored signatures for {list(signatures.keys())} "
-                    f"of SubmissionRecord #{record_id}"
-                )
+                current_app.logger.info(f"compute_minhash: stored signatures for {list(signatures.keys())} of SubmissionRecord #{record_id}")
             else:
-                current_app.logger.warning(
-                    f"compute_minhash: no signatures produced for SubmissionRecord #{record_id}"
-                )
+                current_app.logger.warning(f"compute_minhash: no signatures produced for SubmissionRecord #{record_id}")
 
         # ------------------------------------------------------------------
         # Sentence-transformer embeddings — skip if already current for this model
@@ -505,10 +457,7 @@ def register_similarity_analysis_tasks(celery):
         )
 
         if embedding_current:
-            current_app.logger.info(
-                f"compute_minhash: embeddings already current for SubmissionRecord #{record_id} "
-                f"(model={model_name}) — skipping"
-            )
+            current_app.logger.info(f"compute_minhash: embeddings already current for SubmissionRecord #{record_id} (model={model_name}) — skipping")
         else:
             embedding_vectors: dict[str, list[float]] = {}
 
@@ -521,29 +470,22 @@ def register_similarity_analysis_tasks(celery):
                     continue
                 if len(text.split()) < MIN_CHUNK_WORDS:
                     current_app.logger.debug(
-                        f"compute_minhash: chunk '{chunk_type}' for record #{record_id} "
-                        f"has fewer than {MIN_CHUNK_WORDS} words — skipping embedding"
+                        f"compute_minhash: chunk '{chunk_type}' for record #{record_id} has fewer than {MIN_CHUNK_WORDS} words — skipping embedding"
                     )
                     continue
                 try:
                     vec = st_model.encode(text, convert_to_numpy=True)
                     embedding_vectors[chunk_type] = vec.tolist()
                 except Exception as exc:
-                    current_app.logger.warning(
-                        f"compute_minhash: embedding failed for chunk '{chunk_type}' "
-                        f"of record #{record_id}: {exc}"
-                    )
+                    current_app.logger.warning(f"compute_minhash: embedding failed for chunk '{chunk_type}' of record #{record_id}: {exc}")
 
             if embedding_vectors:
                 store_embeddings(record_id, embedding_vectors, model_name)
                 current_app.logger.info(
-                    f"compute_minhash: stored embeddings for {list(embedding_vectors.keys())} "
-                    f"of SubmissionRecord #{record_id} (model={model_name})"
+                    f"compute_minhash: stored embeddings for {list(embedding_vectors.keys())} of SubmissionRecord #{record_id} (model={model_name})"
                 )
             else:
-                current_app.logger.warning(
-                    f"compute_minhash: no embeddings produced for SubmissionRecord #{record_id}"
-                )
+                current_app.logger.warning(f"compute_minhash: no embeddings produced for SubmissionRecord #{record_id}")
 
         record_step_end(_r, record_id, "compute_minhash", _t0)
 
@@ -576,11 +518,8 @@ def register_similarity_analysis_tasks(celery):
 
         chunks = get_similarity_chunks(record_id)
         if chunks is None or not chunks.get("minhash_signatures"):
-            current_app.logger.warning(
-                f"run_similarity_check: no minhash signatures for SubmissionRecord #{record_id} — skipping"
-            )
-            record_step_end(_r, record_id, "run_similarity_check", _t0,
-                            error="No minhash signatures — skipped")
+            current_app.logger.warning(f"run_similarity_check: no minhash signatures for SubmissionRecord #{record_id} — skipping")
+            record_step_end(_r, record_id, "run_similarity_check", _t0, error="No minhash signatures — skipped")
             return
 
         current_sections = chunks.get("sections", {})
@@ -597,23 +536,17 @@ def register_similarity_analysis_tasks(celery):
         try:
             current_record = db.session.get(SubmissionRecord, record_id)
         except SQLAlchemyError as exc:
-            current_app.logger.warning(
-                f"run_similarity_check: SQLAlchemyError loading SubmissionRecord #{record_id}: {exc}"
-            )
+            current_app.logger.warning(f"run_similarity_check: SQLAlchemyError loading SubmissionRecord #{record_id}: {exc}")
             return
 
         if current_record is None:
-            current_app.logger.warning(
-                f"run_similarity_check: SubmissionRecord #{record_id} not found — skipping"
-            )
+            current_app.logger.warning(f"run_similarity_check: SubmissionRecord #{record_id} not found — skipping")
             return
 
         try:
             tenant_id: int = current_record.period.config.project_class.tenant_id
         except AttributeError:
-            current_app.logger.warning(
-                f"run_similarity_check: could not determine tenant for SubmissionRecord #{record_id} — skipping"
-            )
+            current_app.logger.warning(f"run_similarity_check: could not determine tenant for SubmissionRecord #{record_id} — skipping")
             return
 
         # Collect all other record IDs in the same tenant from SQL
@@ -629,15 +562,11 @@ def register_similarity_analysis_tasks(celery):
             )
             same_tenant_ids = [row[0] for row in same_tenant_rows]
         except SQLAlchemyError as exc:
-            current_app.logger.warning(
-                f"run_similarity_check: SQLAlchemyError fetching tenant record IDs for #{record_id}: {exc}"
-            )
+            current_app.logger.warning(f"run_similarity_check: SQLAlchemyError fetching tenant record IDs for #{record_id}: {exc}")
             return
 
         if not same_tenant_ids:
-            current_app.logger.info(
-                f"run_similarity_check: no other records in same tenant — skipping for record #{record_id}"
-            )
+            current_app.logger.info(f"run_similarity_check: no other records in same tenant — skipping for record #{record_id}")
             return
 
         # ------------------------------------------------------------------
@@ -645,9 +574,7 @@ def register_similarity_analysis_tasks(celery):
         # ------------------------------------------------------------------
         client, collection = _get_collection()
         if collection is None:
-            current_app.logger.warning(
-                f"run_similarity_check: MongoDB not configured — skipping for record #{record_id}"
-            )
+            current_app.logger.warning(f"run_similarity_check: MongoDB not configured — skipping for record #{record_id}")
             return
 
         try:
@@ -660,17 +587,13 @@ def register_similarity_analysis_tasks(celery):
             )
             other_docs = list(cursor)
         except Exception as exc:
-            current_app.logger.warning(
-                f"run_similarity_check: MongoDB query failed for record #{record_id}: {exc}"
-            )
+            current_app.logger.warning(f"run_similarity_check: MongoDB query failed for record #{record_id}: {exc}")
             return
         finally:
             client.close()
 
         if not other_docs:
-            current_app.logger.info(
-                f"run_similarity_check: no other records with signatures — skipping for record #{record_id}"
-            )
+            current_app.logger.info(f"run_similarity_check: no other records with signatures — skipping for record #{record_id}")
             return
 
         # ------------------------------------------------------------------
@@ -704,8 +627,7 @@ def register_similarity_analysis_tasks(celery):
                         jaccard = float(current_mh.jaccard(other_mh))
                     except Exception as exc:
                         current_app.logger.debug(
-                            f"run_similarity_check: Jaccard failed for records "
-                            f"#{record_id}/#{other_id} chunk '{chunk_type}': {exc}"
+                            f"run_similarity_check: Jaccard failed for records #{record_id}/#{other_id} chunk '{chunk_type}': {exc}"
                         )
                         continue
 
@@ -714,16 +636,19 @@ def register_similarity_analysis_tasks(celery):
 
                     a_id, b_id = min(record_id, other_id), max(record_id, other_id)
                     key = (a_id, b_id, chunk_type)
-                    entry = pair_concerns.setdefault(key, {
-                        "record_a_id": a_id,
-                        "record_b_id": b_id,
-                        "chunk_type": chunk_type,
-                        "minhash_jaccard": None,
-                        "transformer_cosine": None,
-                        "jaccard_triggered": False,
-                        "cosine_triggered": False,
-                        "embedding_model": None,
-                    })
+                    entry = pair_concerns.setdefault(
+                        key,
+                        {
+                            "record_a_id": a_id,
+                            "record_b_id": b_id,
+                            "chunk_type": chunk_type,
+                            "minhash_jaccard": None,
+                            "transformer_cosine": None,
+                            "jaccard_triggered": False,
+                            "cosine_triggered": False,
+                            "embedding_model": None,
+                        },
+                    )
                     entry["minhash_jaccard"] = jaccard
                     entry["jaccard_triggered"] = True
 
@@ -769,9 +694,7 @@ def register_similarity_analysis_tasks(celery):
             other_norms = np.linalg.norm(other_matrix, axis=1)
             nonzero = other_norms != 0
             cosines = np.zeros(len(other_ids_with_emb), dtype=np.float32)
-            cosines[nonzero] = (other_matrix[nonzero] @ current_vec) / (
-                other_norms[nonzero] * current_norm
-            )
+            cosines[nonzero] = (other_matrix[nonzero] @ current_vec) / (other_norms[nonzero] * current_norm)
 
             for i, other_id in enumerate(other_ids_with_emb):
                 cosine = float(cosines[i])
@@ -801,16 +724,19 @@ def register_similarity_analysis_tasks(celery):
                             except Exception:
                                 pass
 
-                entry = pair_concerns.setdefault(key, {
-                    "record_a_id": a_id,
-                    "record_b_id": b_id,
-                    "chunk_type": chunk_type,
-                    "minhash_jaccard": None,
-                    "transformer_cosine": None,
-                    "jaccard_triggered": False,
-                    "cosine_triggered": False,
-                    "embedding_model": None,
-                })
+                entry = pair_concerns.setdefault(
+                    key,
+                    {
+                        "record_a_id": a_id,
+                        "record_b_id": b_id,
+                        "chunk_type": chunk_type,
+                        "minhash_jaccard": None,
+                        "transformer_cosine": None,
+                        "jaccard_triggered": False,
+                        "cosine_triggered": False,
+                        "embedding_model": None,
+                    },
+                )
                 if jaccard is not None:
                     entry["minhash_jaccard"] = jaccard
                 entry["transformer_cosine"] = cosine
@@ -863,11 +789,7 @@ def register_similarity_analysis_tasks(celery):
                     )
                 )
                 db.session.execute(stmt)
-                other_id = (
-                    concern_data["record_b_id"]
-                    if concern_data["record_a_id"] == record_id
-                    else concern_data["record_a_id"]
-                )
+                other_id = concern_data["record_b_id"] if concern_data["record_a_id"] == record_id else concern_data["record_a_id"]
                 concerned_other_ids.add(other_id)
 
             # Refresh risk factors on partner records only; record_id is handled
@@ -883,19 +805,12 @@ def register_similarity_analysis_tasks(celery):
             db.session.commit()
 
             if concerns_to_upsert:
-                current_app.logger.info(
-                    f"run_similarity_check: upserted {len(concerns_to_upsert)} concern(s) "
-                    f"for SubmissionRecord #{record_id}"
-                )
+                current_app.logger.info(f"run_similarity_check: upserted {len(concerns_to_upsert)} concern(s) for SubmissionRecord #{record_id}")
             else:
-                current_app.logger.info(
-                    f"run_similarity_check: no similarity concerns for SubmissionRecord #{record_id}"
-                )
+                current_app.logger.info(f"run_similarity_check: no similarity concerns for SubmissionRecord #{record_id}")
 
         except SQLAlchemyError as exc:
-            current_app.logger.warning(
-                f"run_similarity_check: SQLAlchemyError for record #{record_id}: {exc}"
-            )
+            current_app.logger.warning(f"run_similarity_check: SQLAlchemyError for record #{record_id}: {exc}")
             db.session.rollback()
             record_step_end(_r, record_id, "run_similarity_check", _t0, error=repr(exc))
             raise self.retry(exc=exc)

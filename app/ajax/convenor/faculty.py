@@ -160,9 +160,9 @@ def _build_menu_templ() -> Template:
 
 
 def faculty_data(
-        pclass: ProjectClass,
-        config: ProjectClassConfig,
-        row_list: List[Tuple[User, FacultyData]],
+    pclass: ProjectClass,
+    config: ProjectClassConfig,
+    row_list: List[Tuple[User, FacultyData]],
 ):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
@@ -175,9 +175,7 @@ def faculty_data(
     data = [
         {
             "name": render_template(name_templ, u=u, d=fd, pclass_id=pclass.id),
-            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(
-                em=u.email
-            ),
+            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
             "user": u.username,
             "enrolled": render_template(
                 enrolments_templ,
@@ -186,12 +184,8 @@ def faculty_data(
                 pclass_id=pclass.id,
                 simple_label=simple_label,
             ),
-            "projects": render_template(
-                projects_templ, d=fd, pclass=pclass, simple_label=simple_label
-            ),
-            "golive": render_template(
-                golive_templ, config=config, pclass=pclass, user=u, userdata=fd
-            ),
+            "projects": render_template(projects_templ, d=fd, pclass=pclass, simple_label=simple_label),
+            "golive": render_template(golive_templ, config=config, pclass=pclass, user=u, userdata=fd),
             "menu": render_template(menu_templ, pclass=pclass, user=u, userdata=fd),
         }
         for u, fd, er in row_list

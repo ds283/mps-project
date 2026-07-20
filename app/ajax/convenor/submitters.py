@@ -186,15 +186,11 @@ def _build_menu_templ() -> Template:
 
 def submitters_data(students, config, show_name, show_number, sort_number):
     submittter_state = config.submitter_lifecycle
-    allow_delete = (
-        submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    )
+    allow_delete = submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
     # since these templates are loaded from disk, Jinja2 will cache them automatically
     simple_label = get_template_attribute("labels.html", "simple_label")
-    project_tag = get_template_attribute(
-        "convenor/submitters_macros.html", "project_tag"
-    )
+    project_tag = get_template_attribute("convenor/submitters_macros.html", "project_tag")
 
     # however, template *strings* are not cached
     # we have to do this ourselves
@@ -212,14 +208,10 @@ def submitters_data(students, config, show_name, show_number, sort_number):
                     show_name=show_name,
                     show_number=show_number,
                 ),
-                "sortvalue": s.student.exam_number
-                if sort_number
-                else s.student.user.last_name + s.student.user.first_name,
+                "sortvalue": s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name,
             },
             "cohort": {
-                "display": render_template(
-                    cohort_templ, sub=s, simple_label=simple_label
-                ),
+                "display": render_template(cohort_templ, sub=s, simple_label=simple_label),
                 "value": s.student.cohort,
             },
             "periods": render_template(

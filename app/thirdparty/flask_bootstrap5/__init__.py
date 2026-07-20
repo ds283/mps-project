@@ -27,15 +27,9 @@ VERSION_BOOTSTRAP = "5.3.8"
 VERSION_JQUERY = "3.7.1"
 VERSION_POPPER = "2.11.8"
 
-BOOTSTRAP_JS_SHA = (
-    "sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-)
-BOOTSTRAP_CSS_SHA = (
-    "sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
-)
-POPPER_JS_SHA = (
-    "sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
-)
+BOOTSTRAP_JS_SHA = "sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+BOOTSTRAP_CSS_SHA = "sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+POPPER_JS_SHA = "sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
 
 
 def get_table_titles(data, primary_key, primary_key_title):

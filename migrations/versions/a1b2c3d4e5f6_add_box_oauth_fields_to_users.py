@@ -10,6 +10,7 @@ Changes:
   - Add box_token_valid column to users table (BOOLEAN, not null, default False)
   - Add box_updated_at column to users table (DATETIME, nullable)
 """
+
 from alembic import op
 import sqlalchemy as sa
 

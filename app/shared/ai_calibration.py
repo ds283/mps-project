@@ -147,14 +147,8 @@ def compute_calibration(
     Sigma_inv = np.linalg.pinv(Sigma)
 
     # Collect metadata about which project classes and years were used.
-    included_pclass_ids = sorted({
-        rec.period.config.pclass_id for rec in records
-        if rec.period and rec.period.config
-    })
-    included_years = sorted({
-        rec.period.config.year for rec in records
-        if rec.period and rec.period.config and rec.period.config.year is not None
-    })
+    included_pclass_ids = sorted({rec.period.config.pclass_id for rec in records if rec.period and rec.period.config})
+    included_years = sorted({rec.period.config.year for rec in records if rec.period and rec.period.config and rec.period.config.year is not None})
 
     return {
         "feature_set": feature_set,

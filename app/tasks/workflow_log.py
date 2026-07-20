@@ -52,13 +52,7 @@ def register_workflow_log_tasks(celery):
 
                 # Find the timestamp of the (excess)-th oldest entry — everything at or
                 # before this timestamp will be deleted.
-                cutoff_entry = (
-                    db.session.query(WorkflowLogEntry)
-                    .order_by(asc(WorkflowLogEntry.timestamp))
-                    .offset(excess - 1)
-                    .limit(1)
-                    .one_or_none()
-                )
+                cutoff_entry = db.session.query(WorkflowLogEntry).order_by(asc(WorkflowLogEntry.timestamp)).offset(excess - 1).limit(1).one_or_none()
 
                 if cutoff_entry is not None:
                     cutoff_ts = cutoff_entry.timestamp
@@ -66,11 +60,7 @@ def register_workflow_log_tasks(celery):
                     # Delete all entries older than (or equal to) the cutoff timestamp.
                     # We delete by iterating so that SQLAlchemy cascades the M2M association
                     # rows in workflow_log_to_pclass correctly.
-                    to_delete = (
-                        db.session.query(WorkflowLogEntry)
-                        .filter(WorkflowLogEntry.timestamp <= cutoff_ts)
-                        .all()
-                    )
+                    to_delete = db.session.query(WorkflowLogEntry).filter(WorkflowLogEntry.timestamp <= cutoff_ts).all()
                     for entry in to_delete:
                         db.session.delete(entry)
 
@@ -78,16 +68,12 @@ def register_workflow_log_tasks(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in prune_workflow_log()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in prune_workflow_log()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="FINISHED")
 
-    def _get_workflow_log_entries(
-            user: User, pclass_id: Optional[int], tenant_id: Optional[int]
-    ):
+    def _get_workflow_log_entries(user: User, pclass_id: Optional[int], tenant_id: Optional[int]):
         """
         Query WorkflowLogEntry rows, applying both the user's access scope (based on role)
         and the requested pclass/tenant filter.  Returns (entries, label_suffix).
@@ -109,36 +95,20 @@ def register_workflow_log_tasks(celery):
         if not is_root:
             if is_admin:
                 user_tenant_ids = [t.id for t in user.tenants]
-                query = query.filter(
-                    WorkflowLogEntry.project_classes.any(
-                        ProjectClass.tenant_id.in_(user_tenant_ids)
-                    )
-                )
+                query = query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.tenant_id.in_(user_tenant_ids)))
             else:  # convenor
                 fd = db.session.query(FacultyData).filter_by(id=user.id).first()
                 if fd is not None:
-                    convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [
-                        pc.id for pc in fd.coconvenor_for
-                    ]
+                    convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [pc.id for pc in fd.coconvenor_for]
                 else:
                     convenor_pclass_ids = []
-                query = query.filter(
-                    WorkflowLogEntry.project_classes.any(
-                        ProjectClass.id.in_(convenor_pclass_ids)
-                    )
-                )
+                query = query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.id.in_(convenor_pclass_ids)))
 
         # Apply the requested filter (pclass takes priority over tenant)
         if pclass is not None:
-            query = query.filter(
-                WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass.id)
-            )
+            query = query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass.id))
         elif tenant is not None:
-            query = query.filter(
-                WorkflowLogEntry.project_classes.any(
-                    ProjectClass.tenant_id == tenant.id
-                )
-            )
+            query = query.filter(WorkflowLogEntry.project_classes.any(ProjectClass.tenant_id == tenant.id))
 
         entries = query.order_by(asc(WorkflowLogEntry.timestamp)).all()
 
@@ -159,9 +129,7 @@ def register_workflow_log_tasks(celery):
             pclass_names = ", ".join(pc.name for pc in entry.project_classes)
             records.append(
                 {
-                    "timestamp": entry.timestamp.strftime("%a %d %b %Y %H:%M:%S")
-                    if entry.timestamp
-                    else "",
+                    "timestamp": entry.timestamp.strftime("%a %d %b %Y %H:%M:%S") if entry.timestamp else "",
                     "user": initiator_name,
                     "student": student_name,
                     "endpoint": entry.endpoint or "",
@@ -189,18 +157,16 @@ def register_workflow_log_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def export_workflow_log(
-            self,
-            user_id: int,
-            pclass_id: Optional[int] = None,
-            tenant_id: Optional[int] = None,
+        self,
+        user_id: int,
+        pclass_id: Optional[int] = None,
+        tenant_id: Optional[int] = None,
     ):
         """
         Export the workflow log (optionally filtered by project class or tenant) to an Excel
         spreadsheet, store it as a GeneratedAsset, and add a DownloadCentreItem for the user.
         """
-        self.update_state(
-            state="STARTED", meta={"msg": "Preparing workflow log export"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Preparing workflow log export"})
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -209,21 +175,15 @@ def register_workflow_log_tasks(celery):
                 current_app.logger.error(msg)
                 raise Exception(msg)
         except SQLAlchemyError as e:
-            current_app.logger.exception(
-                "SQLAlchemyError exception in export_workflow_log()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in export_workflow_log()", exc_info=e)
             raise self.retry()
 
-        self.update_state(
-            state="STARTED", meta={"msg": "Querying workflow log entries"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Querying workflow log entries"})
 
         try:
             entries, label = _get_workflow_log_entries(user, pclass_id, tenant_id)
         except SQLAlchemyError as e:
-            current_app.logger.exception(
-                "SQLAlchemyError exception in export_workflow_log()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in export_workflow_log()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="STARTED", meta={"msg": "Building Excel spreadsheet"})
@@ -270,9 +230,7 @@ def register_workflow_log_tasks(celery):
 
                 dispatch_thumbnail_task(asset)
 
-                download_item = DownloadCentreItem._build(
-                    asset=asset, user=user, description="Workflow log export"
-                )
+                download_item = DownloadCentreItem._build(asset=asset, user=user, description="Workflow log export")
                 db.session.add(download_item)
 
             message = render_template_string(_WORKFLOW_LOG_READY_TMPL)
@@ -282,27 +240,23 @@ def register_workflow_log_tasks(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in export_workflow_log()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in export_workflow_log()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="SUCCESS", meta={"msg": "Export complete"})
 
     @celery.task(bind=True, default_retry_delay=30)
     def export_workflow_log_csv(
-            self,
-            user_id: int,
-            pclass_id: Optional[int] = None,
-            tenant_id: Optional[int] = None,
+        self,
+        user_id: int,
+        pclass_id: Optional[int] = None,
+        tenant_id: Optional[int] = None,
     ):
         """
         Export the workflow log (optionally filtered by project class or tenant) to a CSV file,
         store it as a GeneratedAsset, and add a DownloadCentreItem for the user.
         """
-        self.update_state(
-            state="STARTED", meta={"msg": "Preparing workflow log CSV export"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Preparing workflow log CSV export"})
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -311,21 +265,15 @@ def register_workflow_log_tasks(celery):
                 current_app.logger.error(msg)
                 raise Exception(msg)
         except SQLAlchemyError as e:
-            current_app.logger.exception(
-                "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e)
             raise self.retry()
 
-        self.update_state(
-            state="STARTED", meta={"msg": "Querying workflow log entries"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Querying workflow log entries"})
 
         try:
             entries, label = _get_workflow_log_entries(user, pclass_id, tenant_id)
         except SQLAlchemyError as e:
-            current_app.logger.exception(
-                "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="STARTED", meta={"msg": "Building CSV file"})
@@ -356,12 +304,12 @@ def register_workflow_log_tasks(celery):
                 size = output_path.stat().st_size
                 with open(output_path, "rb") as f:
                     with AssetUploadManager(
-                            asset,
-                            data=BytesIO(f.read()),
-                            storage=object_store,
-                            audit_data="workflow_log.export_workflow_log_csv",
-                            length=size,
-                            mimetype="text/csv",
+                        asset,
+                        data=BytesIO(f.read()),
+                        storage=object_store,
+                        audit_data="workflow_log.export_workflow_log_csv",
+                        length=size,
+                        mimetype="text/csv",
                     ):
                         pass
 
@@ -371,9 +319,7 @@ def register_workflow_log_tasks(celery):
 
                 dispatch_thumbnail_task(asset)
 
-                download_item = DownloadCentreItem._build(
-                    asset=asset, user=user, description="Workflow log CSV export"
-                )
+                download_item = DownloadCentreItem._build(asset=asset, user=user, description="Workflow log CSV export")
                 db.session.add(download_item)
 
             message = render_template_string(_WORKFLOW_LOG_READY_TMPL)
@@ -383,9 +329,7 @@ def register_workflow_log_tasks(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e)
             raise self.retry()
 
         self.update_state(state="SUCCESS", meta={"msg": "Export complete"})

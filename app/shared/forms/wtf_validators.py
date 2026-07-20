@@ -67,9 +67,7 @@ def valid_username(form, field):
 
 def globally_unique_username(form, field):
     if _datastore.find_user(username=field.data) is not None:
-        raise ValidationError(
-            "{name} is already associated with an account".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with an account".format(name=field.data))
 
 
 def unique_or_original_username(form, field):
@@ -83,13 +81,9 @@ def existing_username(form, field):
     user = _datastore.find_user(username=field.data)
 
     if user is None:
-        raise ValidationError(
-            "userid {name} is not an existing user".format(name=field.data)
-        )
+        raise ValidationError("userid {name} is not an existing user".format(name=field.data))
     if not user.is_active:
-        raise ValidationError(
-            "userid {name} exists, but it not currently active".format(name=field.data)
-        )
+        raise ValidationError("userid {name} exists, but it not currently active".format(name=field.data))
 
 
 def unique_or_original_email(form, field):
@@ -97,18 +91,12 @@ def unique_or_original_email(form, field):
         return
 
     if _datastore.find_user(email=field.data) is not None:
-        raise ValidationError(
-            "{name} is already associated with an account".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with an account".format(name=field.data))
 
 
 def globally_unique_group_name(form, field):
     if ResearchGroup.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with an affiliation/research group".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already associated with an affiliation/research group".format(name=field.data))
 
 
 def unique_or_original_group_name(form, field):
@@ -120,11 +108,7 @@ def unique_or_original_group_name(form, field):
 
 def globally_unique_group_abbreviation(form, field):
     if ResearchGroup.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with an affiliation/research group".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already associated with an affiliation/research group".format(name=field.data))
 
 
 def unique_or_original_group_abbreviation(form, field):
@@ -136,9 +120,7 @@ def unique_or_original_group_abbreviation(form, field):
 
 def globally_unique_degree_type(form, field):
     if DegreeType.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with a degree type".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with a degree type".format(name=field.data))
 
 
 def unique_or_original_degree_type(form, field):
@@ -150,9 +132,7 @@ def unique_or_original_degree_type(form, field):
 
 def globally_unique_degree_abbreviation(form, field):
     if DegreeType.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with a degree type".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with a degree type".format(name=field.data))
 
 
 def unique_or_original_degree_abbreviation(form, field):
@@ -165,11 +145,7 @@ def unique_or_original_degree_abbreviation(form, field):
 def globally_unique_degree_programme(form, field):
     degree_type = form.degree_type.data
     if DegreeProgramme.query.filter_by(name=field.data, type_id=degree_type.id).first():
-        raise ValidationError(
-            "{name} is already associated with a degree programme of the same type".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already associated with a degree programme of the same type".format(name=field.data))
 
 
 def unique_or_original_degree_programme(form, field):
@@ -182,11 +158,7 @@ def unique_or_original_degree_programme(form, field):
 
 def globally_unique_course_code(form, field):
     if DegreeProgramme.query.filter_by(course_code=field.data).first():
-        raise ValidationError(
-            "{code} is already associated with a degree programme".format(
-                code=field.data
-            )
-        )
+        raise ValidationError("{code} is already associated with a degree programme".format(code=field.data))
 
 
 def unique_or_original_course_code(form, field):
@@ -198,22 +170,13 @@ def unique_or_original_course_code(form, field):
 
 def globally_unique_programme_abbreviation(form, field):
     degree_type = form.degree_type.data
-    if DegreeProgramme.query.filter_by(
-        abbreviation=field.data, type_id=degree_type.id
-    ).first():
-        raise ValidationError(
-            "{name} is already associated with a degree programme of the same type".format(
-                name=field.data
-            )
-        )
+    if DegreeProgramme.query.filter_by(abbreviation=field.data, type_id=degree_type.id).first():
+        raise ValidationError("{name} is already associated with a degree programme of the same type".format(name=field.data))
 
 
 def unique_or_original_programme_abbreviation(form, field):
     degree_type = form.degree_type.data
-    if (
-        field.data == form.programme.abbreviation
-        and degree_type.id == form.programme.type_id
-    ):
+    if field.data == form.programme.abbreviation and degree_type.id == form.programme.type_id:
         return
 
     return globally_unique_programme_abbreviation(form, field)
@@ -224,9 +187,7 @@ def globally_unique_transferable_skill(form, field):
         TransferableSkill.name == field.data,
         TransferableSkill.group_id == form.group.data.id,
     ).first():
-        raise ValidationError(
-            "{name} is already in use for a transferable skill".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use for a transferable skill".format(name=field.data))
 
 
 def unique_or_original_transferable_skill(form, field):
@@ -238,9 +199,7 @@ def unique_or_original_transferable_skill(form, field):
 
 def globally_unique_skill_group(form, field):
     if SkillGroup.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already in use for a skill group".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use for a skill group".format(name=field.data))
 
 
 def unique_or_original_skill_group(form, field):
@@ -252,9 +211,7 @@ def unique_or_original_skill_group(form, field):
 
 def globally_unique_project_tag_group(form, field):
     if db.session.query(ProjectTagGroup).filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already in use for a project tag group".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use for a project tag group".format(name=field.data))
 
 
 def unique_or_original_project_tag_group(form, field):
@@ -266,9 +223,7 @@ def unique_or_original_project_tag_group(form, field):
 
 def globally_unique_project_tag(form, field):
     if form.group.data is None:
-        raise ValidationError(
-            "Cannot validate project tag name without specifying a tag group. Please select a project tag group"
-        )
+        raise ValidationError("Cannot validate project tag name without specifying a tag group. Please select a project tag group")
 
     check_exists = (
         db.session.query(ProjectTag)
@@ -281,9 +236,7 @@ def globally_unique_project_tag(form, field):
     )
 
     if check_exists is not None:
-        raise ValidationError(
-            f'"{field.data}" is already in use for a project tag in group "{form.group.data.name}"'
-        )
+        raise ValidationError(f'"{field.data}" is already in use for a project tag in group "{form.group.data.name}"')
 
 
 def unique_or_original_project_tag(form, field):
@@ -295,9 +248,7 @@ def unique_or_original_project_tag(form, field):
 
 def globally_unique_project_class(form, field):
     if ProjectClass.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with a project class".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with a project class".format(name=field.data))
 
 
 def unique_or_original_project_class(form, field):
@@ -309,9 +260,7 @@ def unique_or_original_project_class(form, field):
 
 def globally_unique_project_class_abbrev(form, field):
     if ProjectClass.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as an abbreviation".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use as an abbreviation".format(name=field.data))
 
 
 def unique_or_original_project_class_abbrev(form, field):
@@ -323,11 +272,7 @@ def unique_or_original_project_class_abbrev(form, field):
 
 def globally_unique_supervisor(form, field):
     if Supervisor.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with a supervisory role".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already associated with a supervisory role".format(name=field.data))
 
 
 def unique_or_original_supervisor(form, field):
@@ -339,9 +284,7 @@ def unique_or_original_supervisor(form, field):
 
 def globally_unique_supervisor_abbrev(form, field):
     if Supervisor.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as an abbreviation".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use as an abbreviation".format(name=field.data))
 
 
 def unique_or_original_supervisor_abbrev(form, field):
@@ -353,9 +296,7 @@ def unique_or_original_supervisor_abbrev(form, field):
 
 def globally_unique_role(form, field):
     if Role.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with a user role".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with a user role".format(name=field.data))
 
 
 def unique_or_original_role(form, field):
@@ -369,9 +310,7 @@ def globally_unique_registration_number(form, field):
     rec = StudentData.query.filter_by(registration_number=field.data).first()
     if rec is not None:
         raise ValidationError(
-            "Registration number {n} is already associated with student {name}".format(
-                n=rec.registration_number, name=rec.user.name
-            )
+            "Registration number {n} is already associated with student {name}".format(n=rec.registration_number, name=rec.user.name)
         )
 
 
@@ -384,11 +323,7 @@ def unique_or_original_registration_number(form, field):
 
 def globally_unique_matching_name(year, form, field):
     if MatchingAttempt.query.filter_by(name=field.data, year=year).first():
-        raise ValidationError(
-            "{name} is already in use for a matching attempt this year".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use for a matching attempt this year".format(name=field.data))
 
 
 def unique_or_original_matching_name(year, form, field):
@@ -400,9 +335,7 @@ def unique_or_original_matching_name(year, form, field):
 
 def globally_unique_project(form, field):
     if Project.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already associated with a project".format(name=field.data)
-        )
+        raise ValidationError("{name} is already associated with a project".format(name=field.data))
 
 
 def unique_or_original_project(form, field):
@@ -413,12 +346,8 @@ def unique_or_original_project(form, field):
 
 
 def project_unique_label(form, field):
-    if ProjectDescription.query.filter_by(
-        parent_id=form.project_id, label=field.data
-    ).first():
-        raise ValidationError(
-            "{name} is already used as a label for this project".format(name=field.data)
-        )
+    if ProjectDescription.query.filter_by(parent_id=form.project_id, label=field.data).first():
+        raise ValidationError("{name} is already used as a label for this project".format(name=field.data))
 
 
 def project_unique_or_original_label(form, field):
@@ -435,11 +364,7 @@ def value_is_nonnegative(form, field):
 
 def globally_unique_assessment_name(year, form, field):
     if PresentationAssessment.query.filter_by(name=field.data, year=year).first():
-        raise ValidationError(
-            "{name} is already in use as an assessment name for this year".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use as an assessment name for this year".format(name=field.data))
 
 
 def unique_or_original_assessment_name(year, form, field):
@@ -451,9 +376,7 @@ def unique_or_original_assessment_name(year, form, field):
 
 def globally_unique_building_name(form, field):
     if Building.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as a building name".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use as a building name".format(name=field.data))
 
 
 def unique_or_original_building_name(form, field):
@@ -465,11 +388,7 @@ def unique_or_original_building_name(form, field):
 
 def globally_unique_room_name(form, field):
     if Room.query.filter_by(name=field.data, building_id=form.building.data.id).first():
-        raise ValidationError(
-            "{building} {name} is already in use as a room name".format(
-                building=form.building.data.name, name=field.data
-            )
-        )
+        raise ValidationError("{building} {name} is already in use as a room name".format(building=form.building.data.name, name=field.data))
 
 
 def unique_or_original_room_name(form, field):
@@ -481,11 +400,7 @@ def unique_or_original_room_name(form, field):
 
 def globally_unique_schedule_name(assessment_id, form, field):
     if ScheduleAttempt.query.filter_by(owner_id=assessment_id, name=field.data).first():
-        raise ValidationError(
-            "{name} is already in use for a schedule attached to this assessment".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use for a schedule attached to this assessment".format(name=field.data))
 
 
 def unique_or_original_schedule_name(assessment_id, form, field):
@@ -497,9 +412,7 @@ def unique_or_original_schedule_name(assessment_id, form, field):
 
 def globally_unique_schedule_tag(form, field):
     if ScheduleAttempt.query.filter_by(tag=field.data).first():
-        raise ValidationError(
-            "{tag} is already in use for a schedule tag".format(tag=field.data)
-        )
+        raise ValidationError("{tag} is already in use for a schedule tag".format(tag=field.data))
 
 
 def unique_or_original_schedule_tag(form, field):
@@ -511,9 +424,7 @@ def unique_or_original_schedule_tag(form, field):
 
 def globally_unique_module_code(form, field):
     if Module.query.filter_by(code=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as a module code".format(name=field.data)
-        )
+        raise ValidationError("{name} is already in use as a module code".format(name=field.data))
 
 
 def unique_or_original_module_code(form, field):
@@ -525,9 +436,7 @@ def unique_or_original_module_code(form, field):
 
 def globally_unique_FHEQ_level_name(form, field):
     if FHEQ_Level.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            "{name} is already defined as a FHEQ Level name".format(name=field.data)
-        )
+        raise ValidationError("{name} is already defined as a FHEQ Level name".format(name=field.data))
 
 
 def unique_or_original_FHEQ_level_name(form, field):
@@ -539,9 +448,7 @@ def unique_or_original_FHEQ_level_name(form, field):
 
 def globally_unique_FHEQ_short_name(form, field):
     if FHEQ_Level.query.filter_by(short_name=field.data).first():
-        raise ValidationError(
-            "{name} is already defined as a FHEQ short name".format(name=field.data)
-        )
+        raise ValidationError("{name} is already defined as a FHEQ short name".format(name=field.data))
 
 
 def unique_or_original_FHEQ_short_name(form, field):
@@ -553,9 +460,7 @@ def unique_or_original_FHEQ_short_name(form, field):
 
 def globally_unique_FHEQ_numeric_level(form, field):
     if FHEQ_Level.query.filter_by(numeric_level=field.data).first():
-        raise ValidationError(
-            "Numeric level #{n} is already in use for a FHEQ level".format(n=field.data)
-        )
+        raise ValidationError("Numeric level #{n} is already in use for a FHEQ level".format(n=field.data))
 
 
 def unique_or_original_FHEQ_numeric_level(form, field):
@@ -567,9 +472,7 @@ def unique_or_original_FHEQ_numeric_level(form, field):
 
 def globally_unique_license_name(form, field):
     if AssetLicense.query.filter_by(name=field.data).first():
-        raise ValidationError(
-            'A license with the name "{name}" already exists'.format(name=field.data)
-        )
+        raise ValidationError('A license with the name "{name}" already exists'.format(name=field.data))
 
 
 def unique_or_original_license_name(form, field):
@@ -581,11 +484,7 @@ def unique_or_original_license_name(form, field):
 
 def globally_unique_license_abbreviation(form, field):
     if AssetLicense.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError(
-            'A license with the abbreviation "{abbv}" already exists'.format(
-                abbv=field.data
-            )
-        )
+        raise ValidationError('A license with the abbreviation "{abbv}" already exists'.format(abbv=field.data))
 
 
 def unique_or_original_license_abbreviation(form, field):
@@ -598,11 +497,7 @@ def unique_or_original_license_abbreviation(form, field):
 def per_license_unique_version(form, field):
     name = form.name.data
     if AssetLicense.query.filter_by(name=name, version=form.version.data).first():
-        raise ValidationError(
-            'A license of type "{name}" with version "{ver}" already exists'.form(
-                name=name, ver=form.version.data
-            )
-        )
+        raise ValidationError('A license of type "{name}" with version "{ver}" already exists'.form(name=name, ver=form.version.data))
 
 
 def per_license_unique_or_original_version(form, field):
@@ -614,11 +509,7 @@ def per_license_unique_or_original_version(form, field):
 
 def globally_unique_batch_item_userid(batch_id, form, field):
     if StudentBatchItem.query.filter_by(parent_id=batch_id, user_id=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as a user id for this batch import".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use as a user id for this batch import".format(name=field.data))
 
 
 def unique_or_original_batch_item_userid(batch_id, form, field):
@@ -630,11 +521,7 @@ def unique_or_original_batch_item_userid(batch_id, form, field):
 
 def globally_unique_batch_item_email(batch_id, form, field):
     if StudentBatchItem.query.filter_by(parent_id=batch_id, email=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as an email address for this batch import".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use as an email address for this batch import".format(name=field.data))
 
 
 def unique_or_original_batch_item_email(batch_id, form, field):
@@ -645,14 +532,8 @@ def unique_or_original_batch_item_email(batch_id, form, field):
 
 
 def globally_unique_batch_item_exam_number(batch_id, form, field):
-    if StudentBatchItem.query.filter_by(
-        parent_id=batch_id, exam_number=field.data
-    ).first():
-        raise ValidationError(
-            "{name} is already in use as an exam number for this batch import".format(
-                name=field.data
-            )
-        )
+    if StudentBatchItem.query.filter_by(parent_id=batch_id, exam_number=field.data).first():
+        raise ValidationError("{name} is already in use as an exam number for this batch import".format(name=field.data))
 
 
 def unique_or_original_batch_item_exam_number(batch_id, form, field):
@@ -663,14 +544,8 @@ def unique_or_original_batch_item_exam_number(batch_id, form, field):
 
 
 def globally_unique_batch_item_registration_number(batch_id, form, field):
-    if StudentBatchItem.query.filter_by(
-        parent_id=batch_id, registration_number=field.data
-    ).first():
-        return ValidationError(
-            "{name} is already used as a registration number for this batch import".format(
-                name=field.data
-            )
-        )
+    if StudentBatchItem.query.filter_by(parent_id=batch_id, registration_number=field.data).first():
+        return ValidationError("{name} is already used as a registration number for this batch import".format(name=field.data))
 
 
 def unique_or_original_batch_item_registration_number(batch_id, form, field):
@@ -682,11 +557,7 @@ def unique_or_original_batch_item_registration_number(batch_id, form, field):
 
 def globally_unique_faculty_batch_item_userid(batch_id, form, field):
     if FacultyBatchItem.query.filter_by(parent_id=batch_id, user_id=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as a user id for this batch import".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use as a user id for this batch import".format(name=field.data))
 
 
 def unique_or_original_faculty_batch_item_userid(batch_id, form, field):
@@ -698,11 +569,7 @@ def unique_or_original_faculty_batch_item_userid(batch_id, form, field):
 
 def globally_unique_faculty_batch_item_email(batch_id, form, field):
     if FacultyBatchItem.query.filter_by(parent_id=batch_id, email=field.data).first():
-        raise ValidationError(
-            "{name} is already in use as an email address for this batch import".format(
-                name=field.data
-            )
-        )
+        raise ValidationError("{name} is already in use as an email address for this batch import".format(name=field.data))
 
 
 def unique_or_original_faculty_batch_item_email(batch_id, form, field):
@@ -721,9 +588,7 @@ def globally_unique_submission_unit(period_id, form, field):
         )
         .first()
     ):
-        raise ValidationError(
-            f'A submission period unit with the name "{field.data}" already exists for this period'
-        )
+        raise ValidationError(f'A submission period unit with the name "{field.data}" already exists for this period')
 
 
 def unique_or_original_submission_unit(period_id, form, field):
@@ -742,9 +607,7 @@ def globally_unique_supervision_event_template(unit_id, form, field):
         )
         .first()
     ):
-        raise ValidationError(
-            f'A supervision event template with the name "{field.data}" already exists for this unit'
-        )
+        raise ValidationError(f'A supervision event template with the name "{field.data}" already exists for this unit')
 
 
 def unique_or_original_supervision_event_template(unit_id, form, field):
@@ -769,9 +632,7 @@ def make_unique_marking_event_in_period(period_id, name=None, exclude_id=None):
         if exclude_id is not None:
             q = q.filter(MarkingEvent.id != exclude_id)
         if q.first() is not None:
-            raise ValidationError(
-                f'"{field.data}" is already used for a marking event in this submission period'
-            )
+            raise ValidationError(f'"{field.data}" is already used for a marking event in this submission period')
 
     return validator
 
@@ -790,9 +651,7 @@ def make_unique_marking_workflow_in_event(event_id, name=None, exclude_id=None):
         if exclude_id is not None:
             q = q.filter(MarkingWorkflow.id != exclude_id)
         if q.first() is not None:
-            raise ValidationError(
-                f'"{field.data}" is already used for a marking workflow in this event'
-            )
+            raise ValidationError(f'"{field.data}" is already used for a marking workflow in this event')
 
     return validator
 
@@ -811,9 +670,7 @@ def make_unique_marking_workflow_key_in_event(event_id, key=None, exclude_id=Non
         if exclude_id is not None:
             q = q.filter(MarkingWorkflow.id != exclude_id)
         if q.first() is not None:
-            raise ValidationError(
-                f'"{field.data}" is already used as a key for a marking workflow in this event'
-            )
+            raise ValidationError(f'"{field.data}" is already used as a key for a marking workflow in this event')
 
     return validator
 
@@ -833,9 +690,7 @@ def make_unique_marking_scheme_in_pclass(pclass_id, name=None, exclude_id=None):
         if exclude_id is not None:
             q = q.filter(MarkingScheme.id != exclude_id)
         if q.first() is not None:
-            raise ValidationError(
-                f'"{field.data}" is already used as a marking scheme name in this project class'
-            )
+            raise ValidationError(f'"{field.data}" is already used as a marking scheme name in this project class')
 
     return validator
 
@@ -912,68 +767,46 @@ def parse_schema(data) -> dict:
 
     # "conflation_rule" is required and must be a string
     if not isinstance(data.get("conflation_rule"), str):
-        raise SchemaValidationError(
-            "'conflation_rule' is required and must be a string"
-        )
+        raise SchemaValidationError("'conflation_rule' is required and must be a string")
 
     # "scheme" is required and must be a list of section blocks
     scheme = data.get("scheme")
     if not isinstance(scheme, list):
-        raise SchemaValidationError(
-            "'scheme' is required and must be a list of section blocks"
-        )
+        raise SchemaValidationError("'scheme' is required and must be a list of section blocks")
 
     # Pass 1: structural validation; build fiducial value dictionary
     fiducial: dict = {}
 
     for block_idx, block in enumerate(scheme):
         if not isinstance(block, dict):
-            raise SchemaValidationError(
-                f"Section block {block_idx} must be a JSON object"
-            )
+            raise SchemaValidationError(f"Section block {block_idx} must be a JSON object")
         if not isinstance(block.get("title"), str):
-            raise SchemaValidationError(
-                f"Section block {block_idx} is missing a 'title' string"
-            )
+            raise SchemaValidationError(f"Section block {block_idx} is missing a 'title' string")
 
         # Optional description
         description = block.get("description")
         if description is not None and not isinstance(description, str):
-            raise SchemaValidationError(
-                f"Section block {block_idx}: 'description' must be a string"
-            )
+            raise SchemaValidationError(f"Section block {block_idx}: 'description' must be a string")
 
         # Required fields list
         fields = block.get("fields")
         if not isinstance(fields, list):
-            raise SchemaValidationError(
-                f"Section block {block_idx} ('{block.get('title')}'): 'fields' must be a list"
-            )
+            raise SchemaValidationError(f"Section block {block_idx} ('{block.get('title')}'): 'fields' must be a list")
         for field_idx, field in enumerate(fields):
             if not isinstance(field, dict):
-                raise SchemaValidationError(
-                    f"Section block {block_idx}, field {field_idx}: must be a JSON object"
-                )
+                raise SchemaValidationError(f"Section block {block_idx}, field {field_idx}: must be a JSON object")
             key = field.get("key")
             if not isinstance(key, str):
-                raise SchemaValidationError(
-                    f"Section block {block_idx}, field {field_idx}: 'key' must be a string"
-                )
+                raise SchemaValidationError(f"Section block {block_idx}, field {field_idx}: 'key' must be a string")
             if not key.isidentifier():
-                raise SchemaValidationError(
-                    f"Section block {block_idx}, field {field_idx}: key '{key}' is not a valid Python identifier"
-                )
+                raise SchemaValidationError(f"Section block {block_idx}, field {field_idx}: key '{key}' is not a valid Python identifier")
             if key in fiducial:
                 raise SchemaValidationError(f"Duplicate field key '{key}'")
             if not isinstance(field.get("text"), str):
-                raise SchemaValidationError(
-                    f"Section block {block_idx}, field '{key}': 'text' must be a string"
-                )
+                raise SchemaValidationError(f"Section block {block_idx}, field '{key}': 'text' must be a string")
             ft = field.get("field_type")
             if not isinstance(ft, dict):
-                raise SchemaValidationError(
-                    f"Section block {block_idx}, field '{key}': 'field_type' must be a JSON object"
-                )
+                raise SchemaValidationError(f"Section block {block_idx}, field '{key}': 'field_type' must be a JSON object")
             field_type_name = ft.get("type")
             if field_type_name not in _VALID_MARKING_FIELD_TYPES:
                 raise SchemaValidationError(
@@ -989,29 +822,20 @@ def parse_schema(data) -> dict:
             raise SchemaValidationError("'validation' must be a list")
         for item_idx, test_item in enumerate(validation):
             if not isinstance(test_item, dict):
-                raise SchemaValidationError(
-                    f"Validation item {item_idx} must be a JSON object"
-                )
+                raise SchemaValidationError(f"Validation item {item_idx} must be a JSON object")
             if not isinstance(test_item.get("test"), str):
-                raise SchemaValidationError(
-                    f"Validation item {item_idx}: 'test' must be a string"
-                )
+                raise SchemaValidationError(f"Validation item {item_idx}: 'test' must be a string")
             action = test_item.get("action")
             if not isinstance(action, list):
-                raise SchemaValidationError(
-                    f"Validation item {item_idx}: 'action' must be a list"
-                )
+                raise SchemaValidationError(f"Validation item {item_idx}: 'action' must be a list")
             if not all(a in _VALID_VALIDATION_ACTIONS for a in action):
                 invalid = [a for a in action if a not in _VALID_VALIDATION_ACTIONS]
                 raise SchemaValidationError(
-                    f"Validation item {item_idx}: unknown action(s) {invalid}; "
-                    f"must be from {sorted(_VALID_VALIDATION_ACTIONS)}"
+                    f"Validation item {item_idx}: unknown action(s) {invalid}; must be from {sorted(_VALID_VALIDATION_ACTIONS)}"
                 )
             # "prevent_submit" must be the only action if present
             if "prevent_submit" in action and len(action) != 1:
-                raise SchemaValidationError(
-                    f"Validation item {item_idx}: 'prevent_submit' cannot be combined with other actions"
-                )
+                raise SchemaValidationError(f"Validation item {item_idx}: 'prevent_submit' cannot be combined with other actions")
 
     # Pass 2: expression evaluation using fiducial values
     eval_ns = {"__builtins__": _SAFE_BUILTINS} | fiducial
@@ -1019,27 +843,18 @@ def parse_schema(data) -> dict:
     try:
         result = eval(data["conflation_rule"], eval_ns)
     except Exception as exc:
-        raise SchemaValidationError(
-            f"'conflation_rule' raised an error during evaluation: {exc}"
-        )
+        raise SchemaValidationError(f"'conflation_rule' raised an error during evaluation: {exc}")
     if not isinstance(result, (int, float)):
-        raise SchemaValidationError(
-            f"'conflation_rule' must evaluate to a number, but got {type(result).__name__}"
-        )
+        raise SchemaValidationError(f"'conflation_rule' must evaluate to a number, but got {type(result).__name__}")
 
     if validation is not None:
         for item_idx, test_item in enumerate(validation):
             try:
                 result = eval(test_item["test"], eval_ns)
             except Exception as exc:
-                raise SchemaValidationError(
-                    f"Validation item {item_idx} 'test' expression raised an error during evaluation: {exc}"
-                )
+                raise SchemaValidationError(f"Validation item {item_idx} 'test' expression raised an error during evaluation: {exc}")
             if not isinstance(result, bool):
-                raise SchemaValidationError(
-                    f"Validation item {item_idx} 'test' expression must evaluate to a bool, "
-                    f"but got {type(result).__name__}"
-                )
+                raise SchemaValidationError(f"Validation item {item_idx} 'test' expression must evaluate to a bool, but got {type(result).__name__}")
 
     return data
 
@@ -1076,24 +891,16 @@ def parse_targets(data, fiducial) -> dict:
 
     for target, conflation_rule in data.items():
         if not isinstance(target, str) or not target.isidentifier():
-            raise SchemaValidationError(
-                f"Target key {target!r} must be a valid Python identifier"
-            )
+            raise SchemaValidationError(f"Target key {target!r} must be a valid Python identifier")
         if not isinstance(conflation_rule, str):
-            raise SchemaValidationError(
-                f"Target value for key {target!r} must be a string expression"
-            )
+            raise SchemaValidationError(f"Target value for key {target!r} must be a string expression")
 
         try:
             result = eval(conflation_rule, eval_ns)
         except Exception as exc:
-            raise SchemaValidationError(
-                f"Target expression for key {target!r} raised an error during evaluation: {exc}"
-            )
+            raise SchemaValidationError(f"Target expression for key {target!r} raised an error during evaluation: {exc}")
         if not isinstance(result, (int, float)):
-            raise SchemaValidationError(
-                f"Target expression for key {target!r} must evaluate to a float, but got {type(result).__name__}"
-            )
+            raise SchemaValidationError(f"Target expression for key {target!r} must evaluate to a float, but got {type(result).__name__}")
 
     return data
 
@@ -1192,11 +999,7 @@ def make_unique_feedback_asset_label_in_pclass(pclass_id, label=None):
     def validator(form, field):
         if label is not None and field.data == label:
             return
-        existing = (
-            db.session.query(FeedbackAsset)
-            .filter(FeedbackAsset.pclass_id == pclass_id, FeedbackAsset.label == field.data)
-            .first()
-        )
+        existing = db.session.query(FeedbackAsset).filter(FeedbackAsset.pclass_id == pclass_id, FeedbackAsset.label == field.data).first()
         if existing is not None:
             raise ValidationError(f'"{field.data}" is already used as a feedback asset label in this project class')
 
@@ -1207,11 +1010,7 @@ def make_unique_feedback_template_label_in_pclass(pclass_id, label=None):
     def validator(form, field):
         if label is not None and field.data == label:
             return
-        existing = (
-            db.session.query(FeedbackTemplate)
-            .filter(FeedbackTemplate.pclass_id == pclass_id, FeedbackTemplate.label == field.data)
-            .first()
-        )
+        existing = db.session.query(FeedbackTemplate).filter(FeedbackTemplate.pclass_id == pclass_id, FeedbackTemplate.label == field.data).first()
         if existing is not None:
             raise ValidationError(f'"{field.data}" is already used as a feedback template label in this project class')
 
@@ -1222,11 +1021,7 @@ def make_unique_feedback_recipe_label_in_pclass(pclass_id, label=None):
     def validator(form, field):
         if label is not None and field.data == label:
             return
-        existing = (
-            db.session.query(FeedbackRecipe)
-            .filter(FeedbackRecipe.pclass_id == pclass_id, FeedbackRecipe.label == field.data)
-            .first()
-        )
+        existing = db.session.query(FeedbackRecipe).filter(FeedbackRecipe.pclass_id == pclass_id, FeedbackRecipe.label == field.data).first()
         if existing is not None:
             raise ValidationError(f'"{field.data}" is already used as a feedback recipe label in this project class')
 

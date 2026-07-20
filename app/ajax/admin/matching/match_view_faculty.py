@@ -199,23 +199,17 @@ def _make_record_key(rec: MatchingRecord) -> str:
 
 
 def faculty_view_data(
-        faculty: List[FacultyData],
-        match_attempt: MatchingAttempt,
-        pclass_filter,
-        type_filter,
-        hint_filter,
-        show_includes,
+    faculty: List[FacultyData],
+    match_attempt: MatchingAttempt,
+    pclass_filter,
+    type_filter,
+    hint_filter,
+    show_includes,
 ):
-    project_tag = get_template_attribute(
-        "admin/matching/project_tag.html", "project_tag"
-    )
-    faculty_marker_tag = get_template_attribute(
-        "admin/matching/marker_tag.html", "faculty_marker_tag"
-    )
+    project_tag = get_template_attribute("admin/matching/project_tag.html", "project_tag")
+    faculty_marker_tag = get_template_attribute("admin/matching/marker_tag.html", "faculty_marker_tag")
 
-    error_block_inline = get_template_attribute(
-        "error_block.html", "error_block_inline"
-    )
+    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
 
     name_templ: Template = _build_name_templ()
@@ -231,17 +225,13 @@ def faculty_view_data(
         mark_warnings = {}
 
         # check for CATS overassignment
-        payload = match_attempt.is_supervisor_overassigned(
-            f, include_matches=show_includes, pclass_id=pclass_filter
-        )
+        payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
         sup_overassigned = payload.get("flag", False)
         CATS_sup = payload.get("CATS_total", None)
         included_sup = payload.get("included", {})
         sup_msg = payload.get("error_message", None)
 
-        payload = match_attempt.is_marker_overassigned(
-            f, include_matches=show_includes, pclass_id=pclass_filter
-        )
+        payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
         mark_overassigned = payload.get("flag", False)
         CATS_mark = payload.get("CATS_total", None)
         included_mark = payload.get("included", {})
@@ -254,24 +244,18 @@ def faculty_view_data(
         overassigned = sup_overassigned or mark_overassigned
 
         if show_includes:
-            this_sup, this_mark = match_attempt.get_faculty_CATS(
-                f, pclass_id=pclass_filter
-            )
+            this_sup, this_mark = match_attempt.get_faculty_CATS(f, pclass_id=pclass_filter)
         else:
             this_sup = CATS_sup
             this_mark = CATS_mark
 
         if pclass_filter is not None:
-            payload = match_attempt.is_supervisor_overassigned(
-                f, include_matches=show_includes
-            )
+            payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
             _sup_overassigned = payload.get("flag", False)
             _CATS_sup = payload.get("CATS_total", None)
             _sup_msg = payload.get("error_message", None)
 
-            payload = match_attempt.is_marker_overassigned(
-                f, include_matches=show_includes
-            )
+            payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes)
             _mark_overassigned = payload.get("flag", False)
             _CATS_mark = payload.get("CATS_total", None)
             _mark_msg = payload.get("error_message", None)
@@ -285,16 +269,10 @@ def faculty_view_data(
         included_workload = {}
         for record_key in included_sup:
             if record_key in included_mark:
-                included_workload[record_key] = (
-                        included_sup[record_key] + included_mark[record_key]
-                )
+                included_workload[record_key] = included_sup[record_key] + included_mark[record_key]
 
-        supv_records: List[MatchingRecord] = match_attempt.get_supervisor_records(
-            f.id
-        ).all()
-        mark_records: List[MatchingRecord] = match_attempt.get_marker_records(
-            f.id
-        ).all()
+        supv_records: List[MatchingRecord] = match_attempt.get_supervisor_records(f.id).all()
+        mark_records: List[MatchingRecord] = match_attempt.get_marker_records(f.id).all()
 
         filter_list = []
 
@@ -347,24 +325,18 @@ def faculty_view_data(
             if rec is None:
                 continue
 
-            sup, mark = match_attempt.get_faculty_CATS(
-                f, pclass_id=config.pclass_id
-            )
+            sup, mark = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
 
             if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                sup_errors[("custom_sup", f.id)] = (
-                    "Assignment to {name} violates custom supervising CATS limit {n}".format(
-                        name=f.user.name, n=rec.CATS_supervision
-                    )
+                sup_errors[("custom_sup", f.id)] = "Assignment to {name} violates custom supervising CATS limit {n}".format(
+                    name=f.user.name, n=rec.CATS_supervision
                 )
                 overassigned = True
                 sup_overassigned = True
 
             if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                mark_errors[("custom_mark", f.id)] = (
-                    "Assignment to {name} violates custom marking CATS limit {n}".format(
-                        name=f.user.name, n=rec.CATS_marking
-                    )
+                mark_errors[("custom_mark", f.id)] = "Assignment to {name} violates custom marking CATS limit {n}".format(
+                    name=f.user.name, n=rec.CATS_marking
                 )
                 overassigned = True
                 mark_overassigned = True

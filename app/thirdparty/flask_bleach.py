@@ -64,9 +64,7 @@ class Bleach(object):
             self.app.extensions = {}
 
         self.app.config.setdefault("BLEACH_ALLOWED_TAGS", bleach.ALLOWED_TAGS)
-        self.app.config.setdefault(
-            "BLEACH_ALLOWED_ATTRIBUTES", bleach.ALLOWED_ATTRIBUTES
-        )
+        self.app.config.setdefault("BLEACH_ALLOWED_ATTRIBUTES", bleach.ALLOWED_ATTRIBUTES)
         self.app.config.setdefault("BLEACH_ALLOWED_PROTOCOLS", bleach.ALLOWED_PROTOCOLS)
         self.app.config.setdefault("BLEACH_STRIP_MARKUP", False)
         self.app.config.setdefault("BLEACH_STRIP_COMMENTS", True)
@@ -113,6 +111,4 @@ class Bleach(object):
         )
 
     def linkify(self, stream):
-        return bleach.linkify(
-            stream, parse_email=self.app.config["BLEACH_LINKIFY_PARSE_EMAIL"]
-        )
+        return bleach.linkify(stream, parse_email=self.app.config["BLEACH_LINKIFY_PARSE_EMAIL"])

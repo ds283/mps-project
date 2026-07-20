@@ -150,9 +150,7 @@ class AnalysisCache:
 
     def get_metrics(self, text_hash: str) -> Optional[dict]:
         """Return cached lexical metrics for *text_hash*, or None on miss."""
-        row = self._conn.execute(
-            "SELECT * FROM text_metrics WHERE text_hash = ?", (text_hash,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM text_metrics WHERE text_hash = ?", (text_hash,)).fetchone()
         if row is None:
             return None
         return dict(row)

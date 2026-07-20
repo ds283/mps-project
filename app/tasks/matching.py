@@ -255,17 +255,13 @@ def _pulp_dicts(
 
     # Backwards compatiblity with deprecation Warning for indexs
     if indices is not None and indexs is not None:
-        raise TypeError(
-            "Both 'indices' and 'indexs' provided to LpVariable.dicts.  Use one only, preferably 'indices'."
-        )
+        raise TypeError("Both 'indices' and 'indexs' provided to LpVariable.dicts.  Use one only, preferably 'indices'.")
     elif indices is not None:
         pass
     elif indexs is not None:
         indices = indexs
     else:
-        raise TypeError(
-            "LpVariable.dicts missing both 'indices' and deprecated 'indexs' arguments."
-        )
+        raise TypeError("LpVariable.dicts missing both 'indices' and deprecated 'indexs' arguments.")
 
     if not isinstance(indices, tuple):
         indices = (indices,)
@@ -276,24 +272,14 @@ def _pulp_dicts(
     indices = indices[1:]
 
     if len(indices) == 0:
-        d = {
-            i: pulp.LpVariable(
-                name % tuple(indexStart + [str(i)]), lowBound, upBound, cat
-            )
-            for i in index
-        }
+        d = {i: pulp.LpVariable(name % tuple(indexStart + [str(i)]), lowBound, upBound, cat) for i in index}
     else:
-        d = {
-            i: _pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i])
-            for i in index
-        }
+        d = {i: _pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i]) for i in index}
 
     return d
 
 
-def _enumerate_selectors(
-    record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized=False
-) -> SelectorEnumeration:
+def _enumerate_selectors(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized=False) -> SelectorEnumeration:
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -306,9 +292,7 @@ def _enumerate_selectors(
     if read_serialized:
         return _enumerate_selectors_serialized(record)
 
-    return _enumerate_selectors_primary(
-        configs, include_only_submitted=record.include_only_submitted
-    )
+    return _enumerate_selectors_primary(configs, include_only_submitted=record.include_only_submitted)
 
 
 def _enumerate_selectors_serialized(record: MatchingAttempt) -> SelectorEnumeration:
@@ -319,11 +303,7 @@ def _enumerate_selectors_serialized(record: MatchingAttempt) -> SelectorEnumerat
 
     selector_dict = {}
 
-    record_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(category=MatchingEnumeration.SELECTOR, matching_id=record.id)
-        .subquery()
-    )
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.SELECTOR, matching_id=record.id).subquery()
     records = (
         db.session.query(record_data.c.enumeration, SelectingStudent)
         .select_from(SelectingStudent)
@@ -354,9 +334,7 @@ def _enumerate_selectors_serialized(record: MatchingAttempt) -> SelectorEnumerat
     )
 
 
-def _enumerate_selectors_primary(
-    configs: List[ProjectClassConfig], include_only_submitted: bool = False
-) -> SelectorEnumeration:
+def _enumerate_selectors_primary(configs: List[ProjectClassConfig], include_only_submitted: bool = False) -> SelectorEnumeration:
     number = 0
     sel_to_number = {}
     number_to_sel = {}
@@ -380,21 +358,14 @@ def _enumerate_selectors_primary(
         # So in this case too, we shouldn't forward the selector for matching
 
         opt_in_type = config.selection_open_to_all
-        enroll_previous_year = (
-            config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
-        )
+        enroll_previous_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
         enroll_any_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
         carryover = config.supervisor_carryover
 
-        selectors = (
-            db.session.query(SelectingStudent)
-            .filter_by(retired=False, config_id=config.id, convert_to_submitter=True)
-            .all()
-        )
+        selectors = db.session.query(SelectingStudent).filter_by(retired=False, config_id=config.id, convert_to_submitter=True).all()
 
         print(
-            ' :: length of raw selectors list for "{name}" '
-            "(config_id={y}) = {n}".format(
+            ' :: length of raw selectors list for "{name}" (config_id={y}) = {n}'.format(
                 name=config.project_class.name, y=config.id, n=len(selectors)
             )
         )
@@ -416,28 +387,13 @@ def _enumerate_selectors_primary(
                 else:
                     if sel.academic_year is not None and not sel.has_graduated:
                         if opt_in_type and (
-                            (
-                                enroll_previous_year
-                                and sel.academic_year
-                                == config.start_year
-                                - (1 if config.select_in_previous_cycle else 0)
-                            )
-                            or (
-                                enroll_any_year
-                                and config.start_year
-                                <= sel.academic_year
-                                < config.start_year + config.extent
-                            )
+                            (enroll_previous_year and sel.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0))
+                            or (enroll_any_year and config.start_year <= sel.academic_year < config.start_year + config.extent)
                         ):
                             # interpret failure to submit as lack of interest; no need to generate a match
                             attach = False
 
-                        elif (
-                            carryover
-                            and config.start_year
-                            <= sel.academic_year
-                            < config.start_year + config.extent
-                        ):
+                        elif carryover and config.start_year <= sel.academic_year < config.start_year + config.extent:
                             # interpret failure to submit as evidence student is happy with existing allocation
 
                             # TODO: in reality there is some overlap with the previous case, if both carryover and
@@ -462,9 +418,7 @@ def _enumerate_selectors_primary(
                 #  periods where no project needs to be assigned, e.g. the Data Science MSc with the project
                 #  proposal submission period
                 number_submissions = config.number_submissions
-                multiplicity[number] = (
-                    number_submissions if number_submissions >= 1 else 1
-                )
+                multiplicity[number] = number_submissions if number_submissions >= 1 else 1
 
                 selector_dict[number] = sel
 
@@ -512,11 +466,7 @@ def _enumerate_liveprojects_serialized(
     project_dict = {}  # mapping from enumerated number to LiveProject instance
     project_group_dict = {}  # mapping from config.id to list of LiveProject.ids associated with it
 
-    record_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(category=MatchingEnumeration.LIVEPROJECT, matching_id=record.id)
-        .subquery()
-    )
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.LIVEPROJECT, matching_id=record.id).subquery()
     records = (
         db.session.query(record_data.c.enumeration, LiveProject)
         .select_from(LiveProject)
@@ -539,28 +489,16 @@ def _enumerate_liveprojects_serialized(
         sup = lp.CATS_supervision
         mk = lp.CATS_marking
 
-        CATS_supervisor[n] = (
-            sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
-        )
+        CATS_supervisor[n] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
         CATS_marker[n] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
-        capacity[n] = (
-            lp.capacity
-            if (lp.enforce_capacity and lp.capacity is not None and lp.capacity > 0)
-            else UNBOUNDED_SUPERVISING_CAPACITY
-        )
+        capacity[n] = lp.capacity if (lp.enforce_capacity and lp.capacity is not None and lp.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
 
         project_dict[n] = lp
 
         # UPDATE MODERATE CATS
 
-    group_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(
-            category=MatchingEnumeration.LIVEPROJECT_GROUP, matching_id=record.id
-        )
-        .all()
-    )
+    group_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.LIVEPROJECT_GROUP, matching_id=record.id).all()
 
     for record in group_data:
         record: MatchingEnumeration
@@ -623,8 +561,7 @@ def _enumerate_liveprojects_primary(
                         LiveProject.use_supervisor_pool.is_(False),
                         User.active.is_(True),
                         FacultyData.id != None,
-                        EnrollmentRecord.supervisor_state
-                        == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                        EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     ),
                 )
             )
@@ -643,21 +580,11 @@ def _enumerate_liveprojects_primary(
 
                 sup = item.CATS_supervision
                 mk = item.CATS_marking
-                CATS_supervisor[number] = (
-                    sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
-                )
-                CATS_marker[number] = (
-                    mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
-                )
+                CATS_supervisor[number] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
+                CATS_marker[number] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
                 capacity[number] = (
-                    item.capacity
-                    if (
-                        item.enforce_capacity
-                        and item.capacity is not None
-                        and item.capacity > 0
-                    )
-                    else UNBOUNDED_SUPERVISING_CAPACITY
+                    item.capacity if (item.enforce_capacity and item.capacity is not None and item.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
                 )
 
                 project_dict[number] = item
@@ -707,11 +634,7 @@ def _enumerate_supervising_faculty_serialized(
     fac_dict = {}
 
     # stored ids and primary keys refer to FacultyData instances, not EnrollmentRecord instances
-    record_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(category=MatchingEnumeration.SUPERVISOR, matching_id=record.id)
-        .subquery()
-    )
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.SUPERVISOR, matching_id=record.id).subquery()
     records = (
         db.session.query(record_data.c.enumeration, FacultyData)
         .select_from(FacultyData)
@@ -733,13 +656,7 @@ def _enumerate_supervising_faculty_serialized(
 
         fac_dict[n] = fac
 
-    limit_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(
-            category=MatchingEnumeration.SUPERVISOR_LIMITS, matching_id=record.id
-        )
-        .all()
-    )
+    limit_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.SUPERVISOR_LIMITS, matching_id=record.id).all()
 
     for record in limit_data:
         record: MatchingEnumeration
@@ -854,11 +771,7 @@ def _enumerate_marking_faculty_serialized(record: MatchingAttempt) -> MarkerEnum
     fac_dict = {}
 
     # stored ids and primary keys refer to FacultyData instances, not EnrollmentRecord instances
-    record_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(category=MatchingEnumeration.MARKER, matching_id=record.id)
-        .subquery()
-    )
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.MARKER, matching_id=record.id).subquery()
     records = (
         db.session.query(record_data.c.enumeration, FacultyData)
         .select_from(FacultyData)
@@ -880,11 +793,7 @@ def _enumerate_marking_faculty_serialized(record: MatchingAttempt) -> MarkerEnum
 
         fac_dict[n] = fac
 
-    limit_data = (
-        db.session.query(MatchingEnumeration)
-        .filter_by(category=MatchingEnumeration.MARKER_LIMITS, matching_id=record.id)
-        .all()
-    )
+    limit_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.MARKER_LIMITS, matching_id=record.id).all()
 
     for record in limit_data:
         record: MatchingEnumeration
@@ -965,9 +874,7 @@ def _enumerate_marking_faculty_primary(
     )
 
 
-def _build_ranking_matrix(
-    number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record: MatchingAttempt
-):
+def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record: MatchingAttempt):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -987,12 +894,8 @@ def _build_ranking_matrix(
     cstr = set()  # cstr is a set of (student, project) pairs that will be converted into Require hints
 
     ignore_programme_prefs = record.ignore_programme_prefs
-    programme_bias = (
-        float(record.programme_bias) if record.programme_bias is not None else 1.0
-    )
-    bookmark_bias = (
-        float(record.bookmark_bias) if record.bookmark_bias is not None else 1.0
-    )
+    programme_bias = float(record.programme_bias) if record.programme_bias is not None else 1.0
+    bookmark_bias = float(record.bookmark_bias) if record.bookmark_bias is not None else 1.0
 
     use_hints = record.use_hints
     require_to_encourage = record.require_to_encourage
@@ -1033,8 +936,9 @@ def _build_ranking_matrix(
                     require.add(project.id)
                 else:
                     raise RuntimeError(
-                        'Could not assign custom offer to selector "{name}" because target LiveProject '
-                        "does not exist".format(name=sel.student.user.name)
+                        'Could not assign custom offer to selector "{name}" because target LiveProject does not exist'.format(
+                            name=sel.student.user.name
+                        )
                     )
 
         # otherwise, we want to work through the student's entire submission list, keeping track of the ranks
@@ -1048,11 +952,7 @@ def _build_ranking_matrix(
 
                     hint = item.hint
 
-                    if (
-                        not use_hints
-                        or forbid_to_discourage
-                        or hint != SelectionRecord.SELECTION_HINT_FORBID
-                    ):
+                    if not use_hints or forbid_to_discourage or hint != SelectionRecord.SELECTION_HINT_FORBID:
                         ranks[item.liveproject_id] = item.rank
 
                     # determine weight for this allocation
@@ -1064,36 +964,22 @@ def _build_ranking_matrix(
                             w *= encourage_bias
                         elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
                             w *= discourage_bias
-                        elif (
-                            hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG
-                            or (
-                                require_to_encourage
-                                and hint == SelectionRecord.SELECTION_HINT_REQUIRE
-                            )
+                        elif hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG or (
+                            require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE
                         ):
                             w *= strong_encourage_bias
-                        elif (
-                            hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG
-                            or (
-                                forbid_to_discourage
-                                and hint == SelectionRecord.SELECTION_HINT_FORBID
-                            )
+                        elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG or (
+                            forbid_to_discourage and hint == SelectionRecord.SELECTION_HINT_FORBID
                         ):
                             w *= strong_discourage_bias
 
                     weights[item.liveproject_id] = w
 
-                    if (
-                        use_hints
-                        and not require_to_encourage
-                        and hint == SelectionRecord.SELECTION_HINT_REQUIRE
-                    ):
+                    if use_hints and not require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE:
                         require.add(item.liveproject_id)
 
                     # record alternatives, provided this selection has not been forbidden
-                    if item.liveproject is not None and (
-                        not use_hints or hint != SelectionRecord.SELECTION_HINT_FORBID
-                    ):
+                    if item.liveproject is not None and (not use_hints or hint != SelectionRecord.SELECTION_HINT_FORBID):
                         for alt in item.liveproject.alternatives:
                             alt: LiveProjectAlternative
 
@@ -1107,8 +993,9 @@ def _build_ranking_matrix(
 
             if valid_projects == 0:
                 raise RuntimeError(
-                    'Could not build rank matrix for selector "{name}" because no LiveProjects '
-                    "on their preference list exist".format(name=sel.student.user.name)
+                    'Could not build rank matrix for selector "{name}" because no LiveProjects on their preference list exist'.format(
+                        name=sel.student.user.name
+                    )
                 )
 
         else:
@@ -1153,9 +1040,7 @@ def _build_ranking_matrix(
     return R, W, cstr
 
 
-def _build_marking_matrix(
-    number_mark, mark_dict, number_projects, project_dict, max_multiplicity
-):
+def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
     """
     Construct a dictionary mapping from (marking_faculty, project) pairs to the maximum multiplicity
     allowed for each marking assignment
@@ -1180,9 +1065,7 @@ def _build_marking_matrix(
             # does the project class for this project use markers?
             if proj.config.uses_marker:
                 # check whether marker i is in the assessor list for project j
-                count = get_count(
-                    proj.assessor_list_query.filter(FacultyData.id == fac.id)
-                )
+                count = get_count(proj.assessor_list_query.filter(FacultyData.id == fac.id))
 
                 if count == 1:
                     M[idx] = max_multiplicity
@@ -1269,9 +1152,7 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
             # if project uses a supervisor pool, then any member of the assessor pool is an allowed supervisor.
             # in this case, the project owner is usually a manager and is not a potential supervisor.
             if proj.use_supervisor_pool:
-                count = get_count(
-                    proj.supervisor_list_query.filter(FacultyData.id == fac.id)
-                )
+                count = get_count(proj.supervisor_list_query.filter(FacultyData.id == fac.id))
                 if count == 1:
                     P[idx] = 1
                 elif count == 0:
@@ -1380,9 +1261,7 @@ def _enumerate_submissions_for_markers(
 
                 # store this submission record in the submitter dictionary
                 if sub in submit_to_number:
-                    raise RuntimeError(
-                        "Non-unique submitter when enumerating submissions for marker assignment"
-                    )
+                    raise RuntimeError("Non-unique submitter when enumerating submissions for marker assignment")
 
                 number_to_submit[num_submitters] = sub
                 submit_to_number[sub] = num_submitters
@@ -1398,13 +1277,11 @@ def _enumerate_submissions_for_markers(
                         task_id,
                         TaskRecord.FAILURE,
                         100,
-                        'Failed because LiveProject "{name}" has no '
-                        "active assessors".format(name=sub.project.name),
+                        'Failed because LiveProject "{name}" has no active assessors'.format(name=sub.project.name),
                         autocommit=True,
                     )
                     user.post_message(
-                        'Failed to populate markers because LiveProject "{name}" has no active '
-                        "assessors.".format(name=sub.project.name),
+                        'Failed to populate markers because LiveProject "{name}" has no active assessors.'.format(name=sub.project.name),
                         "error",
                         autocommit=True,
                     )
@@ -1424,13 +1301,9 @@ def _enumerate_submissions_for_markers(
                         f"marker(s) are required. Please add more assessors to the project or reduce "
                         f"the number of markers required for this period."
                     )
-                    progress_update(
-                        task_id, TaskRecord.FAILURE, 100, short_msg, autocommit=True
-                    )
+                    progress_update(task_id, TaskRecord.FAILURE, 100, short_msg, autocommit=True)
                     user.post_message(long_msg, "error", autocommit=True)
-                    self.update_state(
-                        "FAILURE", meta={"msg": "LiveProject assessor pool too small"}
-                    )
+                    self.update_state("FAILURE", meta={"msg": "LiveProject assessor pool too small"})
                     return None
 
                 for marker in assessors:
@@ -1547,16 +1420,10 @@ def _create_PuLP_problem(
         with Timer() as X_timer:
             X = _pulp_dicts(
                 "X",
-                itertools.product(
-                    range(data.selector_data.number), range(data.project_data.number)
-                ),
+                itertools.product(range(data.selector_data.number), range(data.project_data.number)),
                 cat=pulp.LpBinary,
             )
-        print(
-            " ** created X[i,j] matrix ({num} elements) in time {t}".format(
-                t=X_timer.interval, num=len(X)
-            )
-        )
+        print(" ** created X[i,j] matrix ({num} elements) in time {t}".format(t=X_timer.interval, num=len(X)))
 
         # SUPERVISOR DECISION VARIABLES
 
@@ -1568,17 +1435,11 @@ def _create_PuLP_problem(
         with Timer() as S_timer:
             S = _pulp_dicts(
                 "S",
-                itertools.product(
-                    range(data.supervisor_data.number), range(data.project_data.number)
-                ),
+                itertools.product(range(data.supervisor_data.number), range(data.project_data.number)),
                 cat=pulp.LpInteger,
                 lowBound=0,
             )
-        print(
-            " ** created S[k,j] ({num} elements) matrix in time {t}".format(
-                t=S_timer.interval, num=len(S)
-            )
-        )
+        print(" ** created S[k,j] ({num} elements) matrix in time {t}".format(t=S_timer.interval, num=len(S)))
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
@@ -1586,27 +1447,17 @@ def _create_PuLP_problem(
         with Timer() as ss_timer:
             ss = _pulp_dicts(
                 "ss",
-                itertools.product(
-                    range(data.supervisor_data.number), range(data.project_data.number)
-                ),
+                itertools.product(range(data.supervisor_data.number), range(data.project_data.number)),
                 cat=pulp.LpBinary,
             )
-        print(
-            " ** created ss[k,j] ({num} elements) matrix in time {t}".format(
-                t=ss_timer.interval, num=len(ss)
-            )
-        )
+        print(" ** created ss[k,j] ({num} elements) matrix in time {t}".format(t=ss_timer.interval, num=len(ss)))
 
         # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
         # 0 = none assigned
         # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
         with Timer() as Z_timer:
             Z = _pulp_dicts("Z", range(data.supervisor_data.number), cat=pulp.LpBinary)
-        print(
-            " ** created Z[k] ({num} elements) matrix in time {t}".format(
-                t=Z_timer.interval, num=len(Z)
-            )
-        )
+        print(" ** created Z[k] ({num} elements) matrix in time {t}".format(t=Z_timer.interval, num=len(Z)))
 
         # MARKER DECISION VARIABLES
 
@@ -1629,11 +1480,7 @@ def _create_PuLP_problem(
                 ),
                 cat=pulp.LpBinary,
             )
-        print(
-            " ** created Y[i,j,l] ({num} elements) matrix in time {t}".format(
-                t=Y_timer.interval, num=len(Y)
-            )
-        )
+        print(" ** created Y[i,j,l] ({num} elements) matrix in time {t}".format(t=Y_timer.interval, num=len(Y)))
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
 
@@ -1649,11 +1496,7 @@ def _create_PuLP_problem(
                 cat=pulp.LpInteger,
                 lowBound=0,
             )
-        print(
-            " ** created Ysel[i,j] ({num} elements) matrix in time {t}".format(
-                t=Ysel_timer.interval, num=len(Ysel)
-            )
-        )
+        print(" ** created Ysel[i,j] ({num} elements) matrix in time {t}".format(t=Ysel_timer.interval, num=len(Ysel)))
 
         # Then, Ymark[l, j] slices Y[i,j,l] by summing over markers i at fixed j, l
         with Timer() as Ymark_timer:
@@ -1663,11 +1506,7 @@ def _create_PuLP_problem(
                 cat=pulp.LpInteger,
                 lowBound=0,
             )
-        print(
-            " ** created Ymark[l,j] ({num} elements) matrix in time {t}".format(
-                t=Ymark_timer.interval, num=len(Ymark)
-            )
-        )
+        print(" ** created Ymark[l,j] ({num} elements) matrix in time {t}".format(t=Ymark_timer.interval, num=len(Ymark)))
 
         # boolean version of Y indicating whether a marker has any assignments to a particular project
         with Timer() as yy_timer:
@@ -1676,11 +1515,7 @@ def _create_PuLP_problem(
                 itertools.product(range(number_mark), range(number_lp)),
                 cat=pulp.LpBinary,
             )
-        print(
-            " ** created yy[i,j] ({num} elements) matrix in time {t}".format(
-                t=yy_timer.interval, num=len(yy)
-            )
-        )
+        print(" ** created yy[i,j] ({num} elements) matrix in time {t}".format(t=yy_timer.interval, num=len(yy)))
 
         # to implement workload balancing we use pairs of continuous variables that relax
         # to the maximum and minimum workload for each faculty group:
@@ -1713,16 +1548,10 @@ def _create_PuLP_problem(
 
         # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
         # solution
-        sup_elastic_CATS = _pulp_dicts(
-            "A", range(number_sup), cat=pulp.LpContinuous, lowBound=0
-        )
-        mark_elastic_CATS = _pulp_dicts(
-            "B", range(number_mark), cat=pulp.LpContinuous, lowBound=0
-        )
+        sup_elastic_CATS = _pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
+        mark_elastic_CATS = _pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
-    print(
-        " -- created decision variables in time {t}".format(t=variable_timer.interval)
-    )
+    print(" -- created decision variables in time {t}".format(t=variable_timer.interval))
 
     # OBJECTIVE FUNCTION
 
@@ -1736,9 +1565,7 @@ def _create_PuLP_problem(
 
     with Timer() as obj_timer:
         # tension top and bottom workloads in each group against each other
-        group_levelling = (
-            (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
-        )
+        group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
         global_levelling = globalMax - globalMin
 
         # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
@@ -1746,12 +1573,8 @@ def _create_PuLP_problem(
 
         # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
         # upper and lower limits roughly equal to one ranking place in matching to students
-        group_levelling_term = (
-            abs(levelling_bias) * group_levelling / mean_CATS_per_project
-        )
-        global_levelling_term = (
-            abs(intra_group_tension) * global_levelling / mean_CATS_per_project
-        )
+        group_levelling_term = abs(levelling_bias) * group_levelling / mean_CATS_per_project
+        global_levelling_term = abs(intra_group_tension) * global_levelling / mean_CATS_per_project
 
         # try to keep marking assignments under control by imposing a penalty for the highest number of marking assignments
         marking_bias = abs(marking_pressure) * maxMarking
@@ -1763,19 +1586,14 @@ def _create_PuLP_problem(
         # of CATS limits except where really necessary; notice that these elastic variables are measured in
         # units of CATS, not projects, so the coefficients really are large
         elastic_CATS_penalty = abs(CATS_violation_penalty) * (
-            sum(sup_elastic_CATS[i] for i in range(number_sup))
-            + sum(mark_elastic_CATS[i] for i in range(number_mark))
+            sum(sup_elastic_CATS[i] for i in range(number_sup)) + sum(mark_elastic_CATS[i] for i in range(number_mark))
         )
 
         # we also impose a penalty for every supervisor who does not have any project assignments
-        no_assignment_penalty = (
-            2.0 * abs(no_assignment_penalty) * sum(1 - Z[i] for i in range(number_sup))
-        )
+        no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1 - Z[i] for i in range(number_sup))
 
         prob += (
-            _build_score_function(
-                data, PuLPProblem(problem=None, X=X, Y=Y, S=S), base_data, base_bias
-            )
+            _build_score_function(data, PuLPProblem(problem=None, X=X, Y=Y, S=S), base_data, base_bias)
             - group_levelling_term
             - global_levelling_term
             - marking_bias
@@ -1809,9 +1627,7 @@ def _create_PuLP_problem(
 
                 if proj.owner is not None:
                     user_owner: User = proj.owner.user
-                    tag = "{first}{last}".format(
-                        first=user_owner.first_name, last=user_owner.last_name
-                    )
+                    tag = "{first}{last}".format(first=user_owner.first_name, last=user_owner.last_name)
                 elif proj.use_supervisor_pool:
                     tag = "SupervisorPool"
                 else:
@@ -1837,9 +1653,7 @@ def _create_PuLP_problem(
 
             prob += (
                 sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l],
-                "_C{first}{last}_SC{scfg}_assign".format(
-                    first=user.first_name, last=user.last_name, scfg=sel.config_id
-                ),
+                "_C{first}{last}_SC{scfg}_assign".format(first=user.first_name, last=user.last_name, scfg=sel.config_id),
             )
 
         # Add constraints for any matches marked 'require' by a convenor
@@ -1883,11 +1697,7 @@ def _create_PuLP_problem(
                     ),
                 )
 
-    print(
-        " -- created selector ranking constraints in time {t}".format(
-            t=sel_timer.interval
-        )
-    )
+    print(" -- created selector ranking constraints in time {t}".format(t=sel_timer.interval))
 
     # SUPERVISOR ASSIGNMENTS
 
@@ -1970,20 +1780,15 @@ def _create_PuLP_problem(
                 # force that total number of assigned supervisors matches total number of assigned students;
                 # (each S[k,j] can be > 1, meaning that the same supervisor is assigned to > 1 students)
                 prob += (
-                    sum(S[(k, j)] * P[(k, j)] for k in range(number_sup))
-                    == sum(X[(i, j)] for i in range(number_sel)),
-                    "_CS_C{cfg}_P{num}_supv_parity".format(
-                        cfg=proj.config_id, num=proj.number
-                    ),
+                    sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == sum(X[(i, j)] for i in range(number_sel)),
+                    "_CS_C{cfg}_P{num}_supv_parity".format(cfg=proj.config_id, num=proj.number),
                 )
 
             else:
                 # enforce no supervisors assigned to this project
                 prob += (
                     sum(S[(k, j)] for k in range(number_sup)) == 0,
-                    "_CS_C{cfg}_P{num}_nosupv".format(
-                        cfg=proj.config_id, num=proj.number
-                    ),
+                    "_CS_C{cfg}_P{num}_nosupv".format(cfg=proj.config_id, num=proj.number),
                 )
 
         # Prevent supervisors from being assigned to more than a fixed number of projects.
@@ -2006,9 +1811,7 @@ def _create_PuLP_problem(
             if group_limit is not None and group_limit > 0:
                 prob += (
                     group_projects <= group_limit,
-                    "_C{first}{last}_group_limit".format(
-                        first=user.first_name, last=user.last_name
-                    ),
+                    "_C{first}{last}_group_limit".format(first=user.first_name, last=user.last_name),
                 )
 
             all_limit = record.max_different_all_projects
@@ -2018,9 +1821,7 @@ def _create_PuLP_problem(
 
                 prob += (
                     all_projects <= all_limit,
-                    "_C{first}{last}_all_limit".format(
-                        first=user.first_name, last=user.last_name
-                    ),
+                    "_C{first}{last}_all_limit".format(first=user.first_name, last=user.last_name),
                 )
 
         # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
@@ -2031,9 +1832,7 @@ def _create_PuLP_problem(
             # force Z[k] to be zero if no projects are assigned to supervisor k
             prob += (
                 Z[k] <= sum(S[(k, j)] for j in range(number_lp)),
-                "_CZ{first}{last}_upperb".format(
-                    first=user.first_name, last=user.last_name
-                ),
+                "_CZ{first}{last}_upperb".format(first=user.first_name, last=user.last_name),
             )
 
             # force Z[k] to be 1 if any project is assigned to supervisor k
@@ -2111,9 +1910,7 @@ def _create_PuLP_problem(
 
                 prob += (
                     Ymark[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)),
-                    "_CYmark_sel{sel}_C{cfg}_P{num}".format(
-                        sel=user.id, cfg=proj.config_id, num=proj.number
-                    ),
+                    "_CYmark_sel{sel}_C{cfg}_P{num}".format(sel=user.id, cfg=proj.config_id, num=proj.number),
                 )
 
         # yy[i,j] should be zero if marker i has no assignments to project j, and otherwise 1
@@ -2169,18 +1966,14 @@ def _create_PuLP_problem(
 
                     prob += (
                         marker_valence[j] * X[(l, j)] == Ymark[(l, j)],
-                        "_CY_sel{sel}_C{cfg}_P{num}_mark_parity".format(
-                            sel=sel_user.id, cfg=proj.config_id, num=proj.number
-                        ),
+                        "_CY_sel{sel}_C{cfg}_P{num}_mark_parity".format(sel=sel_user.id, cfg=proj.config_id, num=proj.number),
                     )
 
             else:
                 # enforce no markers assigned to this project
                 prob += (
                     sum(Ysel[(i, j)] for i in range(number_mark)) == 0,
-                    "_CY_C{cfg}_P{num}_nomark".format(
-                        cfg=proj.config_id, num=proj.number
-                    ),
+                    "_CY_C{cfg}_P{num}_nomark".format(cfg=proj.config_id, num=proj.number),
                 )
 
         # No supervisor should be assigned to mark their own project, and vice versa
@@ -2268,30 +2061,21 @@ def _create_PuLP_problem(
             # enforce global limit, either from optimization configuration or from user's global record
             lim = record.supervising_limit
             sup_limit = sup_limits[k]
-            if (
-                not record.ignore_per_faculty_limits
-                and sup_limit is not None
-                and sup_limit > 0
-            ):
+            if not record.ignore_per_faculty_limits and sup_limit is not None and sup_limit > 0:
                 if sup_limit < lim:
                     lim = sup_limit
 
             existing_CATS = _compute_existing_sup_CATS(record, sup)
             if existing_CATS > lim:
                 raise RuntimeError(
-                    "Inconsistent matching problem: existing supervisory CATS load {n} for faculty "
-                    '"{name}" exceeds specified CATS limit'.format(
+                    'Inconsistent matching problem: existing supervisory CATS load {n} for faculty "{name}" exceeds specified CATS limit'.format(
                         n=existing_CATS, name=user.name
                     )
                 )
 
             prob += (
-                existing_CATS
-                + sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp))
-                <= lim + sup_elastic_CATS[k],
-                "_C{first}{last}_supv_CATS".format(
-                    first=user.first_name, last=user.last_name
-                ),
+                existing_CATS + sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= lim + sup_elastic_CATS[k],
+                "_C{first}{last}_supv_CATS".format(first=user.first_name, last=user.last_name),
             )
 
             # enforce ad-hoc per-project-class supervisor limits
@@ -2301,11 +2085,8 @@ def _create_PuLP_problem(
 
                 if k in fac_limits and projects is not None:
                     prob += (
-                        sum(S[(k, j)] * CATS_supervisor[j] for j in projects)
-                        <= fac_limits[k],
-                        "_C{first}{last}_supv_CATS_config_{cfg}".format(
-                            first=user.first_name, last=user.last_name, cfg=config_id
-                        ),
+                        sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k],
+                        "_C{first}{last}_supv_CATS_config_{cfg}".format(first=user.first_name, last=user.last_name, cfg=config_id),
                     )
 
         # CATS assigned to each marker must be within bounds
@@ -2316,30 +2097,21 @@ def _create_PuLP_problem(
             # enforce global limit
             lim = record.marking_limit
             mark_limit = mark_limits[i]
-            if (
-                not record.ignore_per_faculty_limits
-                and mark_limit is not None
-                and mark_limit > 0
-            ):
+            if not record.ignore_per_faculty_limits and mark_limit is not None and mark_limit > 0:
                 if mark_limit < lim:
                     lim = mark_limit
 
             existing_CATS = _compute_existing_mark_CATS(record, mark)
             if existing_CATS > lim:
                 raise RuntimeError(
-                    "Inconsistent matching problem: existing marking CATS load {n} for faculty "
-                    '"{name}" exceeds specified CATS limit'.format(
+                    'Inconsistent matching problem: existing marking CATS load {n} for faculty "{name}" exceeds specified CATS limit'.format(
                         n=existing_CATS, name=mark.user.name
                     )
                 )
 
             prob += (
-                existing_CATS
-                + sum(CATS_marker[j] * Ysel[(i, j)] for j in range(number_lp))
-                <= lim + mark_elastic_CATS[i],
-                "_C{first}{last}_mark_CATS".format(
-                    first=user.first_name, last=user.last_name
-                ),
+                existing_CATS + sum(CATS_marker[j] * Ysel[(i, j)] for j in range(number_lp)) <= lim + mark_elastic_CATS[i],
+                "_C{first}{last}_mark_CATS".format(first=user.first_name, last=user.last_name),
             )
 
             # enforce ad-hoc per-project-class marking limits
@@ -2349,18 +2121,11 @@ def _create_PuLP_problem(
 
                 if i in fac_limits and projects is not None:
                     prob += (
-                        sum(CATS_marker[j] * Ysel[(i, j)] for j in projects)
-                        <= fac_limits[i],
-                        "_C{first}{last}_mark_CATS_config_C{cfg}".format(
-                            first=user.first_name, last=user.last_name, cfg=config_id
-                        ),
+                        sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i],
+                        "_C{first}{last}_mark_CATS_config_C{cfg}".format(first=user.first_name, last=user.last_name, cfg=config_id),
                     )
 
-    print(
-        " -- created faculty workload constraints in time {t}".format(
-            t=fac_work_timer.interval
-        )
-    )
+    print(" -- created faculty workload constraints in time {t}".format(t=fac_work_timer.interval))
 
     # WORKLOAD LEVELLING
 
@@ -2378,14 +2143,8 @@ def _create_PuLP_problem(
         # supMin and supMax should bracket the CATS workload of faculty who supervise only
         if len(sup_only_numbers) > 0:
             for k in sup_only_numbers:
-                prob += (
-                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp))
-                    <= supMax
-                )
-                prob += (
-                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp))
-                    >= supMin
-                )
+                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= supMax
+                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) >= supMin
 
             prob += globalMin <= supMin
             prob += globalMax >= supMax
@@ -2398,14 +2157,8 @@ def _create_PuLP_problem(
         # markMin and markMax should bracket the CATS workload of faculty who mark only
         if len(mark_only_numbers) > 0:
             for i in mark_only_numbers:
-                prob += (
-                    sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
-                    <= markMax
-                )
-                prob += (
-                    sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
-                    >= markMin
-                )
+                prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= markMax
+                prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= markMin
 
             prob += globalMin <= markMin
             prob += globalMax >= markMax
@@ -2419,13 +2172,11 @@ def _create_PuLP_problem(
         if len(sup_and_mark_numbers) > 0:
             for k, i in sup_and_mark_numbers:
                 prob += (
-                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp))
-                    + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
+                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
                     <= supMarkMax
                 )
                 prob += (
-                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp))
-                    + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
+                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
                     >= supMarkMin
                 )
 
@@ -2458,28 +2209,18 @@ def _create_PuLP_problem(
         else:
             prob += maxMarking == 0
 
-    print(
-        " -- created workload levelling objectives in time {t}".format(
-            t=level_timer.interval
-        )
-    )
+    print(" -- created workload levelling objectives in time {t}".format(t=level_timer.interval))
 
     return PuLPProblem(problem=prob, X=X, Y=Y, S=S)
 
 
-def _build_score_function(
-    data: InitializationData, pulp_data: PuLPProblem, base_data: BaseData, base_bias
-):
+def _build_score_function(data: InitializationData, pulp_data: PuLPProblem, base_data: BaseData, base_bias):
     # generate score function, used as a component of the maximization objective
     objective = 0
 
     fbase_bias = None
 
-    if (
-        len(base_data.base_X) > 0
-        or len(base_data.base_Y) > 0
-        or len(base_data.base_S) > 0
-    ):
+    if len(base_data.base_X) > 0 or len(base_data.base_Y) > 0 or len(base_data.base_S) > 0:
         if base_bias is None:
             raise RuntimeError("base_bias = None in _build_score_function")
         else:
@@ -2567,11 +2308,7 @@ def _store_PuLP_solution(
             if item not in record.projects:
                 record.projects.append(item)
 
-    print(
-        " ** updated MatchingAttempt configuration data in time {t}".format(
-            t=config_timer.interval
-        )
-    )
+    print(" ** updated MatchingAttempt configuration data in time {t}".format(t=config_timer.interval))
 
     record.mean_CATS_per_project = data.mean_CATS_per_project
 
@@ -2581,9 +2318,7 @@ def _store_PuLP_solution(
         for j in range(data.project_data.number):
             proj_id = data.project_data.number_to_project[j]
             if proj_id in supervisors:
-                raise RuntimeError(
-                    "PuLP solution has inconsistent supervisor assignment"
-                )
+                raise RuntimeError("PuLP solution has inconsistent supervisor assignment")
 
             assigned = {}
 
@@ -2596,11 +2331,7 @@ def _store_PuLP_solution(
 
             supervisors[proj_id] = assigned
 
-    print(
-        " ** parsed supervisor decision variables in time {t}".format(
-            t=sup_timer.interval
-        )
-    )
+    print(" ** parsed supervisor decision variables in time {t}".format(t=sup_timer.interval))
 
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
@@ -2609,18 +2340,14 @@ def _store_PuLP_solution(
         for j in range(data.project_data.number):
             proj_id = data.project_data.number_to_project[j]
             if proj_id in markers:
-                raise RuntimeError(
-                    "Marker entry already exists when storing PuLP marker assignment"
-                )
+                raise RuntimeError("Marker entry already exists when storing PuLP marker assignment")
 
             assigned = {}
 
             for l in range(data.selector_data.number):
                 sel_id = data.selector_data.number_to_selector[l]
                 if sel_id in assigned:
-                    raise RuntimeError(
-                        "Selector entry already exists when storing PuLP marker assignment"
-                    )
+                    raise RuntimeError("Selector entry already exists when storing PuLP marker assignment")
 
                 sel_marker = set()
 
@@ -2635,24 +2362,18 @@ def _store_PuLP_solution(
 
             markers[proj_id] = assigned
 
-    print(
-        " ** parsed marker decision variables in time {t}".format(t=mark_timer.interval)
-    )
+    print(" ** parsed marker decision variables in time {t}".format(t=mark_timer.interval))
 
     # loop through all selectors that participated in the matching, generating matching records for each one
     for i in range(data.selector_data.number):
         if i not in data.selector_data.dict:
-            raise RuntimeError(
-                "PuLP solution references unexpected SelectingStudent instance"
-            )
+            raise RuntimeError("PuLP solution references unexpected SelectingStudent instance")
 
         sel_id: int = data.selector_data.number_to_selector[i]
 
         sel: SelectingStudent = data.selector_data.dict[i]
         if sel.id != sel_id:
-            raise RuntimeError(
-                "Inconsistent selector lookup when storing PuLP solution"
-            )
+            raise RuntimeError("Inconsistent selector lookup when storing PuLP solution")
 
         # find the submission periods and marker valences that are needed for this selector
         config: ProjectClassConfig = sel.config
@@ -2667,9 +2388,7 @@ def _store_PuLP_solution(
                 assigned.append(j)
 
         if len(assigned) != data.selector_data.multiplicity[i]:
-            raise RuntimeError(
-                "Number of selector assignments in PuLP solution does not match expected selector multiplicity"
-            )
+            raise RuntimeError("Number of selector assignments in PuLP solution does not match expected selector multiplicity")
 
         print(f">> Storing assigned values for selector = {sel.student.user.name}")
         print(f">>   Assigned projects = {assigned}")
@@ -2694,9 +2413,7 @@ def _store_PuLP_solution(
 
                     if num_offers > 0:
                         custom_offers_per_period[pd.period] = offers
-                        print(
-                            f">>   -- Found {num_offers} custom offers for period #{pd.period}"
-                        )
+                        print(f">>   -- Found {num_offers} custom offers for period #{pd.period}")
                     else:
                         print(f">>   -- Found no custom offers for period #{pd.period}")
 
@@ -2710,25 +2427,17 @@ def _store_PuLP_solution(
                 markers_per_period[pd.submission_period] = pd.number_markers
 
                 if has_custom_offers:
-                    offers: List[CustomOffer] = sel.accepted_offers(
-                        pd.submission_period
-                    ).all()
+                    offers: List[CustomOffer] = sel.accepted_offers(pd.submission_period).all()
                     num_offers = len(offers)
 
                     if num_offers > 0:
                         custom_offers_per_period[pd.submission_period] = offers
-                        print(
-                            f">>   -- Found {num_offers} custom offers for period #{pd.submission_period}"
-                        )
+                        print(f">>   -- Found {num_offers} custom offers for period #{pd.submission_period}")
                     else:
-                        print(
-                            f">>   -- Found no custom offers for period #{pd.submission_period}"
-                        )
+                        print(f">>   -- Found no custom offers for period #{pd.submission_period}")
 
         if len(markers_per_period) != data.selector_data.multiplicity[i]:
-            raise RuntimeError(
-                "Number of submission periods does not match expected selector multiplicity"
-            )
+            raise RuntimeError("Number of submission periods does not match expected selector multiplicity")
 
         print(f">>   Markers per period = {markers_per_period.items()}")
         print(f">>   Custom offers per period = {custom_offers_per_period.items()}")
@@ -2738,20 +2447,14 @@ def _store_PuLP_solution(
             proj_number: int = assigned.pop()
 
             if proj_number not in data.project_data.dict:
-                raise RuntimeError(
-                    "PuLP solution references unexpected LiveProject instance"
-                )
+                raise RuntimeError("PuLP solution references unexpected LiveProject instance")
 
             proj_id: int = data.project_data.number_to_project[proj_number]
             project: LiveProject = data.project_data.dict[proj_number]
             if proj_id != project.id:
-                raise RuntimeError(
-                    "Inconsistent project lookup when storing PuLP solution"
-                )
+                raise RuntimeError("Inconsistent project lookup when storing PuLP solution")
 
-            print(
-                f">>   Processing assigned project id = #{proj_id}, number = #{proj_number}, '{project.name}'"
-            )
+            print(f">>   Processing assigned project id = #{proj_id}, number = #{proj_number}, '{project.name}'")
 
             # calculate selector's rank of the assigned project
             # (this lets us work out the quality of the fit from the student's perspective)
@@ -2761,15 +2464,11 @@ def _store_PuLP_solution(
                 alt_data = sel.alternative_priority(proj_id)
 
                 if alt_data is None:
-                    raise RuntimeError(
-                        "PuLP solution assigns unranked project to selector"
-                    )
+                    raise RuntimeError("PuLP solution assigns unranked project to selector")
 
             # DECIDE WHICH SUBMISSION PERIOD TO ASSIGN THIS PROJECT TO
             if len(markers_per_period) == 0:
-                raise RuntimeError(
-                    "Period list is unexpectedly empty when storing PuLP solution"
-                )
+                raise RuntimeError("Period list is unexpectedly empty when storing PuLP solution")
 
             period_list = sorted(list(markers_per_period.keys()))
             this_period = None
@@ -2779,16 +2478,12 @@ def _store_PuLP_solution(
             for pd, offers in custom_offers_per_period.items():
                 for offer in offers:
                     if offer.liveproject_id == proj_id:
-                        print(
-                            f">>   Matched custom offer id = #{offer.id} and assigned to period #{pd}"
-                        )
+                        print(f">>   Matched custom offer id = #{offer.id} and assigned to period #{pd}")
                         if pd in period_list:
                             this_period = pd
                             break
                         else:
-                            raise RuntimeError(
-                                "PuLP solution should assign project to a custom offer, but the required period is missing"
-                            )
+                            raise RuntimeError("PuLP solution should assign project to a custom offer, but the required period is missing")
 
                 if this_period is not None:
                     break
@@ -2797,9 +2492,7 @@ def _store_PuLP_solution(
             # avoid assigning to periods for which there is a custom offer, because that will create
             # a conflict
             if this_period is None:
-                allowed_periods = [
-                    n for n in period_list if n not in custom_offers_per_period
-                ]
+                allowed_periods = [n for n in period_list if n not in custom_offers_per_period]
                 this_period = allowed_periods[0]
                 print(f">>   Assigned to vacant period #{this_period}")
 
@@ -2833,9 +2526,7 @@ def _store_PuLP_solution(
             if uses_supervisor:
                 # get supervisor assignment for this project
                 if proj_id not in supervisors:
-                    raise RuntimeError(
-                        "PuLP solution error: supervisor stack unexpectedly empty or missing"
-                    )
+                    raise RuntimeError("PuLP solution error: supervisor stack unexpectedly empty or missing")
 
                 supervisor_list = supervisors[proj_id]
                 supervisor = None
@@ -2860,56 +2551,40 @@ def _store_PuLP_solution(
                         )
 
                 if supervisor is None:
-                    raise RuntimeError(
-                        "PuLP solution error: supervisor stack unexpectedly empty or missing"
-                    )
+                    raise RuntimeError("PuLP solution error: supervisor stack unexpectedly empty or missing")
 
                 # generate supervisor role record
-                role_supv = MatchingRole(
-                    user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR
-                )
+                role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
                 data_rec.roles.append(role_supv)
 
                 # generate original supervisor role record (cached so we can revert later if required)
-                orig_role_supv = MatchingRole(
-                    user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR
-                )
+                orig_role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
                 data_rec.original_roles.append(orig_role_supv)
 
             # find marker
             if uses_marker:
                 # get a set of marker assignments for this project
                 if proj_id not in markers:
-                    raise RuntimeError(
-                        "PuLP solution error: marker stack unexpectedly empty or missing"
-                    )
+                    raise RuntimeError("PuLP solution error: marker stack unexpectedly empty or missing")
 
                 selector_list = markers[proj_id]
                 marker_set = selector_list[sel_id]
 
                 if len(marker_set) < markers_needed:
-                    raise RuntimeError(
-                        "Number of marker assignments in PuLP solution does not match expected marker valence"
-                    )
+                    raise RuntimeError("Number of marker assignments in PuLP solution does not match expected marker valence")
 
                 while markers_needed > 0 and len(marker_set) > 0:
                     marker = marker_set.pop()
 
                     if marker is None:
-                        raise RuntimeError(
-                            "PuLP solution error: marker stack unexpected empty or missing"
-                        )
+                        raise RuntimeError("PuLP solution error: marker stack unexpected empty or missing")
 
                     # generate marker role record
-                    role_mark = MatchingRole(
-                        user_id=marker, role=MatchingRole.ROLE_MARKER
-                    )
+                    role_mark = MatchingRole(user_id=marker, role=MatchingRole.ROLE_MARKER)
                     data_rec.roles.append(role_mark)
 
                     # generate original marker role record (cached so we can revert later if required)
-                    orig_role_mark = MatchingRole(
-                        user_id=marker, role=MatchingRole.ROLE_MARKER
-                    )
+                    orig_role_mark = MatchingRole(user_id=marker, role=MatchingRole.ROLE_MARKER)
                     data_rec.original_roles.append(orig_role_mark)
 
                     markers_needed -= 1
@@ -2953,16 +2628,8 @@ def _create_marker_PuLP_problem(
 
     for i in range(number_markers):
         # max_CATS and min_CATS should bracket the CATS workload of all faculty
-        prob += (
-            enum_data.CATS_dict[i]
-            + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters))
-            <= max_CATS
-        )
-        prob += (
-            enum_data.CATS_dict[i]
-            + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters))
-            >= min_CATS
-        )
+        prob += enum_data.CATS_dict[i] + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) <= max_CATS
+        prob += enum_data.CATS_dict[i] + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) >= min_CATS
 
         # max_assigned should relax to total assigned
         prob += sum(Y[(i, j)] for j in range(number_submitters)) <= max_assigned
@@ -2989,9 +2656,7 @@ def _create_marker_PuLP_problem(
     return MarkerPuLPProblem(problem=prob, Y=Y)
 
 
-def _initialize(
-    self, record: MatchingAttempt, read_serialized: bool = False
-) -> InitializationData:
+def _initialize(self, record: MatchingAttempt, read_serialized: bool = False) -> InitializationData:
     progress_update(
         record.celery_id,
         TaskRecord.RUNNING,
@@ -3004,11 +2669,7 @@ def _initialize(
         # get list of project classes participating in automatic assignment
         configs = record.config_members.all()
         mean_CATS_per_project = _find_mean_project_CATS(configs)
-        print(
-            " -- {n} ProjectClassConfig instances participate in this matching".format(
-                n=len(configs)
-            )
-        )
+        print(" -- {n} ProjectClassConfig instances participate in this matching".format(n=len(configs)))
 
         progress_update(
             record.celery_id,
@@ -3021,15 +2682,9 @@ def _initialize(
         # get lists of selectors and liveprojects, together with auxiliary data such as
         # multiplicities (for selectors) and CATS assignments (for projects)
         with Timer() as sel_timer:
-            selector_data: SelectorEnumeration = _enumerate_selectors(
-                record, configs, read_serialized=read_serialized
-            )
+            selector_data: SelectorEnumeration = _enumerate_selectors(record, configs, read_serialized=read_serialized)
             # number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
-        print(
-            " -- enumerated {n} selectors in time {s}".format(
-                n=selector_data.number, s=sel_timer.interval
-            )
-        )
+        print(" -- enumerated {n} selectors in time {s}".format(n=selector_data.number, s=sel_timer.interval))
 
         progress_update(
             record.celery_id,
@@ -3040,17 +2695,11 @@ def _initialize(
         )
 
         with Timer() as lp_timer:
-            project_data: LiveProjectEnumeration = _enumerate_liveprojects(
-                record, configs, read_serialized=read_serialized
-            )
+            project_data: LiveProjectEnumeration = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
             # number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, lp_dict, lp_group_dict = _enumerate_liveprojects(
             #     record, configs, read_serialized=read_serialized
             # )
-        print(
-            " -- enumerated {n} LiveProjects in time {s}".format(
-                n=project_data.number, s=lp_timer.interval
-            )
-        )
+        print(" -- enumerated {n} LiveProjects in time {s}".format(n=project_data.number, s=lp_timer.interval))
 
         progress_update(
             record.celery_id,
@@ -3062,15 +2711,9 @@ def _initialize(
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
-            supervisor_data: SupervisorEnumeration = _enumerate_supervising_faculty(
-                record, configs
-            )
+            supervisor_data: SupervisorEnumeration = _enumerate_supervising_faculty(record, configs)
             # number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict, sup_pclass_limits = _enumerate_supervising_faculty(record, configs)
-        print(
-            " -- enumerated {n} supervising faculty in time {s}".format(
-                n=supervisor_data.number, s=sup_timer.interval
-            )
-        )
+        print(" -- enumerated {n} supervising faculty in time {s}".format(n=supervisor_data.number, s=sup_timer.interval))
 
         progress_update(
             record.celery_id,
@@ -3083,11 +2726,7 @@ def _initialize(
         with Timer() as mark_timer:
             marker_data: MarkerEnumeration = _enumerate_marking_faculty(record, configs)
             # number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = _enumerate_marking_faculty(record, configs)
-        print(
-            " -- enumerated {n} marking faculty in time {s}".format(
-                n=marker_data.number, s=mark_timer.interval
-            )
-        )
+        print(" -- enumerated {n} marking faculty in time {s}".format(n=marker_data.number, s=mark_timer.interval))
 
         progress_update(
             record.celery_id,
@@ -3109,18 +2748,11 @@ def _initialize(
 
             sup_only_numbers = {supervisor_data.faculty_to_number[x] for x in sup_only}
             mark_only_numbers = {marker_data.faculty_to_number[x] for x in mark_only}
-            sup_and_mark_numbers = {
-                (supervisor_data.faculty_to_number[x], marker_data.faculty_to_number[x])
-                for x in sup_and_mark
-            }
+            sup_and_mark_numbers = {(supervisor_data.faculty_to_number[x], marker_data.faculty_to_number[x]) for x in sup_and_mark}
         print(" -- partitioned faculty in time {s}".format(s=partition_timer.interval))
         print("    :: {n} faculty are supervising only".format(n=len(sup_only_numbers)))
         print("    :: {n} faculty are marking only".format(n=len(mark_only_numbers)))
-        print(
-            "    :: {n} faculty are supervising and marking".format(
-                n=len(sup_and_mark_numbers)
-            )
-        )
+        print("    :: {n} faculty are supervising and marking".format(n=len(sup_and_mark_numbers)))
 
         progress_update(
             record.celery_id,
@@ -3140,9 +2772,7 @@ def _initialize(
                 project_data.dict,
                 record,
             )
-        print(
-            " -- built student ranking matrix in time {s}".format(s=rank_timer.interval)
-        )
+        print(" -- built student ranking matrix in time {s}".format(s=rank_timer.interval))
 
         progress_update(
             record.celery_id,
@@ -3162,11 +2792,7 @@ def _initialize(
                 project_data.dict,
                 mm if mm >= 1 else 1,
             )
-        print(
-            " -- built marking compatibility matrix in time {s}".format(
-                s=mark_matrix_timer.interval
-            )
-        )
+        print(" -- built marking compatibility matrix in time {s}".format(s=mark_matrix_timer.interval))
 
         progress_update(
             record.celery_id,
@@ -3184,11 +2810,7 @@ def _initialize(
                 supervisor_data.number,
                 supervisor_data.dict,
             )
-        print(
-            " -- built project-to-supervisor mapping matrix in time {s}".format(
-                s=sup_mapping_timer.interval
-            )
-        )
+        print(" -- built project-to-supervisor mapping matrix in time {s}".format(s=sup_mapping_timer.interval))
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -3222,9 +2844,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
 
     if record.base is None:
         print(f"-- no base in use for this match (record.base_id = {record.base_id})")
-        return BaseData(
-            base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match
-        )
+        return BaseData(base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match)
 
     sel_to_number = data.selector_data.selector_to_number
     lp_to_number = data.project_data.project_to_number
@@ -3236,9 +2856,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
 
         if record.selector_id not in sel_to_number:
             # this does not have to be an error; we just take it to indicate that no base match exists
-            print(
-                f"Missing SelectingStudent when reconstructing X map (SelectingStudent.id = {record.selector_id})"
-            )
+            print(f"Missing SelectingStudent when reconstructing X map (SelectingStudent.id = {record.selector_id})")
             continue
 
         # get our selector number for the allocated selector
@@ -3251,9 +2869,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
             # this does not have to be an error; we just take it to indicate that no base match exists
             # (e.g. this can happen if a supervisor has been marked as on sabbatical since the original match
             # was done; then their LiveProject instances don't get enumerated)
-            print(
-                f"Missing LiveProject when reconstructing X map (LiveProject.id = {record.project_id})"
-            )
+            print(f"Missing LiveProject when reconstructing X map (LiveProject.id = {record.project_id})")
             continue
 
         # get our project number for the allocated project
@@ -3261,8 +2877,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
 
         base_X.add((sel_number, proj_number))
         print(
-            ">> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} "
-            "(={proj_name})".format(
+            ">> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} (={proj_name})".format(
                 sel_n=sel_number,
                 proj_n=proj_number,
                 sel_name=sel_user.name,
@@ -3279,9 +2894,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
                 MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
             ]:
                 if role.user_id not in sup_to_number:
-                    print(
-                        f"Missing supervisor when reconstructing S map (User.id = {role.user_id})"
-                    )
+                    print(f"Missing supervisor when reconstructing S map (User.id = {role.user_id})")
                     continue
 
                 supv_number = sup_to_number[role.user_id]
@@ -3293,8 +2906,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
                     base_S[key] = 1
 
                 print(
-                    ">> registered base match between supervisor {sup_n} (={sup_name}) and project {proj_n} "
-                    "(={proj_name})".format(
+                    ">> registered base match between supervisor {sup_n} (={sup_name}) and project {proj_n} (={proj_name})".format(
                         sup_n=supv_number,
                         proj_n=proj_number,
                         sup_name=role.user.name,
@@ -3304,18 +2916,14 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
 
             elif role.role == MatchingRole.ROLE_MARKER:
                 if role.user_id not in mark_to_number:
-                    print(
-                        f"Missing marker when reconstructing Y map (User.id = {role.user_id})"
-                    )
+                    print(f"Missing marker when reconstructing Y map (User.id = {role.user_id})")
                     continue
 
                 mark_number = mark_to_number[role.user_id]
 
                 key = (mark_number, proj_number, sel_number)
                 if key in base_Y:
-                    raise RuntimeError(
-                        "Duplicate value of boolean Y[marker,project,selector]"
-                    )
+                    raise RuntimeError("Duplicate value of boolean Y[marker,project,selector]")
                 else:
                     base_Y[key] = 1
 
@@ -3332,9 +2940,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
                     )
                 )
 
-    return BaseData(
-        base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match
-    )
+    return BaseData(base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match)
 
 
 def _execute_live(
@@ -3361,13 +2967,9 @@ def _execute_live(
         prob = pulp_problem.problem
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(
-                pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25)
-            )
+            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25))
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(
-                pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25)
-            )
+            status = prob.solve(pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25))
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
             status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
@@ -3426,38 +3028,26 @@ def _execute_from_solution(
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
             solver = pulp_apis.PULP_CBC_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol_LP(file, prob, prob.variables())
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
             solver = pulp_apis.COIN_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol_LP(file, prob, prob.variables())
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
             solver = pulp_apis.GLPK_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol(file)
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
             solver = pulp_apis.CPLEX_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol(file)
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_GUROBI_CMD:
             solver = pulp_apis.GUROBI_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_SCIP_CMD:
             solver = pulp_apis.SCIP_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
-                solver.readsol(file)
-            )
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         else:
             msg = "Unknown solver"
             current_app.logger.error(msg)
-            progress_update(
-                record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True
-            )
+            progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
             raise Exception(msg)
 
         if status != pulp.LpStatusInfeasible:
@@ -3499,15 +3089,11 @@ def _execute_marker_problem(
     )
 
     with Timer() as solve_time:
-        status = pulp_problem.problem.solve(
-            pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25)
-        )
+        status = pulp_problem.problem.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25))
 
     print("-- solved PuLP problem in time {t}".format(t=solve_time.interval))
 
-    progress_update(
-        task_id, TaskRecord.RUNNING, 70, "Processing PuLP solution...", autocommit=True
-    )
+    progress_update(task_id, TaskRecord.RUNNING, 70, "Processing PuLP solution...", autocommit=True)
 
     state = pulp.LpStatus[status]
 
@@ -3565,9 +3151,7 @@ def _execute_marker_problem(
             autocommit=True,
         )
 
-    progress_update(
-        task_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=True
-    )
+    progress_update(task_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=True)
 
 
 def _process_PuLP_solution(
@@ -3746,9 +3330,7 @@ def _store_enumeration_details(record, data: InitializationData):
                 )
                 db.session.add(data_rec)
 
-    write_limits(
-        MatchingEnumeration.SUPERVISOR_LIMITS, data.supervisor_data.enrolment_limit
-    )
+    write_limits(MatchingEnumeration.SUPERVISOR_LIMITS, data.supervisor_data.enrolment_limit)
     write_limits(MatchingEnumeration.MARKER_LIMITS, data.marker_data.enrolment_limit)
 
     # allow exception to propgate up to calling function
@@ -3767,9 +3349,7 @@ def register_matching_tasks(celery):
         )
 
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3812,18 +3392,12 @@ def register_matching_tasks(celery):
     def offline_match(self, matching_id, user_id):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up MatchingAttempt record for id={id}".format(
-                    id=matching_id
-                )
-            },
+            meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=matching_id)},
         )
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3911,21 +3485,13 @@ def register_matching_tasks(celery):
     def process_offline_solution(self, matching_id, asset_id, user_id):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up TemporaryAsset record for id={id}".format(
-                    id=asset_id
-                )
-            },
+            meta={"msg": "Looking up TemporaryAsset record for id={id}".format(id=asset_id)},
         )
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
-            asset: TemporaryAsset = (
-                db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
-            )
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
-            )
+            asset: TemporaryAsset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3954,9 +3520,7 @@ def register_matching_tasks(celery):
 
         with storage.download_to_scratch() as scratch_path:
             with Timer() as create_time:
-                data: InitializationData = _initialize(
-                    self, record, read_serialized=True
-                )
+                data: InitializationData = _initialize(self, record, read_serialized=True)
 
                 base_data: BaseData = _build_base_XYS(record, data)
 
@@ -3968,9 +3532,7 @@ def register_matching_tasks(celery):
                     autocommit=True,
                 )
 
-                pulp_problem: PuLPProblem = _create_PuLP_problem(
-                    data, base_data, record
-                )
+                pulp_problem: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
             print(" -- creation complete in time {t}".format(t=create_time.interval))
 
@@ -4007,19 +3569,11 @@ def register_matching_tasks(celery):
     ):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up ProjectClassConfig records for ids={ids}".format(
-                    ids=config_ids
-                )
-            },
+            meta={"msg": "Looking up ProjectClassConfig records for ids={ids}".format(ids=config_ids)},
         )
 
         try:
-            configs = (
-                db.session.query(ProjectClassConfig)
-                .filter(ProjectClassConfig.id.in_(config_ids))
-                .all()
-            )
+            configs = db.session.query(ProjectClassConfig).filter(ProjectClassConfig.id.in_(config_ids)).all()
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -4032,11 +3586,7 @@ def register_matching_tasks(celery):
 
         missing = set(config_ids) - {c.id for c in configs}
         if missing:
-            current_app.logger.warning(
-                "populate_markers: could not load ProjectClassConfig ids {ids}".format(
-                    ids=missing
-                )
-            )
+            current_app.logger.warning("populate_markers: could not load ProjectClassConfig ids {ids}".format(ids=missing))
 
         if user is None:
             msg = "Could not load User record from database"
@@ -4068,9 +3618,7 @@ def register_matching_tasks(celery):
                     if period.retired or period.closed or _feedback_open:
                         continue
                     for rec in period.submissions:
-                        for role in [
-                            r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER
-                        ]:
+                        for role in [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]:
                             db.session.delete(role)
             db.session.flush()
         except SQLAlchemyError as e:
@@ -4092,9 +3640,7 @@ def register_matching_tasks(celery):
             try:
                 import pandas as pd
 
-                tmp_asset = (
-                    db.session.query(TemporaryAsset).filter_by(id=tmp_asset_id).first()
-                )
+                tmp_asset = db.session.query(TemporaryAsset).filter_by(id=tmp_asset_id).first()
                 if tmp_asset is not None:
                     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                     storage = AssetCloudAdapter(
@@ -4136,26 +3682,15 @@ def register_matching_tasks(celery):
                             continue
 
                         # look up FacultyData by name
-                        matched = (
-                            db.session.query(FacultyData)
-                            .join(FacultyData.user)
-                            .filter_by(last_name=last, first_name=first)
-                            .all()
-                        )
+                        matched = db.session.query(FacultyData).join(FacultyData.user).filter_by(last_name=last, first_name=first).all()
                         if len(matched) == 1:
                             resolved_cats[matched[0].id] = cats_float
                         elif len(matched) == 0:
-                            current_app.logger.warning(
-                                f"populate_markers: no faculty match for '{last}, {first}' in CATS spreadsheet"
-                            )
+                            current_app.logger.warning(f"populate_markers: no faculty match for '{last}, {first}' in CATS spreadsheet")
                         else:
-                            current_app.logger.warning(
-                                f"populate_markers: ambiguous faculty match for '{last}, {first}' in CATS spreadsheet"
-                            )
+                            current_app.logger.warning(f"populate_markers: ambiguous faculty match for '{last}, {first}' in CATS spreadsheet")
             except SQLAlchemyError as e:
-                current_app.logger.exception(
-                    "SQLAlchemyError parsing CATS spreadsheet", exc_info=e
-                )
+                current_app.logger.exception("SQLAlchemyError parsing CATS spreadsheet", exc_info=e)
                 # fall back to default CATS computation rather than failing the whole task
 
         elif mode == 2 and baseline_cats is not None:
@@ -4163,14 +3698,10 @@ def register_matching_tasks(celery):
             resolved_cats = {int(k): float(v) for k, v in baseline_cats.items()}
 
         with Timer() as create_time:
-            enum_data: MarkerPopulationEnumeration = _enumerate_submissions_for_markers(
-                self, configs, task_id, user, baseline_cats=resolved_cats
-            )
+            enum_data: MarkerPopulationEnumeration = _enumerate_submissions_for_markers(self, configs, task_id, user, baseline_cats=resolved_cats)
 
             if enum_data is None:
-                raise Exception(
-                    "Marker enumeration failed: a project in one of the selected configurations has no active assessors"
-                )
+                raise Exception("Marker enumeration failed: a project in one of the selected configurations has no active assessors")
 
             progress_update(
                 task_id,
@@ -4180,9 +3711,7 @@ def register_matching_tasks(celery):
                 autocommit=True,
             )
 
-            pulp_problem: MarkerPuLPProblem = _create_marker_PuLP_problem(
-                enum_data, configs[0]
-            )
+            pulp_problem: MarkerPuLPProblem = _create_marker_PuLP_problem(enum_data, configs[0])
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
@@ -4192,17 +3721,11 @@ def register_matching_tasks(celery):
     def remove_markers(self, config_id, user_id, task_id):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up ProjectClassConfig record for id={id}".format(
-                    id=config_id
-                )
-            },
+            meta={"msg": "Looking up ProjectClassConfig record for id={id}".format(id=config_id)},
         )
 
         try:
-            config = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -4236,12 +3759,7 @@ def register_matching_tasks(celery):
             from ..models.markingevent import MarkingEvent as _ME
             from ..models.markingevent import MarkingEventWorkflowStates as _MEWS
 
-            _feedback_open = (
-                period.marking_events.filter(
-                    _ME.workflow_state >= _MEWS.OPEN, _ME.workflow_state < _MEWS.CLOSED
-                ).count()
-                > 0
-            )
+            _feedback_open = period.marking_events.filter(_ME.workflow_state >= _MEWS.OPEN, _ME.workflow_state < _MEWS.CLOSED).count() > 0
             if period.retired or period.closed or _feedback_open:
                 period_data.update({"action": "ignore"})
                 payload_data.append(period_data)
@@ -4254,9 +3772,7 @@ def register_matching_tasks(celery):
                 student: StudentData = sub.student
                 owner: User = student.user
 
-                marker_roles = [
-                    r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER
-                ]
+                marker_roles = [r for r in rec.roles if r.role == SubmissionRole.ROLE_MARKER]
                 removed_markers = []
                 for role in marker_roles:
                     marker_user: User = role.user
@@ -4278,15 +3794,11 @@ def register_matching_tasks(celery):
                     "full_name": owner.name,
                 }
                 if rec.project is not None:
-                    record_data.update(
-                        {"project_id": rec.project_id, "project_name": rec.project.name}
-                    )
+                    record_data.update({"project_id": rec.project_id, "project_name": rec.project.name})
                 record_data.update({"removed_markers": removed_markers})
                 submissions_data.append(record_data)
 
-            period_data.update(
-                {"action": "process", "submission_records": submissions_data}
-            )
+            period_data.update({"action": "process", "submission_records": submissions_data})
             payload_data.append(period_data)
 
         try:
@@ -4311,9 +3823,7 @@ def register_matching_tasks(celery):
         )
 
         try:
-            record: MatchingRecord = (
-                db.session.query(MatchingRecord).filter_by(id=id).first()
-            )
+            record: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -4418,9 +3928,7 @@ def register_matching_tasks(celery):
         )
 
         try:
-            old_attempt: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=id).first()
-            )
+            old_attempt: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -4517,17 +4025,13 @@ def register_matching_tasks(celery):
                 # duplicate any roles stored with this MatchingRecord instance
                 for old_role in old_record.roles:
                     old_role: MatchingRole
-                    new_role = MatchingRole(
-                        user_id=old_role.user_id, role=old_role.role
-                    )
+                    new_role = MatchingRole(user_id=old_role.user_id, role=old_role.role)
                     new_record.roles.append(new_role)
 
                 # duplicate any "original" roles stored with this MatchingRecord instance
                 for old_role in old_record.original_roles:
                     old_role: MatchingRole
-                    new_role = MatchingRole(
-                        user_id=old_role.user_id, role=old_role.role
-                    )
+                    new_role = MatchingRole(user_id=old_role.user_id, role=old_role.role)
                     new_record.original_roles.append(new_role)
 
             # if this MatchingAttempt is awaiting upload of an offline-generated match, duplicate enumerations
@@ -4615,9 +4119,7 @@ def register_matching_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def populate_submitters(self, match_id, config_id, user_id, task_id):
-        self.update_state(
-            state="STARTED", meta={"msg": "Looking up database configuration records"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Looking up database configuration records"})
 
         progress_update(
             task_id,
@@ -4628,12 +4130,8 @@ def register_matching_tasks(celery):
         )
 
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
-            config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -4790,24 +4288,15 @@ def register_matching_tasks(celery):
         # pull out MatchingRecord instances that belong to this MatchingAttempt, and which correspond to
         # the specified ProjectClass(Config)
         match_records = (
-            record.records.join(
-                SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id
-            )
+            record.records.join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id)
             .filter(SelectingStudent.config_id == config_id)
             .all()
         )
 
-        populate_tasks = group(
-            convert_record_to_submitter.s(match_id, config_id, user_id, r.id)
-            for r in match_records
-        )
+        populate_tasks = group(convert_record_to_submitter.s(match_id, config_id, user_id, r.id) for r in match_records)
 
         if len(populate_tasks) > 0:
-            work = (
-                populate_initial_msg.si(task_id)
-                | populate_tasks
-                | populate_final_msg.s(task_id)
-            )
+            work = populate_initial_msg.si(task_id) | populate_tasks | populate_final_msg.s(task_id)
             return self.replace(work)
 
         progress_update(
@@ -4871,25 +4360,15 @@ def register_matching_tasks(celery):
         )
 
     @celery.task(bind=True)
-    def convert_record_to_submitter(
-        self, _result_data, match_id, config_id, user_id, data_id
-    ):
+    def convert_record_to_submitter(self, _result_data, match_id, config_id, user_id, data_id):
         # read database records
-        self.update_state(
-            state="STARTED", meta={"msg": "Looking up database configuration records"}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Looking up database configuration records"})
 
         try:
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            )
-            config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
-            data: MatchingRecord = (
-                db.session.query(MatchingRecord).filter_by(id=data_id).first()
-            )
+            data: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=data_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -4916,15 +4395,11 @@ def register_matching_tasks(celery):
 
         needs_commit = False
 
-        self.update_state(
-            state="STARTED", meta={"msg": "Populating SubmittingStudent record..."}
-        )
+        self.update_state(state="STARTED", meta={"msg": "Populating SubmittingStudent record..."})
 
         # first, determine whether there is an existing SubmittingStudent instance associated with this student
         sel: SelectingStudent = data.selector
-        sub: SubmittingStudent = config.submitting_students.filter(
-            SubmittingStudent.student_id == sel.student_id
-        ).first()
+        sub: SubmittingStudent = config.submitting_students.filter(SubmittingStudent.student_id == sel.student_id).first()
 
         # data payload returned from this task
         payload = {}
@@ -5073,11 +4548,7 @@ def register_matching_tasks(celery):
     def generate_excel_matching_report(self, matching_id, user_id, task_id):
         self.update_state(
             state="STARTED",
-            meta={
-                "msg": "Looking up MatchingAttempt record for id={id}".format(
-                    id=matching_id
-                )
-            },
+            meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=matching_id)},
         )
         progress_update(
             task_id,
@@ -5089,9 +4560,7 @@ def register_matching_tasks(celery):
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
-            record: MatchingAttempt = (
-                db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
-            )
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -5107,9 +4576,7 @@ def register_matching_tasks(celery):
             raise Exception(msg)
 
         self.update_state("STARTED", meta={"msg": "Writing .xlsx report"})
-        progress_update(
-            task_id, TaskRecord.RUNNING, 50, "Writing .xlsx report...", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 50, "Writing .xlsx report...", autocommit=True)
 
         try:
             xlsx_asset: GeneratedAsset = _export_matching_as_excel(record, user)

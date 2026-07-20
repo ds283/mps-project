@@ -41,13 +41,13 @@ def report_info(msg: str, source: str, user: Optional[User]):
 
 
 def attach_asset_to_email_msg(
-        msg: EmailLike,
-        storage: AssetCloudAdapter,
-        current_size: int,
-        filename=None,
-        max_attached_size=None,
-        description=None,
-        endpoint="download_submitted_asset",
+    msg: EmailLike,
+    storage: AssetCloudAdapter,
+    current_size: int,
+    filename=None,
+    max_attached_size=None,
+    description=None,
+    endpoint="download_submitted_asset",
 ) -> AttachmentData:
     if not storage.exists():
         raise RuntimeError("_attach_documents() could not find asset in object store")
@@ -59,44 +59,25 @@ def attach_asset_to_email_msg(
     manifest = []
 
     # if attachment is too large, generate a link instead
-    if (
-            max_attached_size is not None
-            and float(current_size + asset_size) / (1024 * 1024) > max_attached_size
-    ):
+    if max_attached_size is not None and float(current_size + asset_size) / (1024 * 1024) > max_attached_size:
         if filename is not None:
             try:
                 link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}?filename={fnam}".format(
                     endpoint=endpoint, asset_id=asset.id, fnam=quote(filename)
                 )
             except TypeError as e:
-                link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(
-                    endpoint=endpoint, asset_id=asset.id
-                )
-                print(
-                    f'attach_asset_to_email_msg: TypeError received with filename="{filename}"'
-                )
+                link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
+                print(f'attach_asset_to_email_msg: TypeError received with filename="{filename}"')
         else:
-            link = (
-                "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(
-                    endpoint=endpoint, asset_id=asset.id
-                )
-            )
+            link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
         manifest.append((False, link, description))
         asset_size = 0
 
     # otherwise, perform the attachment
     else:
-        attached_name = (
-            str(filename)
-            if filename is not None
-            else str(asset.target_name)
-            if asset.target_name is not None
-            else str(asset.unique_name)
-        )
+        attached_name = str(filename) if filename is not None else str(asset.target_name) if asset.target_name is not None else str(asset.unique_name)
 
-        msg.attach(
-            filename=attached_name, mimetype=asset.mimetype, content=storage.get()
-        )
+        msg.attach(filename=attached_name, mimetype=asset.mimetype, content=storage.get())
 
         manifest.append((True, attached_name, description))
 

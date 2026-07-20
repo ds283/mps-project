@@ -28,10 +28,7 @@ def register_provider(name: str, cls: Type[CloudStorageProvider]) -> None:
 def get_provider_class(name: str) -> Type[CloudStorageProvider]:
     if name not in _providers:
         available = ", ".join(sorted(_providers.keys())) or "(none)"
-        raise KeyError(
-            f"cloud_storage: unknown provider '{name}'. "
-            f"Registered providers: {available}"
-        )
+        raise KeyError(f"cloud_storage: unknown provider '{name}'. Registered providers: {available}")
     return _providers[name]
 
 

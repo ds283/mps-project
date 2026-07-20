@@ -161,9 +161,7 @@ def get_inflight_record_ids(active_jobs: List[LLMOrchestrationJob]) -> set:
                 ids.add(int(raw))
         return ids
     except Exception as exc:
-        current_app.logger.warning(
-            f"get_inflight_record_ids: Redis error fetching inflight IDs: {exc}"
-        )
+        current_app.logger.warning(f"get_inflight_record_ids: Redis error fetching inflight IDs: {exc}")
         return set()
 
 
@@ -173,9 +171,7 @@ def _cleanup_redis(job: LLMOrchestrationJob) -> None:
         r = _get_orchestration_redis()
         r.delete(job.redis_queue_key, job.redis_inflight_key)
     except Exception as exc:
-        current_app.logger.warning(
-            f"llm_orchestration: could not clean up Redis keys for job {job.uuid}: {exc}"
-        )
+        current_app.logger.warning(f"llm_orchestration: could not clean up Redis keys for job {job.uuid}: {exc}")
 
 
 def set_pipeline_paused(paused: bool) -> None:
@@ -238,6 +234,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     # SubmissionRecord is the source of truth; the MongoDB documents are a cache that
     # must be invalidated whenever the record is fully reset.
     from ..shared.scraped_text_store import delete_scraped_text
+
     delete_scraped_text(record.id)
 
     if old_processed_report is not None:
@@ -252,10 +249,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
                     audit_data="llm_orchestration._clear_record_state",
                 )
         except Exception as exc:
-            current_app.logger.warning(
-                f"llm_orchestration: could not delete processed report asset "
-                f"for SubmissionRecord #{record.id}: {exc}"
-            )
+            current_app.logger.warning(f"llm_orchestration: could not delete processed report asset for SubmissionRecord #{record.id}: {exc}")
         db.session.delete(old_processed_report)
 
 
@@ -310,11 +304,7 @@ def _collect_record_ids(
     ``_filter_already_queued()`` to avoid double-queuing records that are
     genuinely still in-flight in a Redis queue.
     """
-    q = (
-        db.session.query(SubmissionRecord.id)
-        .filter(SubmissionRecord.period_id.in_(period_ids))
-        .filter(SubmissionRecord.report_id.isnot(None))
-    )
+    q = db.session.query(SubmissionRecord.id).filter(SubmissionRecord.period_id.in_(period_ids)).filter(SubmissionRecord.report_id.isnot(None))
     if skip_complete:
         q = q.filter(
             SubmissionRecord.language_analysis_complete.is_(False),
@@ -349,9 +339,7 @@ def _get_already_queued_record_ids(r, active_jobs: List[LLMOrchestrationJob]) ->
             for raw in r.lrange(job.redis_inflight_key, 0, -1):
                 queued.add(int(raw))
         except Exception as exc:
-            current_app.logger.warning(
-                f"_get_already_queued_record_ids: Redis error reading job {job.uuid}: {exc}"
-            )
+            current_app.logger.warning(f"_get_already_queued_record_ids: Redis error reading job {job.uuid}: {exc}")
     return queued
 
 
@@ -363,11 +351,7 @@ def _filter_already_queued(record_ids: List[int], caller: str) -> List[int]:
     submission.
     """
     try:
-        active_jobs = (
-            db.session.query(LLMOrchestrationJob)
-            .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
-            .all()
-        )
+        active_jobs = db.session.query(LLMOrchestrationJob).filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)).all()
         if not active_jobs:
             return record_ids
         r = _get_orchestration_redis()
@@ -377,15 +361,10 @@ def _filter_already_queued(record_ids: List[int], caller: str) -> List[int]:
         filtered = [rid for rid in record_ids if rid not in already_queued]
         skipped = len(record_ids) - len(filtered)
         if skipped:
-            current_app.logger.info(
-                f"{caller}: skipped {skipped} record(s) already queued in an active job"
-            )
+            current_app.logger.info(f"{caller}: skipped {skipped} record(s) already queued in an active job")
         return filtered
     except Exception as exc:
-        current_app.logger.warning(
-            f"{caller}: could not check for already-queued records: {exc} "
-            f"— proceeding without deduplication"
-        )
+        current_app.logger.warning(f"{caller}: could not check for already-queued records: {exc} — proceeding without deduplication")
         return record_ids
 
 
@@ -433,9 +412,7 @@ def _create_and_dispatch_job(
         # each susceptible to lock contention and each triggering autoflush; a single
         # bulk UPDATE is one lock-acquisition pass over the affected rows.
         try:
-            db.session.query(SubmissionRecord).filter(
-                SubmissionRecord.id.in_(record_ids)
-            ).update(
+            db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(record_ids)).update(
                 {
                     "language_analysis": None,
                     "language_analysis_started": False,
@@ -493,10 +470,7 @@ def _create_and_dispatch_job(
                         audit_data="llm_orchestration._create_and_dispatch_job",
                     )
                 except Exception as exc:
-                    current_app.logger.warning(
-                        f"llm_orchestration: could not delete processed report asset "
-                        f"#{asset_id}: {exc}"
-                    )
+                    current_app.logger.warning(f"llm_orchestration: could not delete processed report asset #{asset_id}: {exc}")
             db.session.delete(asset)
 
         # Invalidate MongoDB scraped-text cache for every record being reset.
@@ -638,9 +612,7 @@ def _dispatch_coordinator_if_pending() -> None:
     try:
         r = _get_orchestration_redis()
         active_jobs: List[LLMOrchestrationJob] = (
-            db.session.query(LLMOrchestrationJob)
-            .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
-            .all()
+            db.session.query(LLMOrchestrationJob).filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)).all()
         )
         if not active_jobs:
             return
@@ -648,9 +620,7 @@ def _dispatch_coordinator_if_pending() -> None:
         if has_pending:
             _dispatch_global_coordinator()
     except Exception as exc:
-        current_app.logger.warning(
-            f"_dispatch_coordinator_if_pending: error checking queues: {exc}"
-        )
+        current_app.logger.warning(f"_dispatch_coordinator_if_pending: error checking queues: {exc}")
 
 
 def _recover_active_jobs() -> None:
@@ -681,23 +651,17 @@ def _recover_active_jobs() -> None:
     try:
         r = _get_orchestration_redis()
     except Exception as exc:
-        current_app.logger.error(
-            f"!! llm_orchestration._recover_active_jobs: cannot connect to Redis: {exc}"
-        )
+        current_app.logger.error(f"!! llm_orchestration._recover_active_jobs: cannot connect to Redis: {exc}")
         return
 
     if not r.set(RECOVERY_LOCK_KEY, "1", nx=True, ex=RECOVERY_LOCK_TTL):
-        current_app.logger.info(
-            "** llm_orchestration._recover_active_jobs: recovery lock held by another worker — skipping"
-        )
+        current_app.logger.info("** llm_orchestration._recover_active_jobs: recovery lock held by another worker — skipping")
         return
 
     try:
         try:
             active_jobs: List[LLMOrchestrationJob] = (
-                db.session.query(LLMOrchestrationJob)
-                .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
-                .all()
+                db.session.query(LLMOrchestrationJob).filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)).all()
             )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
@@ -707,12 +671,12 @@ def _recover_active_jobs() -> None:
             return
 
         if not active_jobs:
-            current_app.logger.info('** llm_orchestration._recover_active_jobs: no active jobs found')
+            current_app.logger.info("** llm_orchestration._recover_active_jobs: no active jobs found")
             return
 
         needs_coordinator = False
         for job in active_jobs:
-            current_app.logger.info(f'** llm_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})')
+            current_app.logger.info(f"** llm_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})")
             # Move any inflight records back to the pending queue.
             recovered = 0
             try:
@@ -720,40 +684,27 @@ def _recover_active_jobs() -> None:
                     recovered += 1
             except Exception as exc:
                 current_app.logger.warning(
-                    f"!! llm_orchestration._recover_active_jobs: Redis error recovering "
-                    f"inflight items for job {job.uuid}: {exc}"
+                    f"!! llm_orchestration._recover_active_jobs: Redis error recovering inflight items for job {job.uuid}: {exc}"
                 )
 
             if recovered:
-                current_app.logger.info(
-                    f"@@ llm_orchestration._recover_active_jobs: re-queued {recovered} "
-                    f"inflight record(s) for job {job.uuid}"
-                )
+                current_app.logger.info(f"@@ llm_orchestration._recover_active_jobs: re-queued {recovered} inflight record(s) for job {job.uuid}")
             else:
-                current_app.logger.info(
-                    f"@@ llm_orchestration._recover_active_jobs: did not discover any inflight records for job {job.uuid}"
-                )
+                current_app.logger.info(f"@@ llm_orchestration._recover_active_jobs: did not discover any inflight records for job {job.uuid}")
 
             # Dispatch the coordinator if this job has pending work.
             try:
                 if r.llen(job.redis_queue_key) > 0:
                     needs_coordinator = True
             except Exception as exc:
-                current_app.logger.warning(
-                    f"!! llm_orchestration._recover_active_jobs: Redis error checking queue "
-                    f"length for job {job.uuid}: {exc}"
-                )
+                current_app.logger.warning(f"!! llm_orchestration._recover_active_jobs: Redis error checking queue length for job {job.uuid}: {exc}")
 
         if needs_coordinator:
             try:
                 _dispatch_global_coordinator()
-                current_app.logger.info(
-                    "@@ llm_orchestration._recover_active_jobs: dispatched global coordinator"
-                )
+                current_app.logger.info("@@ llm_orchestration._recover_active_jobs: dispatched global coordinator")
             except Exception as exc:
-                current_app.logger.error(
-                    f"!! llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
-                )
+                current_app.logger.error(f"!! llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}")
         else:
             current_app.logger.info(f"@@ llm_orchestration._recover_active_jobs: no pending work for job {job.uuid}")
     finally:
@@ -779,13 +730,9 @@ def launch_period_pipeline(
     Returns the created ``LLMOrchestrationJob`` (already committed) or None if
     there are no eligible records.
     """
-    period: SubmissionPeriodRecord = (
-        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-    )
+    period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
     if period is None:
-        current_app.logger.error(
-            f"launch_period_pipeline: SubmissionPeriodRecord #{period_id} not found"
-        )
+        current_app.logger.error(f"launch_period_pipeline: SubmissionPeriodRecord #{period_id} not found")
         return None
 
     record_ids = _collect_record_ids([period_id], skip_complete=not clear_existing)
@@ -815,13 +762,9 @@ def launch_pclass_pipeline(
     """
     Create a bulk LLM orchestration job for all periods in a ``ProjectClassConfig``.
     """
-    config: ProjectClassConfig = (
-        db.session.query(ProjectClassConfig).filter_by(id=pclass_config_id).first()
-    )
+    config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=pclass_config_id).first()
     if config is None:
-        current_app.logger.error(
-            f"launch_pclass_pipeline: ProjectClassConfig #{pclass_config_id} not found"
-        )
+        current_app.logger.error(f"launch_pclass_pipeline: ProjectClassConfig #{pclass_config_id} not found")
         return None
 
     period_ids = [p.id for p in config.periods.all()]
@@ -836,11 +779,7 @@ def launch_pclass_pipeline(
     if not record_ids:
         return None
 
-    pclass_name = (
-        config.project_class.abbreviation
-        if config.project_class
-        else str(pclass_config_id)
-    )
+    pclass_name = config.project_class.abbreviation if config.project_class else str(pclass_config_id)
     return _create_and_dispatch_job(
         scope=LLMOrchestrationJob.SCOPE_PCLASS,
         scope_id=pclass_config_id,
@@ -969,13 +908,9 @@ def launch_error_period_pipeline(
 
     Returns the created ``LLMOrchestrationJob`` or None if no error records exist.
     """
-    period: SubmissionPeriodRecord = (
-        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-    )
+    period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
     if period is None:
-        current_app.logger.error(
-            f"launch_error_period_pipeline: SubmissionPeriodRecord #{period_id} not found"
-        )
+        current_app.logger.error(f"launch_error_period_pipeline: SubmissionPeriodRecord #{period_id} not found")
         return None
 
     record_ids = _collect_error_record_ids([period_id])
@@ -1110,13 +1045,9 @@ def launch_retry_errors_period_pipeline(
     scraped-text document — ``download_and_extract`` skips when the cached
     asset_id still matches, so only the failed step re-runs.
     """
-    period: SubmissionPeriodRecord = (
-        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-    )
+    period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
     if period is None:
-        current_app.logger.error(
-            f"launch_retry_errors_period_pipeline: SubmissionPeriodRecord #{period_id} not found"
-        )
+        current_app.logger.error(f"launch_retry_errors_period_pipeline: SubmissionPeriodRecord #{period_id} not found")
         return None
 
     record_ids = _collect_error_record_ids([period_id])
@@ -1228,9 +1159,7 @@ def enqueue_single_record(
     processed (not found, no report attached, or not eligible).
     """
     try:
-        record: SubmissionRecord = (
-            db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-        )
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
     except SQLAlchemyError as exc:
         current_app.logger.exception(
             f"enqueue_single_record: SQLAlchemyError loading SubmissionRecord #{record_id}",
@@ -1239,22 +1168,16 @@ def enqueue_single_record(
         return None
 
     if record is None:
-        current_app.logger.error(
-            f"enqueue_single_record: SubmissionRecord #{record_id} not found"
-        )
+        current_app.logger.error(f"enqueue_single_record: SubmissionRecord #{record_id} not found")
         return None
 
     if record.report is None:
-        current_app.logger.warning(
-            f"enqueue_single_record: SubmissionRecord #{record_id} has no report — skipping"
-        )
+        current_app.logger.warning(f"enqueue_single_record: SubmissionRecord #{record_id} has no report — skipping")
         return None
 
     period = record.period
     if period is None:
-        current_app.logger.error(
-            f"enqueue_single_record: SubmissionRecord #{record_id} has no associated period"
-        )
+        current_app.logger.error(f"enqueue_single_record: SubmissionRecord #{record_id} has no associated period")
         return None
 
     record_ids = _filter_already_queued([record_id], "enqueue_single_record")
@@ -1344,9 +1267,7 @@ def register_llm_orchestration_tasks(celery):
             try:
                 _recover_active_jobs()
             except Exception as exc:
-                flask_app.logger.exception(
-                    "llm_orchestration.on_worker_ready: recovery failed", exc_info=exc
-                )
+                flask_app.logger.exception("llm_orchestration.on_worker_ready: recovery failed", exc_info=exc)
 
     # ------------------------------------------------------------------
     # _finalize_workflow_entry  (internal helper)
@@ -1379,6 +1300,7 @@ def register_llm_orchestration_tasks(celery):
                 _safe_student_name,
                 _safe_year,
             )
+
             entry = read_workflow_entry(redis_client, record.id if record else 0)
             if record is not None:
                 entry["student_name"] = _safe_student_name(record)
@@ -1388,10 +1310,7 @@ def register_llm_orchestration_tasks(celery):
             entry["finished_at"] = datetime.now().isoformat(timespec="milliseconds")
             job.prepend_workflow(entry)
         except Exception as exc:
-            current_app.logger.warning(
-                f"llm_orchestration._finalize_workflow_entry: failed for "
-                f"record #{record.id if record else '?'}: {exc}"
-            )
+            current_app.logger.warning(f"llm_orchestration._finalize_workflow_entry: failed for record #{record.id if record else '?'}: {exc}")
 
     # ------------------------------------------------------------------
     # orchestration_record_done
@@ -1412,27 +1331,19 @@ def register_llm_orchestration_tasks(celery):
             r.lrem(f"llm_inflight:{job_uuid}", 0, str(record_id).encode())
         except Exception as exc:
             current_app.logger.warning(
-                f"llm_orchestration.orchestration_record_done: Redis LREM failed "
-                f"for job {job_uuid} / record #{record_id}: {exc}"
+                f"llm_orchestration.orchestration_record_done: Redis LREM failed for job {job_uuid} / record #{record_id}: {exc}"
             )
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
-            job: LLMOrchestrationJob = (
-                db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
             if job is not None:
                 _finalize_workflow_entry(r, job, record, "complete")
                 job.increment_completed()
                 # Use >= (not ==) to correctly handle the double-processing race
                 # where a record may be counted twice after crash recovery.
                 # Guard against marking an already-complete job complete a second time.
-                if (
-                    (job.completed_count + job.failed_count) >= job.total_count
-                    and job.status == LLMOrchestrationJob.STATUS_RUNNING
-                ):
+                if (job.completed_count + job.failed_count) >= job.total_count and job.status == LLMOrchestrationJob.STATUS_RUNNING:
                     job.mark_complete()
                 db.session.commit()
             # Delete the Redis step hash only after a successful commit so that a
@@ -1445,8 +1356,7 @@ def register_llm_orchestration_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
-                f"llm_orchestration.orchestration_record_done: SQLAlchemyError "
-                f"for job {job_uuid} / record #{record_id}",
+                f"llm_orchestration.orchestration_record_done: SQLAlchemyError for job {job_uuid} / record #{record_id}",
                 exc_info=exc,
             )
             # Dispatch the coordinator before retrying so the pipeline can move
@@ -1474,14 +1384,11 @@ def register_llm_orchestration_tasks(celery):
             r.lrem(f"llm_inflight:{job_uuid}", 0, str(record_id).encode())
         except Exception as exc:
             current_app.logger.warning(
-                f"llm_orchestration.orchestration_record_error: Redis LREM failed "
-                f"for job {job_uuid} / record #{record_id}: {exc}"
+                f"llm_orchestration.orchestration_record_error: Redis LREM failed for job {job_uuid} / record #{record_id}: {exc}"
             )
 
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             if record is not None:
                 _reset_record_flags_only(record)
                 data = record.language_analysis_data
@@ -1490,33 +1397,22 @@ def register_llm_orchestration_tasks(celery):
                     {
                         "stage": "workflow",
                         "type": "OrchestrationError",
-                        "message": (
-                            "An unhandled exception occurred during bulk orchestration. "
-                            "Check Celery logs."
-                        ),
+                        "message": ("An unhandled exception occurred during bulk orchestration. Check Celery logs."),
                     }
                 )
                 record.set_language_analysis_data(data)
 
-            job: LLMOrchestrationJob = (
-                db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
-            )
+            job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
             if job is not None:
                 job.append_error(
                     record,
                     stage="workflow",
                     exc_type="OrchestrationError",
-                    message=(
-                        "An unhandled exception occurred during bulk orchestration. "
-                        "Check Celery logs for record #{}.".format(record_id)
-                    ),
+                    message=("An unhandled exception occurred during bulk orchestration. Check Celery logs for record #{}.".format(record_id)),
                 )
                 _finalize_workflow_entry(r, job, record, "failed")
                 job.increment_failed()
-                if (
-                    (job.completed_count + job.failed_count) >= job.total_count
-                    and job.status == LLMOrchestrationJob.STATUS_RUNNING
-                ):
+                if (job.completed_count + job.failed_count) >= job.total_count and job.status == LLMOrchestrationJob.STATUS_RUNNING:
                     job.mark_complete()
 
             db.session.commit()
@@ -1529,8 +1425,7 @@ def register_llm_orchestration_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
-                f"llm_orchestration.orchestration_record_error: SQLAlchemyError "
-                f"for job {job_uuid} / record #{record_id}",
+                f"llm_orchestration.orchestration_record_error: SQLAlchemyError for job {job_uuid} / record #{record_id}",
                 exc_info=exc,
             )
             # Dispatch the coordinator before retrying so the pipeline can move
@@ -1572,11 +1467,7 @@ def register_llm_orchestration_tasks(celery):
         # ------- load active jobs -------
         try:
             active_jobs: List[LLMOrchestrationJob] = (
-                db.session.query(LLMOrchestrationJob)
-                .filter(
-                    LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)
-                )
-                .all()
+                db.session.query(LLMOrchestrationJob).filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)).all()
             )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
@@ -1649,15 +1540,12 @@ def register_llm_orchestration_tasks(celery):
             globally_paused = bool(r.exists(REDIS_GLOBAL_PAUSE_KEY))
         except Exception as exc:
             current_app.logger.warning(
-                f"llm_orchestration.global_orchestration_step: Redis error checking global pause: {exc}"
-                " — proceeding as unpaused"
+                f"llm_orchestration.global_orchestration_step: Redis error checking global pause: {exc} — proceeding as unpaused"
             )
             globally_paused = False
 
         if globally_paused:
-            current_app.logger.info(
-                "llm_orchestration.global_orchestration_step: globally paused — skipping dispatch"
-            )
+            current_app.logger.info("llm_orchestration.global_orchestration_step: globally paused — skipping dispatch")
             return
 
         # ------- filter per-job pause state -------
@@ -1665,9 +1553,7 @@ def register_llm_orchestration_tasks(celery):
         # Only unpaused jobs are eligible for new dispatches.
         dispatchable_jobs = [j for j in active_jobs if not j.paused]
         if not dispatchable_jobs:
-            current_app.logger.info(
-                "llm_orchestration.global_orchestration_step: all active jobs are paused — skipping dispatch"
-            )
+            current_app.logger.info("llm_orchestration.global_orchestration_step: all active jobs are paused — skipping dispatch")
             return
 
         # ------- compute available slots -------
@@ -1702,13 +1588,10 @@ def register_llm_orchestration_tasks(celery):
 
             # Atomically move record ID from pending queue to inflight list.
             try:
-                record_id_bytes = r.rpoplpush(
-                    job.redis_queue_key, job.redis_inflight_key
-                )
+                record_id_bytes = r.rpoplpush(job.redis_queue_key, job.redis_inflight_key)
             except Exception as exc:
                 current_app.logger.exception(
-                    f"llm_orchestration.global_orchestration_step: Redis RPOPLPUSH error "
-                    f"for job {job.uuid}",
+                    f"llm_orchestration.global_orchestration_step: Redis RPOPLPUSH error for job {job.uuid}",
                     exc_info=exc,
                 )
                 continue
@@ -1720,13 +1603,10 @@ def register_llm_orchestration_tasks(celery):
 
             # ------- load and validate record -------
             try:
-                record: SubmissionRecord = (
-                    db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-                )
+                record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             except SQLAlchemyError as exc:
                 current_app.logger.exception(
-                    f"llm_orchestration.global_orchestration_step: SQLAlchemyError loading "
-                    f"SubmissionRecord #{record_id}",
+                    f"llm_orchestration.global_orchestration_step: SQLAlchemyError loading SubmissionRecord #{record_id}",
                     exc_info=exc,
                 )
                 r.lrem(job.redis_inflight_key, 0, record_id_bytes)
@@ -1746,8 +1626,7 @@ def register_llm_orchestration_tasks(celery):
 
             if record is None or record.report is None:
                 current_app.logger.warning(
-                    f"llm_orchestration.global_orchestration_step: skipping "
-                    f"SubmissionRecord #{record_id} (not found or no report)"
+                    f"llm_orchestration.global_orchestration_step: skipping SubmissionRecord #{record_id} (not found or no report)"
                 )
                 r.lrem(job.redis_inflight_key, 0, record_id_bytes)
                 try:
@@ -1758,10 +1637,7 @@ def register_llm_orchestration_tasks(celery):
                         message=f"SubmissionRecord #{record_id} not found or has no uploaded report.",
                     )
                     job.increment_failed()
-                    if (
-                        (job.completed_count + job.failed_count) >= job.total_count
-                        and job.status == LLMOrchestrationJob.STATUS_RUNNING
-                    ):
+                    if (job.completed_count + job.failed_count) >= job.total_count and job.status == LLMOrchestrationJob.STATUS_RUNNING:
                         job.mark_complete()
                     db.session.commit()
                 except Exception:
@@ -1790,8 +1666,7 @@ def register_llm_orchestration_tasks(celery):
             except SQLAlchemyError as exc:
                 db.session.rollback()
                 current_app.logger.exception(
-                    f"llm_orchestration.global_orchestration_step: SQLAlchemyError resetting "
-                    f"SubmissionRecord #{record_id}",
+                    f"llm_orchestration.global_orchestration_step: SQLAlchemyError resetting SubmissionRecord #{record_id}",
                     exc_info=exc,
                 )
                 r.lrem(job.redis_inflight_key, 0, record_id_bytes)
@@ -1853,9 +1728,7 @@ def register_llm_orchestration_tasks(celery):
         try:
             _dispatch_coordinator_if_pending()
         except Exception as exc:
-            current_app.logger.exception(
-                "llm_orchestration.llm_watchdog: failed", exc_info=exc
-            )
+            current_app.logger.exception("llm_orchestration.llm_watchdog: failed", exc_info=exc)
             raise self.retry()
 
     return (

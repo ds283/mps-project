@@ -161,18 +161,10 @@ def status(id):
 
     # inject query factories for template selectors
     pclass_id = pclass.id
-    golive_form.faculty_template.query_factory = lambda: GetWorkflowTemplates(
-        EmailTemplate.GO_LIVE_FACULTY, pclass_id=pclass_id
-    )
-    golive_form.selector_template.query_factory = lambda: GetWorkflowTemplates(
-        EmailTemplate.GO_LIVE_SELECTOR, pclass_id=pclass_id
-    )
-    golive_form.convenor_template.query_factory = lambda: GetWorkflowTemplates(
-        EmailTemplate.GO_LIVE_CONVENOR, pclass_id=pclass_id
-    )
-    issue_form.confirm_template.query_factory = lambda: GetWorkflowTemplates(
-        EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass_id=pclass_id
-    )
+    golive_form.faculty_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_FACULTY, pclass_id=pclass_id)
+    golive_form.selector_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_SELECTOR, pclass_id=pclass_id)
+    golive_form.convenor_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_CONVENOR, pclass_id=pclass_id)
+    issue_form.confirm_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass_id=pclass_id)
 
     # first time this page is displayed, populate the forms with sensible default data
     if request.method == "GET":
@@ -195,18 +187,10 @@ def status(id):
         change_form.notify_convenor.data = True
 
         # pre-select the default templates
-        golive_form.faculty_template.data = EmailTemplate.find_template_(
-            EmailTemplate.GO_LIVE_FACULTY, pclass=pclass
-        )
-        golive_form.selector_template.data = EmailTemplate.find_template_(
-            EmailTemplate.GO_LIVE_SELECTOR, pclass=pclass
-        )
-        golive_form.convenor_template.data = EmailTemplate.find_template_(
-            EmailTemplate.GO_LIVE_CONVENOR, pclass=pclass
-        )
-        issue_form.confirm_template.data = EmailTemplate.find_template_(
-            EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=pclass
-        )
+        golive_form.faculty_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_FACULTY, pclass=pclass)
+        golive_form.selector_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_SELECTOR, pclass=pclass)
+        golive_form.convenor_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_CONVENOR, pclass=pclass)
+        issue_form.confirm_template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=pclass)
 
     rollover_in_progress = config.year < current_year
 
@@ -226,9 +210,7 @@ def status(id):
         )
     )
     n_consent_eligible = _base_consent.scalar() or 0
-    n_consent_invited = (
-        _base_consent.filter(SubmissionRecord.consent_invitation_sent_at.isnot(None)).scalar() or 0
-    )
+    n_consent_invited = _base_consent.filter(SubmissionRecord.consent_invitation_sent_at.isnot(None)).scalar() or 0
     n_consent_consented = (
         db.session.query(func.count(SubmissionRecord.id))
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
@@ -373,11 +355,13 @@ def popular_projects_ajax(config_id):
         config_pclass_id=config.pclass_id,
     )
 
-    return jsonify({
-        "tbody": tbody_html,
-        "updated_at": datetime.now().strftime("%a %d %b %Y %H:%M:%S"),
-        "period": interval_key,
-    })
+    return jsonify(
+        {
+            "tbody": tbody_html,
+            "updated_at": datetime.now().strftime("%a %d %b %Y %H:%M:%S"),
+            "period": interval_key,
+        }
+    )
 
 
 @convenor.route("/comms/<int:id>")
@@ -402,20 +386,13 @@ def comms(id):
     from sqlalchemy import func
 
     # fetch last 15 EmailWorkflow events for this pclass
-    workflows = (
-        pclass.workflows.order_by(EmailWorkflow.send_time.desc()).limit(15).all()
-    )
+    workflows = pclass.workflows.order_by(EmailWorkflow.send_time.desc()).limit(15).all()
 
     # prepare data for each workflow (similar to email_workflow_data in app/ajax/site/email_workflows.py)
     workflow_data = []
     for w in workflows:
         # Item counts via sub-queries for efficiency
-        total = (
-            db.session.query(func.count(EmailWorkflowItem.id))
-            .filter(EmailWorkflowItem.workflow_id == w.id)
-            .scalar()
-            or 0
-        )
+        total = db.session.query(func.count(EmailWorkflowItem.id)).filter(EmailWorkflowItem.workflow_id == w.id).scalar() or 0
         sent = (
             db.session.query(func.count(EmailWorkflowItem.id))
             .filter(
@@ -476,8 +453,6 @@ def comms(id):
     )
 
 
-
-
 @convenor.route("/configure/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def configure(id):
@@ -497,9 +472,7 @@ def configure(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     marking_scheme_count = MarkingScheme.query.filter_by(pclass_id=pclass.id).count()
-    email_template_count = EmailTemplate.query.filter(
-        EmailTemplate.pclass_id == pclass.id
-    ).count()
+    email_template_count = EmailTemplate.query.filter(EmailTemplate.pclass_id == pclass.id).count()
     feedback_recipe_count = pclass.feedback_recipes.count()
 
     return render_template_context(
@@ -663,44 +636,31 @@ def attached_ajax(id):
     # build list of projects attached to this project class
     base_query = db.session.query(Project).filter(Project.project_classes.any(id=id))
 
-    if (
-        valid_filter == "valid"
-        or valid_filter == "not-valid"
-        or valid_filter == "reject"
-        or valid_filter == "pending"
-    ):
+    if valid_filter == "valid" or valid_filter == "not-valid" or valid_filter == "reject" or valid_filter == "pending":
         if pclass.require_confirm:
-            base_query = base_query.join(
-                ProjectDescription, ProjectDescription.parent_id == Project.id
-            ).filter(ProjectDescription.project_classes.any(id=pclass.id))
+            base_query = base_query.join(ProjectDescription, ProjectDescription.parent_id == Project.id).filter(
+                ProjectDescription.project_classes.any(id=pclass.id)
+            )
 
             if valid_filter == "pending":
                 base_query = base_query.filter(ProjectDescription.confirmed.is_(False))
 
         if valid_filter == "valid":
             base_query = base_query.filter(
-                ProjectDescription.workflow_state
-                != ProjectDescription.WORKFLOW_APPROVAL_QUEUED,
-                ProjectDescription.workflow_state
-                != ProjectDescription.WORKFLOW_APPROVAL_REJECTED,
+                ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED,
+                ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED,
             )
 
         if valid_filter == "not-valid":
-            base_query = base_query.filter(
-                ProjectDescription.workflow_state
-                == ProjectDescription.WORKFLOW_APPROVAL_QUEUED
-            )
+            base_query = base_query.filter(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED)
 
         if valid_filter == "reject":
-            base_query = base_query.filter(
-                ProjectDescription.workflow_state
-                == ProjectDescription.WORKFLOW_APPROVAL_REJECTED
-            )
+            base_query = base_query.filter(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED)
 
     # restrict query to projects owned by active users, or generic projects
-    base_query = base_query.join(
-        User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.use_supervisor_pool.is_(True), User.active.is_(True)))
+    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(
+        or_(Project.use_supervisor_pool.is_(True), User.active.is_(True))
+    )
 
     # get FilterRecord for currently logged-in user
     filter_record: FilterRecord = get_convenor_filter_record(config)
@@ -712,9 +672,7 @@ def attached_ajax(id):
         base_query = base_query.filter(Project.group_id.in_(valid_group_ids))
 
     if len(valid_skill_ids) > 0:
-        base_query = base_query.filter(
-            Project.skills.any(TransferableSkill.id.in_(valid_skill_ids))
-        )
+        base_query = base_query.filter(Project.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
 
     # active projects only (default ON)
     if active_filter != "0":
@@ -726,13 +684,10 @@ def attached_ajax(id):
             and_(
                 EnrollmentRecord.owner_id == Project.owner_id,
                 EnrollmentRecord.pclass_id == pclass.id,
-                EnrollmentRecord.supervisor_state
-                == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
             )
         )
-        base_query = base_query.filter(
-            or_(Project.use_supervisor_pool.is_(True), supervisor_enrolled)
-        )
+        base_query = base_query.filter(or_(Project.use_supervisor_pool.is_(True), supervisor_enrolled))
 
     # generic projects only (default OFF)
     if generic_filter == "1":
@@ -905,30 +860,9 @@ def faculty_ajax(id):
         )
 
     elif (
-        (
-            (
-                enrol_filter == "supv-active"
-                or enrol_filter == "supv-sabbatical"
-                or enrol_filter == "supv-exempt"
-            )
-            and pclass.uses_supervisor
-        )
-        or (
-            (
-                enrol_filter == "mark-active"
-                or enrol_filter == "mark-sabbatical"
-                or enrol_filter == "mark-exempt"
-            )
-            and pclass.uses_marker
-        )
-        or (
-            (
-                enrol_filter == "pres-active"
-                or enrol_filter == "pres-sabbatical"
-                or enrol_filter == "pres-exempt"
-            )
-            and pclass.uses_presentations
-        )
+        ((enrol_filter == "supv-active" or enrol_filter == "supv-sabbatical" or enrol_filter == "supv-exempt") and pclass.uses_supervisor)
+        or ((enrol_filter == "mark-active" or enrol_filter == "mark-sabbatical" or enrol_filter == "mark-exempt") and pclass.uses_marker)
+        or ((enrol_filter == "pres-active" or enrol_filter == "pres-sabbatical" or enrol_filter == "pres-exempt") and pclass.uses_presentations)
     ):
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
@@ -947,46 +881,23 @@ def faculty_ajax(id):
         )
 
         if enrol_filter == "supv-active":
-            base_query = base_query.filter(
-                EnrollmentRecord.supervisor_state
-                == EnrollmentRecord.SUPERVISOR_ENROLLED
-            )
+            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
         elif enrol_filter == "supv-sabbatical":
-            base_query = base_query.filter(
-                EnrollmentRecord.supervisor_state
-                == EnrollmentRecord.SUPERVISOR_SABBATICAL
-            )
+            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
         elif enrol_filter == "supv-exempt":
-            base_query = base_query.filter(
-                EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT
-            )
+            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
         elif enrol_filter == "mark-active":
-            base_query = base_query.filter(
-                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED
-            )
+            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
         elif enrol_filter == "mark-sabbatical":
-            base_query = base_query.filter(
-                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL
-            )
+            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
         elif enrol_filter == "mark-exempt":
-            base_query = base_query.filter(
-                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT
-            )
+            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
         elif enrol_filter == "pres-active":
-            base_query = base_query.filter(
-                EnrollmentRecord.presentations_state
-                == EnrollmentRecord.PRESENTATIONS_ENROLLED
-            )
+            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
         elif enrol_filter == "pres-sabbatical":
-            base_query = base_query.filter(
-                EnrollmentRecord.presentations_state
-                == EnrollmentRecord.PRESENTATIONS_SABBATICAL
-            )
+            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
         elif enrol_filter == "pres-exempt":
-            base_query = base_query.filter(
-                EnrollmentRecord.presentations_state
-                == EnrollmentRecord.PRESENTATIONS_EXEMPT
-            )
+            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
     else:
         # build list of all active faculty, together with their FacultyData records
@@ -1010,9 +921,7 @@ def faculty_ajax(id):
     return _faculty_ajax_handler(base_query, pclass, config, state_filter)
 
 
-def _faculty_ajax_handler(
-    base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str
-):
+def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str):
     def search_name(row: Tuple[User, FacultyData, EnrollmentRecord]):
         u, fd, er = row
         u: User
@@ -1070,11 +979,7 @@ def _faculty_ajax_handler(
         fd: FacultyData
         er: EnrollmentRecord
 
-        return (
-            config.require_confirm
-            and config.requests_issued
-            and config.is_confirmation_required(fd)
-        )
+        return config.require_confirm and config.requests_issued and config.is_confirmation_required(fd)
 
     def sort_projects(row: Tuple[User, FacultyData, EnrollmentRecord]):
         u, fd, er = row
@@ -1105,35 +1010,19 @@ def _faculty_ajax_handler(
         er: EnrollmentRecord
 
         if state_filter == "no-projects" and pclass.uses_supervisor:
-            return (
-                er is not None
-                and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                and fd.number_projects_offered(pclass) == 0
-            )
+            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_offered(pclass) == 0
 
         if state_filter == "no-supervisor" and pclass.uses_supervisor:
-            return (
-                er is not None
-                and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                and fd.number_projects_supervisable(pclass) == 0
-            )
+            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_supervisable(pclass) == 0
 
         if state_filter == "supervisor-pool" and pclass.uses_supervisor:
             return fd.number_supervisor_pool(pclass) > 0
 
         if state_filter == "no-marker" and pclass.uses_marker:
-            return (
-                er is not None
-                and er.marker_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                and fd.number_assessor == 0
-            )
+            return er is not None and er.marker_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_assessor == 0
 
         if state_filter == "unofferable":
-            return (
-                er is not None
-                and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                and fd.projects_unofferable > 0
-            )
+            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.projects_unofferable > 0
 
         if state_filter == "custom-cats":
             return (
@@ -1148,12 +1037,8 @@ def _faculty_ajax_handler(
 
         return True
 
-    with ServerSideInMemoryHandler(
-        request, base_query, columns, row_filter=partial(_filter, state_filter, pclass)
-    ) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.faculty_data, pclass, config)
-        )
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=partial(_filter, state_filter, pclass)) as handler:
+        return handler.build_payload(partial(ajax.convenor.faculty_data, pclass, config))
 
 
 def _has_custom_CATS(fac_data, pclass):

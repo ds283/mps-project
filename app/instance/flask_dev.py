@@ -10,9 +10,7 @@
 
 DEBUG = True  # enable Flask debugger
 
-SQLALCHEMY_ECHO = (
-    False  # disable SQLAlchemy logging (takes a long time to emit all queries)
-)
+SQLALCHEMY_ECHO = False  # disable SQLAlchemy logging (takes a long time to emit all queries)
 
 DEBUG_TB_PROFILER_ENABLED = False  # enable/disable profiling in the Flask debug toolbar
 DEBUG_API_PREFIX = ""  # no special prefix for API (=Ajax) endpoints

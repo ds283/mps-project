@@ -230,9 +230,7 @@ def add_group():
 
         return redirect(url_for("admin.edit_groups"))
 
-    return render_template_context(
-        "admin/edit_group.html", group_form=form, title="Add new affiliation"
-    )
+    return render_template_context("admin/edit_group.html", group_form=form, title="Add new affiliation")
 
 
 @admin.route("/edit_group/<int:id>", methods=["GET", "POST"])
@@ -274,9 +272,7 @@ def edit_group(id):
 
         return redirect(url_for("admin.edit_groups"))
 
-    return render_template_context(
-        "admin/edit_group.html", group_form=form, group=group, title="Edit affiliation"
-    )
+    return render_template_context("admin/edit_group.html", group_form=form, group=group, title="Edit affiliation")
 
 
 @admin.route("/activate_group/<int:id>")
@@ -334,9 +330,7 @@ def edit_degree_types():
     View for editing degree types
     :return:
     """
-    return render_template_context(
-        "admin/degree_types/edit_degrees.html", subpane="degrees"
-    )
+    return render_template_context("admin/degree_types/edit_degrees.html", subpane="degrees")
 
 
 @admin.route("/edit_degree_programmes")
@@ -346,9 +340,7 @@ def edit_degree_programmes():
     View for editing degree programmes
     :return:
     """
-    return render_template_context(
-        "admin/degree_types/edit_programmes.html", subpane="programmes"
-    )
+    return render_template_context("admin/degree_types/edit_programmes.html", subpane="programmes")
 
 
 @admin.route("/edit_modules")
@@ -358,9 +350,7 @@ def edit_modules():
     View for editing modules
     :return:
     """
-    return render_template_context(
-        "admin/degree_types/edit_modules.html", subpane="modules"
-    )
+    return render_template_context("admin/degree_types/edit_modules.html", subpane="modules")
 
 
 @admin.route("/edit_levels")
@@ -370,9 +360,7 @@ def edit_levels():
     View for editing FHEQ levels
     :return:
     """
-    return render_template_context(
-        "admin/degree_types/edit_levels.html", subpane="levels"
-    )
+    return render_template_context("admin/degree_types/edit_levels.html", subpane="levels")
 
 
 @admin.route("/edit_levels_ajax", methods=["POST"])
@@ -462,9 +450,7 @@ def degree_programmes_ajax():
     Ajax data point for degree programmes tables
     :return:
     """
-    base_query = db.session.query(DegreeProgramme).join(
-        DegreeType, DegreeType.id == DegreeProgramme.type_id
-    )
+    base_query = db.session.query(DegreeProgramme).join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
 
     name = {
         "search": DegreeProgramme.name,
@@ -503,9 +489,7 @@ def modules_ajax():
     Ajax data point for module table
     :return:
     """
-    base_query = db.session.query(Module).join(
-        FHEQ_Level, FHEQ_Level.id == Module.level_id
-    )
+    base_query = db.session.query(Module).join(FHEQ_Level, FHEQ_Level.id == Module.level_id)
 
     code = {
         "search": Module.code,
@@ -739,9 +723,7 @@ def edit_degree_programme(id):
         programme.course_code = form.course_code.data
         programme.foundation_year = form.foundation_year.data
         programme.year_out = form.year_out.data
-        programme.year_out_value = (
-            form.year_out_value.data if programme.year_out else None
-        )
+        programme.year_out_value = form.year_out_value.data if programme.year_out else None
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
         programme.last_edit_timestamp = datetime.now()
@@ -829,31 +811,21 @@ def attach_modules(id, level_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
-            form.selector.data = (
-                FHEQ_Level.query.filter(FHEQ_Level.active.is_(True))
-                .order_by(FHEQ_Level.numeric_level.asc())
-                .first()
-            )
+            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active.is_(True)).order_by(FHEQ_Level.numeric_level.asc()).first()
         else:
-            form.selector.data = FHEQ_Level.query.filter(
-                FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id
-            ).first()
+            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
-        modules = Module.query.filter(
-            Module.active.is_(True), Module.level_id == form.selector.data.id
-        ).order_by(Module.semester.asc(), Module.name.asc())
+        modules = Module.query.filter(Module.active.is_(True), Module.level_id == form.selector.data.id).order_by(
+            Module.semester.asc(), Module.name.asc()
+        )
     else:
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
 
-    levels = (
-        FHEQ_Level.query.filter_by(active=True)
-        .order_by(FHEQ_Level.numeric_level.asc())
-        .all()
-    )
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
     return render_template_context(
         "admin/degree_types/attach_modules.html",
@@ -957,9 +929,7 @@ def add_level():
 
         return redirect(url_for("admin.edit_levels"))
 
-    return render_template_context(
-        "admin/degree_types/edit_level.html", form=form, title="Add new FHEQ Level"
-    )
+    return render_template_context("admin/degree_types/edit_level.html", form=form, title="Add new FHEQ Level")
 
 
 @admin.route("/edit_level/<int:id>", methods=["GET", "POST"])
@@ -1093,9 +1063,7 @@ def add_module():
 
         return redirect(url_for("admin.edit_modules"))
 
-    return render_template_context(
-        "admin/degree_types/edit_module.html", form=form, title="Add new module"
-    )
+    return render_template_context("admin/degree_types/edit_module.html", form=form, title="Add new module")
 
 
 @admin.route("/edit_module/<int:id>", methods=["GET", "POST"])
@@ -1110,9 +1078,7 @@ def edit_module(id):
 
     if not module.active:
         flash(
-            'Module "{code} {name}" cannot be edited because it is retired.'.format(
-                code=module.code, name=module.name
-            ),
+            'Module "{code} {name}" cannot be edited because it is retired.'.format(code=module.code, name=module.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1206,9 +1172,7 @@ def edit_skills():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template_context(
-        "admin/transferable_skills/edit_skills.html", subpane="skills"
-    )
+    return render_template_context("admin/transferable_skills/edit_skills.html", subpane="skills")
 
 
 @admin.route("/skills_ajax", methods=["POST"])
@@ -1221,9 +1185,7 @@ def skills_ajax():
     if not validate_is_admin_or_convenor("edit_tags"):
         return jsonify({})
 
-    base_query = db.session.query(TransferableSkill).join(
-        SkillGroup, SkillGroup.id == TransferableSkill.group_id
-    )
+    base_query = db.session.query(TransferableSkill).join(SkillGroup, SkillGroup.id == TransferableSkill.group_id)
 
     name = {
         "search": TransferableSkill.name,
@@ -1398,9 +1360,7 @@ def edit_skill_groups():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template_context(
-        "admin/transferable_skills/edit_skill_groups.html", subpane="groups"
-    )
+    return render_template_context("admin/transferable_skills/edit_skill_groups.html", subpane="groups")
 
 
 @admin.route("/skill_groups_ajax", methods=["POST"])
@@ -1577,9 +1537,7 @@ def edit_project_tag_groups():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template_context(
-        "admin/project_tags/edit_tag_groups.html", subpane="groups"
-    )
+    return render_template_context("admin/project_tags/edit_tag_groups.html", subpane="groups")
 
 
 @admin.route("/edit_project_tag_groups_ajax", methods=["POST"])
@@ -1781,9 +1739,7 @@ def edit_project_tags_ajax():
     if not validate_is_admin_or_convenor("edit_tags"):
         return jsonify({})
 
-    base_query = db.session.query(ProjectTag).join(
-        ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id
-    )
+    base_query = db.session.query(ProjectTag).join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
 
     name = {
         "search": ProjectTag.name,
@@ -1849,9 +1805,7 @@ def add_project_tag():
 
         return redirect(url_for("admin.edit_project_tags"))
 
-    return render_template_context(
-        "admin/project_tags/edit_tag.html", tag_form=form, title="Add new project tag"
-    )
+    return render_template_context("admin/project_tags/edit_tag.html", tag_form=form, title="Add new project tag")
 
 
 @admin.route("/edit_project_tag/<int:tid>", methods=["GET", "POST"])
@@ -2011,9 +1965,7 @@ def add_license():
 
         return redirect(url_for("admin.edit_licenses"))
 
-    return render_template_context(
-        "admin/edit_license.html", form=form, title="Add new content license"
-    )
+    return render_template_context("admin/edit_license.html", form=form, title="Add new content license")
 
 
 @admin.route("/edit_license/<int:lid>", methods=["GET", "POST"])
@@ -2047,8 +1999,7 @@ def edit_license(lid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
-                'Could not edit license "{name}" because of a database error. '
-                "Please contact a system administrator".format(name=license.name),
+                'Could not edit license "{name}" because of a database error. Please contact a system administrator'.format(name=license.name),
                 "error",
             )
 
@@ -2079,8 +2030,7 @@ def activate_license(lid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not activate license "{name}" due to a database error. '
-            "Please contact a system administrator".format(name=license.name),
+            'Could not activate license "{name}" due to a database error. Please contact a system administrator'.format(name=license.name),
             "error",
         )
 
@@ -2104,8 +2054,7 @@ def deactivate_license(lid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not deactivate license "{name}" due to a database error. '
-            "Please contact a system administrator".format(name=license.name),
+            'Could not deactivate license "{name}" due to a database error. Please contact a system administrator'.format(name=license.name),
             "error",
         )
 
@@ -2142,9 +2091,7 @@ def add_pclass():
     """
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
-        flash(
-            "No degree types are available. Set up at least one active degree type before adding a project class."
-        )
+        flash("No degree types are available. Set up at least one active degree type before adding a project class.")
         return redirect(redirect_url())
 
     all_tenants: List[Tenant] = db.session.query(Tenant).all()
@@ -2298,11 +2245,7 @@ def add_pclass():
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        flash(
-            'Set convenor for "{title}" to {name}.'.format(
-                name=data.convenor_name, title=data.name
-            )
-        )
+        flash('Set convenor for "{title}" to {name}.'.format(name=data.convenor_name, title=data.name))
 
         return redirect(url_for("admin.edit_project_classes"))
 
@@ -2325,9 +2268,7 @@ def add_pclass():
             form.use_project_tags.data = False
             form.force_tag_groups.data = []
 
-    return render_template_context(
-        "admin/edit_project_class.html", pclass_form=form, title="Add new project class"
-    )
+    return render_template_context("admin/edit_project_class.html", pclass_form=form, title="Add new project class")
 
 
 @admin.route("/edit_pclass/<int:id>", methods=["GET", "POST"])
@@ -2426,8 +2367,7 @@ def edit_pclass(id):
 
         if pclass.convenor.id != old_convenor.id:
             flash(
-                'Set convenor for "{title}" to {name}. The previous convenor was {oldname} and has been '
-                "removed".format(
+                'Set convenor for "{title}" to {name}. The previous convenor was {oldname} and has been removed'.format(
                     name=pclass.convenor_name,
                     oldname=old_convenor.user.name,
                     title=pclass.name,
@@ -2515,9 +2455,7 @@ def edit_pclass_text(id):
 
         return redirect(url_for("admin.edit_project_classes"))
 
-    return render_template_context(
-        "admin/edit_pclass_text.html", form=form, pclass=data
-    )
+    return render_template_context("admin/edit_pclass_text.html", form=form, pclass=data)
 
 
 @admin.route("/activate_pclass/<int:id>")
@@ -2632,9 +2570,7 @@ def regenerate_period_records(id):
     config = data.get_config(current_year)
 
     templates = config.template_periods.all()
-    records = config.periods.order_by(
-        SubmissionPeriodRecord.submission_period.asc()
-    ).all()
+    records = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
 
     # work through existing recrods and templates in pairs, overwriting each record with the content
     # of the corresponding template
@@ -2717,10 +2653,7 @@ def regenerate_period_records(id):
         # must clean up the MongoDB scraped-text cache manually.
         from app.shared.scraped_text_store import delete_scraped_text
 
-        record_ids = [
-            r.id
-            for r in db.session.query(SubmissionRecord.id).filter_by(period_id=c.id, retired=False)
-        ]
+        record_ids = [r.id for r in db.session.query(SubmissionRecord.id).filter_by(period_id=c.id, retired=False)]
         db.session.query(SubmissionRecord).filter_by(period_id=c.id, retired=False).delete()
         for rid in record_ids:
             delete_scraped_text(rid)
@@ -2801,8 +2734,9 @@ def add_period_definition(id):
         try:
             db.session.flush()
             modified: bool = pclass.validate_presentations()
-            log_db_commit(f"Added new submission period definition '{pd.name}' to project class '{pclass.name}'", user=current_user,
-                          project_classes=pclass)
+            log_db_commit(
+                f"Added new submission period definition '{pd.name}' to project class '{pclass.name}'", user=current_user, project_classes=pclass
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not add new submission period definition because of a database error. Please contact a system administrator.",
@@ -2862,8 +2796,9 @@ def edit_period_definition(id):
         try:
             db.session.flush()
             modified: bool = pd.owner.validate_presentations()
-            log_db_commit(f"Edited submission period definition '{pd.name}' for project class '{pd.owner.name}'", user=current_user,
-                          project_classes=pd.owner)
+            log_db_commit(
+                f"Edited submission period definition '{pd.name}' for project class '{pd.owner.name}'", user=current_user, project_classes=pd.owner
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes because of a database error. Please contact a system administrator.",

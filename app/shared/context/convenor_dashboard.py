@@ -69,9 +69,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     )
 
     all_fac_count = get_count(all_fac_query)
-    enrolled_fac_count = get_count(
-        all_fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id))
-    )
+    enrolled_fac_count = get_count(all_fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
     attached_projects = (
         db.session.query(Project)
@@ -89,8 +87,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
                 and_(
                     Project.use_supervisor_pool.is_(False),
                     EnrollmentRecord.pclass_id == pclass.id,
-                    EnrollmentRecord.supervisor_state
-                    == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     FacultyData.id != None,
                     User.active.is_(True),
                 ),
@@ -102,13 +99,9 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     sel_count = get_count(config.selecting_students.filter_by(retired=False))
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
-    missing_canvas_count = (
-        get_count(config.missing_canvas_students) if config.canvas_enabled else 0
-    )
+    missing_canvas_count = get_count(config.missing_canvas_students) if config.canvas_enabled else 0
 
-    todos = build_convenor_tasks_query(
-        config, status_filter="available", due_date_order=True
-    )
+    todos = build_convenor_tasks_query(config, status_filter="available", due_date_order=True)
     todo_count = get_count(todos)
 
     all_confirms_q = build_all_confirmations_query(config)
@@ -123,12 +116,8 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     declined_confirms_q = build_declined_confirmations_query(config)
     declined_confirms = get_count(declined_confirms_q)
 
-    last_confirm: Optional[ConfirmRequest] = outstanding_confirms_q.order_by(
-        ConfirmRequest.request_timestamp
-    ).first()
-    recent_confirm: Optional[ConfirmRequest] = outstanding_confirms_q.order_by(
-        ConfirmRequest.request_timestamp.desc()
-    ).first()
+    last_confirm: Optional[ConfirmRequest] = outstanding_confirms_q.order_by(ConfirmRequest.request_timestamp).first()
+    recent_confirm: Optional[ConfirmRequest] = outstanding_confirms_q.order_by(ConfirmRequest.request_timestamp.desc()).first()
 
     now = datetime.now()
     if last_confirm is not None:
@@ -162,9 +151,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     # Count marking events from closed submission periods
     marking_events_count = get_count(
         db.session.query(MarkingEvent)
-        .join(
-            SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id
-        )
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
         .filter(
             and_(
                 SubmissionPeriodRecord.config.has(pclass_id=pclass.id),
@@ -173,11 +160,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         )
     )
 
-    marking_urgent_count = sum(
-        event.urgent_action_count
-        for period in config.periods
-        for event in period.marking_events
-    )
+    marking_urgent_count = sum(event.urgent_action_count for period in config.periods for event in period.marking_events)
 
     return {
         "faculty": enrolled_fac_count,
@@ -205,9 +188,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     }
 
 
-def get_convenor_action_items(
-    pclass: ProjectClass, config: ProjectClassConfig, convenor_data: dict
-) -> list:
+def get_convenor_action_items(pclass: ProjectClass, config: ProjectClassConfig, convenor_data: dict) -> list:
     """
     Build a prioritised list of action items for the convenor actions panel.
     Takes the already-computed convenor_data dict — does not re-call
@@ -313,11 +294,7 @@ def get_convenor_action_items(
     # NOTE: has_submitted and has_bookmarks are Python properties that run
     # small queries each. This is O(N) for N = active selectors. Acceptable
     # for typical class sizes; could be replaced with a join query if slow.
-    inactive = sum(
-        1
-        for s in config.selecting_students.filter_by(retired=False)
-        if not s.has_submitted and not s.has_bookmarks
-    )
+    inactive = sum(1 for s in config.selecting_students.filter_by(retired=False) if not s.has_submitted and not s.has_bookmarks)
     if inactive > 0:
         spl = "s" if inactive != 1 else ""
         vpl = "have" if inactive != 1 else "has"
@@ -325,10 +302,7 @@ def get_convenor_action_items(
             ConvenorAction(
                 severity="info",
                 icon="question-circle",
-                title=(
-                    f"{inactive} selector{spl} {vpl} neither submitted a selection "
-                    f"nor bookmarked any projects — may receive a random allocation"
-                ),
+                title=(f"{inactive} selector{spl} {vpl} neither submitted a selection nor bookmarked any projects — may receive a random allocation"),
                 buttons=[
                     ConvenorActionButton(
                         label="View selectors",
@@ -344,9 +318,7 @@ def get_convenor_action_items(
 
 def get_convenor_todo_data(config: ProjectClassConfig, task_limit=10):
     # get list of available tasks (not available != all, even excluding dropped and completed tasks)
-    tks = build_convenor_tasks_query(
-        config, status_filter="available", due_date_order=True
-    )
+    tks = build_convenor_tasks_query(config, status_filter="available", due_date_order=True)
 
     top_tks = tks.limit(task_limit).all()
 
@@ -369,24 +341,14 @@ def build_convenor_tasks_query(
     """
 
     # subquery to get list of current selectors
-    selectors = (
-        db.session.query(SelectingStudent.id)
-        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id)
-        .subquery()
-    )
+    selectors = db.session.query(SelectingStudent.id).filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).subquery()
 
     # subquery to get list of current submitters
-    submitters = (
-        db.session.query(SubmittingStudent.id)
-        .filter(~SubmittingStudent.retired, SubmittingStudent.config_id == config.id)
-        .subquery()
-    )
+    submitters = db.session.query(SubmittingStudent.id).filter(~SubmittingStudent.retired, SubmittingStudent.config_id == config.id).subquery()
 
     # find selector tasks that are linked to one of our current selectors
     sel_tks = (
-        db.session.query(ConvenorSelectorTask.id)
-        .select_from(selectors)
-        .join(ConvenorSelectorTask, ConvenorSelectorTask.owner_id == selectors.c.id)
+        db.session.query(ConvenorSelectorTask.id).select_from(selectors).join(ConvenorSelectorTask, ConvenorSelectorTask.owner_id == selectors.c.id)
     )
 
     # find submitter tasks that are linked to one of our current submitters
@@ -397,9 +359,7 @@ def build_convenor_tasks_query(
     )
 
     # find ids of tasks linked ot this project class config
-    task_tks = db.session.query(ConvenorGenericTask.id).filter(
-        ConvenorGenericTask.owner_id == config.id
-    )
+    task_tks = db.session.query(ConvenorGenericTask.id).filter(ConvenorGenericTask.owner_id == config.id)
 
     # join these lists to produce a single list of tasks associated with our current selectors or submitters
     task_ids = sel_tks.union(sub_tks).union(task_tks).subquery()
@@ -409,12 +369,8 @@ def build_convenor_tasks_query(
     # object from the query.union.union construct; if we have just query.union then specifying a column
     # label works, but with a double union the columns end up with anonymous names. That means we have
     # to select by position.
-    convenor_task = with_polymorphic(
-        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
-    )
-    tks = db.session.query(convenor_task).join(
-        task_ids, convenor_task.id == tuple(task_ids.c)[0]
-    )
+    convenor_task = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+    tks = db.session.query(convenor_task).join(task_ids, convenor_task.id == tuple(task_ids.c)[0])
 
     # if only searching for available tasks, skip those that are complete or dropped.
     # also skip tasks with a defer date that has not yet passed, unless they are blocking
@@ -489,8 +445,7 @@ def _compute_group_capacity_data(pclass_id, group_id):
                 and_(
                     Project.use_supervisor_pool.is_(False),
                     EnrollmentRecord.pclass_id == pclass_id,
-                    EnrollmentRecord.supervisor_state
-                    == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     FacultyData.id != None,
                     User.active.is_(True),
                 ),
@@ -596,8 +551,7 @@ def _compute_group_approvals_data(pclass_id, group_id):
                 and_(
                     Project.use_supervisor_pool.is_(False),
                     EnrollmentRecord.pclass_id == pclass_id,
-                    EnrollmentRecord.supervisor_state
-                    == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     FacultyData.id != None,
                     User.active.is_(True),
                 ),
@@ -642,12 +596,8 @@ def _compute_group_approvals_data(pclass_id, group_id):
 def _capacity_delete_ProjectDescription_cache(desc):
     for pcl in desc.project_classes:
         if desc.parent is not None:
-            cache.delete_memoized(
-                _compute_group_capacity_data, pcl.id, desc.parent.group_id
-            )
-            cache.delete_memoized(
-                _compute_group_approvals_data, pcl.id, desc.parent.group_id
-            )
+            cache.delete_memoized(_compute_group_capacity_data, pcl.id, desc.parent.group_id)
+            cache.delete_memoized(_compute_group_approvals_data, pcl.id, desc.parent.group_id)
         else:
             cache.delete_memoized(_compute_group_capacity_data)
             cache.delete_memoized(_compute_group_approvals_data)
@@ -777,12 +727,7 @@ def _capacity_FacultyData_delete_handler(mapper, connection, target):
 
 def get_convenor_approval_data(pclass: ProjectClass):
     # get list of research groups
-    groups = (
-        db.session.query(ResearchGroup)
-        .filter_by(active=True)
-        .order_by(ResearchGroup.name)
-        .all()
-    )
+    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
 
     data = []
 
@@ -829,12 +774,7 @@ def get_convenor_approval_data(pclass: ProjectClass):
 
 def get_capacity_data(pclass: ProjectClass):
     # get list of research groups
-    groups = (
-        db.session.query(ResearchGroup)
-        .filter_by(active=True)
-        .order_by(ResearchGroup.name)
-        .all()
-    )
+    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
 
     data = []
 

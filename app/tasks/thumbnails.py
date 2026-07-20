@@ -59,9 +59,7 @@ def register_thumbnail_tasks(celery):
         self.update_state(state="STARTED")
 
         if asset_type not in _ASSET_TYPES:
-            current_app.logger.error(
-                f"force_regenerate_thumbnails: unknown asset type '{asset_type}'"
-            )
+            current_app.logger.error(f"force_regenerate_thumbnails: unknown asset type '{asset_type}'")
             self.update_state(state="FINISHED")
             return
 
@@ -77,8 +75,7 @@ def register_thumbnail_tasks(celery):
             if self.request.retries < 5:
                 raise self.retry(countdown=10)
             current_app.logger.warning(
-                f"force_regenerate_thumbnails: {asset_type} id #{asset_id} not found "
-                f"after {self.request.retries} retries; skipping"
+                f"force_regenerate_thumbnails: {asset_type} id #{asset_id} not found after {self.request.retries} retries; skipping"
             )
             self.update_state(state="FINISHED")
             return
@@ -143,10 +140,7 @@ def register_thumbnail_tasks(celery):
         if asset is None:
             if self.request.retries < 5:
                 raise self.retry(countdown=10)
-            current_app.logger.warning(
-                f"generate_thumbnails: {asset_type} id #{asset_id} not found "
-                f"after {self.request.retries} retries; skipping"
-            )
+            current_app.logger.warning(f"generate_thumbnails: {asset_type} id #{asset_id} not found after {self.request.retries} retries; skipping")
             self.update_state(state="FINISHED")
             return
 
@@ -155,20 +149,14 @@ def register_thumbnail_tasks(celery):
         source_store = bucket_map.get(asset.bucket)
 
         if thumbnails_store is None:
-            current_app.logger.error(
-                "generate_thumbnails: no ObjectStore for THUMBNAILS_BUCKET"
-            )
+            current_app.logger.error("generate_thumbnails: no ObjectStore for THUMBNAILS_BUCKET")
             _set_thumbnail_error(asset, "Thumbnails bucket is not configured")
             self.update_state(state="FINISHED")
             return
 
         if source_store is None:
-            current_app.logger.error(
-                f"generate_thumbnails: no ObjectStore for bucket {asset.bucket}"
-            )
-            _set_thumbnail_error(
-                asset, f"No object store configured for bucket {asset.bucket}"
-            )
+            current_app.logger.error(f"generate_thumbnails: no ObjectStore for bucket {asset.bucket}")
+            _set_thumbnail_error(asset, f"No object store configured for bucket {asset.bucket}")
             self.update_state(state="FINISHED")
             return
 
@@ -185,16 +173,8 @@ def register_thumbnail_tasks(celery):
                 with ScratchFolderManager() as cache_dir:
                     manager = PreviewManager(str(cache_dir.path), create_folder=False)
 
-                    small_preview_path = Path(
-                        manager.get_jpeg_preview(
-                            str(scratch_file.path), width=200, height=200
-                        )
-                    )
-                    medium_preview_path = Path(
-                        manager.get_jpeg_preview(
-                            str(scratch_file.path), width=400, height=400
-                        )
-                    )
+                    small_preview_path = Path(manager.get_jpeg_preview(str(scratch_file.path), width=200, height=200))
+                    medium_preview_path = Path(manager.get_jpeg_preview(str(scratch_file.path), width=400, height=400))
 
                     small_data = small_preview_path.read_bytes()
                     medium_data = medium_preview_path.read_bytes()
@@ -273,6 +253,4 @@ def _set_thumbnail_error(asset, message: str) -> None:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.exception(
-            "SQLAlchemyError while setting thumbnail_error flag", exc_info=e
-        )
+        current_app.logger.exception("SQLAlchemyError while setting thumbnail_error flag", exc_info=e)

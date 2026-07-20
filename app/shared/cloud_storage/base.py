@@ -31,13 +31,14 @@ from typing import BinaryIO, List, Optional, Union
 # CloudItem
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CloudItem:
     """Provider-agnostic descriptor for a file or folder returned by list_folder."""
 
-    ref: str                         # opaque provider ID (Box file/folder ID, Drive fileId, …)
+    ref: str  # opaque provider ID (Box file/folder ID, Drive fileId, …)
     name: str
-    kind: str                        # "file" | "folder"
+    kind: str  # "file" | "folder"
     size: Optional[int] = None
     modified_at: Optional[datetime] = None
     # Shareable/download URL if the provider can return it at list time.
@@ -48,6 +49,7 @@ class CloudItem:
 # ---------------------------------------------------------------------------
 # CloudStorageProvider ABC
 # ---------------------------------------------------------------------------
+
 
 class CloudStorageProvider(ABC):
     """
@@ -169,6 +171,7 @@ class CloudStorageProvider(ABC):
 # CloudStorageLocation  (facade)
 # ---------------------------------------------------------------------------
 
+
 class CloudStorageLocation:
     """
     Facade over a CloudStorageProvider.  Holds (provider, root_ref) and adds a
@@ -253,12 +256,12 @@ class CloudStorageLocation:
         t0 = time.monotonic()
         try:
             result = self._provider.get_or_create_folder(effective_parent, name)
-            self._log_audit("get_or_create_folder", folder_ref=effective_parent, name=name,
-                            elapsed_ms=int((time.monotonic() - t0) * 1000))
+            self._log_audit("get_or_create_folder", folder_ref=effective_parent, name=name, elapsed_ms=int((time.monotonic() - t0) * 1000))
             return result
         except Exception as exc:
-            self._log_audit("get_or_create_folder", folder_ref=effective_parent, name=name,
-                            elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc))
+            self._log_audit(
+                "get_or_create_folder", folder_ref=effective_parent, name=name, elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc)
+            )
             raise
 
     def list_folder(self, folder_ref: str) -> List[CloudItem]:
@@ -279,13 +282,12 @@ class CloudStorageLocation:
         t0 = time.monotonic()
         try:
             result = self._provider.upsert_file(folder_ref, filename, data, mimetype)
-            self._log_audit("upsert_file", folder_ref=folder_ref, name=filename,
-                            bytes=size, elapsed_ms=int((time.monotonic() - t0) * 1000))
+            self._log_audit("upsert_file", folder_ref=folder_ref, name=filename, bytes=size, elapsed_ms=int((time.monotonic() - t0) * 1000))
             return result
         except Exception as exc:
-            self._log_audit("upsert_file", folder_ref=folder_ref, name=filename,
-                            bytes=size, elapsed_ms=int((time.monotonic() - t0) * 1000),
-                            error=repr(exc))
+            self._log_audit(
+                "upsert_file", folder_ref=folder_ref, name=filename, bytes=size, elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc)
+            )
             raise
 
     def upsert_file_chunked(
@@ -300,9 +302,7 @@ class CloudStorageLocation:
         """Chunked upload via the provider; audited."""
         t0 = time.monotonic()
         try:
-            result = self._provider.upsert_file_chunked(
-                folder_ref, filename, stream, size, mimetype, chunk_size
-            )
+            result = self._provider.upsert_file_chunked(folder_ref, filename, stream, size, mimetype, chunk_size)
             self._log_audit(
                 "upsert_file_chunked",
                 folder_ref=folder_ref,
@@ -327,12 +327,10 @@ class CloudStorageLocation:
         t0 = time.monotonic()
         try:
             data = self._provider.download_file(file_ref)
-            self._log_audit("download_file", file_ref=file_ref, bytes=len(data),
-                            elapsed_ms=int((time.monotonic() - t0) * 1000))
+            self._log_audit("download_file", file_ref=file_ref, bytes=len(data), elapsed_ms=int((time.monotonic() - t0) * 1000))
             return data
         except Exception as exc:
-            self._log_audit("download_file", file_ref=file_ref,
-                            elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc))
+            self._log_audit("download_file", file_ref=file_ref, elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc))
             raise
 
     def get_shareable_url(
@@ -348,11 +346,9 @@ class CloudStorageLocation:
         t0 = time.monotonic()
         try:
             self._provider.delete_file(file_ref)
-            self._log_audit("delete_file", file_ref=file_ref,
-                            elapsed_ms=int((time.monotonic() - t0) * 1000))
+            self._log_audit("delete_file", file_ref=file_ref, elapsed_ms=int((time.monotonic() - t0) * 1000))
         except Exception as exc:
-            self._log_audit("delete_file", file_ref=file_ref,
-                            elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc))
+            self._log_audit("delete_file", file_ref=file_ref, elapsed_ms=int((time.monotonic() - t0) * 1000), error=repr(exc))
             raise
 
     # -- Auth error convenience ----------------------------------------------

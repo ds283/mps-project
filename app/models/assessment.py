@@ -55,9 +55,7 @@ def _PresentationAssessment_is_valid(id):
     return True, errors, warnings
 
 
-class PresentationAssessment(
-    db.Model, EditingMetadataMixin, AvailabilityRequestStateMixin
-):
+class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequestStateMixin):
     """
     Store data for a presentation assessment
     """
@@ -79,9 +77,7 @@ class PresentationAssessment(
     # CONFIGURATION
 
     # name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # submission sessions to which we are attached
     # (should only be one PresentationAssessment instance attached per period record)
@@ -108,9 +104,7 @@ class PresentationAssessment(
 
     # who skipped availability requests?
     availability_skipped_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    availability_skipped_by = db.relationship(
-        "User", uselist=False, foreign_keys=[availability_skipped_id]
-    )
+    availability_skipped_by = db.relationship("User", uselist=False, foreign_keys=[availability_skipped_id])
 
     # requests skipped timestamp
     availability_skipped_timestamp = db.Column(db.DateTime())
@@ -155,9 +149,7 @@ class PresentationAssessment(
         return get_count(self.outstanding_assessors)
 
     def is_faculty_outstanding(self, faculty_id):
-        return (
-            get_count(self.outstanding_assessors.filter_by(faculty_id=faculty_id)) > 0
-        )
+        return get_count(self.outstanding_assessors.filter_by(faculty_id=faculty_id)) > 0
 
     @property
     def outstanding_assessors(self):
@@ -286,12 +278,7 @@ class PresentationAssessment(
             .subquery()
         )
 
-        return (
-            db.session.query(ProjectClass)
-            .join(pclass_ids, ProjectClass.id == pclass_ids.c.id)
-            .order_by(ProjectClass.name.asc())
-            .all()
-        )
+        return db.session.query(ProjectClass).join(pclass_ids, ProjectClass.id == pclass_ids.c.id).order_by(ProjectClass.name.asc()).all()
 
     @property
     def convenor_list(self):
@@ -333,12 +320,7 @@ class PresentationAssessment(
             .subquery()
         )
 
-        return (
-            db.session.query(Building)
-            .join(building_ids, Building.id == building_ids.c.id)
-            .order_by(Building.name.asc())
-            .all()
-        )
+        return db.session.query(Building).join(building_ids, Building.id == building_ids.c.id).order_by(Building.name.asc()).all()
 
     @property
     def available_rooms(self):
@@ -364,9 +346,7 @@ class PresentationAssessment(
 
     @property
     def available_sessions(self):
-        return self.sessions.order_by(
-            PresentationSession.date.asc(), PresentationSession.session_type.asc()
-        ).all()
+        return self.sessions.order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc()).all()
 
     @property
     def available_talks(self):
@@ -404,9 +384,7 @@ class PresentationAssessment(
     @property
     def schedulable_talks(self):
         talks = self.available_talks.all()
-        return [
-            t for t in talks if not self.not_attending(t.id) and t.project is not None
-        ]
+        return [t for t in talks if not self.not_attending(t.id) and t.project is not None]
 
     @property
     def assessors_query(self):
@@ -429,12 +407,7 @@ class PresentationAssessment(
         return self.assessors_query.all()
 
     def not_attending(self, record_id):
-        return (
-            get_count(
-                self.submitter_list.filter_by(submitter_id=record_id, attending=False)
-            )
-            > 0
-        )
+        return get_count(self.submitter_list.filter_by(submitter_id=record_id, attending=False)) > 0
 
     def includes_faculty(self, faculty_id):
         return get_count(self.assessor_list.filter_by(faculty_id=faculty_id)) > 0
@@ -512,12 +485,7 @@ class PresentationAssessment(
     def earliest_date(self):
         q = self.sessions.subquery()
 
-        record = (
-            db.session.query(PresentationSession)
-            .join(q, q.c.id == PresentationSession.id)
-            .order_by(PresentationSession.date.asc())
-            .first()
-        )
+        record = db.session.query(PresentationSession).join(q, q.c.id == PresentationSession.id).order_by(PresentationSession.date.asc()).first()
 
         if record is None:
             return "<unknown>"
@@ -528,12 +496,7 @@ class PresentationAssessment(
     def latest_date(self):
         q = self.sessions.subquery()
 
-        record = (
-            db.session.query(PresentationSession)
-            .join(q, q.c.id == PresentationSession.id)
-            .order_by(PresentationSession.date.desc())
-            .first()
-        )
+        record = db.session.query(PresentationSession).join(q, q.c.id == PresentationSession.id).order_by(PresentationSession.date.desc()).first()
 
         if record is None:
             return "<unknown>"
@@ -663,16 +626,12 @@ class AssessorAttendanceData(db.Model):
     )
 
     # assessment that owns this availability record
-    assessment_id = db.Column(
-        db.Integer(), db.ForeignKey("presentation_assessments.id")
-    )
+    assessment_id = db.Column(db.Integer(), db.ForeignKey("presentation_assessments.id"))
     assessment = db.relationship(
         "PresentationAssessment",
         foreign_keys=[assessment_id],
         uselist=False,
-        backref=db.backref(
-            "assessor_list", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("assessor_list", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # sessions for which we are available
@@ -756,11 +715,7 @@ class AssessorAttendanceData(db.Model):
                 changed = True
 
         for sess in self.assessment.sessions:
-            if (
-                sess not in self.available
-                and sess not in self.unavailable
-                and sess not in self.if_needed
-            ):
+            if sess not in self.available and sess not in self.unavailable and sess not in self.if_needed:
                 self.available.append(sess)
                 changed = True
 
@@ -779,9 +734,7 @@ def _AssessorAttendanceData_update_handler(mapper, connection, target):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -802,9 +755,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -825,9 +776,7 @@ def _AssessorAttendanceData_delete_handler(mapper, connection, target):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -848,9 +797,7 @@ def _AssessorAttendanceData_available_append_handler(target, value, initiator):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -871,9 +818,7 @@ def _AssessorAttendanceData_available_remove_handler(target, value, initiator):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -894,9 +839,7 @@ def _AssessorAttendanceData_unavailable_append_handler(target, value, initiator)
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -917,9 +860,7 @@ def _AssessorAttendanceData_unavailable_remove_handler(target, value, initiator)
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -940,9 +881,7 @@ def _AssessorAttendanceData_ifneeded_append_handler(target, value, initiator):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -963,9 +902,7 @@ def _AssessorAttendanceData_ifneeded_remove_handler(target, value, initiator):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -998,16 +935,12 @@ class SubmitterAttendanceData(db.Model):
     )
 
     # assessment that owns this availability record
-    assessment_id = db.Column(
-        db.Integer(), db.ForeignKey("presentation_assessments.id")
-    )
+    assessment_id = db.Column(db.Integer(), db.ForeignKey("presentation_assessments.id"))
     assessment = db.relationship(
         "PresentationAssessment",
         foreign_keys=[assessment_id],
         uselist=False,
-        backref=db.backref(
-            "submitter_list", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("submitter_list", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # in the make-up event?
@@ -1068,9 +1001,7 @@ def _SubmitterAttendanceData_update_handler(mapper, connection, target):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1091,9 +1022,7 @@ def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1114,9 +1043,7 @@ def _SubmitterAttendanceData_delete_handler(mapper, connection, target):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1137,9 +1064,7 @@ def _SubmitterAttendanceData_available_append_handler(target, value, initiator):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1160,9 +1085,7 @@ def _SubmitterAttendanceData_available_remove_handler(target, value, initiator):
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1183,9 +1106,7 @@ def _SubmitterAttendanceData_unavailable_append_handler(target, value, initiator
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1206,9 +1127,7 @@ def _SubmitterAttendanceData_unavailable_remove_handler(target, value, initiator
             _ScheduleSlot_is_valid,
         )
 
-        schedules = db.session.query(ScheduleAttempt).filter_by(
-            owner_id=target.assessment_id
-        )
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.assessment_id)
         for schedule in schedules:
             cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
 
@@ -1217,9 +1136,7 @@ def _SubmitterAttendanceData_unavailable_remove_handler(target, value, initiator
                 cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
 
 
-class PresentationSession(
-    db.Model, EditingMetadataMixin, PresentationSessionTypesMixin
-):
+class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTypesMixin):
     """
     Store data about a presentation session
     """
@@ -1235,9 +1152,7 @@ class PresentationSession(
         "PresentationAssessment",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "sessions", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("sessions", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # label for this session
@@ -1341,11 +1256,7 @@ class PresentationSession(
     def ordered_rooms(self):
         from .scheduling import Building, Room
 
-        query = (
-            db.session.query(session_to_rooms.c.room_id)
-            .filter(session_to_rooms.c.session_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(session_to_rooms.c.room_id).filter(session_to_rooms.c.session_id == self.id).subquery()
 
         return (
             db.session.query(Room)
@@ -1401,18 +1312,14 @@ class PresentationSession(
 
         q = self.available_submitters.subquery()
 
-        return db.session.query(SubmissionRecord).join(
-            q, q.c.submitter_id == SubmissionRecord.id
-        )
+        return db.session.query(SubmissionRecord).join(q, q.c.submitter_id == SubmissionRecord.id)
 
     @property
     def ordered_faculty(self):
         from .faculty import FacultyData
         from .users import User
 
-        return self._faculty.join(User, User.id == FacultyData.id).order_by(
-            User.last_name.asc(), User.first_name.asc()
-        )
+        return self._faculty.join(User, User.id == FacultyData.id).order_by(User.last_name.asc(), User.first_name.asc())
 
     def faculty_available(self, faculty_id):
         return get_count(self.available_faculty.filter_by(faculty_id=faculty_id)) > 0
@@ -1424,23 +1331,13 @@ class PresentationSession(
         return get_count(self.unavailable_faculty.filter_by(faculty_id=faculty_id)) > 0
 
     def submitter_available(self, submitter_id):
-        return (
-            get_count(self.available_submitters.filter_by(submitter_id=submitter_id))
-            > 0
-        )
+        return get_count(self.available_submitters.filter_by(submitter_id=submitter_id)) > 0
 
     def submitter_unavailable(self, submitter_id):
-        return (
-            get_count(self.unavailable_submitters.filter_by(submitter_id=submitter_id))
-            > 0
-        )
+        return get_count(self.unavailable_submitters.filter_by(submitter_id=submitter_id)) > 0
 
     def faculty_make_available(self, fac):
-        data = (
-            db.session.query(AssessorAttendanceData)
-            .filter_by(assessment_id=self.owner_id, faculty_id=fac.id)
-            .first()
-        )
+        data = db.session.query(AssessorAttendanceData).filter_by(assessment_id=self.owner_id, faculty_id=fac.id).first()
         if data is None:
             return
 
@@ -1454,11 +1351,7 @@ class PresentationSession(
             data.if_needed.remove(self)
 
     def faculty_make_unavailable(self, fac):
-        data = (
-            db.session.query(AssessorAttendanceData)
-            .filter_by(assessment_id=self.owner_id, faculty_id=fac.id)
-            .first()
-        )
+        data = db.session.query(AssessorAttendanceData).filter_by(assessment_id=self.owner_id, faculty_id=fac.id).first()
         if data is None:
             return
 
@@ -1472,11 +1365,7 @@ class PresentationSession(
             data.if_needed.remove(self)
 
     def faculty_make_ifneeded(self, fac):
-        data = (
-            db.session.query(AssessorAttendanceData)
-            .filter_by(assessment_id=self.owner_id, faculty_id=fac.id)
-            .first()
-        )
+        data = db.session.query(AssessorAttendanceData).filter_by(assessment_id=self.owner_id, faculty_id=fac.id).first()
         if data is None:
             return
 
@@ -1490,11 +1379,7 @@ class PresentationSession(
             data.if_needed.append(self)
 
     def submitter_make_available(self, sub):
-        data = (
-            db.session.query(SubmitterAttendanceData)
-            .filter_by(assessment_id=self.owner_id, submitter_id=sub.id)
-            .first()
-        )
+        data = db.session.query(SubmitterAttendanceData).filter_by(assessment_id=self.owner_id, submitter_id=sub.id).first()
         if data is None:
             return
 
@@ -1505,11 +1390,7 @@ class PresentationSession(
             data.unavailable.remove(self)
 
     def submitter_make_unavailable(self, sub):
-        data = (
-            db.session.query(SubmitterAttendanceData)
-            .filter_by(assessment_id=self.owner_id, submitter_id=sub.id)
-            .first()
-        )
+        data = db.session.query(SubmitterAttendanceData).filter_by(assessment_id=self.owner_id, submitter_id=sub.id).first()
         if data is None:
             return
 
@@ -1530,11 +1411,7 @@ def _PresentationSession_update_handler(mapper, connection, target):
 
         # Can't filter on session_type, since we don't know the session_type prior to the update.
         # Instead, just uncache all sessions for this event on the same day.
-        dups = (
-            db.session.query(PresentationSession)
-            .filter_by(date=target.date, owner_id=target.owner_id)
-            .all()
-        )
+        dups = db.session.query(PresentationSession).filter_by(date=target.date, owner_id=target.owner_id).all()
         for dup in dups:
             if dup.id != target.id:
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)

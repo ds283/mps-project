@@ -59,11 +59,7 @@ class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         if text is None:
             text = self.abbreviation
 
-        popover_text = (
-            self.description
-            if (popover and self.description is not None and len(self.description) > 0)
-            else None
-        )
+        popover_text = self.description if (popover and self.description is not None and len(self.description) > 0) else None
 
         return self._make_label(text, popover_text=popover_text)
 
@@ -133,9 +129,7 @@ class ConvenorSubmitterArticle(FormattedArticle):
     __tablename__ = "submitter_convenor_articles"
 
     # primary key links to base table
-    id = db.Column(
-        db.Integer(), db.ForeignKey("formatted_articles.id"), primary_key=True
-    )
+    id = db.Column(db.Integer(), db.ForeignKey("formatted_articles.id"), primary_key=True)
 
     # owning ProjectClassConfig
     period_id = db.Column(db.Integer(), db.ForeignKey("submission_periods.id"))
@@ -143,9 +137,7 @@ class ConvenorSubmitterArticle(FormattedArticle):
         "SubmissionPeriodRecord",
         foreign_keys=[period_id],
         uselist=False,
-        backref=db.backref(
-            "articles", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("articles", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     __mapper_args__ = {"polymorphic_identity": 1}
@@ -160,9 +152,7 @@ class ProjectSubmitterArticle(FormattedArticle):
     __tablename__ = "submitter_project_articles"
 
     # primary key links to base table
-    id = db.Column(
-        db.Integer(), db.ForeignKey("formatted_articles.id"), primary_key=True
-    )
+    id = db.Column(db.Integer(), db.ForeignKey("formatted_articles.id"), primary_key=True)
 
     # owning SubmissionRecord
     record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"))
@@ -170,9 +160,7 @@ class ProjectSubmitterArticle(FormattedArticle):
         "SubmissionRecord",
         foreign_keys=[record_id],
         uselist=False,
-        backref=db.backref(
-            "articles", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("articles", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     __mapper_args__ = {"polymorphic_identity": 2}

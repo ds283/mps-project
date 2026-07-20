@@ -246,9 +246,7 @@ def template_data_pclass_override(pclass: ProjectClass, template_list: List):
     menu_templ: Template = _build_pclass_menu_templ()
 
     def _process(template_type: int, template):
-        type_name = _TYPE_NAMES.get(
-            template_type, f"Unknown email template type ({template_type})"
-        )
+        type_name = _TYPE_NAMES.get(template_type, f"Unknown email template type ({template_type})")
 
         return {
             "type": render_template(
@@ -269,9 +267,7 @@ def template_data_pclass_override(pclass: ProjectClass, template_list: List):
             ),
         }
 
-    data = [
-        _process(template_type, template) for template_type, template in template_list
-    ]
+    data = [_process(template_type, template) for template_type, template in template_list]
 
     return data
 
@@ -295,9 +291,7 @@ def template_data_tenant_override(tenant: Tenant, template_list: List):
     menu_templ: Template = _build_tenant_menu_templ()
 
     def _process(template_type: int, template):
-        type_name = _TYPE_NAMES.get(
-            template_type, f"Unknown email template type ({template_type})"
-        )
+        type_name = _TYPE_NAMES.get(template_type, f"Unknown email template type ({template_type})")
 
         return {
             "type": render_template(
@@ -318,8 +312,6 @@ def template_data_tenant_override(tenant: Tenant, template_list: List):
             ),
         }
 
-    data = [
-        _process(template_type, template) for template_type, template in template_list
-    ]
+    data = [_process(template_type, template) for template_type, template in template_list]
 
     return data

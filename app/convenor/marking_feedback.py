@@ -107,9 +107,7 @@ def _period_has_open_marking_event(period) -> bool:
     )
 
 
-def _get_scoped_configs(
-    anchor_config: ProjectClassConfig, user: User
-) -> List[ProjectClassConfig]:
+def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[ProjectClassConfig]:
     """Return the list of ProjectClassConfig instances in scope for the given user."""
     tenant_id = anchor_config.project_class.tenant_id
     current_year = get_current_year()
@@ -279,15 +277,12 @@ def close_period(id):
 
     if config.submission_period > config.number_submissions:
         flash(
-            'Period close request ignored because "{name}" '
-            "is already in a rollover state.".format(name=config.name),
+            'Period close request ignored because "{name}" is already in a rollover state.'.format(name=config.name),
             "info",
         )
         return request.referrer
 
-    period: SubmissionPeriodRecord = config.periods.filter_by(
-        submission_period=config.submission_period
-    ).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
 
     canvas_warning = ""
     if period is not None and period.canvas_enabled:
@@ -317,9 +312,7 @@ def close_period(id):
         "{canvas_warning}"
         "<p>After closure, no immediate action is taken automatically by the platform, "
         "but no further edits can be made.</p>"
-        "<p>This action cannot be undone.</p>".format(
-            name=config.name, canvas_warning=canvas_warning
-        )
+        "<p>This action cannot be undone.</p>".format(name=config.name, canvas_warning=canvas_warning)
     )
     submit_label = "Close period"
 
@@ -356,8 +349,7 @@ def do_close_period(id):
 
     if config.submission_period > config.number_submissions:
         flash(
-            'Period close request ignored because "{name}" '
-            "is already in a rollover state.".format(name=config.name),
+            'Period close request ignored because "{name}" is already in a rollover state.'.format(name=config.name),
             "info",
         )
         return request.referrer
@@ -366,9 +358,7 @@ def do_close_period(id):
     if url is None:
         url = redirect_url()
 
-    period: SubmissionPeriodRecord = config.periods.filter_by(
-        submission_period=config.submission_period
-    ).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
     if period is None and config.number_submissions > 0:
         flash(
             "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
@@ -400,9 +390,7 @@ def do_close_period(id):
     return redirect(url)
 
 
-def _validate_submission_period(
-    record: SubmissionPeriodRecord, config: ProjectClassConfig
-):
+def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectClassConfig):
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
         return False
@@ -410,8 +398,7 @@ def _validate_submission_period(
     # check configuration is still current
     if config.project_class.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -514,8 +501,7 @@ def edit_config_roles(pid):
 
     if pclass.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -583,8 +569,7 @@ def edit_config_cats(pid):
 
     if pclass.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -648,8 +633,7 @@ def edit_config_selection(pid):
 
     if pclass.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -722,8 +706,7 @@ def edit_config_canvas(pid):
 
     if pclass.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -787,8 +770,7 @@ def edit_config_ai_rubric(pid):
 
     if pclass.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -846,8 +828,7 @@ def edit_config_doc_limits(pid):
 
     if pclass.most_recent_config.id != config.id:
         flash(
-            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(
+            "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} because it has been rolled over.".format(
                 yra=config.submit_year_a, yrb=config.submit_year_b
             ),
             "info",
@@ -862,9 +843,7 @@ def edit_config_doc_limits(pid):
         config.page_limit_enabled = form.page_limit_enabled.data
         config.page_limit = form.page_limit.data
         tol = form.word_count_tolerance.data
-        config.word_count_tolerance = (
-            round(float(tol) / 100, 4) if tol is not None else None
-        )
+        config.word_count_tolerance = round(float(tol) / 100, 4) if tol is not None else None
 
         try:
             log_db_commit(
@@ -887,9 +866,7 @@ def edit_config_doc_limits(pid):
     form.page_limit_enabled.data = config.page_limit_enabled
     form.page_limit.data = config.page_limit
     tolerance = config.word_count_tolerance
-    form.word_count_tolerance.data = (
-        round(float(tolerance) * 100, 1) if tolerance is not None else None
-    )
+    form.word_count_tolerance.data = round(float(tolerance) * 100, 1) if tolerance is not None else None
 
     url = request.args.get("url", url_for("convenor.status", id=pclass.id))
     text = request.args.get("text", "Configure")
@@ -1087,10 +1064,7 @@ def publish_assignment(id):
     if not validate_is_convenor(sub.config.project_class):
         return redirect(redirect_url())
 
-    if (
-        sub.config.submitter_lifecycle
-        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-    ):
+    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash(
             "It is now too late to publish an assignment to students for this project class.",
             "error",
@@ -1130,10 +1104,7 @@ def unpublish_assignment(id):
     if not validate_project_class(sub.config.project_class):
         return redirect(redirect_url())
 
-    if (
-        sub.config.submitter_lifecycle
-        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-    ):
+    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash(
             "It is now too late to unpublish an assignment for this project class.",
             "error",
@@ -1171,10 +1142,7 @@ def publish_all_assignments(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if (
-        config.submitter_lifecycle
-        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-    ):
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash(
             "It is now too late to publish assignments to students for this project class.",
             "error",
@@ -1186,9 +1154,7 @@ def publish_all_assignments(id):
     state_filter = request.args.get("state_filter")
     year_filter = request.args.get("year_filter")
 
-    data = build_submitters_data(
-        config, cohort_filter, prog_filter, state_filter, year_filter
-    )
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
     for sel in data:
         sel.published = True
@@ -1224,10 +1190,7 @@ def unpublish_all_assignments(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if (
-        config.submitter_lifecycle
-        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-    ):
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash(
             "It is now too late to unpublish assignments for this project class.",
             "error",
@@ -1239,9 +1202,7 @@ def unpublish_all_assignments(id):
     state_filter = request.args.get("state_filter")
     year_filter = request.args.get("year_filter")
 
-    data = build_submitters_data(
-        config, cohort_filter, prog_filter, state_filter, year_filter
-    )
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
     for sel in data:
         sel.published = False
@@ -1283,11 +1244,7 @@ def populate_markers(configid):
     if form.validate_on_submit():
         selected_configs = form.project_classes.data or []
         # defence in depth: drop any config the user is not a convenor for
-        selected_configs = [
-            c
-            for c in selected_configs
-            if validate_is_convenor(c.project_class, message=False)
-        ]
+        selected_configs = [c for c in selected_configs if validate_is_convenor(c.project_class, message=False)]
 
         if not selected_configs:
             flash("No project classes were selected.", "warning")
@@ -1337,21 +1294,14 @@ def populate_markers(configid):
                         for fac in sub.project.assessor_list:
                             if fac.id not in seen_faculty:
                                 seen_faculty[fac.id] = fac
-            baseline_cats = {
-                str(fac_id): float(sum(fac.total_CATS_assignment()))
-                for fac_id, fac in seen_faculty.items()
-            }
+            baseline_cats = {str(fac_id): float(sum(fac.total_CATS_assignment())) for fac_id, fac in seen_faculty.items()}
 
         celery = current_app.extensions["celery"]
         populate = celery.tasks["app.tasks.matching.populate_markers"]
 
         if len(selected_configs) == 1:
-            tk_name = 'Populate markers for "{proj}"'.format(
-                proj=selected_configs[0].name
-            )
-            tk_desc = 'Populate marker assignments for "{proj}"'.format(
-                proj=selected_configs[0].name
-            )
+            tk_name = 'Populate markers for "{proj}"'.format(proj=selected_configs[0].name)
+            tk_desc = 'Populate marker assignments for "{proj}"'.format(proj=selected_configs[0].name)
         else:
             names = ", ".join('"{}"'.format(c.name) for c in selected_configs)
             tk_name = "Populate markers for {names}".format(names=names)
@@ -1404,11 +1354,7 @@ def remove_markers(configid):
     if form.validate_on_submit():
         selected_configs = form.project_classes.data or []
         # defence in depth: drop any config the user is not a convenor for
-        selected_configs = [
-            c
-            for c in selected_configs
-            if validate_is_convenor(c.project_class, message=False)
-        ]
+        selected_configs = [c for c in selected_configs if validate_is_convenor(c.project_class, message=False)]
 
         if not selected_configs:
             flash("No project classes were selected.", "warning")
@@ -1425,9 +1371,7 @@ def remove_markers(configid):
             uuid = register_task(
                 tk_name,
                 owner=current_user,
-                description='Remove marker assignments for "{proj}"'.format(
-                    proj=cfg.name
-                ),
+                description='Remove marker assignments for "{proj}"'.format(proj=cfg.name),
             )
             seq = chain(
                 init.si(uuid, tk_name),
@@ -1465,22 +1409,13 @@ def export_allocation(configid):
     celery = current_app.extensions["celery"]
     seq = chain(
         celery.tasks["app.tasks.user_launch.mark_user_task_started"].si(uuid, tk_name),
-        celery.tasks["app.tasks.allocation_export.export_allocation_xlsx"].si(
-            config_ids, current_user.id, uuid
-        ),
-        celery.tasks["app.tasks.user_launch.mark_user_task_ended"].si(
-            uuid, tk_name, current_user.id
-        ),
-    ).on_error(
-        celery.tasks["app.tasks.user_launch.mark_user_task_failed"].si(
-            uuid, tk_name, current_user.id
-        )
-    )
+        celery.tasks["app.tasks.allocation_export.export_allocation_xlsx"].si(config_ids, current_user.id, uuid),
+        celery.tasks["app.tasks.user_launch.mark_user_task_ended"].si(uuid, tk_name, current_user.id),
+    ).on_error(celery.tasks["app.tasks.user_launch.mark_user_task_failed"].si(uuid, tk_name, current_user.id))
     seq.apply_async(task_id=uuid)
 
     flash(
-        f'Export of allocation for "{config.name}" has been queued. '
-        f"The spreadsheet will be available in your Download Centre when complete.",
+        f'Export of allocation for "{config.name}" has been queued. The spreadsheet will be available in your Download Centre when complete.',
         "info",
     )
     return redirect(redirect_url())
@@ -1496,12 +1431,8 @@ def view_feedback():
     if sub_id is None and sid is None:
         abort(404)
 
-    submitter: SubmittingStudent = (
-        SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
-    )
-    rec: SubmissionRecord = (
-        SubmissionRecord.query.get_or_404(sid) if sid is not None else None
-    )
+    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
 
     if submitter is not None:
         config: ProjectClassConfig = submitter.config
@@ -1527,9 +1458,7 @@ def view_feedback():
 
         else:
             if hasattr(form, "selector") and form.selector.data is not None:
-                rec: SubmissionRecord = submitter.get_assignment(
-                    period=form.selector.data
-                )
+                rec: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
             else:
                 rec: SubmissionRecord = submitter.get_assignment()
 
@@ -1564,15 +1493,11 @@ def view_feedback():
     event_data = []
     for event in all_events:
         srs = (
-            rec.submitter_reports.join(
-                MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
-            )
+            rec.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
             .filter(MarkingWorkflow.event_id == event.id)
             .all()
         )
-        cr = ConflationReport.query.filter_by(
-            marking_event_id=event.id, submission_record_id=rec.id
-        ).first()
+        cr = ConflationReport.query.filter_by(marking_event_id=event.id, submission_record_id=rec.id).first()
         if srs:
             event_data.append((event, srs, cr))
 
@@ -1668,49 +1593,26 @@ def faculty_workload_ajax(id):
         return jsonify({})
 
     # build a list of only enrolled faculty, together with their FacultyData records
-    faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(
-        EnrollmentRecord.pclass_id == id
-    )
+    faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id)
 
     if enroll_filter == "supv-active":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
     elif enroll_filter == "supv-sabbatical":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
     elif enroll_filter == "supv-exempt":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
     elif enroll_filter == "mark-active":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
     elif enroll_filter == "mark-sabbatical":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
     elif enroll_filter == "mark-exempt":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
     elif enroll_filter == "pres-active":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.presentations_state
-            == EnrollmentRecord.PRESENTATIONS_ENROLLED
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
     elif enroll_filter == "pres-sabbatical":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.presentations_state
-            == EnrollmentRecord.PRESENTATIONS_SABBATICAL
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
     elif enroll_filter == "pres-exempt":
-        faculty_ids = faculty_ids.filter(
-            EnrollmentRecord.presentations_state
-            == EnrollmentRecord.PRESENTATIONS_EXEMPT
-        )
+        faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
     faculty_ids = faculty_ids.subquery()
 
@@ -1749,9 +1651,7 @@ def faculty_workload_ajax(id):
     columns = {"name": name, "workload": workload}
 
     with ServerSideInMemoryHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.faculty_workload_data, config)
-        )
+        return handler.build_payload(partial(ajax.convenor.faculty_workload_data, config))
 
 
 @convenor.route("/teaching_groups/<int:id>")
@@ -1880,11 +1780,7 @@ def teaching_groups_ajax(id):
         show_period = x
 
     if organize_by == "faculty":
-        faculty_ids = (
-            db.session.query(EnrollmentRecord.owner_id)
-            .filter(EnrollmentRecord.pclass_id == id)
-            .subquery()
-        )
+        faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id).subquery()
 
         faculty = (
             db.session.query(FacultyData)
@@ -1896,9 +1792,7 @@ def teaching_groups_ajax(id):
 
         return ajax.convenor.teaching_group_by_faculty(faculty, config, show_period)
 
-    return ajax.convenor.teaching_group_by_student(
-        config.submitting_students, config, show_period
-    )
+    return ajax.convenor.teaching_group_by_student(config.submitting_students, config, show_period)
 
 
 @convenor.route("/manual_assign/", methods=["GET", "POST"])
@@ -1911,12 +1805,8 @@ def manual_assign():
     if sub_id is None and sid is None:
         abort(404)
 
-    submitter: SubmittingStudent = (
-        SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
-    )
-    rec: SubmissionRecord = (
-        SubmissionRecord.query.get_or_404(sid) if sid is not None else None
-    )
+    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
 
     if submitter is not None:
         current_config: ProjectClassConfig = submitter.config
@@ -1942,9 +1832,7 @@ def manual_assign():
 
         else:
             if hasattr(form, "selector") and form.selector.data is not None:
-                rec: SubmissionRecord = submitter.get_assignment(
-                    period=form.selector.data
-                )
+                rec: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
             else:
                 rec: SubmissionRecord = submitter.get_assignment()
 
@@ -1990,8 +1878,7 @@ def manual_assign():
         text=text,
         form=form,
         submitter=submitter,
-        allow_reassign_project=rec.project_id is None
-        or not _period_has_open_marking_event(period),
+        allow_reassign_project=rec.project_id is None or not _period_has_open_marking_event(period),
     )
 
 
@@ -2015,9 +1902,7 @@ def manual_assign_ajax(id):
     if not validate_is_convenor(select_config.project_class):
         return jsonify({})
 
-    base_query = select_config.live_projects.join(
-        FacultyData, FacultyData.id == LiveProject.owner_id
-    ).join(User, User.id == FacultyData.id)
+    base_query = select_config.live_projects.join(FacultyData, FacultyData.id == LiveProject.owner_id).join(User, User.id == FacultyData.id)
 
     project = {
         "search": LiveProject.name,
@@ -2059,18 +1944,14 @@ def assign_revert(id):
 
     if _period_has_open_marking_event(rec.period):
         flash(
-            "Can not revert assignment for {name} because feedback is already open".format(
-                name=rec.period.display_name
-            ),
+            "Can not revert assignment for {name} because feedback is already open".format(name=rec.period.display_name),
             "error",
         )
         return redirect(redirect_url())
 
     if rec.matching_record is None:
         flash(
-            "Can not revert assignment for {name} because the automated matching data could not be found".format(
-                name=rec.period.display_name
-            ),
+            "Can not revert assignment for {name} because the automated matching data could not be found".format(name=rec.period.display_name),
             "error",
         )
         return redirect(redirect_url())
@@ -2149,9 +2030,7 @@ def assign_from_selection(id, sel_id):
 
     if _period_has_open_marking_event(rec.period):
         flash(
-            "Can not reassign for {name} because feedback is already open".format(
-                name=rec.period.display_name
-            ),
+            "Can not reassign for {name} because feedback is already open".format(name=rec.period.display_name),
             "error",
         )
         return redirect(redirect_url())
@@ -2230,9 +2109,7 @@ def assign_liveproject(id, pid):
 
     if _period_has_open_marking_event(rec.period):
         flash(
-            "Can not reassign for {name} because feedback is already open".format(
-                name=rec.period.display_name
-            ),
+            "Can not reassign for {name} because feedback is already open".format(name=rec.period.display_name),
             "error",
         )
         return redirect(redirect_url())
@@ -2241,8 +2118,9 @@ def assign_liveproject(id, pid):
 
     if lp.config_id != select_config.id:
         flash(
-            "Can not assign LiveProject #{num} for {name} because they do not belong to the same academic "
-            "cycle.".format(num=lp.number, name=rec.period.display_name),
+            "Can not assign LiveProject #{num} for {name} because they do not belong to the same academic cycle.".format(
+                num=lp.number, name=rec.period.display_name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -2317,9 +2195,7 @@ def deassign_project(id):
 
     if _period_has_open_marking_event(rec.period):
         flash(
-            "Can not de-assign project for {name} because feedback is already open".format(
-                name=rec.period.display_name
-            ),
+            "Can not de-assign project for {name} because feedback is already open".format(name=rec.period.display_name),
             "error",
         )
         return redirect(redirect_url())
@@ -2571,9 +2447,7 @@ def push_feedback(id):
     email_task = celery.tasks["app.tasks.push_feedback.push_period"]
 
     tk_name = f"Push feedback reports"
-    tk_description = (
-        "Send feedback reports by email for {config.name} {period.display_name}"
-    )
+    tk_description = "Send feedback reports by email for {config.name} {period.display_name}"
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
@@ -2583,10 +2457,7 @@ def push_feedback(id):
     # in the outer chain. push_period handles its own terminal state via notify_feedback_push
     # and push_feedback_error. The outer .on_error() catches early failures in init or push_period
     # before self.replace() is called.
-    seq = (
-        init.si(task_id, tk_name)
-        | email_task.si(id, current_user.id, True, None, task_id)
-    ).on_error(error.si(task_id, tk_name, current_user.id))
+    seq = (init.si(task_id, tk_name) | email_task.si(id, current_user.id, True, None, task_id)).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
@@ -2894,11 +2765,7 @@ def inspect_unit_event_templates_ajax(unit_id):
 
     templates = unit.templates.all()
 
-    return jsonify(
-        ajax.convenor.supervision_event_templates_data(
-            templates, unit, url=url, text=text
-        )
-    )
+    return jsonify(ajax.convenor.supervision_event_templates_data(templates, unit, url=url, text=text))
 
 
 @convenor.route("/add_unit_event_template/<int:unit_id>", methods=["GET", "POST"])
@@ -2970,9 +2837,7 @@ def add_unit_event_template(unit_id):
 @roles_accepted("faculty", "admin", "root")
 def edit_unit_event_template(template_id):
     # template_id is a SupervisionEventTemplate
-    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
-        template_id
-    )
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
     unit: SubmissionPeriodUnit = template.unit
     period: SubmissionPeriodRecord = unit.owner
     config: ProjectClassConfig = period.config
@@ -3034,9 +2899,7 @@ def edit_unit_event_template(template_id):
 @roles_accepted("faculty", "admin", "root")
 def delete_unit_event_template(template_id):
     # template_id is a SupervisionEventTemplate
-    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
-        template_id
-    )
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
     unit: SubmissionPeriodUnit = template.unit
     period: SubmissionPeriodRecord = unit.owner
     config: ProjectClassConfig = period.config
@@ -3067,9 +2930,7 @@ def delete_unit_event_template(template_id):
 @roles_accepted("faculty", "admin", "root")
 def inspect_template_events(template_id):
     # template_id is a SupervisionEventTemplate
-    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
-        template_id
-    )
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
     unit: SubmissionPeriodUnit = template.unit
     period: SubmissionPeriodRecord = unit.owner
     config: ProjectClassConfig = period.config
@@ -3104,9 +2965,7 @@ def inspect_template_events_ajax(template_id):
     AJAX endpoint for inspect_template_events view
     """
     # template_id is a SupervisionEventTemplate
-    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
-        template_id
-    )
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
     unit: SubmissionPeriodUnit = template.unit
     period: SubmissionPeriodRecord = unit.owner
     config: ProjectClassConfig = period.config

@@ -83,9 +83,7 @@ class ProjectTagGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     )
 
     # name of tag group
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # active flag
     active = db.Column(db.Boolean(), default=True)
@@ -215,21 +213,12 @@ def _Project_is_offerable(pid):
     # CONSTRAINT 2. The affiliated research group should be active, if this project is attached to any
     # classes that uses research groups
     if project.group is None:
-        if (
-            get_count(
-                project.project_classes.filter(ProjectClass.advertise_research_group)
-            )
-            > 0
-        ):
-            errors["groups"] = (
-                "No affiliation or research group associated with project"
-            )
+        if get_count(project.project_classes.filter(ProjectClass.advertise_research_group)) > 0:
+            errors["groups"] = "No affiliation or research group associated with project"
 
     else:
         if not project.group.active:
-            errors["groups"] = (
-                "The project's assigned affiliation or research group is not active"
-            )
+            errors["groups"] = "The project's assigned affiliation or research group is not active"
 
     # CONSTRAINT 3.
     # -- A. For each attached project class, we should have enough assessors.
@@ -238,21 +227,13 @@ def _Project_is_offerable(pid):
     for pclass in project.project_classes:
         pclass: ProjectClass
         # A
-        if (
-            pclass.uses_marker
-            and pclass.number_assessors is not None
-            and project.number_assessors(pclass) < pclass.number_assessors
-        ):
-            errors[("pclass-assessors", pclass.id)] = (
-                f"Too few assessors assigned for '{pclass.name}'"
-            )
+        if pclass.uses_marker and pclass.number_assessors is not None and project.number_assessors(pclass) < pclass.number_assessors:
+            errors[("pclass-assessors", pclass.id)] = f"Too few assessors assigned for '{pclass.name}'"
 
         # B
         desc = project.get_description(pclass)
         if desc is None:
-            errors[("pclass-descriptions", pclass.id)] = (
-                f"No project description assigned for '{pclass.name}'"
-            )
+            errors[("pclass-descriptions", pclass.id)] = f"No project description assigned for '{pclass.name}'"
 
         # C
         for group in pclass.force_tag_groups:
@@ -263,36 +244,26 @@ def _Project_is_offerable(pid):
             )
             count = get_count(query)
             if count == 0:
-                errors[("pclass-tags", pclass.id)] = (
-                    f"{pclass.name} requires at least one tag to be assigned from the group '{group.name}'"
-                )
+                errors[("pclass-tags", pclass.id)] = f"{pclass.name} requires at least one tag to be assigned from the group '{group.name}'"
 
     # CONSTRAINT 4. All attached project descriptions should validate individually
     for desc in project.descriptions:
         if desc.has_issues:
             if not desc.is_valid:
-                errors[("descriptions", desc.id)] = (
-                    f'Variant "{desc.label}" has validation errors'
-                )
+                errors[("descriptions", desc.id)] = f'Variant "{desc.label}" has validation errors'
             else:
-                warnings[("descriptions", desc.id)] = (
-                    f'Variant "{desc.label}" has validation warnings'
-                )
+                warnings[("descriptions", desc.id)] = f'Variant "{desc.label}" has validation warnings'
 
     # CONSTRAINT 5. For pool-based projects, there should be a nonempty supervisor pool
     if project.use_supervisor_pool:
         for pclass in project.project_classes:
             if project.number_supervisors(pclass) == 0:
-                errors[("supervisors", pclass.id)] = (
-                    f'There are no supervisors in the supervisor pool for "{pclass.name}"'
-                )
+                errors[("supervisors", pclass.id)] = f'There are no supervisors in the supervisor pool for "{pclass.name}"'
 
     # CONSTRAINT 6. The ATAS restricted flag has to be set
     if any([p.enforce_ATAS for p in project.project_classes]):
         if project.ATAS_restricted is None:
-            errors["ATAS"] = (
-                f'The ATAS-restricted option has not been set, but "{pclass.name}" enforces ATAS restrictions'
-            )
+            errors["ATAS"] = f'The ATAS-restricted option has not been set, but "{pclass.name}" enforces ATAS restrictions'
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -427,9 +398,7 @@ class Project(
     # Project and ProjectDescription which we solve using the SQLAlchemy post_update option)
 
     # link to default description, if one exists
-    default_id = db.Column(
-        db.Integer(), db.ForeignKey("descriptions.id", use_alter=True)
-    )
+    default_id = db.Column(db.Integer(), db.ForeignKey("descriptions.id", use_alter=True))
     default = db.relationship(
         "ProjectDescription",
         foreign_keys=[default_id],
@@ -580,9 +549,7 @@ class Project(
         :param faculty:
         :return:
         """
-        return get_count(
-            self.assessors.filter_by(id=faculty_id)
-        ) > 0 and self._is_assessor_for_at_least_one_pclass(faculty_id)
+        return get_count(self.assessors.filter_by(id=faculty_id)) > 0 and self._is_assessor_for_at_least_one_pclass(faculty_id)
 
     def number_assessors(self, pclass):
         """
@@ -626,9 +593,7 @@ class Project(
         :param faculty:
         :return:
         """
-        return get_count(
-            self.supervisors.filter_by(id=faculty_id)
-        ) > 0 and self._is_supervisor_for_at_least_one_pclass(faculty_id)
+        return get_count(self.supervisors.filter_by(id=faculty_id)) > 0 and self._is_supervisor_for_at_least_one_pclass(faculty_id)
 
     def number_supervisors(self, pclass: Optional = None):
         """
@@ -685,9 +650,7 @@ class Project(
         else:
             raise RuntimeError("Could not interpret pclass argument")
 
-        desc = self.descriptions.filter(
-            ProjectDescription.project_classes.any(id=pclass_id)
-        ).first()
+        desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass_id)).first()
         if desc is not None:
             return desc
 
@@ -709,9 +672,7 @@ class Project(
         elif isinstance(config, ProjectClassConfig):
             config_id = config.id
         else:
-            raise RuntimeError(
-                'Unexpected type for "config" in Project.selector_live_counterpart()'
-            )
+            raise RuntimeError('Unexpected type for "config" in Project.selector_live_counterpart()')
 
         return self.live_projects.filter_by(config_id=config_id).first()
 
@@ -725,9 +686,7 @@ class Project(
         elif isinstance(cfg, ProjectClassConfig):
             config = cfg
         else:
-            raise RuntimeError(
-                'Unexpected type for "config" in Project.submitter_live_counterpart()'
-            )
+            raise RuntimeError('Unexpected type for "config" in Project.submitter_live_counterpart()')
 
         if config is None:
             return None
@@ -757,9 +716,7 @@ class Project(
         record = self.last_viewing_times.filter_by(user_id=user.id).first()
 
         if record is None:
-            record = LastViewingTime(
-                user_id=user.id, project_id=self.id, last_viewed=None
-            )
+            record = LastViewingTime(user_id=user.id, project_id=self.id, last_viewed=None)
             db.session.add(record)
 
         record.last_viewed = datetime.now()
@@ -769,16 +726,11 @@ class Project(
     def has_new_comments(self, user):
         # build query to determine most recent comment, ignoring our own
         # (they don't count as new, unread comments)
-        query = db.session.query(DescriptionComment.creation_timestamp).filter(
-            DescriptionComment.owner_id != user.id
-        )
+        query = db.session.query(DescriptionComment.creation_timestamp).filter(DescriptionComment.owner_id != user.id)
 
         # if user not in approvals team, ignore any comments that are only visible to the approvals team
         if not user.has_role("project_approver"):
-            query = query.filter(
-                DescriptionComment.visibility
-                != DescriptionComment.VISIBILITY_APPROVALS_TEAM
-            )
+            query = query.filter(DescriptionComment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM)
 
         query = (
             query.join(
@@ -912,9 +864,7 @@ class ProjectAlternative(db.Model, AlternativesPriorityMixin):
         "Project",
         foreign_keys=[parent_id],
         uselist=False,
-        backref=db.backref(
-            "alternatives", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("alternatives", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # alternative project
@@ -931,11 +881,7 @@ class ProjectAlternative(db.Model, AlternativesPriorityMixin):
         get reciprocal version of this alternative, if one exists
         :return:
         """
-        return (
-            db.session.query(ProjectAlternative)
-            .filter_by(parent_id=self.alternative_id, alternative_id=self.parent_id)
-            .first()
-        )
+        return db.session.query(ProjectAlternative).filter_by(parent_id=self.alternative_id, alternative_id=self.parent_id).first()
 
     @property
     def has_reciprocal(self):
@@ -954,43 +900,31 @@ def _ProjectDescription_is_valid(id):
 
     # CONSTRAINT 1 - At least one supervisory role must be specified
     if get_count(obj.team.filter(Supervisor.active)) == 0:
-        errors["supervisors"] = (
-            'No active supervisory roles assigned. Use the "Settings..." menu to specify them.'
-        )
+        errors["supervisors"] = 'No active supervisory roles assigned. Use the "Settings..." menu to specify them.'
 
     # CONSTRAINT 2 - If parent project enforces capacity limits, a capacity must be specified
     if obj.parent.enforce_capacity:
         if obj.capacity is None or obj.capacity <= 0:
             errors["capacity"] = (
-                "Capacity is zero or unset, but enforcement is enabled for "
-                'parent project. Use the "Settings..." menu to specify a maximum capacity.'
+                'Capacity is zero or unset, but enforcement is enabled for parent project. Use the "Settings..." menu to specify a maximum capacity.'
             )
 
     # CONSTRAINT 3 - All tagged recommended modules should be valid
     for module in obj.modules:
         if not obj.module_available(module.id):
-            errors[("module", module.id)] = (
-                'Tagged recommended module "{name}" is not available for this '
-                "description".format(name=module.name)
-            )
+            errors[("module", module.id)] = 'Tagged recommended module "{name}" is not available for this description'.format(name=module.name)
 
     # CONSTRAINT 4 - Description should be specified
     if obj.description is None or len(obj.description) == 0:
-        errors["description"] = (
-            'No project description. Use the "Edit content..." menu item to specify it.'
-        )
+        errors["description"] = 'No project description. Use the "Edit content..." menu item to specify it.'
 
     # CONSTRAINT 5 - Resource should be specified
     if obj.reading is None or len(obj.reading) == 0:
-        warnings["reading"] = (
-            'No project resources specified. Use the "Edit content..." menu item to add details.'
-        )
+        warnings["reading"] = 'No project resources specified. Use the "Edit content..." menu item to add details.'
 
     # CONSTRAINT 6 - Aims should be specified
     if obj.aims is None or len(obj.aims) == 0:
-        warnings["aims"] = (
-            'No project aims. Use the "Settings..." menu item to specify them.'
-        )
+        warnings["aims"] = 'No project aims. Use the "Settings..." menu item to specify them.'
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -1032,9 +966,7 @@ class ProjectDescription(
         "Project",
         foreign_keys=[parent_id],
         uselist=False,
-        backref=db.backref(
-            "descriptions", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("descriptions", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # which project classes are associated with this description?
@@ -1224,10 +1156,7 @@ class ProjectDescription(
 
         # if user not in approvals team, ignore any comments that are only visible to the approvals team
         if not user.has_role("project_approver"):
-            query = query.filter(
-                DescriptionComment.visibility
-                != DescriptionComment.VISIBILITY_APPROVALS_TEAM
-            )
+            query = query.filter(DescriptionComment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM)
 
         query = query.order_by(DescriptionComment.creation_timestamp.desc())
 
@@ -1300,11 +1229,7 @@ class ProjectDescription(
         modified = False
 
         # ensure that project class list does not contain any class that is not attached to the parent project
-        removed = [
-            pcl
-            for pcl in self.project_classes
-            if pcl not in self.parent.project_classes
-        ]
+        removed = [pcl for pcl in self.project_classes if pcl not in self.parent.project_classes]
 
         for pcl in removed:
             current_app.logger.info(
@@ -1342,12 +1267,8 @@ def _ProjectDescription_update_handler(mapper, connection, target):
 
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
-                cache.delete_memoized(
-                    _Project_num_assessors, target.parent_id, pclass.id
-                )
-                cache.delete_memoized(
-                    _Project_num_supervisors, target.parent_id, pclass.id
-                )
+                cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+                cache.delete_memoized(_Project_num_supervisors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, "before_insert")
@@ -1360,12 +1281,8 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
 
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
-                cache.delete_memoized(
-                    _Project_num_assessors, target.parent_id, pclass.id
-                )
-                cache.delete_memoized(
-                    _Project_num_supervisors, target.parent_id, pclass.id
-                )
+                cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+                cache.delete_memoized(_Project_num_supervisors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, "before_delete")
@@ -1378,12 +1295,8 @@ def _ProjectDescription_delete_handler(mapper, connection, target):
 
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
-                cache.delete_memoized(
-                    _Project_num_assessors, target.parent_id, pclass.id
-                )
-                cache.delete_memoized(
-                    _Project_num_supervisors, target.parent_id, pclass.id
-                )
+                cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+                cache.delete_memoized(_Project_num_supervisors, target.parent_id, pclass.id)
 
 
 class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
@@ -1401,18 +1314,14 @@ class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
 
     # comment owner
     owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    owner = db.relationship(
-        "User", uselist=False, backref=db.backref("comments", lazy="dynamic")
-    )
+    owner = db.relationship("User", uselist=False, backref=db.backref("comments", lazy="dynamic"))
 
     # project description
     parent_id = db.Column(db.Integer(), db.ForeignKey("descriptions.id"))
     parent = db.relationship(
         "ProjectDescription",
         uselist=False,
-        backref=db.backref(
-            "comments", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("comments", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # comment
@@ -1421,9 +1330,7 @@ class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
     # VISIBILITY
 
     # indicate the visbility status of this comment
-    visibility = db.Column(
-        db.Integer(), default=ApprovalCommentVisibilityStatesMixin.VISIBILITY_EVERYONE
-    )
+    visibility = db.Column(db.Integer(), default=ApprovalCommentVisibilityStatesMixin.VISIBILITY_EVERYONE)
 
     # deleted flag
     deleted = db.Column(db.Boolean(), default=False)
@@ -1437,10 +1344,7 @@ class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
     last_edit_timestamp = db.Column(db.DateTime())
 
     def is_visible(self, user):
-        if (
-            self.visibility == DescriptionComment.VISIBILITY_EVERYONE
-            or self.visibility == DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS
-        ):
+        if self.visibility == DescriptionComment.VISIBILITY_EVERYONE or self.visibility == DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS:
             return True
 
         if self.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM:
@@ -1485,9 +1389,7 @@ class LastViewingTime(db.Model):
         "Project",
         foreign_keys=[project_id],
         uselist=False,
-        backref=db.backref(
-            "last_viewing_times", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("last_viewing_times", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # last viewing time

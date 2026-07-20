@@ -69,15 +69,11 @@ STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
 
 def _get_student_task_container(type, sid):
     if type == STUDENT_TASKS_SELECTOR:
-        obj: SelectingStudent = (
-            db.session.query(SelectingStudent).filter_by(id=sid).first()
-        )
+        obj: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
         return obj
 
     if type == STUDENT_TASKS_SUBMITTER:
-        obj: SubmittingStudent = (
-            db.session.query(SubmittingStudent).filter_by(id=sid).first()
-        )
+        obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
         return obj
 
     raise KeyError
@@ -120,9 +116,7 @@ def student_tasks(type, sid):
 
     blocking_filter = request.args.get("blocking_filter")
 
-    if blocking_filter is None and session.get(
-        "convenor_student_tasks_blocking_filter"
-    ):
+    if blocking_filter is None and session.get("convenor_student_tasks_blocking_filter"):
         blocking_filter = session["convenor_student_tasks_blocking_filter"]
 
     if blocking_filter is not None and blocking_filter not in [
@@ -169,9 +163,7 @@ def student_tasks_ajax(type, sid):
     blocking_filter = request.args.get("blocking_filter", "all")
 
     if status_filter == "default":
-        base_query = obj.tasks.filter(
-            and_(~ConvenorTask.complete, ~ConvenorTask.dropped)
-        )
+        base_query = obj.tasks.filter(and_(~ConvenorTask.complete, ~ConvenorTask.dropped))
     elif status_filter == "completed":
         base_query = obj.tasks.filter(~ConvenorTask.dropped)
     elif status_filter == "overdue":
@@ -203,9 +195,7 @@ def student_tasks_ajax(type, sid):
         "order": ConvenorTask.due_date,
     }
     status = {
-        "order": literal_column(
-            "(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)"
-        )
+        "order": literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")
     }
 
     columns = {
@@ -215,14 +205,10 @@ def student_tasks_ajax(type, sid):
         "status": status,
     }
 
-    return_url = url_for(
-        "convenor.student_tasks", type=type, sid=sid, url=url, text=text
-    )
+    return_url = url_for("convenor.student_tasks", type=type, sid=sid, url=url, text=text)
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(
-            partial(ajax.convenor.student_task_data, type, sid, return_url)
-        )
+        return handler.build_payload(partial(ajax.convenor.student_task_data, type, sid, return_url))
 
 
 @convenor.route("/add_student_task/<int:type>/<int:sid>", methods=["GET", "POST"])
@@ -276,23 +262,13 @@ def add_student_task(type, sid):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/tasks/edit_task.html", form=form, url=url, type=type, obj=obj
-    )
+    return render_template_context("convenor/tasks/edit_task.html", form=form, url=url, type=type, obj=obj)
 
 
 @convenor.route("/edit_student_task/<int:tid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_student_task(tid):
-    task = (
-        db.session.query(
-            with_polymorphic(
-                ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask]
-            )
-        )
-        .filter_by(id=tid)
-        .first()
-    )
+    task = db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])).filter_by(id=tid).first()
     if task is None:
         abort(404)
 
@@ -306,9 +282,7 @@ def edit_student_task(tid):
     form = EditConvenorStudentTask(obj=task)
     url = request.args.get("url", None)
     if url is None:
-        url = url_for(
-            "convenor.student_tasks", type=obj.polymorphic_identity(), sid=obj.id
-        )
+        url = url_for("convenor.student_tasks", type=obj.polymorphic_identity(), sid=obj.id)
 
     if form.validate_on_submit():
         task.description = form.description.data
@@ -338,17 +312,13 @@ def edit_student_task(tid):
 
         return redirect(url)
 
-    return render_template_context(
-        "convenor/tasks/edit_task.html", form=form, url=url, obj=obj, task=task
-    )
+    return render_template_context("convenor/tasks/edit_task.html", form=form, url=url, obj=obj, task=task)
 
 
 @convenor.route("/delete_task/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def delete_task(tid):
-    task_types = with_polymorphic(
-        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
-    )
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -379,19 +349,13 @@ def delete_task(tid):
 
     if task_type == 1 or task_type == 2:
         title = "Delete student task"
-        panel_title = (
-            'Delete task for student <i class="fas fa-user-circle"></i> {name}'.format(
-                name=obj.student.user.name
-            )
-        )
+        panel_title = 'Delete task for student <i class="fas fa-user-circle"></i> {name}'.format(name=obj.student.user.name)
 
         message = (
             "<p>Are you sure that you wish to delete the following task for student "
             '<i class="fas fa-user-circle"></i> {name}?</p>'
             "<p><strong>{desc}</strong></p>"
-            "<p>This action cannot be undone.</p>".format(
-                name=obj.student.user.name, desc=task.description
-            )
+            "<p>This action cannot be undone.</p>".format(name=obj.student.user.name, desc=task.description)
         )
 
     elif task_type == 3:
@@ -427,9 +391,7 @@ def delete_task(tid):
 @convenor.route("/do_delete_task/<int:tid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def do_delete_task(tid):
-    task_types = with_polymorphic(
-        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
-    )
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -476,9 +438,7 @@ def do_delete_task(tid):
 @convenor.route("/mark_task_complete/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def mark_task_complete(tid):
-    task_types = with_polymorphic(
-        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
-    )
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -547,9 +507,7 @@ def mark_task_complete(tid):
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     flash(
                         "Could not generate repeat  task due to a database error. Please contact a system administrator.",
                         "error",
@@ -559,8 +517,7 @@ def mark_task_complete(tid):
         task.complete = False
     else:
         flash(
-            'Unknown action parameter "{param}" passed to mark_task_complete(). Please inform an '
-            "administrator.".format(param=action),
+            'Unknown action parameter "{param}" passed to mark_task_complete(). Please inform an administrator.'.format(param=action),
             "error",
         )
 
@@ -584,9 +541,7 @@ def mark_task_complete(tid):
 @convenor.route("/mark_task_dropped/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def mark_task_dropped(tid):
-    task_types = with_polymorphic(
-        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
-    )
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -614,8 +569,7 @@ def mark_task_dropped(tid):
         task.dropped = False
     else:
         flash(
-            'Unknown action parameter "{param}" passed to mark_task_dropped(). Please inform an '
-            "administrator.".format(param=action),
+            'Unknown action parameter "{param}" passed to mark_task_dropped(). Please inform an administrator.'.format(param=action),
             "error",
         )
 
@@ -655,18 +609,15 @@ def inject_liveproject(pid, pclass_id, type):
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     if type not in [INJECT_CURRENT_CYCLE, INJECT_PREVIOUS_CYCLE]:
-        flash(
-            'Could not handle request to attach LiveProject of unknown type "{type}". '
-            "Please contact a system administrator.".format(type=type)
-        )
+        flash('Could not handle request to attach LiveProject of unknown type "{type}". Please contact a system administrator.'.format(type=type))
         return redirect(redirect_url())
 
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash(
-            'Could not attach LiveProject "{proj}" into project classs "{pcl}" because the '
-            "current configuration record could not be "
-            "found".format(proj=project.name, pcl=config.name),
+            'Could not attach LiveProject "{proj}" into project classs "{pcl}" because the current configuration record could not be found'.format(
+                proj=project.name, pcl=config.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -678,8 +629,9 @@ def inject_liveproject(pid, pclass_id, type):
     # check project is available for this project class
     if config.project_class not in project.project_classes:
         flash(
-            'Could not attach LiveProject "{proj}" to project class "{pcl}" because this project '
-            "is not attached to that class.".format(proj=project.name, pcl=config.name),
+            'Could not attach LiveProject "{proj}" to project class "{pcl}" because this project is not attached to that class.'.format(
+                proj=project.name, pcl=config.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -735,9 +687,8 @@ def inject_liveproject(pid, pclass_id, type):
         return redirect(redirect_url())
 
     tk_name = "Manually attach LiveProject"
-    tk_description = (
-        'Insert project "{proj}" into project class "{pcl}" for academic year '
-        "{yra}-{yrb}".format(proj=project.name, pcl=config.name, yra=yra, yrb=yrb)
+    tk_description = 'Insert project "{proj}" into project class "{pcl}" for academic year {yra}-{yrb}'.format(
+        proj=project.name, pcl=config.name, yra=yra, yrb=yrb
     )
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 

@@ -79,14 +79,10 @@ def workload():
         group_filter = session["reports_workload_group_filter"]
 
     if group_filter is not None:
-        group: ResearchGroup = (
-            db.session.query(ResearchGroup).filter_by(id=group_filter).first()
-        )
+        group: ResearchGroup = db.session.query(ResearchGroup).filter_by(id=group_filter).first()
         if group is None:
             group_filter = "all"
-        elif (
-                not current_user.has_role("root") and group.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and group.tenant_id not in allowed_tenants:
             group_filter = "all"
 
     # write group filter into session if it is not empty
@@ -173,27 +169,17 @@ def workload_ajax():
             tenant_filter = "all"
 
     if group_filter is not None:
-        group: ResearchGroup = (
-            db.session.query(ResearchGroup).filter_by(id=group_filter).first()
-        )
+        group: ResearchGroup = db.session.query(ResearchGroup).filter_by(id=group_filter).first()
         if group is None:
             group_filter = "all"
-        elif (
-                not current_user.has_role("root") and group.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and group.tenant_id not in allowed_tenants:
             group_filter = "all"
 
     if current_user.has_role("root"):
-        fac_query = (
-            db.session.query(FacultyData)
-            .join(User, User.id == FacultyData.id)
-            .filter(User.active)
-        )
+        fac_query = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active)
     else:
         fac_query = (
-            db.session.query(FacultyData)
-            .join(User, User.id == FacultyData.id)
-            .filter(User.active, User.tenants.any(Tenant.id.in_(allowed_tenants)))
+            db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active, User.tenants.any(Tenant.id.in_(allowed_tenants)))
         )
 
     flag, tenant_value = is_integer(tenant_filter)
@@ -219,15 +205,10 @@ def all_projects():
         pclass_filter = session["reports_projects_pclass_filter"]
 
     if pclass_filter is not None:
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
         if pclass is None:
             pclass_filter = "all"
-        elif (
-                not current_user.has_role("root")
-                and pclass.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and pclass.tenant_id not in allowed_tenants:
             pclass_filter = "all"
 
     # write pclass filter into session if it is not empty
@@ -258,18 +239,12 @@ def all_projects():
     if active_filter is not None:
         session["reports_projects_active_filter"] = active_filter
 
-    groups = (
-        SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-    )
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
     if current_user.has_role("root"):
         pclasses = ProjectClass.query.order_by(ProjectClass.name.asc()).all()
     else:
-        pclasses = (
-            ProjectClass.query.filter(ProjectClass.tenant_id.in_(allowed_tenants))
-            .order_by(ProjectClass.name.asc())
-            .all()
-        )
+        pclasses = ProjectClass.query.filter(ProjectClass.tenant_id.in_(allowed_tenants)).order_by(ProjectClass.name.asc()).all()
 
     return render_template_context(
         "reports/all_projects.html",
@@ -297,15 +272,10 @@ def all_projects_ajax():
     active_filter = request.args.get("active_filter")
 
     if pclass_filter is not None:
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
         if pclass is None:
             pclass_filter = "all"
-        elif (
-                not current_user.has_role("root")
-                and pclass.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and pclass.tenant_id not in allowed_tenants:
             pclass_filter = "all"
 
     flag, pclass_value = is_integer(pclass_filter)
@@ -334,32 +304,16 @@ def all_projects_ajax():
         base_query = base_query.filter(Project.active.is_(False))
 
     if valid_filter == "valid":
-        base_query = base_query.filter(
-            Project.descriptions.all_(
-                ProjectDescription.workflow_state
-                == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
-            )
-        )
+        base_query = base_query.filter(Project.descriptions.all_(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED))
     elif valid_filter == "not-valid":
         base_query = base_query.filter(
             and_(
-                Project.descriptions.any(
-                    ProjectDescription.workflow_state
-                    == ProjectDescription.WORKFLOW_APPROVAL_QUEUED
-                ),
-                Project.get_description.all(
-                    ProjectDescription.workflow_state
-                    != ProjectDescription.WORKFLOW_APPROVAL_REJECTED
-                ),
+                Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED),
+                Project.get_description.all(ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED),
             )
         )
     elif valid_filter == "reject":
-        base_query = base_query.filter(
-            Project.descriptions.any(
-                ProjectDescription.workflow_state
-                == ProjectDescription.WORKFLOW_APPROVAL_REJECTED
-            )
-        )
+        base_query = base_query.filter(Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED))
     elif valid_filter == "pending":
         base_query = base_query.filter(
             Project.descriptions.any(
@@ -402,9 +356,7 @@ def liveproject_analytics(proj_id):
     config: ProjectClassConfig = project.config
 
     sel_lifecycle = config.selector_lifecycle
-    require_live = (
-            sel_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    )
+    require_live = sel_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 
     authorized = False
 
@@ -412,11 +364,7 @@ def liveproject_analytics(proj_id):
     if current_user.has_role("root"):
         authorized = True
 
-    if (
-            current_user.has_role("admin")
-            or current_user.has_role("reports")
-            or project.owner_id == current_user.id
-    ):
+    if current_user.has_role("admin") or current_user.has_role("reports") or project.owner_id == current_user.id:
         if config.project_class.tenant_id in allowed_tenants:
             authorized = True
 
@@ -426,9 +374,7 @@ def liveproject_analytics(proj_id):
 
     if not authorized:
         flash(
-            'You are not authorized to view the analytics page for the project "{proj}"'.format(
-                proj=project.name
-            ),
+            'You are not authorized to view the analytics page for the project "{proj}"'.format(proj=project.name),
             "info",
         )
         return redirect(redirect_url())
@@ -482,14 +428,10 @@ def liveproject_analytics(proj_id):
 
     if len(rank_values) > 0:
         total = rank_values[0][1]
-        rank_div, rank_script = _build_rank_plot(
-            rank_dates, ranks, total, labels[0], colour
-        )
+        rank_div, rank_script = _build_rank_plot(rank_dates, ranks, total, labels[0], colour)
 
     if len(scores) > 0:
-        score_div, score_script = _build_score_plot(
-            score_dates, scores, labels[1], colour
-        )
+        score_div, score_script = _build_score_plot(score_dates, scores, labels[1], colour)
 
     return render_template_context(
         "reports/liveproject_analytics/graph.html",
@@ -507,9 +449,7 @@ def liveproject_analytics(proj_id):
 
 
 def _build_score_plot(pop_score_dates, pop_scores, title, colour):
-    plot = figure(
-        title=title, x_axis_label="Date", x_axis_type="datetime", width=800, height=300
-    )
+    plot = figure(title=title, x_axis_label="Date", x_axis_type="datetime", width=800, height=300)
     plot.sizing_mode = "scale_width"
     plot.line(
         pop_score_dates,
@@ -531,9 +471,7 @@ def _build_score_plot(pop_score_dates, pop_scores, title, colour):
 def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
     y_range = Range1d(total, -5)
 
-    plot = figure(
-        title=title, x_axis_label="Date", x_axis_type="datetime", width=800, height=300
-    )
+    plot = figure(title=title, x_axis_label="Date", x_axis_type="datetime", width=800, height=300)
     plot.sizing_mode = "scale_width"
     plot.line(
         pop_rank_dates,
@@ -589,13 +527,7 @@ def year_groups():
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
             .all()
         )
-        cohort_data = (
-            db.session.query(StudentData.cohort)
-            .join(User, User.id == StudentData.id)
-            .filter(User.active.is_(True))
-            .distinct()
-            .all()
-        )
+        cohort_data = db.session.query(StudentData.cohort).join(User, User.id == StudentData.id).filter(User.active.is_(True)).distinct().all()
     else:
         programmes = (
             db.session.query(DegreeProgramme)
@@ -637,11 +569,7 @@ def year_groups():
     if cohort_filter is None and session.get("reports_year_group_cohort_filter"):
         cohort_filter = session["reports_year_group_cohort_filter"]
 
-    if (
-            isinstance(cohort_filter, str)
-            and cohort_filter != "all"
-            and int(cohort_filter) not in cohorts
-    ):
+    if isinstance(cohort_filter, str) and cohort_filter != "all" and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -650,21 +578,13 @@ def year_groups():
     if prog_filter is None and session.get("reports_year_group_prog_filter"):
         prog_filter = session["reports_year_group_prog_filter"]
 
-    if (
-            isinstance(prog_filter, str)
-            and prog_filter != "all"
-            and int(prog_filter) not in prog_ids
-    ):
+    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in prog_ids:
         prog_filter = "all"
 
     if type_filter is None and session.get("reports_year_group_type_filter"):
         type_filter = session["reports_year_group_type_filter"]
 
-    if (
-            isinstance(type_filter, str)
-            and type_filter != "all"
-            and int(type_filter) not in type_ids
-    ):
+    if isinstance(type_filter, str) and type_filter != "all" and int(type_filter) not in type_ids:
         type_filter = "all"
 
     if type_filter is not None:
@@ -816,27 +736,16 @@ def sabbaticals():
         pclass_filter = session["reports_sabbatical_pclass_filter"]
 
     if pclass_filter is not None:
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
         if pclass is None:
             pclass_filter = "all"
-        elif (
-                not current_user.has_role("root")
-                and pclass.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and pclass.tenant_id not in allowed_tenants:
             pclass_filter = "all"
 
     if current_user.has_role("root"):
-        pclasses: List[ProjectClass] = (
-            db.session.query(ProjectClass).filter(ProjectClass.active).all()
-        )
+        pclasses: List[ProjectClass] = db.session.query(ProjectClass).filter(ProjectClass.active).all()
     else:
-        pclasses: List[ProjectClass] = (
-            db.session.query(ProjectClass)
-            .filter(ProjectClass.active, ProjectClass.tenant_id.in_(allowed_tenants))
-            .all()
-        )
+        pclasses: List[ProjectClass] = db.session.query(ProjectClass).filter(ProjectClass.active, ProjectClass.tenant_id.in_(allowed_tenants)).all()
 
     pclass_ids: Set[int] = set(p.id for p in pclasses)
 
@@ -852,9 +761,7 @@ def sabbaticals():
     if pclass_filter is not None:
         session["reports_sabbatical_pclass_filter"] = pclass_filter
 
-    return render_template_context(
-        "reports/sabbaticals.html", pclasses=pclasses, pclass_filter=pclass_filter
-    )
+    return render_template_context("reports/sabbaticals.html", pclasses=pclasses, pclass_filter=pclass_filter)
 
 
 @reports.route("/sabbaticals_ajax", methods=["POST"])
@@ -865,15 +772,10 @@ def sabbaticals_ajax():
     pclass_filter = request.args.get("pclass_filter")
 
     if pclass_filter is not None:
-        pclass: ProjectClass = (
-            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
-        )
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
         if pclass is None:
             pclass_filter = "all"
-        elif (
-                not current_user.has_role("root")
-                and pclass.tenant_id not in allowed_tenants
-        ):
+        elif not current_user.has_role("root") and pclass.tenant_id not in allowed_tenants:
             pclass_filter = "all"
 
     if current_user.has_role("root"):
@@ -884,23 +786,19 @@ def sabbaticals_ajax():
                 or_(
                     and_(
                         ProjectClass.uses_supervisor,
-                        EnrollmentRecord.supervisor_state
-                        != EnrollmentRecord.SUPERVISOR_ENROLLED,
+                        EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
                     ),
                     and_(
                         ProjectClass.uses_marker,
-                        EnrollmentRecord.marker_state
-                        != EnrollmentRecord.MARKER_ENROLLED,
+                        EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED,
                     ),
                     and_(
                         ProjectClass.uses_moderator,
-                        EnrollmentRecord.moderator_state
-                        != EnrollmentRecord.MODERATOR_ENROLLED,
+                        EnrollmentRecord.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED,
                     ),
                     and_(
                         ProjectClass.uses_presentations,
-                        EnrollmentRecord.presentations_state
-                        != EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                        EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED,
                     ),
                 )
             )
@@ -918,23 +816,19 @@ def sabbaticals_ajax():
                     or_(
                         and_(
                             ProjectClass.uses_supervisor,
-                            EnrollmentRecord.supervisor_state
-                            != EnrollmentRecord.SUPERVISOR_ENROLLED,
+                            EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
                         ),
                         and_(
                             ProjectClass.uses_marker,
-                            EnrollmentRecord.marker_state
-                            != EnrollmentRecord.MARKER_ENROLLED,
+                            EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED,
                         ),
                         and_(
                             ProjectClass.uses_moderator,
-                            EnrollmentRecord.moderator_state
-                            != EnrollmentRecord.MODERATOR_ENROLLED,
+                            EnrollmentRecord.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED,
                         ),
                         and_(
                             ProjectClass.uses_presentations,
-                            EnrollmentRecord.presentations_state
-                            != EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                            EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED,
                         ),
                     ),
                 )

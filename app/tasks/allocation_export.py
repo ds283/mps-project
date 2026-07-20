@@ -179,14 +179,10 @@ def register_allocation_export_tasks(celery):
             if user is None:
                 raise Exception(f"User #{user_id} not found")
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError loading user in export_allocation_xlsx", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError loading user in export_allocation_xlsx", exc_info=exc)
             raise self.retry()
 
-        progress_update(
-            task_id, TaskRecord.RUNNING, 10, "Loading project class configs...", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Loading project class configs...", autocommit=True)
 
         try:
             configs: List[ProjectClassConfig] = (
@@ -197,14 +193,10 @@ def register_allocation_export_tasks(celery):
                 .all()
             )
         except SQLAlchemyError as exc:
-            current_app.logger.exception(
-                "SQLAlchemyError loading configs in export_allocation_xlsx", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError loading configs in export_allocation_xlsx", exc_info=exc)
             raise self.retry()
 
-        progress_update(
-            task_id, TaskRecord.RUNNING, 30, "Building role data...", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 30, "Building role data...", autocommit=True)
 
         now = datetime.now()
         expiry = now + timedelta(weeks=4)
@@ -218,9 +210,7 @@ def register_allocation_export_tasks(celery):
                 with pd.ExcelWriter(mgr.path, engine="openpyxl") as writer:
                     for config in configs:
                         rows = _build_role_rows(config)
-                        sheet_name = _normalize_excel_sheet_name(
-                            config.project_class.abbreviation
-                        )
+                        sheet_name = _normalize_excel_sheet_name(config.project_class.abbreviation)
                         df = pd.DataFrame(rows, columns=_ROLE_COLUMNS)
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
 
@@ -250,10 +240,7 @@ def register_allocation_export_tasks(celery):
                         storage=object_store,
                         audit_data="allocation_export.export_allocation_xlsx",
                         length=size,
-                        mimetype=(
-                            "application/vnd.openxmlformats-officedocument"
-                            ".spreadsheetml.sheet"
-                        ),
+                        mimetype=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
                     ):
                         pass
 
@@ -276,12 +263,8 @@ def register_allocation_export_tasks(celery):
 
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in export_allocation_xlsx", exc_info=exc
-            )
+            current_app.logger.exception("SQLAlchemyError in export_allocation_xlsx", exc_info=exc)
             raise self.retry()
 
-        progress_update(
-            task_id, TaskRecord.RUNNING, 100, "Export complete", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 100, "Export complete", autocommit=True)
         self.update_state(state="SUCCESS", meta={"msg": "Export complete"})

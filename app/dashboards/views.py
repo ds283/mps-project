@@ -282,11 +282,7 @@ def _get_accessible_pclasses(tenant_id: Optional[int] = None) -> List[ProjectCla
       - It has at least one SubmissionRecord with a non-null report (i.e. there
         is actual data to display in the dashboard).
     """
-    if (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("data_dashboard_AI")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_AI"):
         q = db.session.query(ProjectClass).filter(
             ProjectClass.publish.is_(True),
             _pclass_has_reports_subq(),
@@ -299,15 +295,9 @@ def _get_accessible_pclasses(tenant_id: Optional[int] = None) -> List[ProjectCla
     if current_user.has_role("faculty") and current_user.faculty_data is not None:
         candidate_ids = [p.id for p in current_user.faculty_data.convenor_list]
         if tenant_id is not None:
-            candidate_ids = [
-                p.id
-                for p in current_user.faculty_data.convenor_list
-                if p.tenant_id == tenant_id
-            ]
+            candidate_ids = [p.id for p in current_user.faculty_data.convenor_list if p.tenant_id == tenant_id]
         qualifying_ids = set(_qualifying_pclass_ids_for(candidate_ids))
-        pcls = [
-            p for p in current_user.faculty_data.convenor_list if p.id in qualifying_ids
-        ]
+        pcls = [p for p in current_user.faculty_data.convenor_list if p.id in qualifying_ids]
         return sorted(pcls, key=lambda p: p.name)
 
     return []
@@ -344,11 +334,7 @@ def _can_access_marking_dashboard() -> bool:
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_marking")
-        or (
-            current_user.has_role("faculty")
-            and current_user.faculty_data is not None
-            and current_user.faculty_data.is_convenor
-        )
+        or (current_user.has_role("faculty") and current_user.faculty_data is not None and current_user.faculty_data.is_convenor)
     )
 
 
@@ -374,11 +360,7 @@ def _get_accessible_pclasses_for_marking(
     if tenant_id is not None:
         q = q.filter(ProjectClass.tenant_id == tenant_id)
 
-    if (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("data_dashboard_marking")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_marking"):
         return q.order_by(ProjectClass.name).all()
 
     if current_user.has_role("faculty") and current_user.faculty_data is not None:
@@ -426,11 +408,7 @@ def _get_accessible_marking_events(
     if year is not None:
         q = q.filter(ProjectClassConfig.year == year)
 
-    if (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("data_dashboard_marking")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_marking"):
         pass
     elif current_user.has_role("faculty") and current_user.faculty_data is not None:
         convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
@@ -440,11 +418,7 @@ def _get_accessible_marking_events(
     else:
         return []
 
-    year_col = (
-        ProjectClassConfig.year.desc()
-        if sort_order == "desc"
-        else ProjectClassConfig.year.asc()
-    )
+    year_col = ProjectClassConfig.year.desc() if sort_order == "desc" else ProjectClassConfig.year.asc()
     return q.order_by(
         ProjectClass.name,
         year_col,
@@ -472,11 +446,7 @@ def _get_accessible_years_for_marking(
     if pclass_id is not None:
         q = q.filter(ProjectClass.id == pclass_id)
 
-    if (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("data_dashboard_marking")
-    ):
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_marking"):
         pass
     elif current_user.has_role("faculty") and current_user.faculty_data is not None:
         convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
@@ -508,21 +478,13 @@ def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
     srs = workflow.submitter_reports.all()
     # Exclude only SRs that are DROPPED in this workflow — DROPPED is a terminal
     # per-workflow state that requires no further action.
-    active_srs = [
-        sr for sr in srs if sr.workflow_state != SubmitterReportWorkflowStates.DROPPED
-    ]
+    active_srs = [sr for sr in srs if sr.workflow_state != SubmitterReportWorkflowStates.DROPPED]
     n_dropped = len(srs) - len(active_srs)
     n_sr = len(active_srs)
     sr_ids = [sr.id for sr in active_srs]
 
     # Single query for all MarkingReports in this workflow (DROPPED SRs excluded)
-    mrs = (
-        db.session.query(MarkingReport)
-        .filter(MarkingReport.submitter_report_id.in_(sr_ids))
-        .all()
-        if sr_ids
-        else []
-    )
+    mrs = db.session.query(MarkingReport).filter(MarkingReport.submitter_report_id.in_(sr_ids)).all() if sr_ids else []
     n_mr = len(mrs)
     n_mr_dist = sum(1 for mr in mrs if mr.distributed)
     n_mr_submitted = sum(1 for mr in mrs if mr.report_submitted)
@@ -548,12 +510,8 @@ def _compute_workflow_health(workflow: MarkingWorkflow) -> Dict:
         return round(100.0 * num / denom, 1)
 
     n_not_ready = state_counts.get(SubmitterReportWorkflowStates.NOT_READY, 0)
-    n_intervention = state_counts.get(
-        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0
-    )
-    n_needs_moderator = state_counts.get(
-        SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0
-    )
+    n_intervention = state_counts.get(SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, 0)
+    n_needs_moderator = state_counts.get(SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, 0)
 
     grade_sd: Optional[float] = None
     grade_cv: Optional[float] = None
@@ -721,12 +679,7 @@ def _aggregate_records(records: List[SubmissionRecord], inflight_ids: set = None
 
         if not record.language_analysis_complete:
             n_missing += 1
-            if (
-                record.language_analysis_started
-                and not record.llm_analysis_failed
-                and not record.llm_feedback_failed
-                and record.id not in _inflight
-            ):
+            if record.language_analysis_started and not record.llm_analysis_failed and not record.llm_feedback_failed and record.id not in _inflight:
                 n_stuck += 1
             continue
 
@@ -968,12 +921,8 @@ def overview():
     avd_summary = _avd_dashboard_summary_for_user() if _can_access_avd_dashboard() else None
     if _can_access_similarity_dashboard():
         _overview_tenants = _get_accessible_tenants()
-        _overview_pclass_ids = [
-            p.id for t in _overview_tenants for p in _get_accessible_pclasses(t.id)
-        ]
-        similarity_summary = _similarity_dashboard_summary(
-            pclass_ids=_overview_pclass_ids if _overview_pclass_ids else None
-        )
+        _overview_pclass_ids = [p.id for t in _overview_tenants for p in _get_accessible_pclasses(t.id)]
+        similarity_summary = _similarity_dashboard_summary(pclass_ids=_overview_pclass_ids if _overview_pclass_ids else None)
     else:
         similarity_summary = None
 
@@ -996,11 +945,7 @@ def ai_dashboard():
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_AI")
-        or (
-            current_user.has_role("faculty")
-            and current_user.faculty_data is not None
-            and current_user.faculty_data.is_convenor
-        )
+        or (current_user.has_role("faculty") and current_user.faculty_data is not None and current_user.faculty_data.is_convenor)
     ):
         flash("You do not have permission to access the AI data dashboard.", "error")
         return redirect(url_for("home.homepage"))
@@ -1018,9 +963,7 @@ def ai_dashboard():
         selected_tenant_id = accessible_tenants[0].id
     else:
         try:
-            selected_tenant_id = int(
-                request.args.get("tenant_id", default_tenant_id)
-            )
+            selected_tenant_id = int(request.args.get("tenant_id", default_tenant_id))
         except (ValueError, TypeError):
             selected_tenant_id = default_tenant_id
 
@@ -1029,9 +972,7 @@ def ai_dashboard():
     if selected_tenant_id not in accessible_tenant_ids:
         selected_tenant_id = default_tenant_id
 
-    selected_tenant = next(
-        (t for t in accessible_tenants if t.id == selected_tenant_id), None
-    )
+    selected_tenant = next((t for t in accessible_tenants if t.id == selected_tenant_id), None)
 
     # ---- accessible project classes for selected tenant --------------------
     accessible_pclasses = _get_accessible_pclasses(selected_tenant_id)
@@ -1055,9 +996,7 @@ def ai_dashboard():
     raw_pclass_ids = request.args.getlist("pclass_id")
     if raw_pclass_ids:
         try:
-            selected_pclass_ids = [
-                int(x) for x in raw_pclass_ids if int(x) in all_pclass_ids
-            ]
+            selected_pclass_ids = [int(x) for x in raw_pclass_ids if int(x) in all_pclass_ids]
         except (ValueError, TypeError):
             selected_pclass_ids = all_pclass_ids
     else:
@@ -1115,15 +1054,9 @@ def ai_dashboard():
         .limit(20)
         .all()
     )
-    _total_seconds = sum(
-        (j.finished_at - j.started_at).total_seconds() for j in recent_completed
-    )
-    _total_records = sum(
-        (j.completed_count or 0) + (j.failed_count or 0) for j in recent_completed
-    )
-    avg_seconds_per_record: Optional[float] = (
-        _total_seconds / _total_records if _total_records > 0 else None
-    )
+    _total_seconds = sum((j.finished_at - j.started_at).total_seconds() for j in recent_completed)
+    _total_records = sum((j.completed_count or 0) + (j.failed_count or 0) for j in recent_completed)
+    avg_seconds_per_record: Optional[float] = _total_seconds / _total_records if _total_records > 0 else None
 
     # ---- build per-cycle sections ------------------------------------------
     # Pre-build a lookup: pclass_id → ProjectClass
@@ -1138,22 +1071,14 @@ def ai_dashboard():
 
         for pclass in selected_pclasses:
             # Find the ProjectClassConfig for this pclass and year
-            config: Optional[ProjectClassConfig] = (
-                db.session.query(ProjectClassConfig)
-                .filter_by(pclass_id=pclass.id, year=year)
-                .first()
-            )
+            config: Optional[ProjectClassConfig] = db.session.query(ProjectClassConfig).filter_by(pclass_id=pclass.id, year=year).first()
             if config is None:
                 continue
 
-            periods: List[SubmissionPeriodRecord] = config.periods.order_by(
-                SubmissionPeriodRecord.submission_period
-            ).all()
+            periods: List[SubmissionPeriodRecord] = config.periods.order_by(SubmissionPeriodRecord.submission_period).all()
 
             for period in periods:
-                records: List[SubmissionRecord] = period.submissions.filter(
-                    SubmissionRecord.report_id.isnot(None)
-                ).all()
+                records: List[SubmissionRecord] = period.submissions.filter(SubmissionRecord.report_id.isnot(None)).all()
                 if not records:
                     continue
 
@@ -1179,9 +1104,7 @@ def ai_dashboard():
         # Cycle-level aggregate
         cycle_agg = _aggregate_records(cycle_records, inflight_ids)
         cycle_histograms = _build_histograms_for_agg(cycle_agg)
-        can_launch_cycle = current_user.has_role("root") or current_user.has_role(
-            "admin"
-        )
+        can_launch_cycle = current_user.has_role("root") or current_user.has_role("admin")
 
         sections.append(
             {
@@ -1209,8 +1132,7 @@ def ai_dashboard():
         avg_seconds_per_record=avg_seconds_per_record,
         metric_configs=METRIC_CONFIGS,
         histogram_threshold=HISTOGRAM_THRESHOLD,
-        can_launch_global=current_user.has_role("root")
-        or current_user.has_role("admin"),
+        can_launch_global=current_user.has_role("root") or current_user.has_role("admin"),
     )
 
 
@@ -1234,20 +1156,14 @@ def launch_period(period_id: int):
         return redirect(redirect_url())
 
     try:
-        job = launch_period_pipeline(
-            period_id=period_id, clear_existing=False, user=current_user
-        )
+        job = launch_period_pipeline(period_id=period_id, clear_existing=False, user=current_user)
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
-        current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc_info=exc
-        )
+        current_app.logger.exception("LLM orchestration pipeline submission error", exc_info=exc)
         return redirect(redirect_url())
 
     if job is None:
-        flash(
-            "No reports are currently missing analysis results for this period.", "info"
-        )
+        flash("No reports are currently missing analysis results for this period.", "info")
     else:
         flash(f"Queued {job.total_count} report(s) for analysis.", "success")
     return redirect(redirect_url())
@@ -1268,9 +1184,7 @@ def clear_period(period_id: int):
         return redirect(redirect_url())
 
     try:
-        job = launch_period_pipeline(
-            period_id=period_id, clear_existing=True, user=current_user
-        )
+        job = launch_period_pipeline(period_id=period_id, clear_existing=True, user=current_user)
     except Exception as exc:
         flash("An error occurred while clearing and relaunching analysis.", "error")
         return redirect(redirect_url())
@@ -1299,14 +1213,10 @@ def launch_pclass(config_id: int):
         return redirect(redirect_url())
 
     try:
-        job = launch_pclass_pipeline(
-            pclass_config_id=config_id, clear_existing=False, user=current_user
-        )
+        job = launch_pclass_pipeline(pclass_config_id=config_id, clear_existing=False, user=current_user)
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
-        current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc_info=exc
-        )
+        current_app.logger.exception("LLM orchestration pipeline submission error", exc_info=exc)
         return redirect(redirect_url())
 
     if job is None:
@@ -1330,9 +1240,7 @@ def clear_pclass(config_id: int):
         return redirect(redirect_url())
 
     try:
-        job = launch_pclass_pipeline(
-            pclass_config_id=config_id, clear_existing=True, user=current_user
-        )
+        job = launch_pclass_pipeline(pclass_config_id=config_id, clear_existing=True, user=current_user)
     except Exception as exc:
         flash("An error occurred while clearing and relaunching analysis.", "error")
         return redirect(redirect_url())
@@ -1355,15 +1263,11 @@ def launch_cycle(year: int):
         job = launch_cycle_pipeline(year=year, clear_existing=False, user=current_user)
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
-        current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc_info=exc
-        )
+        current_app.logger.exception("LLM orchestration pipeline submission error", exc_info=exc)
         return redirect(redirect_url())
 
     if job is None:
-        flash(
-            "No reports are currently missing analysis results for this cycle.", "info"
-        )
+        flash("No reports are currently missing analysis results for this cycle.", "info")
     else:
         flash(f"Queued {job.total_count} report(s) for analysis.", "success")
     return redirect(redirect_url())
@@ -1397,9 +1301,7 @@ def launch_global():
         job = launch_global_pipeline(clear_existing=False, user=current_user)
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
-        current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc_info=exc
-        )
+        current_app.logger.exception("LLM orchestration pipeline submission error", exc_info=exc)
         return redirect(redirect_url())
 
     if job is None:
@@ -1523,9 +1425,7 @@ def clear_errors_period(period_id: int):
 
     count = _clear_error_flags_for_records(record_ids)
     try:
-        log_db_commit(
-            f"Cleared LLM error flags on {count} record(s) for period #{period_id} (no resubmit)"
-        )
+        log_db_commit(f"Cleared LLM error flags on {count} record(s) for period #{period_id} (no resubmit)")
     except SQLAlchemyError:
         db.session.rollback()
         flash("An error occurred while clearing error flags.", "error")
@@ -1744,9 +1644,7 @@ def active_jobs_status():
             db.session.query(LLMOrchestrationJob)
             .filter(
                 LLMOrchestrationJob.uuid.in_(watched_uuids),
-                LLMOrchestrationJob.status.in_(
-                    [LLMOrchestrationJob.STATUS_COMPLETE, LLMOrchestrationJob.STATUS_FAILED]
-                ),
+                LLMOrchestrationJob.status.in_([LLMOrchestrationJob.STATUS_COMPLETE, LLMOrchestrationJob.STATUS_FAILED]),
             )
             .count()
         )
@@ -1760,9 +1658,7 @@ def active_jobs_status():
             .all()
         )
         for job in active_watched:
-            elapsed = (
-                (now - job.started_at).total_seconds() if job.started_at is not None else None
-            )
+            elapsed = (now - job.started_at).total_seconds() if job.started_at is not None else None
             jobs_data[job.uuid] = {
                 "completed": job.completed_count or 0,
                 "failed": job.failed_count or 0,
@@ -1772,15 +1668,9 @@ def active_jobs_status():
     else:
         finished_count = 0
 
-    active_count = (
-        db.session.query(LLMOrchestrationJob)
-        .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
-        .count()
-    )
+    active_count = db.session.query(LLMOrchestrationJob).filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)).count()
 
-    return jsonify(
-        {"just_finished": finished_count > 0, "active_count": active_count, "jobs": jobs_data}
-    )
+    return jsonify({"just_finished": finished_count > 0, "active_count": active_count, "jobs": jobs_data})
 
 
 # ---------------------------------------------------------------------------
@@ -1819,9 +1709,7 @@ def resume_pipeline():
     try:
         _dispatch_global_coordinator()
     except Exception as exc:
-        current_app.logger.warning(
-            f"resume_pipeline: could not dispatch coordinator after resume: {exc}"
-        )
+        current_app.logger.warning(f"resume_pipeline: could not dispatch coordinator after resume: {exc}")
     flash("Analysis pipeline resumed.", "success")
     return redirect(redirect_url())
 
@@ -1830,14 +1718,8 @@ def resume_pipeline():
 @roles_accepted("faculty", "admin", "root")
 def pause_job(uuid: str):
     """Pause a single LLMOrchestrationJob (owner or root/admin only)."""
-    job: LLMOrchestrationJob = (
-        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or (job.owner_id is not None and job.owner_id == current_user.id)
-    ):
+    job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    if not (current_user.has_role("root") or current_user.has_role("admin") or (job.owner_id is not None and job.owner_id == current_user.id)):
         flash("You do not have permission to pause this job.", "error")
         return redirect(redirect_url())
     if not job.is_active:
@@ -1852,8 +1734,7 @@ def pause_job(uuid: str):
         flash("Could not pause the job — please try again.", "error")
         return redirect(redirect_url())
     flash(
-        "Job paused. Records currently in-flight will complete; "
-        "no further records from this job will be dispatched until it is resumed.",
+        "Job paused. Records currently in-flight will complete; no further records from this job will be dispatched until it is resumed.",
         "success",
     )
     return redirect(redirect_url())
@@ -1863,14 +1744,8 @@ def pause_job(uuid: str):
 @roles_accepted("faculty", "admin", "root")
 def resume_job(uuid: str):
     """Resume a paused LLMOrchestrationJob (owner or root/admin only)."""
-    job: LLMOrchestrationJob = (
-        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or (job.owner_id is not None and job.owner_id == current_user.id)
-    ):
+    job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    if not (current_user.has_role("root") or current_user.has_role("admin") or (job.owner_id is not None and job.owner_id == current_user.id)):
         flash("You do not have permission to resume this job.", "error")
         return redirect(redirect_url())
     if not job.is_active:
@@ -1887,9 +1762,7 @@ def resume_job(uuid: str):
     try:
         _dispatch_global_coordinator()
     except Exception as exc:
-        current_app.logger.warning(
-            f"resume_job: could not dispatch coordinator after resume: {exc}"
-        )
+        current_app.logger.warning(f"resume_job: could not dispatch coordinator after resume: {exc}")
     flash("Job resumed.", "success")
     return redirect(redirect_url())
 
@@ -1904,14 +1777,8 @@ def cancel_job(uuid: str):
     their done/error callbacks increment counters but the job is already
     terminal so no further dispatch occurs.
     """
-    job: LLMOrchestrationJob = (
-        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or (job.owner_id is not None and job.owner_id == current_user.id)
-    ):
+    job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    if not (current_user.has_role("root") or current_user.has_role("admin") or (job.owner_id is not None and job.owner_id == current_user.id)):
         flash("You do not have permission to cancel this job.", "error")
         return redirect(redirect_url())
     if not job.is_active:
@@ -1927,8 +1794,7 @@ def cancel_job(uuid: str):
         return redirect(redirect_url())
     _cleanup_redis(job)
     flash(
-        "Job cancelled. Queued records have been discarded; "
-        "any in-flight records will complete harmlessly.",
+        "Job cancelled. Queued records have been discarded; any in-flight records will complete harmlessly.",
         "success",
     )
     return redirect(redirect_url())
@@ -1942,11 +1808,7 @@ def cancel_pipeline():
     Marks every PENDING/RUNNING job as FAILED and deletes their Redis queues.
     In-flight records continue to completion; queued records are discarded.
     """
-    active_jobs = (
-        db.session.query(LLMOrchestrationJob)
-        .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
-        .all()
-    )
+    active_jobs = db.session.query(LLMOrchestrationJob).filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)).all()
     if not active_jobs:
         flash("No active jobs to cancel.", "info")
         return redirect(redirect_url())
@@ -1963,8 +1825,7 @@ def cancel_pipeline():
         _cleanup_redis(job)
     n = len(active_jobs)
     flash(
-        f"Pipeline cancelled: {n} job{'s' if n != 1 else ''} terminated. "
-        "Any in-flight records will complete harmlessly.",
+        f"Pipeline cancelled: {n} job{'s' if n != 1 else ''} terminated. Any in-flight records will complete harmlessly.",
         "success",
     )
     return redirect(redirect_url())
@@ -1988,12 +1849,7 @@ def _record_ids_for_period(period_id: int) -> List[int]:
 
 
 def _record_ids_for_pclass_config(config_id: int) -> List[int]:
-    period_ids = [
-        r[0]
-        for r in db.session.query(SubmissionPeriodRecord.id)
-        .filter(SubmissionPeriodRecord.config_id == config_id)
-        .all()
-    ]
+    period_ids = [r[0] for r in db.session.query(SubmissionPeriodRecord.id).filter(SubmissionPeriodRecord.config_id == config_id).all()]
     if not period_ids:
         return []
     return [
@@ -2032,9 +1888,7 @@ def _record_ids_for_cycle(year: int, pclass_ids: Optional[List[int]] = None) -> 
     ]
 
 
-def _record_ids_global(
-    pclass_ids: Optional[List[int]] = None, years: Optional[List[int]] = None
-) -> List[int]:
+def _record_ids_global(pclass_ids: Optional[List[int]] = None, years: Optional[List[int]] = None) -> List[int]:
     if pclass_ids or years:
         q = (
             db.session.query(SubmissionRecord.id)
@@ -2053,12 +1907,7 @@ def _record_ids_global(
         if years:
             q = q.filter(ProjectClassConfig.year.in_(years))
         return [r[0] for r in q.all()]
-    return [
-        r[0]
-        for r in db.session.query(SubmissionRecord.id)
-        .filter(SubmissionRecord.report_id.isnot(None))
-        .all()
-    ]
+    return [r[0] for r in db.session.query(SubmissionRecord.id).filter(SubmissionRecord.report_id.isnot(None)).all()]
 
 
 def _dispatch_export(
@@ -2079,16 +1928,11 @@ def _dispatch_export(
     if not record_ids:
         return False
     celery = current_app.extensions["celery"]
-    task_name = (
-        "app.tasks.ai_dashboard_export.export_ai_dashboard_xlsx"
-        if fmt == "xlsx"
-        else "app.tasks.ai_dashboard_export.export_ai_dashboard_csv"
-    )
+    task_name = "app.tasks.ai_dashboard_export.export_ai_dashboard_xlsx" if fmt == "xlsx" else "app.tasks.ai_dashboard_export.export_ai_dashboard_csv"
     task = celery.tasks[task_name]
     if fmt == "xlsx":
         task.apply_async(
-            args=[current_user.id, record_ids, filename_stem, description,
-                  tenant_ids or []],
+            args=[current_user.id, record_ids, filename_stem, description, tenant_ids or []],
             queue="default",
         )
     else:
@@ -2112,9 +1956,7 @@ def export_period(period_id: int):
     period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
     pclass = period.config.project_class if period.config else None
 
-    if not (
-        _can_launch_orchestration(pclass) or current_user.has_role("data_dashboard_AI")
-    ):
+    if not (_can_launch_orchestration(pclass) or current_user.has_role("data_dashboard_AI")):
         flash("You do not have permission to export this data.", "error")
         return redirect(redirect_url())
 
@@ -2139,22 +1981,13 @@ def export_pclass(config_id: int):
     fmt = request.args.get("fmt", "xlsx")
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
 
-    if not (
-        _can_launch_orchestration(config.project_class)
-        or current_user.has_role("data_dashboard_AI")
-    ):
+    if not (_can_launch_orchestration(config.project_class) or current_user.has_role("data_dashboard_AI")):
         flash("You do not have permission to export this data.", "error")
         return redirect(redirect_url())
 
-    pclass_abbr = (
-        config.project_class.abbreviation if config.project_class else str(config_id)
-    )
+    pclass_abbr = config.project_class.abbreviation if config.project_class else str(config_id)
     record_ids = _record_ids_for_pclass_config(config_id)
-    tenant_ids = (
-        [config.project_class.tenant_id]
-        if config.project_class and config.project_class.tenant_id
-        else []
-    )
+    tenant_ids = [config.project_class.tenant_id] if config.project_class and config.project_class.tenant_id else []
     stem = f"AI_Dashboard_{pclass_abbr}_{config.year}"
     desc = f"AI dashboard export — {pclass_abbr} {config.year}/{config.year + 1}"
     if _dispatch_export(fmt, record_ids, stem, desc, tenant_ids=tenant_ids):
@@ -2173,11 +2006,7 @@ def export_cycle(year: int):
     """Queue an export of all records for an academic cycle."""
     fmt = request.args.get("fmt", "xlsx")
 
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("data_dashboard_AI")
-    ):
+    if not (current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_AI")):
         flash("You do not have permission to export cycle-level data.", "error")
         return redirect(redirect_url())
 
@@ -2286,9 +2115,7 @@ def marking_dashboard():
     include_closed = request.args.get("include_closed", "0") == "1"
 
     # Year filter — compute the full list of available years (stable regardless of other filters)
-    accessible_years = _get_accessible_years_for_marking(
-        tenant_id=selected_tenant_id, pclass_id=pclass_id
-    )
+    accessible_years = _get_accessible_years_for_marking(tenant_id=selected_tenant_id, pclass_id=pclass_id)
     raw_year = request.args.get("year", "").strip()
     try:
         selected_year = int(raw_year) if raw_year else None
@@ -2339,19 +2166,13 @@ def marking_register(event_id: int):
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_marking")
-        or (
-            current_user.has_role("faculty")
-            and current_user.faculty_data is not None
-            and pclass in current_user.faculty_data.convenor_list
-        )
+        or (current_user.has_role("faculty") and current_user.faculty_data is not None and pclass in current_user.faculty_data.convenor_list)
     ):
         flash("You do not have permission to view this marks register.", "error")
         return redirect(url_for("dashboards.marking_dashboard"))
 
     show_student_names = (
-        current_user.has_role("faculty")
-        and current_user.faculty_data is not None
-        and pclass in current_user.faculty_data.convenor_list
+        current_user.has_role("faculty") and current_user.faculty_data is not None and pclass in current_user.faculty_data.convenor_list
     )
 
     # GET parameters
@@ -2377,11 +2198,7 @@ def marking_register(event_id: int):
         for sr in wf.submitter_reports:
             record_wf_states.setdefault(sr.record_id, []).append(sr.workflow_state)
 
-    dropped_record_ids: set = {
-        rid
-        for rid, states in record_wf_states.items()
-        if all(s == SubmitterReportWorkflowStates.DROPPED for s in states)
-    }
+    dropped_record_ids: set = {rid for rid, states in record_wf_states.items() if all(s == SubmitterReportWorkflowStates.DROPPED for s in states)}
     record_id_set = set(record_wf_states.keys()) - dropped_record_ids
 
     # Build paginated query over SubmissionRecords, sorted by student name
@@ -2414,8 +2231,8 @@ def marking_register(event_id: int):
     workflows = list(event.workflows.order_by(MarkingWorkflow.name))
 
     # Build global lookups (withdrawn students excluded)
-    sr_lookup: Dict = {}   # (wf_id, record_id) -> SubmitterReport
-    mr_lookup: Dict = {}   # sr_id -> [MarkingReport, ...] sorted by id
+    sr_lookup: Dict = {}  # (wf_id, record_id) -> SubmitterReport
+    mr_lookup: Dict = {}  # sr_id -> [MarkingReport, ...] sorted by id
 
     for wf in workflows:
         for sr in wf.submitter_reports:
@@ -2427,9 +2244,7 @@ def marking_register(event_id: int):
     # Max MarkingReports per workflow across active (non-withdrawn) submitter reports
     wf_max_mr: Dict[int, int] = {}
     for wf in workflows:
-        active_sr_ids = [
-            sr.id for sr in wf.submitter_reports if sr.record_id not in dropped_record_ids
-        ]
+        active_sr_ids = [sr.id for sr in wf.submitter_reports if sr.record_id not in dropped_record_ids]
         max_mr = max(
             (len(mr_lookup.get(sid, [])) for sid in active_sr_ids),
             default=0,
@@ -2446,9 +2261,7 @@ def marking_register(event_id: int):
     ]
 
     # ConflationReport lookup
-    cr_lookup: Dict[int, ConflationReport] = {
-        cr.submission_record_id: cr for cr in event.conflation_reports
-    }
+    cr_lookup: Dict[int, ConflationReport] = {cr.submission_record_id: cr for cr in event.conflation_reports}
 
     # Build row data for current page
     rows = []
@@ -2471,9 +2284,7 @@ def marking_register(event_id: int):
                         {
                             "mr": mr,
                             "pct": _mr_progress_pct(mr),
-                            "marker_name": (
-                                mr.role.user.name if mr.role and mr.role.user else "—"
-                            ),
+                            "marker_name": (mr.role.user.name if mr.role and mr.role.user else "—"),
                         }
                     )
                 while len(mr_cells) < wf_max_mr[wf.id]:
@@ -2482,11 +2293,7 @@ def marking_register(event_id: int):
                 mr_cells = [None] * wf_max_mr[wf.id]
 
             # Determine feedback status for this SubmitterReport
-            has_feedback = (
-                any(m["mr"].feedback_submitted for m in mr_cells if m is not None)
-                if (sr and not sr_dropped)
-                else False
-            )
+            has_feedback = any(m["mr"].feedback_submitted for m in mr_cells if m is not None) if (sr and not sr_dropped) else False
 
             wf_cells.append(
                 {
@@ -2545,11 +2352,7 @@ def export_marking_excel(event_id: int):
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_marking")
-        or (
-            current_user.has_role("faculty")
-            and current_user.faculty_data is not None
-            and pclass in current_user.faculty_data.convenor_list
-        )
+        or (current_user.has_role("faculty") and current_user.faculty_data is not None and pclass in current_user.faculty_data.convenor_list)
     ):
         flash("You do not have permission to export this marking event.", "error")
         return redirect(url_for("dashboards.marking_dashboard"))
@@ -3029,11 +2832,7 @@ def _can_access_similarity_dashboard() -> bool:
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_similarity")
-        or (
-            current_user.has_role("faculty")
-            and current_user.faculty_data is not None
-            and current_user.faculty_data.is_convenor
-        )
+        or (current_user.has_role("faculty") and current_user.faculty_data is not None and current_user.faculty_data.is_convenor)
     )
 
 
@@ -3063,11 +2862,7 @@ def _base_concern_query(
     q = db.session.query(SimilarityConcern)
 
     # ---- access control -------------------------------------------------------
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("data_dashboard_similarity")
-    ):
+    if not (current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("data_dashboard_similarity")):
         # Faculty convenors: concern visible if either record is in their pclass
         if current_user.has_role("faculty") and current_user.faculty_data is not None:
             convenor_pclass_ids = [p.id for p in current_user.faculty_data.convenor_list]
@@ -3186,15 +2981,9 @@ def _similarity_dashboard_summary(
     When called with no arguments (from the overview page) returns global totals.
     When called with filter args (from the similarity dashboard) returns scoped counts.
     """
-    n_open = _base_concern_query(
-        tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="open"
-    ).count()
-    n_resolved = _base_concern_query(
-        tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="resolved"
-    ).count()
-    n_pairs = _base_concern_query(
-        tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="all"
-    ).count()
+    n_open = _base_concern_query(tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="open").count()
+    n_resolved = _base_concern_query(tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="resolved").count()
+    n_pairs = _base_concern_query(tenant_id=tenant_id, pclass_ids=pclass_ids, years=years, status_filter="all").count()
     indexed_q = (
         db.session.query(SubmissionRecord)
         .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
@@ -3202,9 +2991,7 @@ def _similarity_dashboard_summary(
         .filter(SubmissionRecord.language_analysis_complete == db.true())
     )
     if tenant_id is not None:
-        indexed_q = indexed_q.join(
-            ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id
-        ).filter(ProjectClass.tenant_id == tenant_id)
+        indexed_q = indexed_q.join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id).filter(ProjectClass.tenant_id == tenant_id)
     if pclass_ids:
         indexed_q = indexed_q.filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
     if years:
@@ -3314,9 +3101,7 @@ def similarity_dashboard():
         selected_tenant_id = accessible_tenants[0].id
     else:
         try:
-            selected_tenant_id = int(
-                request.args.get("tenant_id", default_tenant_id)
-            )
+            selected_tenant_id = int(request.args.get("tenant_id", default_tenant_id))
         except (ValueError, TypeError):
             selected_tenant_id = default_tenant_id
 
@@ -3324,9 +3109,7 @@ def similarity_dashboard():
     if selected_tenant_id not in accessible_tenant_ids:
         selected_tenant_id = default_tenant_id
 
-    selected_tenant = next(
-        (t for t in accessible_tenants if t.id == selected_tenant_id), None
-    )
+    selected_tenant = next((t for t in accessible_tenants if t.id == selected_tenant_id), None)
 
     # ---- accessible project classes ----------------------------------------
     accessible_pclasses = _get_accessible_pclasses(selected_tenant_id)
@@ -3336,9 +3119,7 @@ def similarity_dashboard():
     raw_pclass_ids = request.args.getlist("pclass_id")
     if raw_pclass_ids:
         try:
-            selected_pclass_ids = [
-                int(x) for x in raw_pclass_ids if int(x) in all_pclass_ids
-            ]
+            selected_pclass_ids = [int(x) for x in raw_pclass_ids if int(x) in all_pclass_ids]
         except (ValueError, TypeError):
             selected_pclass_ids = all_pclass_ids
     else:
@@ -3393,15 +3174,9 @@ def similarity_dashboard():
         .limit(20)
         .all()
     )
-    _total_seconds = sum(
-        (j.finished_at - j.started_at).total_seconds() for j in recent_completed
-    )
-    _total_records = sum(
-        (j.completed_count or 0) + (j.failed_count or 0) for j in recent_completed
-    )
-    avg_seconds_per_record: Optional[float] = (
-        _total_seconds / _total_records if _total_records > 0 else None
-    )
+    _total_seconds = sum((j.finished_at - j.started_at).total_seconds() for j in recent_completed)
+    _total_records = sum((j.completed_count or 0) + (j.failed_count or 0) for j in recent_completed)
+    avg_seconds_per_record: Optional[float] = _total_seconds / _total_records if _total_records > 0 else None
 
     # ---- summary stat cards -------------------------------------------------
     summary = _similarity_dashboard_summary(selected_tenant_id, selected_pclass_ids, selected_years)
@@ -3486,8 +3261,7 @@ def similarity_concerns_ajax():
     UserB = aliased(UserModel)
 
     base_query = (
-        base_query
-        .join(RecordAJ, RecordAJ.id == SimilarityConcern.record_a_id)
+        base_query.join(RecordAJ, RecordAJ.id == SimilarityConcern.record_a_id)
         .join(OwnerA, OwnerA.id == RecordAJ.owner_id)
         .join(StudentA, StudentA.id == OwnerA.student_id)
         .join(UserA, UserA.id == StudentA.id)
@@ -3534,11 +3308,7 @@ def similarity_concern_detail(concern_id: int):
         return redirect(url_for("home.homepage"))
 
     # Access-control check: reuse the base query for the current user
-    concern = (
-        _base_concern_query(status_filter="all")
-        .filter(SimilarityConcern.id == concern_id)
-        .first_or_404()
-    )
+    concern = _base_concern_query(status_filter="all").filter(SimilarityConcern.id == concern_id).first_or_404()
 
     record_a = concern.record_a
     record_b = concern.record_b
@@ -3588,25 +3358,17 @@ def resolve_similarity_concern(concern_id: int):
 
     # data_dashboard_similarity role is read-only
     if current_user.has_role("data_dashboard_similarity") and not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("faculty")
+        current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("faculty")
     ):
         flash("Your role has read-only access and cannot resolve concerns.", "error")
         return redirect(back_url)
 
-    concern = (
-        _base_concern_query(status_filter="all")
-        .filter(SimilarityConcern.id == concern_id)
-        .first_or_404()
-    )
+    concern = _base_concern_query(status_filter="all").filter(SimilarityConcern.id == concern_id).first_or_404()
 
     form = ResolveSimilarityConcernForm()
     if not form.validate_on_submit():
         flash("Invalid submission. Please select a resolution.", "error")
-        return redirect(
-            url_for("dashboards.similarity_concern_detail", concern_id=concern_id, url=back_url, text=back_text)
-        )
+        return redirect(url_for("dashboards.similarity_concern_detail", concern_id=concern_id, url=back_url, text=back_text))
 
     concern.reviewed = True
     concern.reviewed_by_id = current_user.id
@@ -3625,9 +3387,7 @@ def resolve_similarity_concern(concern_id: int):
         db.session.rollback()
         current_app.logger.exception("resolve_similarity_concern: SQLAlchemyError", exc_info=exc)
         flash("Could not save the resolution — please try again.", "error")
-        return redirect(
-            url_for("dashboards.similarity_concern_detail", concern_id=concern_id, url=back_url, text=back_text)
-        )
+        return redirect(url_for("dashboards.similarity_concern_detail", concern_id=concern_id, url=back_url, text=back_text))
 
     flash("Concern resolved successfully.", "success")
     return redirect(back_url)
@@ -3686,9 +3446,9 @@ def launch_similarity_rebuild_cycle(year: int):
         return redirect(url_for("dashboards.similarity_dashboard"))
 
     if job is None:
-        flash(f"No reports are currently missing analysis results for the {year}–{year+1} cycle.", "info")
+        flash(f"No reports are currently missing analysis results for the {year}–{year + 1} cycle.", "info")
     else:
-        flash(f"Queued {job.total_count} report(s) for the {year}–{year+1} cycle.", "success")
+        flash(f"Queued {job.total_count} report(s) for the {year}–{year + 1} cycle.", "success")
     return redirect(url_for("dashboards.similarity_dashboard"))
 
 
@@ -3831,9 +3591,7 @@ def resubmit_all_global():
         flash("No records eligible for similarity analysis were found.", "info")
         return redirect(url_for("dashboards.similarity_dashboard"))
 
-    db.session.query(SubmissionRecord).filter(
-        SubmissionRecord.id.in_(record_ids)
-    ).update(
+    db.session.query(SubmissionRecord).filter(SubmissionRecord.id.in_(record_ids)).update(
         {
             SubmissionRecord.similarity_complete: False,
             SubmissionRecord.chunks_present: False,
@@ -3886,14 +3644,8 @@ def resubmit_all_global():
 @roles_accepted("faculty", "admin", "root")
 def cancel_similarity_job(uuid: str):
     """Cancel a single LLMOrchestrationJob from the similarity dashboard."""
-    job: LLMOrchestrationJob = (
-        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
-    if not (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or (job.owner_id is not None and job.owner_id == current_user.id)
-    ):
+    job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    if not (current_user.has_role("root") or current_user.has_role("admin") or (job.owner_id is not None and job.owner_id == current_user.id)):
         flash("You do not have permission to cancel this job.", "error")
         return redirect(redirect_url())
     if not job.is_active:
@@ -3911,8 +3663,7 @@ def cancel_similarity_job(uuid: str):
 
     _cleanup_redis(job)
     flash(
-        "Job cancelled. Queued records have been discarded; "
-        "any in-flight records will complete harmlessly.",
+        "Job cancelled. Queued records have been discarded; any in-flight records will complete harmlessly.",
         "success",
     )
     return redirect(redirect_url())
@@ -3942,9 +3693,7 @@ def _safe_back_url(candidate: Optional[str]) -> str:
     return url_for("dashboards.ai_dashboard")
 
 
-def _build_workflow_entry_from_redis(
-    raw: dict, record, record_id: int, status: str
-) -> dict:
+def _build_workflow_entry_from_redis(raw: dict, record, record_id: int, status: str) -> dict:
     """Reconstruct a workflow-summary dict from a raw Redis hash."""
     from ..tasks.pipeline_tracking import PIPELINE_STEPS
 
@@ -3999,9 +3748,7 @@ def _build_workflow_entry_from_redis(
 @login_required
 @roles_accepted("root", "admin", "data_dashboard_AI", "data_dashboard_similarity")
 def job_error_log(uuid):
-    job: LLMOrchestrationJob = (
-        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
+    job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
     back_url = _safe_back_url(request.args.get("back"))
     entries = list(reversed(job.error_log_list))
     return render_template_context(
@@ -4032,9 +3779,7 @@ def _format_duration(started_at: str | None, finished_at: str | None) -> str:
 @login_required
 @roles_accepted("root", "admin", "data_dashboard_AI", "data_dashboard_similarity")
 def job_workflows(uuid):
-    job: LLMOrchestrationJob = (
-        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
-    )
+    job: LLMOrchestrationJob = db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
     back_url = _safe_back_url(request.args.get("back"))
 
     inflight_entries = []
@@ -4045,9 +3790,7 @@ def job_workflows(uuid):
         for rid in inflight_ids:
             raw = r.hgetall(f"llm_step:{rid}")
             record = db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            inflight_entries.append(
-                _build_workflow_entry_from_redis(raw, record, rid, "in_flight")
-            )
+            inflight_entries.append(_build_workflow_entry_from_redis(raw, record, rid, "in_flight"))
     except Exception as exc:
         current_app.logger.warning(f"job_workflows: could not read inflight entries: {exc}")
 

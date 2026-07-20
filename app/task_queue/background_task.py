@@ -88,11 +88,7 @@ def progress_update(task_id, state, progress, message, autocommit=False):
         # push a notification to owning user, if there is one
         if data.owner is not None:
             remove_on_load = False
-            if (
-                    data.status == TaskRecord.SUCCESS
-                    or data.status == TaskRecord.FAILURE
-                    or data.status == TaskRecord.TERMINATED
-            ):
+            if data.status == TaskRecord.SUCCESS or data.status == TaskRecord.FAILURE or data.status == TaskRecord.TERMINATED:
                 remove_on_load = True
 
             data.owner.post_task_update(
@@ -126,11 +122,7 @@ def reconcile_background_tasks(app):
 
     with app.app_context():
         try:
-            stale = (
-                db.session.query(TaskRecord)
-                .filter(or_(TaskRecord.status == TaskRecord.PENDING, TaskRecord.status == TaskRecord.RUNNING))
-                .all()
-            )
+            stale = db.session.query(TaskRecord).filter(or_(TaskRecord.status == TaskRecord.PENDING, TaskRecord.status == TaskRecord.RUNNING)).all()
         except SQLAlchemyError as e:
             app.logger.exception("reconcile_background_tasks: could not query TaskRecord", exc_info=e)
             return

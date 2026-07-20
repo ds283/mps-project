@@ -12,13 +12,13 @@ from app.task_queue import progress_update
 
 
 def post_task_update_msg(
-        celery_self,
-        task_id: int,
-        celery_state: str,
-        task_state: int,
-        progress_percent: int,
-        msg: str,
-        autocommit: bool = True,
+    celery_self,
+    task_id: int,
+    celery_state: str,
+    task_state: int,
+    progress_percent: int,
+    msg: str,
+    autocommit: bool = True,
 ) -> None:
     progress_update(
         task_id,

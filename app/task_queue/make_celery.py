@@ -66,6 +66,7 @@ def make_celery(app):
         with app.app_context():
             from ..database import db
             from ..models import TaskRecord
+
             try:
                 task = db.session.query(TaskRecord).filter_by(id=task_id).first()
                 if task is not None and task.status in (TaskRecord.PENDING, TaskRecord.RUNNING):
@@ -85,6 +86,7 @@ def make_celery(app):
         with app.app_context():
             from ..database import db
             from ..models import TaskRecord
+
             try:
                 task = db.session.query(TaskRecord).filter_by(id=request.id).first()
                 if task is not None and task.status in (TaskRecord.PENDING, TaskRecord.RUNNING):

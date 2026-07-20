@@ -173,13 +173,9 @@ def StudentDataMixinFactory(allowed_tenants: List[Tenant]):
 
         intermitting = BooleanField("This student is currently intermitting (TWD)")
 
-        dyspraxia_sticker = BooleanField(
-            "Mark work with sticker for learning support package", default=False
-        )
+        dyspraxia_sticker = BooleanField("Mark work with sticker for learning support package", default=False)
 
-        dyslexia_sticker = BooleanField(
-            "Mark work with sticker for specific learning difference", default=False
-        )
+        dyslexia_sticker = BooleanField("Mark work with sticker for specific learning difference", default=False)
 
     return StudentDataMixin
 
@@ -217,18 +213,14 @@ class RegisterOfficeForm(
     pass
 
 
-class ConfirmRegisterOfficeForm(
-    RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin, EditUserTenantsMixin
-):
+class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin, EditUserTenantsMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.next.data:
             self.next.data = request.args.get("next", "")
 
 
-class RegisterFacultyForm(
-    RegisterOfficeForm, FacultyDataMixinFactory(admin=True)
-):
+class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True)):
     save_and_exit = SubmitField("Save and exit")
 
     def __init__(self, *args, **kwargs):
@@ -236,9 +228,7 @@ class RegisterFacultyForm(
         self.submit.label.text = "Next: Research group affiliations"
 
 
-class ConfirmRegisterFacultyForm(
-    ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True)
-):
+class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True)):
     save_and_exit = SubmitField("Save and exit")
 
     def __init__(self, *args, **kwargs):
@@ -269,9 +259,7 @@ class EditStudentNumbersMixin:
 def RegisterStudentFormFactory(allowed_tenants: List[Tenant]):
     StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
 
-    class RegisterStudentForm(
-        RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin
-    ):
+    class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
         pass
 
     return RegisterStudentForm
@@ -280,9 +268,7 @@ def RegisterStudentFormFactory(allowed_tenants: List[Tenant]):
 def ConfirmRegisterStudentFormFactory(allowed_tenants: List[Tenant]):
     StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
 
-    class ConfirmRegisterStudentForm(
-        ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin
-    ):
+    class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
         pass
 
     return ConfirmRegisterStudentForm
@@ -301,9 +287,7 @@ class EditOfficeForm(
     pass
 
 
-class EditFacultyForm(
-    EditOfficeForm, FacultyDataMixinFactory(admin=True)
-):
+class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True)):
     pass
 
 
@@ -421,9 +405,7 @@ def EditStudentBatchItemFormFactory(batch):
             ],
         )
 
-        cohort = IntegerField(
-            "Cohort", validators=[InputRequired("Cohort is required")]
-        )
+        cohort = IntegerField("Cohort", validators=[InputRequired("Cohort is required")])
 
         programme = QuerySelectField(
             "Degree programme",
@@ -484,25 +466,15 @@ def EditFacultyBatchItemFormFactory(batch):
             ],
         )
 
-        office = StringField(
-            "Office", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)]
-        )
+        office = StringField("Office", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
-        CATS_supervision = IntegerField(
-            "Supervision CATS", validators=[Optional(), value_is_nonnegative]
-        )
+        CATS_supervision = IntegerField("Supervision CATS", validators=[Optional(), value_is_nonnegative])
 
-        CATS_marking = IntegerField(
-            "Marking CATS", validators=[Optional(), value_is_nonnegative]
-        )
+        CATS_marking = IntegerField("Marking CATS", validators=[Optional(), value_is_nonnegative])
 
-        CATS_moderation = IntegerField(
-            "Moderation CATS", validators=[Optional(), value_is_nonnegative]
-        )
+        CATS_moderation = IntegerField("Moderation CATS", validators=[Optional(), value_is_nonnegative])
 
-        CATS_presentation = IntegerField(
-            "Presentation CATS", validators=[Optional(), value_is_nonnegative]
-        )
+        CATS_presentation = IntegerField("Presentation CATS", validators=[Optional(), value_is_nonnegative])
 
     return EditFacultyBatchItemForm
 
@@ -531,9 +503,7 @@ class EnrollmentRecordMixin:
 
     # MARKER
 
-    marker_state = RadioField(
-        "Marker status", choices=EnrollmentRecord.marker_choices, coerce=int
-    )
+    marker_state = RadioField("Marker status", choices=EnrollmentRecord.marker_choices, coerce=int)
 
     marker_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -550,9 +520,7 @@ class EnrollmentRecordMixin:
 
     # MODERATOR
 
-    moderator_state = RadioField(
-        "Marker status", choices=EnrollmentRecord.moderator_choices, coerce=int
-    )
+    moderator_state = RadioField("Marker status", choices=EnrollmentRecord.moderator_choices, coerce=int)
 
     moderator_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -569,9 +537,7 @@ class EnrollmentRecordMixin:
 
     # PRESENTATIONS
 
-    presentations_state = RadioField(
-        "Marker status", choices=EnrollmentRecord.presentations_choices, coerce=int
-    )
+    presentations_state = RadioField("Marker status", choices=EnrollmentRecord.presentations_choices, coerce=int)
 
     presentations_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -592,9 +558,7 @@ class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SaveChangesMixin):
 
 
 class RoleMixin:
-    description = StringField(
-        "Description", validators=[Length(max=DEFAULT_STRING_LENGTH)]
-    )
+    description = StringField("Description", validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
     colour = StringField(
         "Colour",

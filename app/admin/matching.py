@@ -124,11 +124,7 @@ def manage_matching():
 
     if flag and requested_year is not None and requested_year in allowed_years:
         selected_year = requested_year
-    elif (
-        hasattr(form, "selector")
-        and form.selector.data is not None
-        and form.selector.data in allowed_years
-    ):
+    elif hasattr(form, "selector") and form.selector.data is not None and form.selector.data in allowed_years:
         selected_year = form.selector.data
     else:
         selected_year = max(allowed_years)
@@ -183,12 +179,7 @@ def skip_matching():
     """
     current_year = get_current_year()
 
-    pcs = (
-        db.session.query(ProjectClass)
-        .filter_by(active=True)
-        .order_by(ProjectClass.name.asc())
-        .all()
-    )
+    pcs = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name.asc()).all()
 
     for pclass in pcs:
         # get current configuration record for this project class
@@ -249,25 +240,19 @@ def create_match():
             )
             return redirect(redirect_url())
 
-    NewMatchForm = NewMatchFormFactory(
-        current_year, base_id=base_id, base_match=base_match
-    )
+    NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id, base_match=base_match)
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
         offline = False
 
         if form.submit.data:
-            task_name = 'Perform project matching for "{name}"'.format(
-                name=form.name.data
-            )
+            task_name = 'Perform project matching for "{name}"'.format(name=form.name.data)
             desc = "Automated project matching task"
 
         elif form.offline.data:
             offline = True
-            task_name = 'Generate file for offline matching for "{name}"'.format(
-                name=form.name.data
-            )
+            task_name = 'Generate file for offline matching for "{name}"'.format(name=form.name.data)
             desc = "Produce .LP file for download and offline matching"
 
         else:
@@ -281,9 +266,9 @@ def create_match():
         #   T/F     None    T/F based on form
         #   T/F     True    T/F based on form
         #   absent  False   False
-        include_only_submitted = (
-            include_control.data if include_control is not None else False
-        ) and (base_match.include_only_submitted if base_match is not None else True)
+        include_only_submitted = (include_control.data if include_control is not None else False) and (
+            base_match.include_only_submitted if base_match is not None else True
+        )
 
         base_bias_control = getattr(form, "base_bias", None)
         force_base_control = getattr(form, "force_base", None)
@@ -292,9 +277,7 @@ def create_match():
             year=selected_year,
             base_id=base_id,
             base_bias=base_bias_control.data if base_bias_control is not None else None,
-            force_base=force_base_control.data
-            if force_base_control is not None
-            else None,
+            force_base=force_base_control.data if force_base_control is not None else None,
             name=form.name.data,
             celery_id=uuid,
             finished=False,
@@ -371,9 +354,7 @@ def create_match():
                         ok = False
                         flash(
                             'Excluded CATS from existing match "{name}" since it contains project class '
-                            '"{pname}" which overlaps with the current match'.format(
-                                name=match.name, pname=config_a.name
-                            )
+                            '"{pname}" which overlaps with the current match'.format(name=match.name, pname=config_a.name)
                         )
                         break
 
@@ -433,12 +414,8 @@ def create_match():
                 form.supervising_limit.data = base_match.supervising_limit
                 form.marking_limit.data = base_match.marking_limit
                 form.max_marking_multiplicity.data = base_match.max_marking_multiplicity
-                form.max_different_group_projects.data = (
-                    base_match.max_different_group_projects
-                )
-                form.max_different_all_projects.data = (
-                    base_match.max_different_all_projects
-                )
+                form.max_different_group_projects.data = base_match.max_different_group_projects
+                form.max_different_all_projects.data = base_match.max_different_all_projects
 
                 form.levelling_bias.data = base_match.levelling_bias
                 form.supervising_pressure.data = base_match.supervising_pressure
@@ -478,9 +455,7 @@ def terminate_match(id):
 
     if record.finished:
         flash(
-            'Can not terminate matching task "{name}" because it has finished.'.format(
-                name=record.name
-            ),
+            'Can not terminate matching task "{name}" because it has finished.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -489,10 +464,8 @@ def terminate_match(id):
     panel_title = "Terminate match <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for("admin.perform_terminate_match", id=id, url=request.referrer)
-    message = (
-        "<p>Please confirm that you wish to terminate the matching job "
-        "<strong>{name}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=record.name)
+    message = "<p>Please confirm that you wish to terminate the matching job <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+        name=record.name
     )
     submit_label = "Terminate job"
 
@@ -519,9 +492,7 @@ def perform_terminate_match(id):
 
     if record.finished:
         flash(
-            'Can not terminate matching task "{name}" because it has finished.'.format(
-                name=record.name
-            ),
+            'Can not terminate matching task "{name}" because it has finished.'.format(name=record.name),
             "error",
         )
         return redirect(url)
@@ -555,8 +526,7 @@ def perform_terminate_match(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not terminate matching task "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=record.name),
+            'Can not terminate matching task "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -586,8 +556,9 @@ def delete_match(id):
 
     if not attempt.finished:
         flash(
-            'Can not delete match "{name}" because it has not terminated. If you wish to delete this '
-            "match, please terminate it first.".format(name=attempt.name),
+            'Can not delete match "{name}" because it has not terminated. If you wish to delete this match, please terminate it first.'.format(
+                name=attempt.name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -613,10 +584,8 @@ def delete_match(id):
     panel_title = "Delete match <strong>{name}</strong>".format(name=attempt.name)
 
     action_url = url_for("admin.perform_delete_match", id=id, url=request.referrer)
-    message = (
-        "<p>Please confirm that you wish to delete the matching "
-        "<strong>{name}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=attempt.name)
+    message = "<p>Please confirm that you wish to delete the matching <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+        name=attempt.name
     )
     submit_label = "Delete match"
 
@@ -658,9 +627,7 @@ def perform_delete_match(id):
 
     if not attempt.finished:
         flash(
-            'Can not delete match "{name}" because it has not terminated.'.format(
-                name=attempt.name
-            ),
+            'Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
             "error",
         )
         return redirect(url)
@@ -697,8 +664,7 @@ def perform_delete_match(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not delete match "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=attempt.name),
+            'Can not delete match "{name}" due to a database error. Please contact a system administrator.'.format(name=attempt.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -724,9 +690,7 @@ def clean_up_match(id):
 
     if not attempt.finished:
         flash(
-            'Can not clean up match "{name}" because it has not terminated.'.format(
-                name=attempt.name
-            ),
+            'Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
             "error",
         )
         return redirect(redirect_url())
@@ -777,9 +741,7 @@ def perform_clean_up_match(id):
 
     if not attempt.finished:
         flash(
-            'Can not clean up match "{name}" because it has not terminated.'.format(
-                name=attempt.name
-            ),
+            'Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
             "error",
         )
         return redirect(url)
@@ -805,8 +767,7 @@ def perform_clean_up_match(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not clean up match "{name}" due to a database error. '
-            "Please contact a system administrator.".format(name=attempt.name),
+            'Can not clean up match "{name}" due to a database error. Please contact a system administrator.'.format(name=attempt.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -833,24 +794,19 @@ def revert_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Can not revert match "{name}" because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Can not revert match "{name}" because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Can not revert match "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Can not revert match "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -902,24 +858,19 @@ def perform_revert_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Can not revert match "{name}" because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Can not revert match "{name}" because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Can not revert match "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Can not revert match "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -965,24 +916,19 @@ def duplicate_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Can not duplicate match "{name}" because it is still awaiting '
-                "manual upload".format(name=record.name),
+                'Can not duplicate match "{name}" because it is still awaiting manual upload'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Can not duplicate match "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not duplicate match "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -998,8 +944,7 @@ def duplicate_match(id):
 
     if suffix >= 100:
         flash(
-            'Can not duplicate match "{name}" because a new unique tag could not '
-            "be generated.".format(name=record.name),
+            'Can not duplicate match "{name}" because a new unique tag could not be generated.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1057,17 +1002,14 @@ def rename_match(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
-                'Could not rename match "{name}" due to a database error. '
-                "Please contact a system administrator.".format(name=record.name),
+                'Could not rename match "{name}" due to a database error. Please contact a system administrator.'.format(name=record.name),
                 "error",
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
-    return render_template_context(
-        "admin/match_inspector/rename.html", form=form, record=record, url=url
-    )
+    return render_template_context("admin/match_inspector/rename.html", form=form, record=record, url=url)
 
 
 @admin.route("/compare_match/<int:id>", methods=["GET", "POST"])
@@ -1081,23 +1023,18 @@ def compare_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Can not compare match "{name}" because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Can not compare match "{name}" because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Can not compare match "{name}" because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Can not compare match "{name}" because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
 
     if not record.solution_usable:
         flash(
-            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
-                name=record.name
-            ),
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1108,18 +1045,12 @@ def compare_match(id):
     year = get_current_year()
     our_pclasses = {x.id for x in record.available_pclasses}
 
-    CompareMatchForm = CompareMatchFormFactory(
-        year, record.id, our_pclasses, current_user.has_role("root")
-    )
+    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses, current_user.has_role("root"))
     form = CompareMatchForm(request.form)
 
     if form.validate_on_submit():
         comparator = form.target.data
-        return redirect(
-            url_for(
-                "admin.do_match_compare", id1=id, id2=comparator.id, text=text, url=url
-            )
-        )
+        return redirect(url_for("admin.do_match_compare", id1=id, id2=comparator.id, text=text, url=url))
 
     return render_template_context(
         "admin/match_inspector/compare_setup.html",
@@ -1150,24 +1081,19 @@ def do_match_compare(id1, id2):
     if not record1.finished:
         if record1.awaiting_upload:
             flash(
-                'Can not compare match "{name}" because it is still awaiting '
-                "manual upload.".format(name=record1.name),
+                'Can not compare match "{name}" because it is still awaiting manual upload.'.format(name=record1.name),
                 "error",
             )
         else:
             flash(
-                'Can not compare match "{name}" because it has not yet terminated.'.format(
-                    name=record1.name
-                ),
+                'Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name),
                 "error",
             )
         return redirect(url)
 
     if not record1.solution_usable:
         flash(
-            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
-                name=record1.name
-            ),
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name),
             "error",
         )
         return redirect(url)
@@ -1175,24 +1101,19 @@ def do_match_compare(id1, id2):
     if not record2.finished:
         if record2.awaiting_upload:
             flash(
-                'Can not compare match "{name}" because it is still awaiting '
-                "manual upload.".format(name=record2.name),
+                'Can not compare match "{name}" because it is still awaiting manual upload.'.format(name=record2.name),
                 "error",
             )
         else:
             flash(
-                'Can not compare match "{name}" because it has not yet terminated.'.format(
-                    name=record2.name
-                ),
+                'Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
                 "error",
             )
         return redirect(url)
 
     if not record2.solution_usable:
         flash(
-            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
-                name=record2.name
-            ),
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
             "error",
         )
         return redirect(url)
@@ -1269,25 +1190,19 @@ def do_match_compare_ajax(id1, id2):
     if not attempt1.finished:
         if attempt1.awaiting_upload:
             flash(
-                'Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(
-                    name=attempt1.name
-                ),
+                'Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(name=attempt1.name),
                 "error",
             )
         else:
             flash(
-                'Can not compare match "{name}" because it has not yet terminated.'.format(
-                    name=attempt1.name
-                ),
+                'Can not compare match "{name}" because it has not yet terminated.'.format(name=attempt1.name),
                 "error",
             )
         return jsonify({})
 
     if attempt1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash(
-            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
-                name=attempt1.name
-            ),
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=attempt1.name),
             "error",
         )
         return jsonify({})
@@ -1295,25 +1210,19 @@ def do_match_compare_ajax(id1, id2):
     if not attempt2.finished:
         if attempt2.awaiting_upload:
             flash(
-                'Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(
-                    name=attempt2.name
-                ),
+                'Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(name=attempt2.name),
                 "error",
             )
         else:
             flash(
-                'Can not compare match "{name}" because it has not yet terminated.'.format(
-                    name=attempt2.name
-                ),
+                'Can not compare match "{name}" because it has not yet terminated.'.format(name=attempt2.name),
                 "error",
             )
         return jsonify({})
 
     if not attempt2.solution_usable:
         flash(
-            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
-                name=attempt2.name
-            ),
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=attempt2.name),
             "error",
         )
         return jsonify({})
@@ -1323,9 +1232,7 @@ def do_match_compare_ajax(id1, id2):
 
     diff_filter = request.args.get("diff_filter")
 
-    discrepant_records = _build_match_changes(
-        attempt1, attempt2, diff_filter, flag, pclass_value
-    )
+    discrepant_records = _build_match_changes(attempt1, attempt2, diff_filter, flag, pclass_value)
     return ajax.admin.compare_match_data(discrepant_records, attempt1, attempt2)
 
 
@@ -1348,9 +1255,7 @@ def _build_match_changes(
         # query supplied MatchingAttempt for an ordered list of records, restricting by project class if required
         if filter_pclasses:
             query = (
-                attempt.records.join(
-                    SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id
-                )
+                attempt.records.join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id)
                 .join(
                     ProjectClassConfig,
                     ProjectClassConfig.id == SelectingStudent.config_id,
@@ -1359,14 +1264,10 @@ def _build_match_changes(
             )
         else:
             query = attempt.records
-        recs: List[MatchingRecord] = query.order_by(
-            MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()
-        )
+        recs: List[MatchingRecord] = query.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc())
 
         # convert to a dictionary, indexed by
-        rec_dict: RecordDictType = {
-            (rec.selector_id, rec.submission_period): rec for rec in recs
-        }
+        rec_dict: RecordDictType = {(rec.selector_id, rec.submission_period): rec for rec in recs}
 
         return rec_dict
 
@@ -1394,27 +1295,19 @@ def _build_match_changes(
         rec2: MatchingRecord = recs2[key]
 
         if rec1.selector_id != rec2.selector_id:
-            raise RuntimeError(
-                "do_match_compare_ajax: rec1.selector_id and rec2.selector_id do not match"
-            )
+            raise RuntimeError("do_match_compare_ajax: rec1.selector_id and rec2.selector_id do not match")
 
         if rec1.submission_period != rec2.submission_period:
-            raise RuntimeError(
-                "do_match_compare_ajax: rec1.submission_period and rec2.submission_period do not match"
-            )
+            raise RuntimeError("do_match_compare_ajax: rec1.submission_period and rec2.submission_period do not match")
 
         # dictionary is indexed by user_id
         RoleDictType = Dict[int, MatchingRole]
 
-        def get_role_dict(
-            rec: MatchingRecord, roles: Union[int, List[int]]
-        ) -> RoleDictType:
+        def get_role_dict(rec: MatchingRecord, roles: Union[int, List[int]]) -> RoleDictType:
             if not isinstance(roles, list):
                 roles = [roles]
 
-            role_records: List[MatchingRole] = rec.roles.filter(
-                MatchingRole.role.in_(roles)
-            )
+            role_records: List[MatchingRole] = rec.roles.filter(MatchingRole.role.in_(roles))
             role_dict: RoleDictType = {role.user_id: role for role in role_records}
 
             return role_dict
@@ -1431,9 +1324,7 @@ def _build_match_changes(
         def get_marker_roles(rec: MatchingRecord) -> RoleDictType:
             return get_role_dict(rec, MatchingRole.ROLE_MARKER)
 
-        def find_record_changes(
-            rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str
-        ) -> List[str]:
+        def find_record_changes(rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str) -> List[str]:
             # is the project assignment different?
             changes = []
 
@@ -1488,9 +1379,7 @@ def replace_matching_record(src_id, dest_id):
     source: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
     dest: MatchingRecord = MatchingRecord.query.get_or_404(dest_id)
 
-    if not validate_match_inspector(
-        source.matching_attempt
-    ) or not validate_match_inspector(dest.matching_attempt):
+    if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
         return redirect(redirect_url())
 
     year = get_current_year()
@@ -1559,9 +1448,7 @@ def insert_matching_record(src_id, attempt_id):
     source_record: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
     dest_attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
 
-    if not validate_match_inspector(
-        source_record.matching_attempt
-    ) or not validate_match_inspector(dest_attempt):
+    if not validate_match_inspector(source_record.matching_attempt) or not validate_match_inspector(dest_attempt):
         return redirect(redirect_url())
 
     year = get_current_year()
@@ -1640,25 +1527,19 @@ def match_export_excel(matching_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for export because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Match "{name}" is not yet available for export because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for export because it has not yet completed.'.format(
-                    name=record.name
-                ),
+                'Match "{name}" is not yet available for export because it has not yet completed.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" is not available for export because it did not yield a useable solution'.format(
-                name=record.name
-            ),
+            'Match "{name}" is not available for export because it did not yield a useable solution'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1676,9 +1557,7 @@ def match_export_excel(matching_id):
     task = celery.tasks["app.tasks.matching.generate_excel_matching_report"]
 
     task.apply_async(args=(matching_id, current_user.id, task_id), task_id=task_id)
-    flash(
-        f'An Excel report for "{record.name}" is being generated, and you will be notified when it is available.'
-    )
+    flash(f'An Excel report for "{record.name}" is being generated, and you will be notified when it is available.')
 
     return redirect(redirect_url())
 
@@ -1691,25 +1570,19 @@ def match_student_view(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for inspection because it has not yet completed.'.format(
-                    name=record.name
-                ),
+                'Match "{name}" is not yet available for inspection because it has not yet completed.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" is not available for inspection because it did not yield a useable solution'.format(
-                name=record.name
-            ),
+            'Match "{name}" is not available for inspection because it did not yield a useable solution'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1772,25 +1645,19 @@ def match_faculty_view(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(
-                    name=record.name
-                ),
+                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for inspection because it has not yet terminated.'.format(
-                    name=record.name
-                ),
+                'Match "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" is not available for inspection because it did not yield an optimal solution.'.format(
-                name=record.name
-            ),
+            'Match "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1864,22 +1731,19 @@ def match_dists_view(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for inspection because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" is not available for inspection '
-            "because it did not yield an optimal solution.".format(name=record.name),
+            'Match "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1905,14 +1769,9 @@ def match_dists_view(id):
 
     fsum = lambda x: x[0] + x[1]
     query = record.faculty_list_query()
-    CATS_tot = [
-        fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None))
-        for f in query.all()
-    ]
+    CATS_tot = [fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None)) for f in query.all()]
 
-    CATS_plot = figure(
-        title="Workload distribution", x_axis_label="CATS", width=800, height=300
-    )
+    CATS_plot = figure(title="Workload distribution", x_axis_label="CATS", width=800, height=300)
     CATS_hist, CATS_edges = histogram(CATS_tot, bins="auto")
     CATS_plot.quad(
         top=CATS_hist,
@@ -1936,9 +1795,7 @@ def match_dists_view(id):
             if s.config.pclass_id != pclass_value:
                 return None
 
-        records: List[MatchingRecord] = s.matching_records.filter(
-            MatchingRecord.matching_id == record.id
-        ).all()
+        records: List[MatchingRecord] = s.matching_records.filter(MatchingRecord.matching_id == record.id).all()
 
         deltas = [r.delta for r in records]
         return sum(deltas) if None not in deltas else None
@@ -1946,9 +1803,7 @@ def match_dists_view(id):
     delta_set = [_get_deltas(s) for s in selectors]
     delta_set = [x for x in delta_set if x is not None]
 
-    delta_plot = figure(
-        title="Delta distribution", x_axis_label="Total delta", width=800, height=300
-    )
+    delta_plot = figure(title="Delta distribution", x_axis_label="Total delta", width=800, height=300)
     delta_hist, delta_edges = histogram(delta_set, bins="auto")
     delta_plot.quad(
         top=delta_hist,
@@ -2019,9 +1874,7 @@ def match_student_view_ajax(id):
         return config.name
 
     def search_projects(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(
-            MatchingRecord.matching_id == record.id
-        ).all()
+        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
 
         def _get_data(rec: MatchingRecord):
             yield rec.project.name if rec.project is not None else ""
@@ -2033,26 +1886,18 @@ def match_student_view_ajax(id):
 
     def sort_projects(row: SelectingStudent):
         records: List[MatchingRecord] = (
-            row.matching_records.filter(MatchingRecord.matching_id == record.id)
-            .order_by(MatchingRecord.submission_period)
-            .all()
+            row.matching_records.filter(MatchingRecord.matching_id == record.id).order_by(MatchingRecord.submission_period).all()
         )
 
-        return list(
-            rec.project.name if rec.project is not None else "" for rec in records
-        )
+        return list(rec.project.name if rec.project is not None else "" for rec in records)
 
     def sort_rank(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(
-            MatchingRecord.matching_id == record.id
-        ).all()
+        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
 
         return sum(rec.total_rank for rec in records)
 
     def sort_score(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(
-            MatchingRecord.matching_id == record.id
-        ).all()
+        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
 
         return sum(rec.current_score for rec in records)
 
@@ -2107,9 +1952,7 @@ def match_student_view_ajax(id):
         filter_list.append(filt)
 
     def row_filter(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(
-            MatchingRecord.matching_id == record.id
-        ).all()
+        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
 
         return all(f(records) for f in filter_list)
 
@@ -2124,11 +1967,7 @@ def match_student_view_ajax(id):
             def _internal_format(ss: List[SelectingStudent]):
                 for s in ss:
                     records: List[MatchingRecord] = (
-                        s.matching_records.filter(
-                            MatchingRecord.matching_id == record.id
-                        )
-                        .order_by(MatchingRecord.submission_period)
-                        .all()
+                        s.matching_records.filter(MatchingRecord.matching_id == record.id).order_by(MatchingRecord.submission_period).all()
                     )
 
                     deltas = [r.delta for r in records]
@@ -2139,9 +1978,7 @@ def match_student_view_ajax(id):
 
                     yield (records, delta, score)
 
-            return ajax.admin.student_view_data(
-                _internal_format(selectors), record.id, url=url, text=text
-            )
+            return ajax.admin.student_view_data(_internal_format(selectors), record.id, url=url, text=text)
 
         return handler.build_payload(row_formatter)
 
@@ -2279,9 +2116,7 @@ def delete_match_record(attempt_id, selector_id):
     if attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(
-                name=attempt.name
-            ),
+            '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2289,18 +2124,14 @@ def delete_match_record(attempt_id, selector_id):
     year = get_current_year()
     if attempt.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=attempt.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=attempt.name),
             "info",
         )
         return redirect(redirect_url())
 
     try:
         # remove all matching records associated with this selector
-        records = db.session.query(MatchingRecord).filter_by(
-            matching_id=attempt.id, selector_id=selector_id
-        )
+        records = db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=selector_id)
         for record in records:
             records: MatchingRecord
             db.session.delete(record)
@@ -2329,9 +2160,7 @@ def reassign_match_project(id, pid):
     if record.matching_attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(
-                name=record.matching_attempt.name
-            ),
+            '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2339,9 +2168,7 @@ def reassign_match_project(id, pid):
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2359,15 +2186,9 @@ def reassign_match_project(id, pid):
 
             else:
                 if project.owner is not None:
-                    enroll_record = project.owner.get_enrollment_record(
-                        project.config.pclass_id
-                    )
+                    enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
 
-                    if (
-                        enroll_record is not None
-                        and enroll_record.supervisor_state
-                        == EnrollmentRecord.SUPERVISOR_ENROLLED
-                    ):
+                    if enroll_record is not None and enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
                         adjust = True
 
                         # remove any previous supervision roles and replace with a supervision role for the new project
@@ -2415,14 +2236,11 @@ def reassign_match_project(id, pid):
                         "error",
                     )
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         else:
             flash(
-                "Could not reassign '{proj}' to {name} because this project "
-                "was not included in this selector's choices".format(
+                "Could not reassign '{proj}' to {name} because this project was not included in this selector's choices".format(
                     proj=project.name, name=record.selector.student.user.name
                 ),
                 "error",
@@ -2442,9 +2260,7 @@ def reassign_match_marker(id, mid):
     if record.matching_attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(
-                name=record.matching_attempt.name
-            ),
+            '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2452,9 +2268,7 @@ def reassign_match_marker(id, mid):
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2465,8 +2279,7 @@ def reassign_match_marker(id, mid):
     if count == 0:
         marker = FacultyData.query.get_or_404(mid)
         flash(
-            "Could not assign {name} as marker since "
-            'not tagged as available for assigned project "{proj}"'.format(
+            'Could not assign {name} as marker since not tagged as available for assigned project "{proj}"'.format(
                 name=marker.user.name, proj=record.project.name
             ),
             "error",
@@ -2501,9 +2314,7 @@ def reassign_match_marker(id, mid):
 
     else:
         flash(
-            "Inconsistent marker counts for matching record (id={id}). Please contact a system administrator".format(
-                id=record.id
-            ),
+            "Inconsistent marker counts for matching record (id={id}). Please contact a system administrator".format(id=record.id),
             "error",
         )
 
@@ -2530,9 +2341,7 @@ def reassign_supervisor_roles(rec_id):
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2563,9 +2372,7 @@ def reassign_supervisor_roles(rec_id):
 
         for fd in new_supv_roles:
             if fd.id not in existing_roles:
-                new_item = MatchingRole(
-                    role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd.id
-                )
+                new_item = MatchingRole(role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd.id)
                 record.roles.add(new_item)
 
         try:
@@ -2613,9 +2420,7 @@ def publish_matching_selectors(id):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2623,22 +2428,19 @@ def publish_matching_selectors(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for email because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for email because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for email because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for email because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared by email.".format(name=record.name),
+            'Match "{name}" did not yield an optimal solution and is not available for use. It cannot be shared by email.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2707,9 +2509,7 @@ def publish_matching_supervisors(id):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2717,22 +2517,19 @@ def publish_matching_supervisors(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for email because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for email because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for email because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for email because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared by email.".format(name=record.name),
+            'Match "{name}" did not yield an optimal solution and is not available for use. It cannot be shared by email.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2817,9 +2614,7 @@ def publish_match(id):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2827,14 +2622,12 @@ def publish_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for publication because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for publication because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for publication because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for publication because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
@@ -2864,9 +2657,7 @@ def unpublish_match(id):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2874,14 +2665,12 @@ def unpublish_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for unpublication because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for unpublication because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for unpublication because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for unpublication because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
@@ -2919,9 +2708,7 @@ def select_match(id):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2929,22 +2716,19 @@ def select_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for selection because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for selection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for selection because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for selection because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" did not yield an optimal solution '
-            "and is not available for use.".format(name=record.name),
+            'Match "{name}" did not yield an optimal solution and is not available for use.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2978,9 +2762,7 @@ def select_match(id):
         our_pclasses.add(item.id)
 
     selected_pclasses = set()
-    selected = (
-        db.session.query(MatchingAttempt).filter_by(year=year, selected=True).all()
-    )
+    selected = db.session.query(MatchingAttempt).filter_by(year=year, selected=True).all()
     for match in selected:
         for item in match.available_pclasses:
             selected_pclasses.add(item.id)
@@ -2988,8 +2770,9 @@ def select_match(id):
     intersection = our_pclasses & selected_pclasses
     if len(intersection) > 0:
         flash(
-            'Cannot select match "{name}" because some project classes it handles are already '
-            "determined by selected matches.".format(name=record.name),
+            'Cannot select match "{name}" because some project classes it handles are already determined by selected matches.'.format(
+                name=record.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -3011,9 +2794,7 @@ def deselect_match(id):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -3021,22 +2802,19 @@ def deselect_match(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for deselection because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for deselection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for deselection because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for deselection because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" did not yield an optimal solution '
-            "and is not available for use.".format(name=record.name),
+            'Match "{name}" did not yield an optimal solution and is not available for use.'.format(name=record.name),
             "info",
         )
         return redirect(redirect_url())
@@ -3047,15 +2825,11 @@ def deselect_match(id):
     return redirect(redirect_url())
 
 
-def _validate_match_populate_submitters(
-    record: MatchingAttempt, config: ProjectClassConfig
-):
+def _validate_match_populate_submitters(record: MatchingAttempt, config: ProjectClassConfig):
     year = get_current_year()
     if record.year != year:
         flash(
-            'Match "{name}" cannot be used to populate submitter records because it belongs to a previous selection cycle'.format(
-                name=record.name
-            ),
+            'Match "{name}" cannot be used to populate submitter records because it belongs to a previous selection cycle'.format(name=record.name),
             "info",
         )
         return False
@@ -3064,9 +2838,7 @@ def _validate_match_populate_submitters(
         flash(
             'Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}", '
             "year = {config_year} because this configuration belongs to a previous "
-            "year".format(
-                match_name=record.name, pcl_name=config.name, config_year=config.year
-            )
+            "year".format(match_name=record.name, pcl_name=config.name, config_year=config.year)
         )
         return False
 
@@ -3081,22 +2853,19 @@ def _validate_match_populate_submitters(
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for use because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for use because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Match "{name}" is not yet available for use because it has not yet '
-                "terminated.".format(name=record.name),
+                'Match "{name}" is not yet available for use because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return False
 
     if not record.solution_usable:
         flash(
-            'Match "{name}" did not yield an optimal solution '
-            "and is not available for use.".format(name=record.name),
+            'Match "{name}" did not yield an optimal solution and is not available for use.'.format(name=record.name),
             "info",
         )
         return False
@@ -3126,9 +2895,7 @@ def populate_submitters_from_match(match_id, config_id):
         return redirect(redirect_url())
 
     title = "Populate submitters from match"
-    panel_title = 'Populate submitters for "{name}" from match "{match_name}"'.format(
-        name=config.name, match_name=record.name
-    )
+    panel_title = 'Populate submitters for "{name}" from match "{match_name}"'.format(name=config.name, match_name=record.name)
 
     action_url = url_for(
         "admin.do_populate_submitters_from_match",
@@ -3184,8 +2951,6 @@ def do_populate_submitters_from_match(match_id, config_id):
     celery = current_app.extensions["celery"]
     task = celery.tasks["app.tasks.matching.populate_submitters"]
 
-    task.apply_async(
-        args=(match_id, config_id, current_user.id, task_id), task_id=task_id
-    )
+    task.apply_async(args=(match_id, config_id, current_user.id, task_id), task_id=task_id)
 
     return redirect(url)

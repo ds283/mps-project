@@ -97,23 +97,21 @@ def _request_supervisor_approval(record: SubmissionRecord):
     )
     if tmpl is None:
         current_app.logger.warning(
-            f"No CONSENT_SUPERVISOR_APPROVAL_REQUEST template for pclass #{pclass.id}; "
-            f"supervisor approval email not sent for record #{record.id}"
+            f"No CONSENT_SUPERVISOR_APPROVAL_REQUEST template for pclass #{pclass.id}; supervisor approval email not sent for record #{record.id}"
         )
         return
 
     supervisor_roles = record.roles.filter(
-        SubmissionRole.role.in_([
-            SubmissionRole.ROLE_SUPERVISOR,
-            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-        ])
+        SubmissionRole.role.in_(
+            [
+                SubmissionRole.ROLE_SUPERVISOR,
+                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]
+        )
     ).all()
 
     if not supervisor_roles:
-        current_app.logger.warning(
-            f"No supervisor roles found for record #{record.id}; "
-            f"supervisor approval email not sent"
-        )
+        current_app.logger.warning(f"No supervisor roles found for record #{record.id}; supervisor approval email not sent")
         return
 
     workflow = EmailWorkflow.build_(
@@ -132,18 +130,22 @@ def _request_supervisor_approval(record: SubmissionRecord):
         if supervisor_user is None or not supervisor_user.email:
             continue
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({
-                "pclass_name": pclass.name,
-                "year_a": config.submit_year_a,
-                "year_b": config.submit_year_b,
-            }),
-            body_payload=encode_email_payload({
-                "record": record,
-                "role": role,
-                "pclass": pclass,
-                "config": config,
-                "approval_url": approval_url,
-            }),
+            subject_payload=encode_email_payload(
+                {
+                    "pclass_name": pclass.name,
+                    "year_a": config.submit_year_a,
+                    "year_b": config.submit_year_b,
+                }
+            ),
+            body_payload=encode_email_payload(
+                {
+                    "record": record,
+                    "role": role,
+                    "pclass": pclass,
+                    "config": config,
+                    "approval_url": approval_url,
+                }
+            ),
             recipient_list=[supervisor_user.email],
         )
         workflow.items.append(item)

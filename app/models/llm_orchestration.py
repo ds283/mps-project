@@ -67,10 +67,10 @@ class LLMOrchestrationJob(db.Model):
     # Scope constants – what set of SubmissionRecords is being processed
     # ------------------------------------------------------------------
 
-    SCOPE_PERIOD = "period"    # single SubmissionPeriodRecord
-    SCOPE_PCLASS = "pclass"    # all periods in a ProjectClassConfig
-    SCOPE_CYCLE = "cycle"      # all periods in a MainConfig year
-    SCOPE_GLOBAL = "global"    # every period in the database
+    SCOPE_PERIOD = "period"  # single SubmissionPeriodRecord
+    SCOPE_PCLASS = "pclass"  # all periods in a ProjectClassConfig
+    SCOPE_CYCLE = "cycle"  # all periods in a MainConfig year
+    SCOPE_GLOBAL = "global"  # every period in the database
 
     ALL_SCOPES = [SCOPE_PERIOD, SCOPE_PCLASS, SCOPE_CYCLE, SCOPE_GLOBAL]
 
@@ -314,7 +314,7 @@ class LLMOrchestrationJob(db.Model):
         entries = self.error_log_list
         entries.append(entry)
         if len(entries) > self._ERROR_LOG_MAX:
-            entries = entries[-self._ERROR_LOG_MAX:]
+            entries = entries[-self._ERROR_LOG_MAX :]
         self.error_log = json.dumps(entries)
 
     # ------------------------------------------------------------------

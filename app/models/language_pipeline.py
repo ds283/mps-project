@@ -19,9 +19,7 @@ class GradingRubric(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    pclass_id = db.Column(
-        db.Integer(), db.ForeignKey("project_classes.id"), nullable=False
-    )
+    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"), nullable=False)
     pclass = db.relationship(
         "ProjectClass",
         foreign_keys=[pclass_id],
@@ -32,9 +30,7 @@ class GradingRubric(db.Model):
     label = db.Column(db.String(255, collation="utf8_bin"), nullable=False)
 
     created_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
-    updated_at = db.Column(
-        db.DateTime(), nullable=False, default=datetime.now, onupdate=datetime.now
-    )
+    updated_at = db.Column(db.DateTime(), nullable=False, default=datetime.now, onupdate=datetime.now)
 
     bands = db.relationship(
         "RubricBand",
@@ -54,23 +50,13 @@ class GradingRubric(db.Model):
         return new_rubric
 
     def to_prompt_bands(self):
-        return [
-            {"band": band.label, "criteria": [c.text for c in band.criteria]}
-            for band in self.bands
-        ]
+        return [{"band": band.label, "criteria": [c.text for c in band.criteria]} for band in self.bands]
 
     def negative_criteria(self):
-        return frozenset(
-            c.text for band in self.bands for c in band.criteria if c.tag == "negative"
-        )
+        return frozenset(c.text for band in self.bands for c in band.criteria if c.tag == "negative")
 
     def positive_floor_criteria(self):
-        return frozenset(
-            c.text
-            for band in self.bands
-            for c in band.criteria
-            if c.tag == "positive_floor"
-        )
+        return frozenset(c.text for band in self.bands for c in band.criteria if c.tag == "positive_floor")
 
 
 class RubricBand(db.Model):
@@ -78,9 +64,7 @@ class RubricBand(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    rubric_id = db.Column(
-        db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=False
-    )
+    rubric_id = db.Column(db.Integer(), db.ForeignKey("grading_rubric.id"), nullable=False)
     rubric = db.relationship("GradingRubric", back_populates="bands")
 
     label = db.Column(db.String(255, collation="utf8_bin"), nullable=False)
@@ -114,9 +98,7 @@ class RubricCriterion(db.Model):
     band = db.relationship("RubricBand", back_populates="criteria")
 
     text = db.Column(db.Text(collation="utf8_bin"), nullable=False)
-    tag = db.Column(
-        db.String(20, collation="utf8_bin"), nullable=False, default="plain"
-    )
+    tag = db.Column(db.String(20, collation="utf8_bin"), nullable=False, default="plain")
     position = db.Column(db.Integer(), nullable=False)
 
     def clone_to(self, target_band):

@@ -304,18 +304,14 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def selectors_data(
-        students: List[SelectingStudent], config: ProjectClassConfig, quickfix_factory=None
-):
+def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig, quickfix_factory=None):
     # cache selector lifecycle information
     state = config.selector_lifecycle
 
     is_admin = current_user.has_role("admin") or current_user.has_role("root")
 
     simple_label = get_template_attribute("labels.html", "simple_label")
-    error_block_inline = get_template_attribute(
-        "error_block.html", "error_block_inline"
-    )
+    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
 
     truncate = get_template_attribute("macros.html", "truncate")
 
@@ -341,9 +337,7 @@ def selectors_data(
                 "sortstring": s.student.user.last_name + s.student.user.first_name,
             },
             "cohort": {
-                "display": render_template(
-                    cohort_templ, sel=s, simple_label=simple_label
-                ),
+                "display": render_template(cohort_templ, sel=s, simple_label=simple_label),
                 "value": s.student.cohort,
             },
             "bookmarks": {

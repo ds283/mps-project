@@ -49,9 +49,7 @@ class Building(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # active flag
     active = db.Column(db.Boolean())
@@ -88,15 +86,11 @@ class Room(db.Model, EditingMetadataMixin):
         "Building",
         foreign_keys=[building_id],
         uselist=False,
-        backref=db.backref(
-            "rooms", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("rooms", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # room name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # room capacity (currently not used)
     capacity = db.Column(db.Integer())
@@ -149,29 +143,24 @@ def _ScheduleAttempt_is_valid(id):
         # check whether each slot validates individually
         if slot.has_issues:
             for n, e in enumerate(slot.errors):
-                errors[("slots", (slot.id, n))] = (
-                    f"{slot.session.label_as_string} {slot.room.full_name}: {e}"
-                )
+                errors[("slots", (slot.id, n))] = f"{slot.session.label_as_string} {slot.room.full_name}: {e}"
 
             for n, w in enumerate(slot.warnings):
-                warnings[("slots", (slot.id, n))] = (
-                    f"{slot.session.label_as_string} {slot.room.full_name}: {w}"
-                )
+                warnings[("slots", (slot.id, n))] = f"{slot.session.label_as_string} {slot.room.full_name}: {w}"
 
     # CONSTRAINT 2. EVERY TALK SHOULD HAVE BEEN SCHEDULED IN EXACTLY ONE SLOT
     for rec in obj.owner.submitter_list:
         if rec.attending:
             if get_count(obj.get_student_slot(rec.submitter.owner_id)) == 0:
                 errors[("talks", rec.submitter_id)] = (
-                    'Submitter "{name}" is enrolled in this assessment, but their talk has not been '
-                    "scheduled".format(name=rec.submitter.owner.student.user.name)
+                    'Submitter "{name}" is enrolled in this assessment, but their talk has not been scheduled'.format(
+                        name=rec.submitter.owner.student.user.name
+                    )
                 )
 
         if get_count(obj.get_student_slot(rec.submitter.owner_id)) > 1:
-            errors[("talks", rec.submitter_id)] = (
-                'Submitter "{name}" has been scheduled in more than one slot'.format(
-                    name=rec.submitter.owner.student.user.name
-                )
+            errors[("talks", rec.submitter_id)] = 'Submitter "{name}" has been scheduled in more than one slot'.format(
+                name=rec.submitter.owner.student.user.name
             )
 
     # CONSTRAINT 3. CATS LIMITS SHOULD BE RESPECTED, FROM FacultyData AND EnrollmentRecords MODELS
@@ -182,9 +171,7 @@ def _ScheduleAttempt_is_valid(id):
     return True, errors, warnings
 
 
-class ScheduleAttempt(
-    db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolChoicesMixin
-):
+class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolChoicesMixin):
     """
     Model configuration data for an assessment scheduling attempt
     """
@@ -201,15 +188,11 @@ class ScheduleAttempt(
         "PresentationAssessment",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "scheduling_attempts", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("scheduling_attempts", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # a name for this matching attempt
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # tag
     tag = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
@@ -298,11 +281,7 @@ class ScheduleAttempt(
             .subquery()
         )
 
-        return (
-            db.session.query(Building)
-            .join(building_ids, Building.id == building_ids.c.building_id)
-            .order_by(Building.name.asc())
-        )
+        return db.session.query(Building).join(building_ids, Building.id == building_ids.c.building_id).order_by(Building.name.asc())
 
     @property
     def available_buildings(self):
@@ -316,12 +295,7 @@ class ScheduleAttempt(
     def rooms_query(self):
         q = self.slots.subquery()
 
-        room_ids = (
-            db.session.query(ScheduleSlot.room_id)
-            .join(q, q.c.id == ScheduleSlot.id)
-            .distinct()
-            .subquery()
-        )
+        room_ids = db.session.query(ScheduleSlot.room_id).join(q, q.c.id == ScheduleSlot.id).distinct().subquery()
 
         return (
             db.session.query(Room)
@@ -353,9 +327,7 @@ class ScheduleAttempt(
         return (
             db.session.query(PresentationSession)
             .join(session_ids, PresentationSession.id == session_ids.c.id)
-            .order_by(
-                PresentationSession.date.asc(), PresentationSession.session_type.asc()
-            )
+            .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
         )
 
     @property
@@ -373,14 +345,10 @@ class ScheduleAttempt(
         return (
             db.session.query(ScheduleSlot)
             .join(q, q.c.id == ScheduleSlot.id)
-            .join(
-                PresentationSession, PresentationSession.id == ScheduleSlot.session_id
-            )
+            .join(PresentationSession, PresentationSession.id == ScheduleSlot.session_id)
             .join(Room, Room.id == ScheduleSlot.room_id)
             .join(Building, Building.id == Room.building_id)
-            .order_by(
-                PresentationSession.date.asc(), Building.name.asc(), Room.name.asc()
-            )
+            .order_by(PresentationSession.date.asc(), Building.name.asc(), Room.name.asc())
         )
 
     @property
@@ -552,10 +520,8 @@ def _ScheduleSlot_is_valid(id):
         expected_size = max(tk.period.max_group_size for tk in obj.talks)
 
         if num_talks > expected_size:
-            errors[("basic", 0)] = (
-                "This slot has a maximum group size {max}, but {sch} talks have been scheduled".format(
-                    sch=num_talks, max=expected_size
-                )
+            errors[("basic", 0)] = "This slot has a maximum group size {max}, but {sch} talks have been scheduled".format(
+                sch=num_talks, max=expected_size
             )
 
     # CONSTRAINT 1b. NUMBER OF TALKS SHOULD BE LESS THAN THE CAPACITY OF THE ROOM, MINUS THE NUMBER OF ASSESSORS
@@ -572,21 +538,15 @@ def _ScheduleSlot_is_valid(id):
             max_talks = 0
 
         if max_talks <= 0:
-            errors[("basic", 1)] = (
-                'Room "{name}" has maximum student capacity {max} (room capacity={rc}, '
-                "number assessors={na})".format(
-                    name=room.full_name,
-                    max=max_talks,
-                    rc=room.capacity,
-                    na=num_assessors,
-                )
+            errors[("basic", 1)] = 'Room "{name}" has maximum student capacity {max} (room capacity={rc}, number assessors={na})'.format(
+                name=room.full_name,
+                max=max_talks,
+                rc=room.capacity,
+                na=num_assessors,
             )
         elif num_talks > max_talks:
-            errors[("basic", 2)] = (
-                'Room "{name}" has maximum student capacity {max}, but {nt} talks have been '
-                "scheduled in this slot".format(
-                    name=room.full_name, max=max_talks, nt=num_talks
-                )
+            errors[("basic", 2)] = 'Room "{name}" has maximum student capacity {max}, but {nt} talks have been scheduled in this slot'.format(
+                name=room.full_name, max=max_talks, nt=num_talks
             )
 
     # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS (OR EQUIVALENTLY, SUBMISSION PERIOD)
@@ -596,13 +556,10 @@ def _ScheduleSlot_is_valid(id):
 
         for talk in obj.talks:
             if talk.period_id != period_id:
-                errors[("period", talk.id)] = (
-                    'Submitter "{name}" is drawn from a mismatching project class '
-                    "({pclass_a} vs. {pclass_b})".format(
-                        name=talk.owner.student.user.name,
-                        pclass_a=talk.period.config.project_class.name,
-                        pclass_b=tk.period.config.project_class.name,
-                    )
+                errors[("period", talk.id)] = 'Submitter "{name}" is drawn from a mismatching project class ({pclass_a} vs. {pclass_b})'.format(
+                    name=talk.owner.student.user.name,
+                    pclass_a=talk.period.config.project_class.name,
+                    pclass_b=tk.period.config.project_class.name,
                 )
 
     # CONSTRAINT 3. NUMBER OF ASSESSORS SHOULD BE EQUAL TO REQUIRED NUMBER FOR THE PROJECT CLASS ASSOCIATED WITH THIS SLOT
@@ -613,16 +570,12 @@ def _ScheduleSlot_is_valid(id):
         expected_assessors = tk.period.number_assessors
 
         if num_assessors > expected_assessors:
-            errors[("basic", 1)] = (
-                "Too many assessors scheduled in this slot (scheduled={sch}, required={num})".format(
-                    sch=num_assessors, num=expected_assessors
-                )
+            errors[("basic", 1)] = "Too many assessors scheduled in this slot (scheduled={sch}, required={num})".format(
+                sch=num_assessors, num=expected_assessors
             )
         if num_assessors < expected_assessors:
-            errors[("basic", 1)] = (
-                "Too few assessors scheduled in this slot (scheduled={sch}, required={num})".format(
-                    sch=num_assessors, num=expected_assessors
-                )
+            errors[("basic", 1)] = "Too few assessors scheduled in this slot (scheduled={sch}, required={num})".format(
+                sch=num_assessors, num=expected_assessors
             )
 
     # CONSTRAINT 4. ASSESSORS SHOULD BE ENROLLED FOR THIS PROJECT CLASS
@@ -630,13 +583,9 @@ def _ScheduleSlot_is_valid(id):
     if pclass is not None:
         for assessor in obj.assessors:
             rec = assessor.get_enrollment_record(pclass.id)
-            if rec is None or (
-                rec is not None
-                and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
-            ):
+            if rec is None or (rec is not None and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED):
                 errors[("enrollment", assessor.id)] = (
-                    'Assessor "{name}" is scheduled in this slot, but is not '
-                    'enrolled as an assessor for "{pclass}"'.format(
+                    'Assessor "{name}" is scheduled in this slot, but is not enrolled as an assessor for "{pclass}"'.format(
                         name=assessor.user.name, pclass=pclass.name
                     )
                 )
@@ -644,37 +593,26 @@ def _ScheduleSlot_is_valid(id):
     # CONSTRAINT 5. ALL ASSESSORS SHOULD BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
         if session.faculty_unavailable(assessor.id):
-            errors[("faculty", assessor.id)] = (
-                'Assessor "{name}" is scheduled in this slot, but is not '
-                "available".format(name=assessor.user.name)
-            )
+            errors[("faculty", assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not available'.format(name=assessor.user.name)
         elif session.faculty_ifneeded(assessor.id):
-            warnings[("faculty", assessor.id)] = (
-                'Assessor "{name}" is scheduled in this slot, but is marked '
-                'as "if needed"'.format(name=assessor.user.name)
+            warnings[("faculty", assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is marked as "if needed"'.format(
+                name=assessor.user.name
             )
         else:
             if not session.faculty_available(assessor.id):
-                errors[("faculty", assessor.id)] = (
-                    'Assessor "{name}" is scheduled in this slot, but they do not '
-                    "belong to this assessment".format(name=assessor.user.name)
+                errors[("faculty", assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but they do not belong to this assessment'.format(
+                    name=assessor.user.name
                 )
 
     # CONSTRAINT 6. ASSESSORS SHOULD NOT BE PROJECT SUPERVISORS
     for talk in obj.talks:
         talk: SubmissionRecord
         if talk.project is None:
-            errors[("supervisor", talk.id)] = (
-                'Project supervisor for "{student}" is not set'.format(
-                    student=talk.owner.student.user.name
-                )
-            )
+            errors[("supervisor", talk.id)] = 'Project supervisor for "{student}" is not set'.format(student=talk.owner.student.user.name)
         elif talk.project.owner in obj.assessors:
-            errors[("supervisor", talk.id)] = (
-                'Assessor "{name}" is project supervisor for "{student}"'.format(
-                    name=talk.project.owner.user.name,
-                    student=talk.owner.student.user.name,
-                )
+            errors[("supervisor", talk.id)] = 'Assessor "{name}" is project supervisor for "{student}"'.format(
+                name=talk.project.owner.user.name,
+                student=talk.owner.student.user.name,
             )
 
     # CONSTRAINT 7. PREFERABLY, EACH TALK SHOULD HAVE AT LEAST ONE ASSESSOR BELONGING TO ITS ASSESSOR POOL
@@ -685,8 +623,7 @@ def _ScheduleSlot_is_valid(id):
 
         if (
             attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_POOL
-            or attempt.all_assessors_in_pool
-            == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL
+            or attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL
         ):
             found_match = False
             for assessor in talk.project.assessor_list:
@@ -696,17 +633,11 @@ def _ScheduleSlot_is_valid(id):
                     break
 
             if not found_match:
-                warnings[("pool", talk.id)] = (
-                    'No assessor belongs to the pool for submitter "{name}"'.format(
-                        name=talk.owner.student.user.name
-                    )
-                )
+                warnings[("pool", talk.id)] = 'No assessor belongs to the pool for submitter "{name}"'.format(name=talk.owner.student.user.name)
 
         elif (
-            attempt.all_assessors_in_pool
-            == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP
-            or attempt.all_assessors_in_pool
-            == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP
+            attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP
+            or attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP
         ):
             found_match = False
             if project.group is not None:
@@ -724,35 +655,30 @@ def _ScheduleSlot_is_valid(id):
 
             if not found_match:
                 warnings[("pool_group", talk.id)] = (
-                    "No assessor belongs to either the pool or affiliated "
-                    "research group for submitter "
-                    '"{name}"'.format(name=talk.owner.student.user.name)
+                    'No assessor belongs to either the pool or affiliated research group for submitter "{name}"'.format(
+                        name=talk.owner.student.user.name
+                    )
                 )
 
     # CONSTRAINT 8. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
     for talk in obj.talks:
         talk: SubmissionRecord
         if assessment.not_attending(talk.id):
-            errors[("talks", talk.id)] = (
-                'Submitter "{name}" is scheduled in this slot, but this student '
-                "is not attending".format(name=talk.owner.student.user.name)
+            errors[("talks", talk.id)] = 'Submitter "{name}" is scheduled in this slot, but this student is not attending'.format(
+                name=talk.owner.student.user.name
             )
 
     # CONSTRAINT 9. SUBMITTERS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for talk in obj.talks:
         talk: SubmissionRecord
         if session.submitter_unavailable(talk.id):
-            errors[("submitter", talk.id)] = (
-                'Submitter "{name}" is scheduled in this slot, but is not '
-                "available".format(name=talk.owner.student.user.name)
+            errors[("submitter", talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not available'.format(
+                name=talk.owner.student.user.name
             )
         else:
             if not session.submitter_available(talk.id):
-                errors[("submitter", talk.id)] = (
-                    'Submitter "{name}" is scheduled in this slot, but they do not '
-                    "belong to this assessment".format(
-                        name=talk.owner.student.user.name
-                    )
+                errors[("submitter", talk.id)] = 'Submitter "{name}" is scheduled in this slot, but they do not belong to this assessment'.format(
+                    name=talk.owner.student.user.name
                 )
 
     # CONSTRAINT 10. TALKS MARKED NOT TO CLASH SHOULD NOT BE SCHEDULED TOGETHER
@@ -763,13 +689,9 @@ def _ScheduleSlot_is_valid(id):
                 talk_i = talks_list[i]
                 talk_j = talks_list[j]
 
-                if talk_i.project_id == talk_j.project_id and (
-                    talk_i.project is not None
-                    and talk_i.project.dont_clash_presentations
-                ):
+                if talk_i.project_id == talk_j.project_id and (talk_i.project is not None and talk_i.project.dont_clash_presentations):
                     errors[("clash", (talk_i.id, talk_j.id))] = (
-                        'Submitters "{name_a}" and "{name_b}" share a project '
-                        '"{proj}" that is marked not to be co-scheduled'.format(
+                        'Submitters "{name_a}" and "{name_b}" share a project "{proj}" that is marked not to be co-scheduled'.format(
                             name_a=talk_i.owner.student.user.name,
                             name_b=talk_j.owner.student.user.name,
                             proj=talk_i.project.name,
@@ -832,16 +754,12 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         "ScheduleAttempt",
         foreign_keys=[owner_id],
         uselist=False,
-        backref=db.backref(
-            "slots", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("slots", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # session
     session_id = db.Column(db.Integer(), db.ForeignKey("presentation_sessions.id"))
-    session = db.relationship(
-        "PresentationSession", foreign_keys=[session_id], uselist=False
-    )
+    session = db.relationship("PresentationSession", foreign_keys=[session_id], uselist=False)
 
     # room
     room_id = db.Column(db.Integer(), db.ForeignKey("rooms.id"))
@@ -869,9 +787,7 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
     # ORIGINAL VERSIONS to allow reversion later
 
     # original set of assessors attached to ths slot
-    original_assessors = db.relationship(
-        "FacultyData", secondary=orig_fac_to_slots, lazy="dynamic"
-    )
+    original_assessors = db.relationship("FacultyData", secondary=orig_fac_to_slots, lazy="dynamic")
 
     # original set of submitters attached to this slot
     original_talks = db.relationship(
@@ -932,19 +848,13 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         return self.owner.event_name
 
     def has_pclass(self, pclass_id):
-        query = (
-            db.session.query(submitter_to_slots.c.submitter_id)
-            .filter(submitter_to_slots.c.slot_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(submitter_to_slots.c.submitter_id).filter(submitter_to_slots.c.slot_id == self.id).subquery()
 
         q = (
             db.session.query(SubmissionRecord)
             .join(query, query.c.submitter_id == SubmissionRecord.id)
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
-            .join(
-                ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id
-            )
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
             .filter(ProjectClassConfig.pclass_id == pclass_id)
         )
         return get_count(q) > 0
@@ -1052,9 +962,7 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
 
             if tk is not None:
                 if not tk.period.has_presentation:
-                    raise RuntimeError(
-                        "Inconsistent SubmissionPeriodDefinition in ScheduleSlot.alternative_rooms"
-                    )
+                    raise RuntimeError("Inconsistent SubmissionPeriodDefinition in ScheduleSlot.alternative_rooms")
                 if tk.period.lecture_capture:
                     needs_lecture_capture = True
 
@@ -1080,11 +988,7 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         if needs_lecture_capture:
             query = query.filter(Room.lecture_capture.is_(True))
 
-        return (
-            query.join(Building, Building.id == Room.building_id)
-            .order_by(Building.name.asc(), Room.name.asc())
-            .all()
-        )
+        return query.join(Building, Building.id == Room.building_id).order_by(Building.name.asc(), Room.name.asc()).all()
 
 
 @listens_for(ScheduleSlot, "before_update")
@@ -1097,9 +1001,7 @@ def _ScheduleSlot_update_handler(mapper, connection, target):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot, "before_insert")
@@ -1112,9 +1014,7 @@ def _ScheduleSlot_insert_handler(mapper, connection, target):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot, "before_delete")
@@ -1127,9 +1027,7 @@ def _ScheduleSlot_delete_handler(mapper, connection, target):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot.assessors, "append")
@@ -1142,9 +1040,7 @@ def _ScheduleSlot_assessors_append_handler(target, value, initiator):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot.assessors, "remove")
@@ -1157,9 +1053,7 @@ def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot.talks, "append")
@@ -1172,9 +1066,7 @@ def _ScheduleSlot_talks_append_handler(target, value, initiator):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot.talks, "remove")
@@ -1187,6 +1079,4 @@ def _ScheduleSlot_talks_remove_handler(target, value, initiator):
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
 
-            cache.delete_memoized(
-                _PresentationAssessment_is_valid, target.owner.owner_id
-            )
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)

@@ -43,9 +43,7 @@ from ..shared.workflow_logging import log_db_commit
 def register_attendance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def check_for_attendance_prompts(self):
-        self.update_state(
-            state=states.STARTED, meta={"msg": "Checking for attendance prompts"}
-        )
+        self.update_state(state=states.STARTED, meta={"msg": "Checking for attendance prompts"})
 
         now = datetime.now()
         today = now.date()
@@ -53,17 +51,13 @@ def register_attendance_tasks(celery):
 
         # check once: bail immediately on non-working days
         if today in holiday_calendar:
-            msg = {
-                "msg": f"Today ({today}) is a UK holiday, skipping attendance prompts"
-            }
+            msg = {"msg": f"Today ({today}) is a UK holiday, skipping attendance prompts"}
             print(msg["msg"])
             self.update_state(state=states.SUCCESS, meta=msg)
             return msg
 
         if not is_busday(today):
-            msg = {
-                "msg": f"Today ({today}) is not a working day, skipping attendance prompts"
-            }
+            msg = {"msg": f"Today ({today}) is not a working day, skipping attendance prompts"}
             print(msg["msg"])
             self.update_state(state=states.SUCCESS, meta=msg)
             return msg
@@ -91,17 +85,10 @@ def register_attendance_tasks(celery):
 
         self.update_state(
             state=states.STARTED,
-            meta={
-                "msg": f"Dispatching attendance prompt tasks for {len(configs)} config(s)"
-            },
+            meta={"msg": f"Dispatching attendance prompt tasks for {len(configs)} config(s)"},
         )
 
-        return self.replace(
-            group(
-                process_attendance_prompts_for_config.si(config.id)
-                for config in configs
-            )
-        )
+        return self.replace(group(process_attendance_prompts_for_config.si(config.id) for config in configs))
 
     @celery.task(bind=True, default_retry_delay=30)
     def process_attendance_prompts_for_config(self, config_id: int):
@@ -111,9 +98,7 @@ def register_attendance_tasks(celery):
         )
 
         try:
-            config: ProjectClassConfig = (
-                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            )
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -179,10 +164,13 @@ def register_attendance_tasks(celery):
                 continue
             if sub.retired:
                 continue
-            if period.marking_events.filter(
-                MarkingEvent.workflow_state >= MarkingEventWorkflowStates.OPEN,
-                MarkingEvent.workflow_state < MarkingEventWorkflowStates.CLOSED,
-            ).count() > 0:
+            if (
+                period.marking_events.filter(
+                    MarkingEvent.workflow_state >= MarkingEventWorkflowStates.OPEN,
+                    MarkingEvent.workflow_state < MarkingEventWorkflowStates.CLOSED,
+                ).count()
+                > 0
+            ):
                 continue
             if period.closed:
                 continue
@@ -201,9 +189,7 @@ def register_attendance_tasks(celery):
             event_time: datetime = event.get_start_time()
             if owner.prompt_at_fixed_time:
                 fixed_time: time = owner.prompt_at_time
-                target_time = event_time.replace(
-                    hour=fixed_time.hour, minute=fixed_time.minute
-                )
+                target_time = event_time.replace(hour=fixed_time.hour, minute=fixed_time.minute)
             else:
                 target_time = event_time + timedelta(hours=owner.prompt_delay)
 
@@ -221,9 +207,7 @@ def register_attendance_tasks(celery):
         if not qualifying:
             return None
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.ATTENDANCE_PROMPT, pclass=config.project_class
-        )
+        template = EmailTemplate.find_template_(EmailTemplate.ATTENDANCE_PROMPT, pclass=config.project_class)
         workflow = EmailWorkflow.build_(
             name=f"Attendance prompts: {config.name} ({datetime.now().strftime('%d/%m/%Y %H:%M')})",
             template=template,
@@ -343,12 +327,8 @@ def register_attendance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def mark_attendance_prompt_sent(self, email_log_id: int, event_id: int):
         try:
-            event: SupervisionEvent = (
-                db.session.query(SupervisionEvent).filter_by(id=event_id).first()
-            )
-            email_log: EmailLog = (
-                db.session.query(EmailLog).filter_by(id=email_log_id).first()
-            )
+            event: SupervisionEvent = db.session.query(SupervisionEvent).filter_by(id=event_id).first()
+            email_log: EmailLog = db.session.query(EmailLog).filter_by(id=email_log_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -359,9 +339,7 @@ def register_attendance_tasks(celery):
             return msg
 
         if email_log is None:
-            print(
-                f"!! mark_attendance_prompt_sent: could not find email log with id {email_log_id}"
-            )
+            print(f"!! mark_attendance_prompt_sent: could not find email log with id {email_log_id}")
             msg = {"msg": f"Could not find email log with id {email_log_id}"}
             self.update_state(state=states.FAILURE, meta=msg)
             return msg

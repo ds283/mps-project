@@ -129,14 +129,13 @@ def dashboard():
         config: ProjectClassConfig = item.most_recent_config
 
         # determine whether this student has a selector role for this project class
-        select_q = config.selecting_students.filter_by(
-            retired=False, student_id=current_user.id
-        )
+        select_q = config.selecting_students.filter_by(retired=False, student_id=current_user.id)
 
         if get_count(select_q) > 1:
             flash(
-                'Multiple live "selector" records exist for "{pclass}" on your account. Please contact '
-                "the system administrator".format(pclass=item.name),
+                'Multiple live "selector" records exist for "{pclass}" on your account. Please contact the system administrator'.format(
+                    pclass=item.name
+                ),
                 "error",
             )
 
@@ -145,14 +144,13 @@ def dashboard():
             has_selections = True
 
         # determine whether this student has a submitter role for this project class
-        submit_q = config.submitting_students.filter_by(
-            retired=False, student_id=current_user.id
-        )
+        submit_q = config.submitting_students.filter_by(retired=False, student_id=current_user.id)
 
         if get_count(submit_q) > 1:
             flash(
-                'Multiple live "submitter" records exist for "{pclass}" on your account. Please contact '
-                "the system administrator".format(pclass=item.name),
+                'Multiple live "submitter" records exist for "{pclass}" on your account. Please contact the system administrator'.format(
+                    pclass=item.name
+                ),
                 "error",
             )
 
@@ -195,9 +193,7 @@ def dashboard():
             ProjectClass.student_level == ptype.level,
         )
     else:
-        pclasses = ProjectClass.query.filter(
-            ProjectClass.active.is_(True), ProjectClass.publish.is_(True)
-        )
+        pclasses = ProjectClass.query.filter(ProjectClass.active.is_(True), ProjectClass.publish.is_(True))
 
     # build list of system messages to consider displaying
     messages = []
@@ -323,12 +319,7 @@ def selector_browse_projects(id):
 
     # supply list of transferable skill groups and research groups that can be filtered against
     if config.advertise_research_group:
-        groups = (
-            db.session.query(ResearchGroup)
-            .filter_by(active=True)
-            .order_by(ResearchGroup.name.asc())
-            .all()
-        )
+        groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
     else:
         groups = None
 
@@ -438,9 +429,7 @@ def submitter_projects_ajax(id):
     if not verify_submitter(sub):
         return jsonify({})
 
-    return _project_list_endpoint(
-        config, None, partial(ajax.student.submitter_liveprojects_data, sub)
-    )
+    return _project_list_endpoint(config, None, partial(ajax.student.submitter_liveprojects_data, sub))
 
 
 def _project_list_endpoint(
@@ -494,23 +483,13 @@ def _project_list_endpoint(
             base_query = base_query.filter(
                 and_(
                     or_(ResearchGroup.id == g.id for g in sel.group_filters),
-                    or_(
-                        LiveProject.skills.any(TransferableSkill.id == s.id)
-                        for s in sel.skill_filters
-                    ),
+                    or_(LiveProject.skills.any(TransferableSkill.id == s.id) for s in sel.skill_filters),
                 )
             )
         elif filter_groups:
-            base_query = base_query.filter(
-                or_(ResearchGroup.id == g.id for g in sel.group_filters)
-            )
+            base_query = base_query.filter(or_(ResearchGroup.id == g.id for g in sel.group_filters))
         elif filter_skills:
-            base_query = base_query.filter(
-                or_(
-                    LiveProject.skills.any(TransferableSkill.id == s.id)
-                    for s in sel.skill_filters
-                )
-            )
+            base_query = base_query.filter(or_(LiveProject.skills.any(TransferableSkill.id == s.id) for s in sel.skill_filters))
 
     name = {
         "search": LiveProject.name,
@@ -913,8 +892,7 @@ def request_confirmation(sid, pid):
     # check whether this project type uses selections
     if not config.uses_selection:
         flash(
-            "This project belongs to a project class for which online selection is not required. "
-            "It is not possible to request confirmation for it.",
+            "This project belongs to a project class for which online selection is not required. It is not possible to request confirmation for it.",
             "error",
         )
         return redirect(redirect_url())
@@ -922,9 +900,7 @@ def request_confirmation(sid, pid):
     # check if confirmation has already been issued
     if project.is_confirmed(sel):
         flash(
-            'Confirmation has already been issued for project "{n}"'.format(
-                n=project.name
-            ),
+            'Confirmation has already been issued for project "{n}"'.format(n=project.name),
             "info",
         )
         return redirect(redirect_url())
@@ -995,8 +971,7 @@ def cancel_confirmation(sid, pid):
     # check whether this project type uses selections
     if not config.uses_selection:
         flash(
-            "This project belongs to a project class for which online selection is not required. "
-            "It is not possible to request confirmation for it.",
+            "This project belongs to a project class for which online selection is not required. It is not possible to request confirmation for it.",
             "error",
         )
         return redirect(redirect_url())
@@ -1004,9 +979,7 @@ def cancel_confirmation(sid, pid):
     # check if confirmation has already been issued
     if project.is_confirmed(sel):
         flash(
-            'Confirmation has already been issued for project "{n}"'.format(
-                n=project.name
-            ),
+            'Confirmation has already been issued for project "{n}"'.format(n=project.name),
             "info",
         )
         return redirect(redirect_url())
@@ -1055,9 +1028,7 @@ def update_ranking():
     if config_id is None or sid is None or ranking is None:
         return jsonify({"status": "ill_formed"})
 
-    config: ProjectClassConfig = (
-        db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-    )
+    config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
     sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
 
     if config is None or sel is None:
@@ -1073,9 +1044,7 @@ def update_ranking():
     # update ranking
     for bookmark in sel.bookmarks:
         if bookmark.liveproject.id not in rmap:
-            raise RuntimeError(
-                "Failed to demap POSTed ranking to bookmark list in update_ranking()"
-            )
+            raise RuntimeError("Failed to demap POSTed ranking to bookmark list in update_ranking()")
 
         bookmark.rank = rmap[bookmark.liveproject.id]
 
@@ -1132,8 +1101,7 @@ def submit(sid):
     valid, errors = sel.is_valid_selection
     if not valid:
         flash(
-            "The current bookmark list is not a valid set of project preferences. This is an internal error; "
-            "please contact a system administrator.",
+            "The current bookmark list is not a valid set of project preferences. This is an internal error; please contact a system administrator.",
             "error",
         )
         return redirect(redirect_url())
@@ -1160,9 +1128,7 @@ def submit(sid):
         db.session.flush()
 
         item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload(
-                {"pcl": sel.config.project_class.name}
-            ),
+            subject_payload=encode_email_payload({"pcl": sel.config.project_class.name}),
             body_payload=encode_email_payload(
                 {
                     "user": sel.student.user,
@@ -1410,15 +1376,11 @@ def view_feedback(id):
     event_data = []
     for event in closed_events:
         srs = (
-            record.submitter_reports.join(
-                MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
-            )
+            record.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
             .filter(MarkingWorkflow.event_id == event.id)
             .all()
         )
-        cr = ConflationReport.query.filter_by(
-            marking_event_id=event.id, submission_record_id=record.id
-        ).first()
+        cr = ConflationReport.query.filter_by(marking_event_id=event.id, submission_record_id=record.id).first()
         if srs:
             event_data.append((event, srs, cr))
 
@@ -1439,9 +1401,7 @@ def set_availability(assessment_id, submitter_id):
         return redirect(redirect_url())
 
     assessment = PresentationAssessment.query.get_or_404(assessment_id)
-    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(
-        submitter_id
-    )
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
 
     owner: SubmittingStudent = submission_record.owner
 
@@ -1490,9 +1450,7 @@ def set_available(session_id, submitter_id):
 
     session: PresentationSession = PresentationSession.query.get_or_404(session_id)
     assessment: PresentationAssessment = session.owner
-    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(
-        submitter_id
-    )
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
 
     owner: SubmittingStudent = submission_record.owner
 
@@ -1548,9 +1506,7 @@ def set_unavailable(session_id, submitter_id):
 
     session: PresentationSession = PresentationSession.query.get_or_404(session_id)
     assessment: PresentationAssessment = session.owner
-    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(
-        submitter_id
-    )
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
 
     owner: SubmittingStudent = submission_record.owner
 
@@ -1608,9 +1564,7 @@ def settings():
     user = User.query.get_or_404(current_user.id)
 
     main_config = get_main_config()
-    StudentSettingsForm = StudentSettingsFormFactory(
-        enable_canvas=main_config.enable_canvas_sync
-    )
+    StudentSettingsForm = StudentSettingsFormFactory(enable_canvas=main_config.enable_canvas_sync)
     form = StudentSettingsForm(obj=user)
     form.user = user
 

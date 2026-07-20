@@ -309,9 +309,7 @@ def remove_affiliation(groupid):
 @faculty.route("/edit_projects")
 @roles_required("faculty")
 def edit_projects():
-    groups = (
-        SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-    )
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
     state_filter = request.args.get("state_filter")
 
@@ -323,9 +321,7 @@ def edit_projects():
 
     session["project_library_state_filter"] = state_filter
 
-    return render_template_context(
-        "faculty/edit_projects.html", groups=groups, state_filter=state_filter
-    )
+    return render_template_context("faculty/edit_projects.html", groups=groups, state_filter=state_filter)
 
 
 @faculty.route("/projects_ajax", methods=["POST"])
@@ -373,14 +369,8 @@ def assessor_for():
     if pclass_filter is not None:
         session["view_marker_pclass_filter"] = pclass_filter
 
-    groups = (
-        SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-    )
-    pclasses = (
-        ProjectClass.query.filter_by(active=True, publish=True)
-        .order_by(ProjectClass.name.asc())
-        .all()
-    )
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    pclasses = ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc()).all()
 
     return render_template_context(
         "faculty/assessor_for.html",
@@ -634,9 +624,7 @@ def edit_project(id):
             )
 
         if form.save_and_preview.data:
-            return redirect(
-                url_for("faculty.project_preview", id=id, text=text, url=url)
-            )
+            return redirect(url_for("faculty.project_preview", id=id, text=text, url=url))
         else:
             return redirect(url)
 
@@ -732,10 +720,8 @@ def delete_project(id):
     panel_title = "Delete project <strong>{name}</strong>".format(name=data.name)
 
     action_url = url_for("faculty.perform_delete_project", id=id, url=request.referrer)
-    message = (
-        "<p>Please confirm that you wish to delete the project "
-        "<strong>{name}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=data.name)
+    message = "<p>Please confirm that you wish to delete the project <strong>{name}</strong>.</p><p>This action cannot be undone.</p>".format(
+        name=data.name
     )
     submit_label = "Delete project"
 
@@ -986,15 +972,9 @@ def description_modules(did, level_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
-            form.selector.data = (
-                FHEQ_Level.query.filter(FHEQ_Level.active.is_(True))
-                .order_by(FHEQ_Level.numeric_level.asc())
-                .first()
-            )
+            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active.is_(True)).order_by(FHEQ_Level.numeric_level.asc()).first()
         else:
-            form.selector.data = FHEQ_Level.query.filter(
-                FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id
-            ).first()
+            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
@@ -1003,11 +983,7 @@ def description_modules(did, level_id=None):
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
-    levels = (
-        FHEQ_Level.query.filter_by(active=True)
-        .order_by(FHEQ_Level.numeric_level.asc())
-        .all()
-    )
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
     return render_template_context(
         "faculty/description_modules.html",
@@ -1040,24 +1016,20 @@ def description_attach_module(did, mod_id, level_id):
 
             try:
                 log_db_commit(
-                    f"Attached recommended module '{module.name}' to description '{desc.label}' "
-                    f"for project '{desc.parent.name}'",
+                    f"Attached recommended module '{module.name}' to description '{desc.label}' for project '{desc.parent.name}'",
                     user=current_user,
                 )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 flash(
-                    'Could not attach module "{name}" due to a database error. '
-                    "Please contact a system administrator".format(name=module.name),
+                    'Could not attach module "{name}" due to a database error. Please contact a system administrator'.format(name=module.name),
                     "error",
                 )
 
         else:
             flash(
-                'Could not attach module "{name}" because it is already attached.'.format(
-                    name=module.name
-                ),
+                'Could not attach module "{name}" because it is already attached.'.format(name=module.name),
                 "warning",
             )
 
@@ -1070,11 +1042,7 @@ def description_attach_module(did, mod_id, level_id):
             "warning",
         )
 
-    return redirect(
-        url_for(
-            "faculty.description_modules", did=did, level_id=level_id, create=create
-        )
-    )
+    return redirect(url_for("faculty.description_modules", did=did, level_id=level_id, create=create))
 
 
 @faculty.route("/description_detach_module/<int:did>/<int:mod_id>/<int:level_id>")
@@ -1094,31 +1062,24 @@ def description_detach_module(did, mod_id, level_id):
 
         try:
             log_db_commit(
-                f"Detached recommended module '{module.name}' from description '{desc.label}' "
-                f"for project '{desc.parent.name}'",
+                f"Detached recommended module '{module.name}' from description '{desc.label}' for project '{desc.parent.name}'",
                 user=current_user,
             )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
-                'Could not detach module "{name}" due to a database error. '
-                "Please contact a system administrator".format(name=module.name),
+                'Could not detach module "{name}" due to a database error. Please contact a system administrator'.format(name=module.name),
                 "error",
             )
 
     else:
         flash(
-            'Could not detach specified module "{name}" because it was not previously '
-            "attached.".format(name=module.name),
+            'Could not detach specified module "{name}" because it was not previously attached.'.format(name=module.name),
             "warning",
         )
 
-    return redirect(
-        url_for(
-            "faculty.description_modules", did=did, level_id=level_id, create=create
-        )
-    )
+    return redirect(url_for("faculty.description_modules", did=did, level_id=level_id, create=create))
 
 
 @faculty.route("/delete_description/<int:did>")
@@ -1160,20 +1121,14 @@ def duplicate_description(did):
     while suffix < 100:
         new_label = "{label} #{suffix}".format(label=desc.label, suffix=suffix)
 
-        if (
-            ProjectDescription.query.filter_by(
-                parent_id=desc.parent_id, label=new_label
-            ).first()
-            is None
-        ):
+        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
             break
 
         suffix += 1
 
     if suffix >= 100:
         flash(
-            'Could not duplicate variant "{label}" because a new unique label could not '
-            "be generated".format(label=desc.label),
+            'Could not duplicate variant "{label}" because a new unique label could not be generated'.format(label=desc.label),
             "error",
         )
         return redirect(redirect_url())
@@ -1224,9 +1179,7 @@ def move_description(did):
 
     create = request.args.get("create", default=None)
 
-    MoveDescriptionForm = MoveDescriptionFormFactory(
-        old_project.owner_id, old_project.id
-    )
+    MoveDescriptionForm = MoveDescriptionFormFactory(old_project.owner_id, old_project.id)
     form = MoveDescriptionForm(request.form)
 
     if form.validate_on_submit():
@@ -1266,14 +1219,7 @@ def move_description(did):
                 if get_count(new_project.project_classes.filter_by(id=pclass.id)) == 0:
                     remove.add(pclass)
 
-                elif (
-                    get_count(
-                        new_project.descriptions.filter(
-                            ProjectDescription.project_classes.any(id=pclass.id)
-                        )
-                    )
-                    > 0
-                ):
+                elif get_count(new_project.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id))) > 0:
                     remove.add(pclass)
 
             for pclass in remove:
@@ -1288,36 +1234,28 @@ def move_description(did):
 
             try:
                 log_db_commit(
-                    f"Moved description '{desc.label}' from project '{old_project.name}' "
-                    f"to project '{new_project.name}'",
+                    f"Moved description '{desc.label}' from project '{old_project.name}' to project '{new_project.name}'",
                     user=current_user,
                 )
                 flash(
-                    'Variant "{name}" successfully moved to project "{pname}"'.format(
-                        name=desc.label, pname=new_project.name
-                    ),
+                    'Variant "{name}" successfully moved to project "{pname}"'.format(name=desc.label, pname=new_project.name),
                     "info",
                 )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 flash(
-                    'Variant "{name}" could not be moved due to a database error'.format(
-                        name=desc.label
-                    ),
+                    'Variant "{name}" could not be moved due to a database error'.format(name=desc.label),
                     "error",
                 )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
             flash(
-                'Variant "{name}" could not be moved because its parent project is '
-                "missing".format(name=desc.label),
+                'Variant "{name}" could not be moved because its parent project is missing'.format(name=desc.label),
                 "error",
             )
 
         if create:
-            return redirect(
-                url_for("faculty.edit_descriptions", id=old_project.id, create=True)
-            )
+            return redirect(url_for("faculty.edit_descriptions", id=old_project.id, create=True))
         else:
             return redirect(url_for("faculty.edit_descriptions", id=new_project.id))
 
@@ -1345,8 +1283,9 @@ def make_default_description(pid, did=None):
 
         if desc.parent_id != pid:
             flash(
-                "Cannot set default description (id={did)) for project (id={pid}) because this description "
-                "does not belong to the project".format(pid=pid, did=did),
+                "Cannot set default description (id={did)) for project (id={pid}) because this description does not belong to the project".format(
+                    pid=pid, did=did
+                ),
                 "error",
             )
             return redirect(redirect_url())
@@ -1377,15 +1316,9 @@ def attach_skills(id, sel_id=None):
     # (otherwise the form annoyingly resets itself everytime the page reloads)
     if not form.validate_on_submit() and request.method == "GET":
         if sel_id is None:
-            form.selector.data = (
-                SkillGroup.query.filter(SkillGroup.active.is_(True))
-                .order_by(SkillGroup.name.asc())
-                .first()
-            )
+            form.selector.data = SkillGroup.query.filter(SkillGroup.active.is_(True)).order_by(SkillGroup.name.asc()).first()
         else:
-            form.selector.data = SkillGroup.query.filter(
-                SkillGroup.active.is_(True), SkillGroup.id == sel_id
-            ).first()
+            form.selector.data = SkillGroup.query.filter(SkillGroup.active.is_(True), SkillGroup.id == sel_id).first()
 
     # get list of active skills matching selector
     if form.selector.data is not None:
@@ -1394,9 +1327,7 @@ def attach_skills(id, sel_id=None):
             TransferableSkill.group_id == form.selector.data.id,
         ).order_by(TransferableSkill.name.asc())
     else:
-        skills = TransferableSkill.query.filter_by(active=True).order_by(
-            TransferableSkill.name.asc()
-        )
+        skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
     create = request.args.get("create", default=None)
 
@@ -1431,9 +1362,7 @@ def add_skill(projectid, skillid, sel_id):
             user=current_user,
         )
 
-    return redirect(
-        url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create)
-    )
+    return redirect(url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create))
 
 
 @faculty.route("/remove_skill/<int:projectid>/<int:skillid>/<int:sel_id>")
@@ -1457,9 +1386,7 @@ def remove_skill(projectid, skillid, sel_id):
             user=current_user,
         )
 
-    return redirect(
-        url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create)
-    )
+    return redirect(url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create))
 
 
 @faculty.route("/attach_programmes/<int:id>")
@@ -1476,9 +1403,7 @@ def attach_programmes(id):
 
     create = request.args.get("create", default=None)
 
-    return render_template_context(
-        "faculty/attach_programmes.html", data=proj, programmes=q.all(), create=create
-    )
+    return render_template_context("faculty/attach_programmes.html", data=proj, programmes=q.all(), create=create)
 
 
 @faculty.route("/add_programme/<int:id>/<int:prog_id>")
@@ -1784,44 +1709,24 @@ def project_preview(id):
         form.comment.data = None
 
     # defaults for comments pane
-    form.limit_visibility.data = (
-        True if current_user.has_role("project_approver") else False
-    )
+    form.limit_visibility.data = True if current_user.has_role("project_approver") else False
 
     allow_approval = (
-        (current_user.has_role("project_approver") or current_user.has_role("root"))
-        and desc is not None
-        and allow_approval_for_description(desc.id)
+        (current_user.has_role("project_approver") or current_user.has_role("root")) and desc is not None and allow_approval_for_description(desc.id)
     )
 
-    show_comments = (
-        allow_approval
-        or (data.owner is not None and current_user.id == data.owner.id)
-        or current_user.has_role("convenor")
-    )
+    show_comments = allow_approval or (data.owner is not None and current_user.id == data.owner.id) or current_user.has_role("convenor")
 
     if desc is not None:
         if all_workflow:
-            workflow_history = desc.workflow_history.order_by(
-                ProjectDescriptionWorkflowHistory.timestamp.asc()
-            ).all()
+            workflow_history = desc.workflow_history.order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
         else:
-            workflow_history = (
-                desc.workflow_history.filter_by(year=current_year)
-                .order_by(ProjectDescriptionWorkflowHistory.timestamp.asc())
-                .all()
-            )
+            workflow_history = desc.workflow_history.filter_by(year=current_year).order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
 
         if all_comments:
-            comments = desc.comments.order_by(
-                DescriptionComment.creation_timestamp.asc()
-            ).all()
+            comments = desc.comments.order_by(DescriptionComment.creation_timestamp.asc()).all()
         else:
-            comments = (
-                desc.comments.filter_by(year=current_year)
-                .order_by(DescriptionComment.creation_timestamp.asc())
-                .all()
-            )
+            comments = desc.comments.filter_by(year=current_year).order_by(DescriptionComment.creation_timestamp.asc()).all()
     else:
         workflow_history = []
         comments = []
@@ -1856,12 +1761,7 @@ def dashboard():
 
     main_config: MainConfig = get_main_config()
     if main_config.enable_2026_ATAS_campaign:
-        if (
-            get_count(
-                current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True))
-            )
-            > 0
-        ):
+        if get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True))) > 0:
             atas_data = check_2026_ATAS(fd)
             if len(atas_data["projects"]) > 0:
                 return redirect(url_for("campaigns.atas_2026"))
@@ -2023,11 +1923,7 @@ def dashboard_moderation():
             workflow = sr.workflow
             if workflow is not None and workflow.id not in seen_workflow_ids:
                 seen_workflow_ids.add(workflow.id)
-                files = [
-                    pa
-                    for pa in workflow.attachments
-                    if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)
-                ]
+                files = [pa for pa in workflow.attachments if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)]
                 if files:
                     moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
 
@@ -2065,9 +1961,7 @@ def dashboard_enrolment(cid):
     remove_new = celery.tasks["app.tasks.selecting.remove_new"]
     remove_new.apply_async(args=(cid, current_user.id), countdown=15)
 
-    enrolment_item = next(
-        (item for item in data["enrolments"] if item["config"].id == cid), None
-    )
+    enrolment_item = next((item for item in data["enrolments"] if item["config"].id == cid), None)
 
     return render_template_context(
         "faculty/dashboard/panes/enrolment.html",
@@ -2107,10 +2001,12 @@ def my_students():
         .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
         .filter(
             SubmissionRole.user_id == current_user.id,
-            SubmissionRole.role.in_([
-                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-            ]),
+            SubmissionRole.role.in_(
+                [
+                    SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                    SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                ]
+            ),
             SubmissionPeriodRecord.closed.is_(True),
         )
         .distinct()
@@ -2172,10 +2068,12 @@ def my_students():
         .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
         .filter(
             SubmissionRole.user_id == current_user.id,
-            SubmissionRole.role.in_([
-                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-            ]),
+            SubmissionRole.role.in_(
+                [
+                    SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                    SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                ]
+            ),
             SubmissionPeriodRecord.closed.is_(True),
         )
         .distinct()
@@ -2190,10 +2088,12 @@ def my_students():
         .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
         .filter(
             SubmissionRole.user_id == current_user.id,
-            SubmissionRole.role.in_([
-                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-            ]),
+            SubmissionRole.role.in_(
+                [
+                    SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                    SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                ]
+            ),
             SubmissionPeriodRecord.closed.is_(True),
         )
         .distinct()
@@ -2210,10 +2110,12 @@ def my_students():
             .filter(
                 SubmissionRole.submission_id == record.id,
                 SubmissionRole.user_id == current_user.id,
-                SubmissionRole.role.in_([
-                    SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-                    SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-                ]),
+                SubmissionRole.role.in_(
+                    [
+                        SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                        SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                    ]
+                ),
             )
             .first()
         )
@@ -2304,10 +2206,12 @@ def consent_approve(record_id):
     role = SubmissionRole.query.filter(
         SubmissionRole.submission_id == record_id,
         SubmissionRole.user_id == current_user.id,
-        SubmissionRole.role.in_([
-            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-        ]),
+        SubmissionRole.role.in_(
+            [
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]
+        ),
     ).first()
     if role is None:
         abort(403)
@@ -2346,10 +2250,12 @@ def consent_decline(record_id):
     role = SubmissionRole.query.filter(
         SubmissionRole.submission_id == record_id,
         SubmissionRole.user_id == current_user.id,
-        SubmissionRole.role.in_([
-            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-        ]),
+        SubmissionRole.role.in_(
+            [
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]
+        ),
     ).first()
     if role is None:
         abort(403)
@@ -2388,10 +2294,12 @@ def consent_revoke(record_id):
     role = SubmissionRole.query.filter(
         SubmissionRole.submission_id == record_id,
         SubmissionRole.user_id == current_user.id,
-        SubmissionRole.role.in_([
-            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
-            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
-        ]),
+        SubmissionRole.role.in_(
+            [
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]
+        ),
     ).first()
     if role is None:
         abort(403)
@@ -2432,8 +2340,7 @@ def confirm_pclass(id):
 
     if not config.requests_issued:
         flash(
-            "Confirmation requests have not yet been issued for {project} "
-            "{yeara}-{yearb}".format(
+            "Confirmation requests have not yet been issued for {project} {yeara}-{yearb}".format(
                 project=config.name,
                 yeara=config.submit_year_a,
                 yearb=config.submit_year_b,
@@ -2443,8 +2350,7 @@ def confirm_pclass(id):
 
     if config.live:
         flash(
-            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(
+            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project has already gone live".format(
                 project=config.name,
                 yeara=config.submit_year_a,
                 yearb=config.submit_year_b,
@@ -2475,8 +2381,7 @@ def confirm_pclass(id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not projects for class "{pclass}" due to a database error. '
-            "Please contact a system administrator".format(pclass=config.name),
+            'Could not projects for class "{pclass}" due to a database error. Please contact a system administrator'.format(pclass=config.name),
             "error",
         )
 
@@ -2515,8 +2420,7 @@ def confirm_description(did, pclass_id):
 
     if config.live:
         flash(
-            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(
+            "Confirmation is no longer required for {project} {yeara}-{yearb} because this project has already gone live".format(
                 project=config.name,
                 yeara=config.submit_year_a,
                 yearb=config.submit_year_b,
@@ -2538,8 +2442,7 @@ def confirm_description(did, pclass_id):
             messages = config.mark_confirmed(current_user.faculty_data, message=True)
 
         log_db_commit(
-            f"Faculty member {current_user.name} confirmed description '{desc.label}' "
-            f"for project '{desc.parent.name}' in class '{pcl.name}'",
+            f"Faculty member {current_user.name} confirmed description '{desc.label}' for project '{desc.parent.name}' in class '{pcl.name}'",
             user=current_user,
             project_classes=pcl,
         )
@@ -2555,8 +2458,7 @@ def confirm_description(did, pclass_id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not confirm description "{desc}" for project "{proj}" due to a database error. '
-            "Please contact a system administrator".format(
+            'Could not confirm description "{desc}" for project "{proj}" due to a database error. Please contact a system administrator'.format(
                 desc=desc.label, proj=desc.parent.name
             ),
             "error",
@@ -2696,7 +2598,6 @@ def past_projects_ajax():
     return ajax.faculty.pastproject_data(past_projects)
 
 
-
 @faculty.route("/set_availability/<int:id>", methods=["GET", "POST"])
 @roles_accepted("faculty")
 def set_availability(id):
@@ -2738,9 +2639,7 @@ def set_availability(id):
         assessment.faculty_set_comment(current_user.faculty_data, comment)
 
         if hasattr(form, "confirm") and form.confirm:
-            record = assessment.assessor_list.filter_by(
-                faculty_id=current_user.id, confirmed=False
-            ).first()
+            record = assessment.assessor_list.filter_by(faculty_id=current_user.id, confirmed=False).first()
             if record is not None:
                 record.confirmed = True
                 record.confirmed_timestamp = datetime.now()
@@ -2773,9 +2672,7 @@ def set_availability(id):
 
     else:
         if request.method == "GET":
-            form.comment.data = assessment.faculty_get_comment(
-                current_user.faculty_data
-            )
+            form.comment.data = assessment.faculty_get_comment(current_user.faculty_data)
 
     return render_template_context(
         "faculty/set_availability.html",
@@ -2817,8 +2714,7 @@ def session_available(sess_id):
 
     try:
         log_db_commit(
-            f"Marked session '{session.short_date_string}' as available for assessment '{assessment.name}' "
-            f"by {current_user.name}",
+            f"Marked session '{session.short_date_string}' as available for assessment '{assessment.name}' by {current_user.name}",
             user=current_user,
         )
     except SQLAlchemyError as e:
@@ -2863,8 +2759,7 @@ def session_ifneeded(sess_id):
 
     try:
         log_db_commit(
-            f"Marked session '{session.short_date_string}' as if-needed for assessment '{assessment.name}' "
-            f"by {current_user.name}",
+            f"Marked session '{session.short_date_string}' as if-needed for assessment '{assessment.name}' by {current_user.name}",
             user=current_user,
         )
     except SQLAlchemyError as e:
@@ -2909,8 +2804,7 @@ def session_unavailable(sess_id):
 
     try:
         log_db_commit(
-            f"Marked session '{session.short_date_string}' as unavailable for assessment '{assessment.name}' "
-            f"by {current_user.name}",
+            f"Marked session '{session.short_date_string}' as unavailable for assessment '{assessment.name}' by {current_user.name}",
             user=current_user,
         )
     except SQLAlchemyError as e:
@@ -2930,9 +2824,7 @@ def session_all_available(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
-        sess_id
-    )
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(sess_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
@@ -2969,9 +2861,7 @@ def session_all_unavailable(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
-        sess_id
-    )
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(sess_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
@@ -3039,9 +2929,7 @@ def show_enrollments():
         .all()
     )
     pclasses_binned = [(p, data.is_enrolled(p)) for p in pclasses]
-    enrolled_pclasses = [
-        data.get_enrollment_record(p) for p, flag in pclasses_binned if flag
-    ]
+    enrolled_pclasses = [data.get_enrollment_record(p) for p, flag in pclasses_binned if flag]
     unenrolled_pclasses = [p for p, flag in pclasses_binned if not flag]
 
     return render_template_context(
@@ -3190,9 +3078,7 @@ def view_feedback(id):
         url = redirect_url()
 
     # Check that the logged-in user holds a SubmissionRole on this record
-    role = SubmissionRole.query.filter_by(
-        submission_id=record.id, user_id=current_user.id
-    ).first()
+    role = SubmissionRole.query.filter_by(submission_id=record.id, user_id=current_user.id).first()
     if role is None:
         flash(
             "You do not have permission to view feedback for this submission. "
@@ -3219,9 +3105,7 @@ def view_feedback(id):
     event_data = []
     for event in closed_events:
         srs = (
-            record.submitter_reports.join(
-                MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
-            )
+            record.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
             .filter(MarkingWorkflow.event_id == event.id)
             .all()
         )
@@ -3253,9 +3137,7 @@ def past_feedback(student_id):
     user: User = User.query.get_or_404(student_id)
 
     if not user.has_role("student"):
-        flash(
-            "It is only possible to view past feedback for a student account.", "info"
-        )
+        flash("It is only possible to view past feedback for a student account.", "info")
         return redirect(redirect_url())
 
     if user.student_data is None:
@@ -3305,9 +3187,7 @@ def past_feedback(student_id):
 
     student_text = "student feedback"
     generic_text = "student feedback"
-    return_url = url_for(
-        "faculty.past_feedback", student_id=data.id, text=text, url=url
-    )
+    return_url = url_for("faculty.past_feedback", student_id=data.id, text=text, url=url)
 
     return render_template_context(
         "student/timeline.html",
@@ -3353,9 +3233,7 @@ def _build_marking_form_class(scheme):
             label = field_spec["text"]
 
             if ftype == "boolean":
-                fields[key] = BooleanField(
-                    label, default=bool(default) if default is not None else False
-                )
+                fields[key] = BooleanField(label, default=bool(default) if default is not None else False)
 
             elif ftype == "text":
                 fields[key] = TextAreaField(
@@ -3383,9 +3261,7 @@ def _build_marking_form_class(scheme):
                 )
 
     if scheme.uses_standard_feedback:
-        fields["feedback_positive"] = TextAreaField(
-            "What was good?", validators=[WTFOptional()], render_kw={"rows": 7}
-        )
+        fields["feedback_positive"] = TextAreaField("What was good?", validators=[WTFOptional()], render_kw={"rows": 7})
         fields["feedback_improvement"] = TextAreaField(
             "What could be improved next time?",
             validators=[WTFOptional()],
@@ -3509,9 +3385,7 @@ def marking_form(report_id):
                         val = round(float(raw_val), 1)
                         field_values[key] = val
                 except (ValueError, TypeError):
-                    getattr(form, key).errors.append(
-                        "Could not convert this value to the required type."
-                    )
+                    getattr(form, key).errors.append("Could not convert this value to the required type.")
                     extraction_error = True
 
         if not extraction_error:
@@ -3567,9 +3441,7 @@ def marking_form(report_id):
                                     db.session.add(vf_wf)
                                     db.session.flush()
 
-                                    for (
-                                        notify_user
-                                    ) in workflow.notify_on_validation_failure:
+                                    for notify_user in workflow.notify_on_validation_failure:
                                         item = EmailWorkflowItem.build_(
                                             subject_payload=encode_email_payload(
                                                 {
@@ -3603,9 +3475,7 @@ def marking_form(report_id):
                 grade_val = None
                 if conflation_rule is not None:
                     try:
-                        grade_val = float(
-                            eval(conflation_rule, {"__builtins__": {}}, field_values)
-                        )
+                        grade_val = float(eval(conflation_rule, {"__builtins__": {}}, field_values))
                     except Exception as e:
                         flash(
                             f"Could not evaluate grade from conflation rule. Your report will be saved, but the final value will not have been conflated correctly. Please contact the convenor.",
@@ -3614,9 +3484,7 @@ def marking_form(report_id):
                         current_app.logger.error(
                             f'Failed to evaluate conflation rule for MarkingReport #{report.id} -- assessor "{role_user.name}", student "{student_user.name}", for workflow "{workflow.name}", event "{event.name}", submission period "{period.display_name}", project class "{pclass.abbreviation}"'
                         )
-                        current_app.logger.error(
-                            f'conflation rule = "{conflation_rule}'
-                        )
+                        current_app.logger.error(f'conflation rule = "{conflation_rule}')
                         current_app.logger.error(f"field_values = {field_values}")
 
                 # Store results
@@ -3640,8 +3508,7 @@ def marking_form(report_id):
 
                 try:
                     log_db_commit(
-                        f"Submitted marking report for {report.student_identifier['label']} "
-                        f"(workflow: {workflow.name})",
+                        f"Submitted marking report for {report.student_identifier['label']} (workflow: {workflow.name})",
                         user=current_user,
                         project_classes=pclass,
                     )
@@ -3653,9 +3520,7 @@ def marking_form(report_id):
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception(
-                        "SQLAlchemyError exception", exc_info=e
-                    )
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     flash(
                         "Could not save marking report due to a database error. Please contact a system administrator.",
                         "error",
@@ -3805,15 +3670,8 @@ def view_marking_report(report_id):
     # Read-only dashboard roles (AVD/Similarity), tenant-scoped. Uses validate_data_dashboard_access,
     # not validate_is_convenor: these roles are not convenor-equivalent and must never be folded
     # into a convenor check, or reused anywhere as an "is_elevated"-equivalent write check.
-    is_dashboard_viewer = validate_data_dashboard_access(
-        pclass, ["data_dashboard_reports", "data_dashboard_similarity"], message=False
-    )
-    if (
-        not is_allowed
-        and not (is_role_owner and report.report_submitted)
-        and not is_responsible_supervisor
-        and not is_dashboard_viewer
-    ):
+    is_dashboard_viewer = validate_data_dashboard_access(pclass, ["data_dashboard_reports", "data_dashboard_similarity"], message=False)
+    if not is_allowed and not (is_role_owner and report.report_submitted) and not is_responsible_supervisor and not is_dashboard_viewer:
         flash("You do not have permission to view this marking report.", "error")
         return redirect(redirect_url())
 
@@ -3995,8 +3853,10 @@ def moderator_report_form(mod_report_id):
     pclass = workflow.event.pclass
     record: SubmissionRecord = sr.record
 
-    is_elevated = current_user.has_role("admin") or current_user.has_role("root") or (
-        current_user.faculty_data is not None and current_user.faculty_data.is_convenor_for(pclass)
+    is_elevated = (
+        current_user.has_role("admin")
+        or current_user.has_role("root")
+        or (current_user.faculty_data is not None and current_user.faculty_data.is_convenor_for(pclass))
     )
     is_owner = mod_report.role.user_id == current_user.id
 
@@ -4171,12 +4031,8 @@ def edit_marking_feedback(report_id):
         "MarkingFeedbackForm",
         (FlaskForm,),
         {
-            "feedback_positive": TextAreaField(
-                "What was good?", validators=[WTFOptional()]
-            ),
-            "feedback_improvement": TextAreaField(
-                "What could be improved next time?", validators=[WTFOptional()]
-            ),
+            "feedback_positive": TextAreaField("What was good?", validators=[WTFOptional()]),
+            "feedback_improvement": TextAreaField("What could be improved next time?", validators=[WTFOptional()]),
             "submit_feedback": SubmitField("Save feedback"),
         },
     )
@@ -4199,8 +4055,7 @@ def edit_marking_feedback(report_id):
 
         try:
             log_db_commit(
-                f"Updated marking feedback for {report.student_identifier['label']} "
-                f"(workflow: {workflow.name})",
+                f"Updated marking feedback for {report.student_identifier['label']} (workflow: {workflow.name})",
                 user=current_user,
                 project_classes=pclass,
             )
@@ -4225,7 +4080,5 @@ def edit_marking_feedback(report_id):
         period=period,
         pclass=pclass,
         url=url,
-        submit_url=url_for(
-            "faculty.edit_marking_feedback", report_id=report_id, url=url
-        ),
+        submit_url=url_for("faculty.edit_marking_feedback", report_id=report_id, url=url),
     )

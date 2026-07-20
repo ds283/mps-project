@@ -22,11 +22,7 @@ def check_2026_ATAS(fd: FacultyData):
     projects = []
 
     _TARGET_GROUP_LABEL = "Final Year Project labels"
-    tag_group: ProjectTagGroup = (
-        db.session.query(ProjectTagGroup)
-        .filter(ProjectTagGroup.name == _TARGET_GROUP_LABEL)
-        .first()
-    )
+    tag_group: ProjectTagGroup = db.session.query(ProjectTagGroup).filter(ProjectTagGroup.name == _TARGET_GROUP_LABEL).first()
 
     class InputForm(Form):
         submit = SubmitField("Continue")
@@ -65,12 +61,7 @@ def check_2026_ATAS(fd: FacultyData):
     for project in fd.projects.filter(
         Project.active.is_(True),
     ):
-        if any(
-            [
-                (p.enforce_ATAS and p.tenant.in_2026_ATAS_campaign)
-                for p in project.project_classes
-            ]
-        ):
+        if any([(p.enforce_ATAS and p.tenant.in_2026_ATAS_campaign) for p in project.project_classes]):
             if project.ATAS_restricted is None:
                 add_project(project)
                 continue

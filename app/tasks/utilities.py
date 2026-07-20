@@ -38,6 +38,4 @@ def register_utility_tasks(celery):
         if num_sent == 1:
             plural = ""
 
-        user.post_message(
-            message.format(n=num_sent, pl=plural), priority, autocommit=True
-        )
+        user.post_message(message.format(n=num_sent, pl=plural), priority, autocommit=True)

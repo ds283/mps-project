@@ -27,9 +27,7 @@ def register_deploy_schedule_tasks(celery):
         self.update_state(state=states.STARTED, meta={"msg": msg})
 
         try:
-            record: ScheduleAttempt = (
-                db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-            )
+            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -58,9 +56,7 @@ def register_deploy_schedule_tasks(celery):
                             .first()
                         )
                     except SQLAlchemyError as e:
-                        current_app.logger.exception(
-                            "SQLAlchemyError exception", exc_info=e
-                        )
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                         raise self.retry()
 
                     if existing is not None:
@@ -89,9 +85,7 @@ def register_deploy_schedule_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        msg = {
-            "msg": f"Created {created} SubmissionRole record(s) for schedule #{schedule_id} (skipped {skipped} duplicate(s))"
-        }
+        msg = {"msg": f"Created {created} SubmissionRole record(s) for schedule #{schedule_id} (skipped {skipped} duplicate(s))"}
         self.update_state(state=states.SUCCESS, meta=msg)
         return msg
 
@@ -101,9 +95,7 @@ def register_deploy_schedule_tasks(celery):
         self.update_state(state=states.STARTED, meta={"msg": msg})
 
         try:
-            record: ScheduleAttempt = (
-                db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-            )
+            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -116,9 +108,7 @@ def register_deploy_schedule_tasks(celery):
         slot_ids = [slot.id for slot in record.slots]
 
         if not slot_ids:
-            msg = {
-                "msg": f"No slots found for schedule #{schedule_id}; nothing to clean up"
-            }
+            msg = {"msg": f"No slots found for schedule #{schedule_id}; nothing to clean up"}
             self.update_state(state=states.SUCCESS, meta=msg)
             return msg
 
@@ -152,8 +142,6 @@ def register_deploy_schedule_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        msg = {
-            "msg": f"Removed {removed} and unlinked {unlinked} SubmissionRole record(s) for schedule #{schedule_id}"
-        }
+        msg = {"msg": f"Removed {removed} and unlinked {unlinked} SubmissionRole record(s) for schedule #{schedule_id}"}
         self.update_state(state=states.SUCCESS, meta=msg)
         return msg

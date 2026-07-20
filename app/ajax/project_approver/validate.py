@@ -29,10 +29,10 @@ def build_actions_templ() -> Template:
 
 
 def validate_data(
-        current_user: User,
-        url: Optional[str],
-        text: Optional[str],
-        records: List[ProjectDescription],
+    current_user: User,
+    url: Optional[str],
+    text: Optional[str],
+    records: List[ProjectDescription],
 ):
     title_templ: Template = build_title_templ()
     owner_templ: Template = build_owner_templ()
@@ -41,9 +41,7 @@ def validate_data(
 
     data = [
         {
-            "name": render_template(
-                title_templ, r=r, url=url, text=text, current_user=current_user
-            ),
+            "name": render_template(title_templ, r=r, url=url, text=text, current_user=current_user),
             "owner": render_template(owner_templ, p=r.parent),
             "pclasses": render_template(pclasses_templ, r=r),
             "menu": render_template(actions_templ, r=r, url=url, text=text),

@@ -137,11 +137,7 @@ def submitters(id):
     if cohort_filter is None and session.get("convenor_submitters_cohort_filter"):
         cohort_filter = session["convenor_submitters_cohort_filter"]
 
-    if (
-            isinstance(cohort_filter, str)
-            and cohort_filter != "all"
-            and int(cohort_filter) not in cohorts
-    ):
+    if isinstance(cohort_filter, str) and cohort_filter != "all" and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -150,11 +146,7 @@ def submitters(id):
     if prog_filter is None and session.get("convenor_submitters_prog_filter"):
         prog_filter = session["convenor_submitters_prog_filter"]
 
-    if (
-            isinstance(prog_filter, str)
-            and prog_filter != "all"
-            and int(prog_filter) not in programmes
-    ):
+    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in programmes:
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -183,11 +175,7 @@ def submitters(id):
     if year_filter is None and session.get("convenor_submitters_year_filter"):
         year_filter = session["convenor_submitters_year_filter"]
 
-    if (
-            isinstance(year_filter, str)
-            and year_filter != "all"
-            and int(year_filter) not in years
-    ):
+    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
         year_filter = "all"
 
     if year_filter is not None:
@@ -211,9 +199,7 @@ def submitters(id):
         session["convenor_submitters_data_display"] = data_display
 
     # build list of student emails for passing to local email client via mailto: list
-    submitters = build_submitters_data(
-        config, cohort_filter, prog_filter, state_filter, year_filter
-    )
+    submitters = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
     if name_filter:
         name_lower = name_filter.lower()
         submitters = [s for s in submitters if name_lower in s.student.user.name.lower()]
@@ -221,10 +207,12 @@ def submitters(id):
     if data_display in ("number", "both-number"):
         submitters.sort(key=lambda s: s.student.exam_number if s.student.exam_number is not None else "")
     else:
-        submitters.sort(key=lambda s: (
-            (s.student.user.last_name or "").lower(),
-            (s.student.user.first_name or "").lower(),
-        ))
+        submitters.sort(
+            key=lambda s: (
+                (s.student.user.last_name or "").lower(),
+                (s.student.user.first_name or "").lower(),
+            )
+        )
 
     emails = [s.student.user.email for s in submitters]
 
@@ -235,17 +223,11 @@ def submitters(id):
     total_submitters = len(submitters)
     page_start = (page - 1) * per_page
     paged_submitters = submitters[page_start : page_start + per_page]
-    allow_delete = (
-        config.submitter_lifecycle <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    )
+    allow_delete = config.submitter_lifecycle <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    template = (
-        "convenor/dashboard/submitters_v2.html"
-        if current_app.config.get("SUBMITTERS_V2", False)
-        else "convenor/dashboard/submitters.html"
-    )
+    template = "convenor/dashboard/submitters_v2.html" if current_app.config.get("SUBMITTERS_V2", False) else "convenor/dashboard/submitters.html"
     return render_template_context(
         template,
         pane="submitters",
@@ -314,13 +296,9 @@ def submitters_ajax(id):
         show_number = True
         sort_number = True
 
-    data = build_submitters_data(
-        config, cohort_filter, prog_filter, state_filter, year_filter
-    )
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
-    return ajax.convenor.submitters_data(
-        data, config, show_name, show_number, sort_number
-    )
+    return ajax.convenor.submitters_data(data, config, show_name, show_number, sort_number)
 
 
 @convenor.route("/enrol_submitters/<int:id>")
@@ -345,10 +323,7 @@ def enrol_submitters(id):
         )
         return redirect(redirect_url())
 
-    if (
-            config.submitter_lifecycle
-            >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-    ):
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash(
             "Manual enrolment of selectors is no longer possible at this stage in the project lifecycle.",
             "error",
@@ -395,11 +370,7 @@ def enrol_submitters(id):
     if prog_filter is None and session.get("convenor_sub_enroll_prog_filter"):
         prog_filter = session["convenor_sub_enroll_prog_filter"]
 
-    if (
-            isinstance(prog_filter, str)
-            and prog_filter != "all"
-            and int(prog_filter) not in programmes
-    ):
+    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in programmes:
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -408,11 +379,7 @@ def enrol_submitters(id):
     if year_filter is None and session.get("convenor_sub_enroll_year_filter"):
         year_filter = session["convenor_sub_enroll_year_filter"]
 
-    if (
-            isinstance(year_filter, str)
-            and year_filter != "all"
-            and int(year_filter) not in years
-    ):
+    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
         year_filter = "all"
 
     if year_filter is not None:
@@ -466,10 +433,7 @@ def enrol_submitters_ajax(id):
         )
         return jsonify({})
 
-    if (
-            config.submitter_lifecycle
-            >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
-    ):
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         return jsonify({})
 
     candidates = build_enrol_submitter_candidates(config)
@@ -486,12 +450,7 @@ def enrol_submitters_ajax(id):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [
-            s
-            for s in candidates.all()
-            if s.academic_year is None
-               or (not s.has_graduated and s.academic_year == year_value)
-        ]
+        candidates = [s for s in candidates.all() if s.academic_year is None or (not s.has_graduated and s.academic_year == year_value)]
     else:
         candidates = candidates.all()
 
@@ -513,10 +472,7 @@ def enrol_all_submitters(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if (
-            config.submitter_lifecycle
-            > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    ):
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash(
             "Manual enrolment of submitters is only possible during normal project activity",
             "error",
@@ -545,11 +501,7 @@ def enrol_all_submitters(configid):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [
-            s
-            for s in candidates.all()
-            if (s.academic_year is None or s.academic_yea == year_value)
-        ]
+        candidates = [s for s in candidates.all() if (s.academic_year is None or s.academic_yea == year_value)]
     else:
         candidates = candidates.all()
 
@@ -563,16 +515,12 @@ def enrol_all_submitters(configid):
 
     try:
         log_db_commit(
-            'Bulk-enrolled {count} submitters for project class "{proj}"'.format(
-                count=len(candidates), proj=config.project_class.name
-            ),
+            'Bulk-enrolled {count} submitters for project class "{proj}"'.format(count=len(candidates), proj=config.project_class.name),
             user=current_user,
             project_classes=config.project_class,
         )
         flash(
-            'Added {count} submitters to project "{proj}"'.format(
-                count=len(candidates), proj=config.project_class.name
-            ),
+            'Added {count} submitters to project "{proj}"'.format(count=len(candidates), proj=config.project_class.name),
             "info",
         )
     except SQLAlchemyError as e:
@@ -610,10 +558,7 @@ def enrol_submitter(sid, configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if (
-            config.submitter_lifecycle
-            > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    ):
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         if not validate_is_administrator(message=False):
             flash(
                 "Manual enrolment of submitters is only possible during normal project activity. "
@@ -700,8 +645,7 @@ def enrol_canvas_student(cid):
 
     if cs.student_id is None:
         flash(
-            "This Canvas student cannot be enrolled automatically because no matching student "
-            "record was found in the MPS database.",
+            "This Canvas student cannot be enrolled automatically because no matching student record was found in the MPS database.",
             "error",
         )
         return redirect(redirect_url())
@@ -740,10 +684,7 @@ def delete_submitter(sid):
     if not validate_is_convenor(sub.config.project_class):
         return redirect(redirect_url())
 
-    if (
-            sub.config.submitter_lifecycle
-            > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    ):
+    if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash(
             "Manual deletion of submitters is only possible during normal project activity",
             "error",
@@ -784,7 +725,8 @@ def delete_submitter(sid):
             db.session.flush()
 
             create_auto_journal_entry(
-                student, journal_html,
+                student,
+                journal_html,
                 title=f"Submitter record deleted: {pclass.name} ({year_str})",
                 project_class_config=config,
                 entry_type=StudentJournalEntry.JOURNAL_TYPE_DELETION,
@@ -799,9 +741,7 @@ def delete_submitter(sid):
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
-                'Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(
-                    n=e
-                ),
+                'Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(n=e),
                 "error",
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -809,9 +749,7 @@ def delete_submitter(sid):
         return redirect(url)
 
     title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
-    panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
-        name=sub.student.user.name
-    )
+    panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
     message = (
         '<p>Are you sure that you wish to delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
         "<p>This action cannot be undone.</p>".format(name=sub.student.user.name)
@@ -842,10 +780,7 @@ def delete_all_submitters(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if (
-            config.submitter_lifecycle
-            > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    ):
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash(
             "Manual deletion of submitters is only possible during normal project activity",
             "error",
@@ -859,13 +794,8 @@ def delete_all_submitters(configid):
     title = "Delete all submitters"
     panel_title = "Delete all submitters"
 
-    action_url = url_for(
-        "convenor.do_delete_all_submitters", configid=configid, url=url
-    )
-    message = (
-        "<p>Are you sure that you wish to delete <strong>all submitters</strong>?"
-        "<p>This action cannot be undone.</p>"
-    )
+    action_url = url_for("convenor.do_delete_all_submitters", configid=configid, url=url)
+    message = "<p>Are you sure that you wish to delete <strong>all submitters</strong>?<p>This action cannot be undone.</p>"
     submit_label = "Delete all submitters"
 
     form = ConfirmActionForm()
@@ -894,10 +824,7 @@ def do_delete_all_submitters(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if (
-            config.submitter_lifecycle
-            > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    ):
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash(
             "Manual deletion of submitters is only possible during normal project activity",
             "error",
@@ -923,8 +850,7 @@ def do_delete_all_submitters(configid):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Could not delete all submitters due to a database error ("{n}"). Please contact a system '
-            "administrator.".format(n=e),
+            'Could not delete all submitters due to a database error ("{n}"). Please contact a system administrator.'.format(n=e),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1104,22 +1030,16 @@ def delete_role(role_id):
             .count()
         )
         if active_mr_count > 0:
-            other_supervisors = [
-                r for r in record.roles
-                if r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR and r.id != role.id
-            ]
+            other_supervisors = [r for r in record.roles if r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR and r.id != role.id]
             if not other_supervisors:
-                has_responsible = any(
-                    r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR
-                    for r in record.roles
-                )
+                has_responsible = any(r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR for r in record.roles)
                 if has_responsible:
                     will_need_fallback = True
                 else:
                     will_be_orphaned = True
 
     base = (
-        f'<p>Please confirm that you wish to delete the {role.role_as_str} role for '
+        f"<p>Please confirm that you wish to delete the {role.role_as_str} role for "
         f'<i class="fas fa-user-circle"></i> <strong>{role_user.name}</strong> '
         f'belonging to submitter <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>.</p>'
     )
@@ -1188,9 +1108,7 @@ def perform_delete_role(role_id):
         # Sync: collect affected SubmitterReports before deleting their MarkingReports,
         # so we can re-evaluate state after the operation completes.
         _mrs_to_delete = db.session.query(MarkingReport).filter_by(role_id=role.id).all()
-        affected_srs: dict[int, SubmitterReport] = {
-            mr.submitter_report_id: mr.submitter_report for mr in _mrs_to_delete
-        }
+        affected_srs: dict[int, SubmitterReport] = {mr.submitter_report_id: mr.submitter_report for mr in _mrs_to_delete}
         for mr in _mrs_to_delete:
             db.session.delete(mr)
 
@@ -1199,30 +1117,18 @@ def perform_delete_role(role_id):
 
         # Sync: if a supervisor role was deleted, rebuild any SubmitterReports that are now
         # left with no MarkingReport, using the same precedence as initialize_marking_workflow.
-        _supervisor_role_types = frozenset(
-            {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
-        )
+        _supervisor_role_types = frozenset({SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR})
         rebuilt_sr_ids: set[int] = set()
         if deleted_role_type in _supervisor_role_types:
-            for event in period.marking_events.filter(
-                MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED
-            ).all():
-                for workflow in event.workflows.filter(
-                    MarkingWorkflow.role.in_(list(_supervisor_role_types))
-                ).all():
-                    sr = db.session.query(SubmitterReport).filter_by(
-                        record_id=record.id, workflow_id=workflow.id
-                    ).first()
+            for event in period.marking_events.filter(MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED).all():
+                for workflow in event.workflows.filter(MarkingWorkflow.role.in_(list(_supervisor_role_types))).all():
+                    sr = db.session.query(SubmitterReport).filter_by(record_id=record.id, workflow_id=workflow.id).first()
                     if sr is None or sr.marking_reports.count() > 0:
                         continue  # still has assignment(s); nothing to do
 
                     all_roles = record.roles.all()
-                    has_supervisor = any(
-                        r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR for r in all_roles
-                    )
-                    has_responsible = any(
-                        r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR for r in all_roles
-                    )
+                    has_supervisor = any(r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR for r in all_roles)
+                    has_responsible = any(r.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR for r in all_roles)
                     if has_supervisor:
                         eligible = [r for r in all_roles if r.role == SubmissionRoleTypesMixin.ROLE_SUPERVISOR]
                     elif has_responsible:
@@ -1265,14 +1171,16 @@ def perform_delete_role(role_id):
         # to READY_TO_DISTRIBUTE since the new report has not yet been distributed.
         from ..tasks.markingevent import advance_submitter_report
 
-        _advanced_states = frozenset({
-            SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
-            SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
-            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
-            SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
-            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
-            SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
-        })
+        _advanced_states = frozenset(
+            {
+                SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
+                SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
+                SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+                SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+                SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+            }
+        )
         for sr in affected_srs.values():
             if sr.workflow_state in (
                 SubmitterReportWorkflowStates.COMPLETED,
@@ -1343,13 +1251,9 @@ def add_role(record_id):
             # new role only when no ROLE_SUPERVISOR MarkingReport already exists for that
             # SubmitterReport (matching the precedence logic in initialize_marking_workflow).
             # For other workflow types: require an exact role match.
-            _supervisor_roles = frozenset(
-                {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
-            )
+            _supervisor_roles = frozenset({SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR})
             affected_srs: dict[int, SubmitterReport] = {}
-            for event in period.marking_events.filter(
-                MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED
-            ).all():
+            for event in period.marking_events.filter(MarkingEvent.workflow_state != MarkingEventWorkflowStates.CLOSED).all():
                 for workflow in event.workflows.all():
                     wf_role = workflow.role
 
@@ -1357,9 +1261,7 @@ def add_role(record_id):
                         if role.role not in _supervisor_roles:
                             continue
 
-                        sr = db.session.query(SubmitterReport).filter_by(
-                            record_id=record.id, workflow_id=workflow.id
-                        ).first()
+                        sr = db.session.query(SubmitterReport).filter_by(record_id=record.id, workflow_id=workflow.id).first()
                         if sr is None:
                             continue
 
@@ -1398,9 +1300,7 @@ def add_role(record_id):
                         if role.role != wf_role:
                             continue
 
-                        sr = db.session.query(SubmitterReport).filter_by(
-                            record_id=record.id, workflow_id=workflow.id
-                        ).first()
+                        sr = db.session.query(SubmitterReport).filter_by(record_id=record.id, workflow_id=workflow.id).first()
                         if sr is None:
                             continue
 
@@ -1438,14 +1338,16 @@ def add_role(record_id):
             # assessor receives a distribution notification.
             from ..tasks.markingevent import advance_submitter_report
 
-            _advanced_states = frozenset({
-                SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
-                SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
-                SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
-                SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
-                SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
-                SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
-            })
+            _advanced_states = frozenset(
+                {
+                    SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
+                    SubmitterReportWorkflowStates.AWAITING_FEEDBACK,
+                    SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+                    SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+                    SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                    SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+                }
+            )
             for sr in affected_srs.values():
                 if sr.workflow_state in (
                     SubmitterReportWorkflowStates.COMPLETED,
@@ -1575,8 +1477,7 @@ def submit_missing_llm(configid):
         flash("No reports are currently missing analysis results.", "info")
     else:
         flash(
-            f"Queued {job.total_count} report(s) for language analysis. "
-            f"Results will appear as submissions are processed.",
+            f"Queued {job.total_count} report(s) for language analysis. Results will appear as submissions are processed.",
             "success",
         )
 

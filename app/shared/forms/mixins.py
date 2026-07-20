@@ -53,9 +53,7 @@ class EditUserNameMixin:
 
 
 class FirstLastNameMixin:
-    first_name = StringField(
-        "First name", validators=[InputRequired(message="First name is required")]
-    )
+    first_name = StringField("First name", validators=[InputRequired(message="First name is required")])
 
     last_name = StringField(
         "Last or family name",
@@ -80,16 +78,12 @@ class EmailSettingsMixin:
         description="Notifications that are grouped include student requests for meeting sign-offs, and notifications about re-enrolment after sabbaticals or buyouts",
     )
 
-    summary_frequency = SelectField(
-        "Frequency of summaries", choices=email_freq_choices, coerce=int
-    )
+    summary_frequency = SelectField("Frequency of summaries", choices=email_freq_choices, coerce=int)
 
 
 def FacultyDataMixinFactory(admin=False):
     class FacultyDataMixin:
-        academic_title = SelectField(
-            "Academic title", choices=academic_titles, coerce=int
-        )
+        academic_title = SelectField("Academic title", choices=academic_titles, coerce=int)
 
         use_academic_title = BooleanField(
             "Use academic title",
@@ -151,11 +145,7 @@ def FacultyDataMixinFactory(admin=False):
 
         office = StringField(
             "Office",
-            validators=[
-                InputRequired(
-                    message="Please enter your office details to help students find you"
-                )
-            ],
+            validators=[InputRequired(message="Please enter your office details to help students find you")],
         )
 
         reminder_emails = BooleanField(
@@ -223,9 +213,7 @@ class PeriodPresentationsMixin:
         validators=[NotOptionalIf("has_presentation")],
     )
 
-    lecture_capture = BooleanField(
-        "The presentation assessment requires a venue with lecture capture"
-    )
+    lecture_capture = BooleanField("The presentation assessment requires a venue with lecture capture")
 
     max_group_size = IntegerField(
         "Maximum group size",
@@ -260,7 +248,6 @@ class PeriodPresentationsMixin:
             Length(max=DEFAULT_STRING_LENGTH),
         ],
     )
-
 
 
 def PeriodSelectorMixinFactory(config: ProjectClassConfig, is_admin: bool):

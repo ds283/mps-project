@@ -118,8 +118,7 @@ def transform_date(date_str):
             multiplier = 1 if date_info["tz_offset"] == "+" else -1
             date_info["tzinfo"] = tzoffset(
                 None,
-                multiplier
-                * (3600 * date_info["tz_hour"] + 60 * date_info["tz_minute"]),
+                multiplier * (3600 * date_info["tz_hour"] + 60 * date_info["tz_minute"]),
             )
 
         for k in ("tz_offset", "tz_hour", "tz_minute"):  # no longer needed
@@ -157,9 +156,7 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord) -> int:
 
     ytop = _coverpage_title(coverpage_label, page, w, ytop)
     ytop = _coverpage_candidate_number(candidate_label, page, w, ytop)
-    ytop = _coverpage_metadata(
-        creation_date, metadata, modified_date, num_pages, page, w, ytop
-    )
+    ytop = _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page, w, ytop)
 
     # embed dyslexia sticker if required
     if data.dyslexia_sticker:
@@ -167,9 +164,7 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord) -> int:
 
     # embed dyspraxia sticker if required
     if data.dyspraxia_sticker:
-        ytop = _attach_sticker(
-            page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label
-        )
+        ytop = _attach_sticker(page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label)
 
     # embed redaction notice if the student's name was found and redacted
     if redaction_count > 0:
@@ -183,9 +178,7 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord) -> int:
     return redaction_count
 
 
-def _coverpage_metadata(
-    creation_date, metadata, modified_date, num_pages, page, w, ytop
-):
+def _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page, w, ytop):
     x0 = _initial_x_position
     y0 = ytop + _text_label_size + _vertical_margin
     p2 = fitz.Point(x0, y0)
@@ -225,9 +218,7 @@ def _coverpage_metadata(
     p6 = fitz.Point(x0, y0)
     rc = page.insert_text(
         p6,
-        "Created at {date}".format(
-            date=creation_date.strftime("%a %d %b %Y %H:%M:%S") if creation_date else "unknown"
-        ),
+        "Created at {date}".format(date=creation_date.strftime("%a %d %b %Y %H:%M:%S") if creation_date else "unknown"),
         color=_black,
         fontname="Helvetica",
         fontsize=_text_label_size,
@@ -237,9 +228,7 @@ def _coverpage_metadata(
     p7 = fitz.Point(x0, y0)
     rc = page.insert_text(
         p7,
-        "Last modified: {date}".format(
-            date=modified_date.strftime("%a %d %b %Y %H:%M:%S") if modified_date else "unknown"
-        ),
+        "Last modified: {date}".format(date=modified_date.strftime("%a %d %b %Y %H:%M:%S") if modified_date else "unknown"),
         color=_black,
         fontname="Helvetica",
         fontsize=_text_label_size,
@@ -250,9 +239,7 @@ def _coverpage_metadata(
 
 
 def _coverpage_candidate_number(candidate_label, page, w, ytop):
-    candidate_label_width = fitz.get_text_length(
-        candidate_label, fontname="Helvetica", fontsize=_subtitle_label_size
-    )
+    candidate_label_width = fitz.get_text_length(candidate_label, fontname="Helvetica", fontsize=_subtitle_label_size)
 
     x0 = (w - candidate_label_width) / 2
     y0 = ytop + _subtitle_label_size + _vertical_margin
@@ -286,9 +273,7 @@ def _coverpage_title(coverpage_label, page, w, ytop):
     now = datetime.now()
     rc = shape.insert_textbox(
         r1,
-        "This page was automatically generated on {now}".format(
-            now=now.strftime("%a %d %b %Y %H:%M:%S")
-        ),
+        "This page was automatically generated on {now}".format(now=now.strftime("%a %d %b %Y %H:%M:%S")),
         color=_black,
         fontname="Helvetica",
         align=fitz.TEXT_ALIGN_CENTER,
@@ -297,9 +282,7 @@ def _coverpage_title(coverpage_label, page, w, ytop):
     shape.commit()
     ytop = ytop + rheight + _text_label_size
 
-    coverpage_label_width = fitz.get_text_length(
-        coverpage_label, fontname="Helvetica", fontsize=_title_label_size
-    )
+    coverpage_label_width = fitz.get_text_length(coverpage_label, fontname="Helvetica", fontsize=_title_label_size)
 
     x0 = (w - coverpage_label_width) / 2
     y0 = ytop + _title_label_size + _vertical_margin
@@ -347,12 +330,7 @@ def _coverpage_redaction_notice(page, w, ytop, count):
         f"Name redacted: {count} {_inst} of the student's name {_werewas} automatically "
         "redacted from the submitted document. Redacted text appears as a solid black rectangle."
     )
-    box_height = (
-        _vertical_margin
-        + 2 * (_text_label_size + 2)
-        + _vertical_margin
-        + 2 * _box_inner_padding
-    )
+    box_height = _vertical_margin + 2 * (_text_label_size + 2) + _vertical_margin + 2 * _box_inner_padding
     ytop += _vertical_margin
     r = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + box_height)
     r_text = fitz.Rect(
@@ -455,9 +433,7 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
         "The metrics below are automatically generated for guidance only. "
         "They do not constitute recommendations and should not replace the marker's own judgement."
     )
-    disclaimer_rect = fitz.Rect(
-        xmargin, ytop, xmargin + rwidth, ytop + 3 * _text_label_size + _vertical_margin
-    )
+    disclaimer_rect = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + 3 * _text_label_size + _vertical_margin)
     shape = page.new_shape()
     shape.insert_textbox(
         disclaimer_rect,
@@ -479,9 +455,7 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
                 estimated=int(word_count), declared=int(stated_word_count)
             )
         else:
-            wc_text = "Word count: {estimated:,} (estimated)".format(
-                estimated=int(word_count)
-            )
+            wc_text = "Word count: {estimated:,} (estimated)".format(estimated=int(word_count))
         ytop += _text_label_size
         page.insert_text(
             fitz.Point(xmargin, ytop),
@@ -531,19 +505,11 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
         if uncited_count > 0:
             if uncited_count <= 4:
                 uncited_detail = "; ".join(str(r) for r in uncited_refs[:4])
-                ref_text = (
-                    "References: {n}   |   Possibly uncited: {uc} ({detail})".format(
-                        n=int(ref_count), uc=uncited_count, detail=uncited_detail
-                    )
-                )
+                ref_text = "References: {n}   |   Possibly uncited: {uc} ({detail})".format(n=int(ref_count), uc=uncited_count, detail=uncited_detail)
             else:
-                ref_text = "References: {n}   |   Possibly uncited: {uc}".format(
-                    n=int(ref_count), uc=uncited_count
-                )
+                ref_text = "References: {n}   |   Possibly uncited: {uc}".format(n=int(ref_count), uc=uncited_count)
         else:
-            ref_text = "References: {n}   |   Possibly uncited: none detected".format(
-                n=int(ref_count)
-            )
+            ref_text = "References: {n}   |   Possibly uncited: none detected".format(n=int(ref_count))
         ytop += _text_label_size
         page.insert_text(
             fitz.Point(xmargin, ytop),
@@ -558,25 +524,15 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
     fig_count = metrics.get("figure_count")
     unreferenced_figs = metrics.get("unreferenced_figures") or []
     if fig_count is not None:
-        unref_fig_count = (
-            len(unreferenced_figs) if isinstance(unreferenced_figs, list) else 0
-        )
+        unref_fig_count = len(unreferenced_figs) if isinstance(unreferenced_figs, list) else 0
         if unref_fig_count > 0:
             if unref_fig_count <= 4:
                 fig_detail = "; ".join(str(f) for f in unreferenced_figs[:4])
-                fig_text = (
-                    "Figures: {n}   |   Possibly unreferenced: {u} ({detail})".format(
-                        n=int(fig_count), u=unref_fig_count, detail=fig_detail
-                    )
-                )
+                fig_text = "Figures: {n}   |   Possibly unreferenced: {u} ({detail})".format(n=int(fig_count), u=unref_fig_count, detail=fig_detail)
             else:
-                fig_text = "Figures: {n}   |   Possibly unreferenced: {u}".format(
-                    n=int(fig_count), u=unref_fig_count
-                )
+                fig_text = "Figures: {n}   |   Possibly unreferenced: {u}".format(n=int(fig_count), u=unref_fig_count)
         else:
-            fig_text = "Figures: {n}   |   Possibly unreferenced: none detected".format(
-                n=int(fig_count)
-            )
+            fig_text = "Figures: {n}   |   Possibly unreferenced: none detected".format(n=int(fig_count))
         ytop += _text_label_size
         page.insert_text(
             fitz.Point(xmargin, ytop),
@@ -591,25 +547,17 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
     table_count = metrics.get("table_count")
     unreferenced_tables = metrics.get("unreferenced_tables") or []
     if table_count is not None:
-        unref_table_count = (
-            len(unreferenced_tables) if isinstance(unreferenced_tables, list) else 0
-        )
+        unref_table_count = len(unreferenced_tables) if isinstance(unreferenced_tables, list) else 0
         if unref_table_count > 0:
             if unref_table_count <= 4:
                 tbl_detail = "; ".join(str(t) for t in unreferenced_tables[:4])
-                tbl_text = (
-                    "Tables: {n}   |   Possibly unreferenced: {u} ({detail})".format(
-                        n=int(table_count), u=unref_table_count, detail=tbl_detail
-                    )
+                tbl_text = "Tables: {n}   |   Possibly unreferenced: {u} ({detail})".format(
+                    n=int(table_count), u=unref_table_count, detail=tbl_detail
                 )
             else:
-                tbl_text = "Tables: {n}   |   Possibly unreferenced: {u}".format(
-                    n=int(table_count), u=unref_table_count
-                )
+                tbl_text = "Tables: {n}   |   Possibly unreferenced: {u}".format(n=int(table_count), u=unref_table_count)
         else:
-            tbl_text = "Tables: {n}   |   Possibly unreferenced: none detected".format(
-                n=int(table_count)
-            )
+            tbl_text = "Tables: {n}   |   Possibly unreferenced: none detected".format(n=int(table_count))
         ytop += _text_label_size
         page.insert_text(
             fitz.Point(xmargin, ytop),
@@ -622,9 +570,7 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
 
     # ── AI compliance statement ───────────────────────────────────────────────
     ytop += _vertical_margin
-    genai_found = (
-        llm_result.get("genai_statement_found", False) if llm_result else False
-    )
+    genai_found = llm_result.get("genai_statement_found", False) if llm_result else False
     genai_precis = llm_result.get("genai_statement_precis") if llm_result else None
 
     if genai_found:
@@ -650,12 +596,7 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
 
     # Estimate height: 4 lines for detected case, 1 for not-detected
     ai_box_lines = 5 if genai_found else 1
-    ai_box_height = (
-        _vertical_margin
-        + ai_box_lines * (_text_label_size + 2)
-        + _vertical_margin
-        + 2 * _box_inner_padding
-    )
+    ai_box_height = _vertical_margin + ai_box_lines * (_text_label_size + 2) + _vertical_margin + 2 * _box_inner_padding
     r_ai = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + ai_box_height)
     r_ai_text = fitz.Rect(
         r_ai.x0 + _box_inner_padding,
@@ -684,9 +625,7 @@ def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process(self, record_id):
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -702,8 +641,7 @@ def register_process_report_tasks(celery):
         # dispatch this task again once analysis completes.
         if not record.language_analysis_complete:
             current_app.logger.info(
-                f"process_report.process: LLM analysis not yet complete for record "
-                f"id={record_id}; deferring until analysis finishes."
+                f"process_report.process: LLM analysis not yet complete for record id={record_id}; deferring until analysis finishes."
             )
             return
 
@@ -730,9 +668,7 @@ def register_process_report_tasks(celery):
         with ScratchFileManager() as output_path:
             with input_storage.download_to_scratch() as input_path:
                 try:
-                    redaction_count = _process_report(
-                        input_path.path, output_path.path, record
-                    )
+                    redaction_count = _process_report(input_path.path, output_path.path, record)
                 except ValueError as e:
                     # document was not a PDF
                     record.processed_report = None
@@ -764,9 +700,7 @@ def register_process_report_tasks(celery):
                         db.session.flush()
                     except SQLAlchemyError as e:
                         db.session.rollback()
-                        current_app.logger.exception(
-                            "SQLAlchemyError exception", exc_info=e
-                        )
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                         raise self.retry()
 
                     dispatch_thumbnail_task(new_asset)
@@ -796,9 +730,7 @@ def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def finalize(self, record_id):
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -831,9 +763,7 @@ def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def error(self, record_id, user_id):
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -850,9 +780,7 @@ def register_process_report_tasks(celery):
             raise Exception(msg)
 
         user.post_message(
-            "Errors occurred when processing uploaded report for submitter {name}".format(
-                name=record.owner.student.user.name
-            ),
+            "Errors occurred when processing uploaded report for submitter {name}".format(name=record.owner.student.user.name),
             "danger",
             autocommit=True,
         )

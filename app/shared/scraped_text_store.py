@@ -50,9 +50,7 @@ def store_scraped_text(
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.store_scraped_text: MongoDB not configured — skipping cache write"
-        )
+        current_app.logger.warning("scraped_text_store.store_scraped_text: MongoDB not configured — skipping cache write")
         return False
 
     try:
@@ -80,9 +78,7 @@ def store_scraped_text(
         return True
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.store_scraped_text: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.store_scraped_text: failed for record #{record_id}: {exc}")
         return False
 
     finally:
@@ -98,9 +94,7 @@ def get_scraped_text(record_id: int) -> dict | None:
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.get_scraped_text: MongoDB not configured — cache miss"
-        )
+        current_app.logger.warning("scraped_text_store.get_scraped_text: MongoDB not configured — cache miss")
         return None
 
     try:
@@ -111,9 +105,7 @@ def get_scraped_text(record_id: int) -> dict | None:
         return doc
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.get_scraped_text: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.get_scraped_text: failed for record #{record_id}: {exc}")
         return None
 
     finally:
@@ -131,9 +123,7 @@ def delete_scraped_text(record_id: int) -> bool:
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.delete_scraped_text: MongoDB not configured — skipping"
-        )
+        current_app.logger.warning("scraped_text_store.delete_scraped_text: MongoDB not configured — skipping")
         return False
 
     try:
@@ -141,9 +131,7 @@ def delete_scraped_text(record_id: int) -> bool:
         return True
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.delete_scraped_text: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.delete_scraped_text: failed for record #{record_id}: {exc}")
         return False
 
     finally:
@@ -169,9 +157,7 @@ def store_similarity_chunks(
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.store_similarity_chunks: MongoDB not configured — skipping"
-        )
+        current_app.logger.warning("scraped_text_store.store_similarity_chunks: MongoDB not configured — skipping")
         return False
 
     try:
@@ -199,9 +185,7 @@ def store_similarity_chunks(
         return True
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.store_similarity_chunks: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.store_similarity_chunks: failed for record #{record_id}: {exc}")
         return False
 
     finally:
@@ -218,9 +202,7 @@ def delete_similarity_chunks(record_id: int) -> bool:
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.delete_similarity_chunks: MongoDB not configured — skipping"
-        )
+        current_app.logger.warning("scraped_text_store.delete_similarity_chunks: MongoDB not configured — skipping")
         return False
     try:
         collection.update_one(
@@ -229,9 +211,7 @@ def delete_similarity_chunks(record_id: int) -> bool:
         )
         return True
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.delete_similarity_chunks: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.delete_similarity_chunks: failed for record #{record_id}: {exc}")
         return False
     finally:
         client.close()
@@ -247,9 +227,7 @@ def get_similarity_chunks(record_id: int) -> dict | None:
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.get_similarity_chunks: MongoDB not configured — cache miss"
-        )
+        current_app.logger.warning("scraped_text_store.get_similarity_chunks: MongoDB not configured — cache miss")
         return None
 
     try:
@@ -262,9 +240,7 @@ def get_similarity_chunks(record_id: int) -> dict | None:
         return doc.get("similarity_chunks")
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.get_similarity_chunks: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.get_similarity_chunks: failed for record #{record_id}: {exc}")
         return None
 
     finally:
@@ -284,9 +260,7 @@ def store_embeddings(record_id: int, vectors: dict, model_name: str) -> bool:
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.store_embeddings: MongoDB not configured — skipping"
-        )
+        current_app.logger.warning("scraped_text_store.store_embeddings: MongoDB not configured — skipping")
         return False
 
     try:
@@ -304,9 +278,7 @@ def store_embeddings(record_id: int, vectors: dict, model_name: str) -> bool:
         return True
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.store_embeddings: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.store_embeddings: failed for record #{record_id}: {exc}")
         return False
 
     finally:
@@ -325,9 +297,7 @@ def store_minhash_signatures(record_id: int, signatures: dict) -> bool:
     """
     client, collection = _get_collection()
     if collection is None:
-        current_app.logger.warning(
-            "scraped_text_store.store_minhash_signatures: MongoDB not configured — skipping"
-        )
+        current_app.logger.warning("scraped_text_store.store_minhash_signatures: MongoDB not configured — skipping")
         return False
 
     try:
@@ -344,9 +314,7 @@ def store_minhash_signatures(record_id: int, signatures: dict) -> bool:
         return True
 
     except Exception as exc:
-        current_app.logger.warning(
-            f"scraped_text_store.store_minhash_signatures: failed for record #{record_id}: {exc}"
-        )
+        current_app.logger.warning(f"scraped_text_store.store_minhash_signatures: failed for record #{record_id}: {exc}")
         return False
 
     finally:

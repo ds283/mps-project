@@ -141,9 +141,7 @@ def supervision_events_data(
     url: str = None,
     text: str = None,
 ):
-    return_url = url_for(
-        "convenor.inspect_template_events", template_id=template.id, url=url, text=text
-    )
+    return_url = url_for("convenor.inspect_template_events", template_id=template.id, url=url, text=text)
 
     name_templ: Template = _build_name_templ()
     attendees_templ: Template = _build_attendees_templ()
@@ -162,9 +160,7 @@ def supervision_events_data(
             "attendance": render_template(
                 attendance_templ,
                 event=e,
-                attendance_label=SupervisionEvent._attendance_string.get(e.attendance)
-                if e.attendance is not None
-                else None,
+                attendance_label=SupervisionEvent._attendance_string.get(e.attendance) if e.attendance is not None else None,
             ),
             "menu": render_template(menu_templ, event=e, return_url=return_url),
         }

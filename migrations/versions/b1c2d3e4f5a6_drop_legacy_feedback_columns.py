@@ -26,6 +26,7 @@ The secondary table submission_record_to_feedback_report is retained: it is now 
 when feedback PDFs are generated via the MarkingEvent workflow, providing the SubmissionRecord
 with a direct link to its feedback reports (used by the document manager view).
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect as sa_inspect
@@ -40,11 +41,7 @@ depends_on = None
 
 def _fk_names_for_column(inspector, table: str, column: str):
     """Return FK constraint names on *table* that include *column*."""
-    return [
-        fk["name"]
-        for fk in inspector.get_foreign_keys(table)
-        if column in fk["constrained_columns"] and fk["name"] is not None
-    ]
+    return [fk["name"] for fk in inspector.get_foreign_keys(table) if column in fk["constrained_columns"] and fk["name"] is not None]
 
 
 def upgrade():
@@ -79,9 +76,7 @@ def upgrade():
 def downgrade():
     # Restore submission_record legacy columns
     with op.batch_alter_table("submission_records", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "feedback_push_id",
@@ -109,9 +104,7 @@ def downgrade():
 
     # Restore submission_role legacy columns
     with op.batch_alter_table("submission_roles", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("feedback_push_timestamp", sa.DateTime(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "feedback_push_id",
@@ -128,9 +121,7 @@ def downgrade():
                 server_default=sa.false(),
             )
         )
-        batch_op.add_column(
-            sa.Column("response_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("response_timestamp", sa.DateTime(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "submitted_response",
@@ -139,9 +130,7 @@ def downgrade():
                 server_default=sa.false(),
             )
         )
-        batch_op.add_column(
-            sa.Column("response", sa.Text(collation="utf8_bin"), nullable=True)
-        )
+        batch_op.add_column(sa.Column("response", sa.Text(collation="utf8_bin"), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "acknowledge_student",
@@ -150,9 +139,7 @@ def downgrade():
                 server_default=sa.false(),
             )
         )
-        batch_op.add_column(
-            sa.Column("feedback_timestamp", sa.DateTime(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("feedback_timestamp", sa.DateTime(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "submitted_feedback",
@@ -175,4 +162,3 @@ def downgrade():
                 nullable=True,
             )
         )
-

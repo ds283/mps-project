@@ -86,9 +86,7 @@ _timestamp = """
 def _format_schedule(task):
     if task.interval is not None:
         data = task.interval
-        return "{d} {i}".format(
-            d=data.every, i=data.period[:-1] if data.every == 1 else data.period
-        )
+        return "{d} {i}".format(d=data.every, i=data.period[:-1] if data.every == 1 else data.period)
 
     elif task.crontab is not None:
         data = task.crontab
@@ -112,16 +110,12 @@ def scheduled_task_data(tasks):
             "active": render_template_string(_active, t=t),
             "last_run": {
                 "display": render_template_string(_timestamp, time=t.last_run_at),
-                "timestamp": t.last_run_at.timestamp()
-                if t.last_run_at is not None
-                else None,
+                "timestamp": t.last_run_at.timestamp() if t.last_run_at is not None else None,
             },
             "total_runs": t.total_run_count,
             "last_change": {
                 "display": render_template_string(_timestamp, time=t.date_changed),
-                "timestamp": t.date_changed.timestamp()
-                if t.date_changed is not None
-                else None,
+                "timestamp": t.date_changed.timestamp() if t.date_changed is not None else None,
             },
             "expires": {
                 "display": render_template_string(_timestamp, time=t.expires),

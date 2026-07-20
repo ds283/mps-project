@@ -110,9 +110,7 @@ class LiveProject(
     id = db.Column(db.Integer(), primary_key=True)
 
     # key to ProjectClassConfig record that identifies the year and pclass
-    config_id = db.Column(
-        db.Integer(), db.ForeignKey("project_class_config.id"), index=True
-    )
+    config_id = db.Column(db.Integer(), db.ForeignKey("project_class_config.id"), index=True)
     config = db.relationship(
         "ProjectClassConfig",
         uselist=False,
@@ -131,9 +129,7 @@ class LiveProject(
 
     # key linking to parent project
     parent_id = db.Column(db.Integer(), db.ForeignKey("projects.id"))
-    parent = db.relationship(
-        "Project", uselist=False, backref=db.backref("live_projects", lazy="dynamic")
-    )
+    parent = db.relationship("Project", uselist=False, backref=db.backref("live_projects", lazy="dynamic"))
 
     # definitive project number in this year
     number = db.Column(db.Integer())
@@ -174,9 +170,7 @@ class LiveProject(
 
         # if project doesn't require sign off, it is always available
         # if project owner doesn't require confirmation, it is always available
-        if self.meeting_reqd != self.MEETING_REQUIRED or (
-            self.owner is not None and self.owner.sign_off_students is False
-        ):
+        if self.meeting_reqd != self.MEETING_REQUIRED or (self.owner is not None and self.owner.sign_off_students is False):
             return True
 
         # otherwise, check if sel is in list of confirmed students
@@ -187,15 +181,11 @@ class LiveProject(
 
     @property
     def _is_waiting_query(self):
-        return self.confirmation_requests.filter_by(
-            state=ConfirmRequestStatesMixin.REQUESTED
-        )
+        return self.confirmation_requests.filter_by(state=ConfirmRequestStatesMixin.REQUESTED)
 
     @property
     def _is_confirmed_query(self):
-        return self.confirmation_requests.filter_by(
-            state=ConfirmRequestStatesMixin.CONFIRMED
-        )
+        return self.confirmation_requests.filter_by(state=ConfirmRequestStatesMixin.CONFIRMED)
 
     def is_waiting(self, sel):
         return get_count(self._is_waiting_query.filter_by(owner_id=sel.id)) > 0
@@ -206,9 +196,7 @@ class LiveProject(
     def get_confirm_request(self, sel):
         return self.confirmation_requests.filter_by(owner_id=sel.id).first()
 
-    def make_confirm_request(
-        self, sel, state="requested", resolved_by=None, comment=None
-    ):
+    def make_confirm_request(self, sel, state="requested", resolved_by=None, comment=None):
         if state not in ConfirmRequestStatesMixin._values:
             state = "requested"
 
@@ -231,9 +219,7 @@ class LiveProject(
     @property
     def ordered_custom_offers(self):
         return (
-            self.custom_offers.join(
-                SelectingStudent, SelectingStudent.id == CustomOffer.selector_id
-            )
+            self.custom_offers.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(
@@ -258,23 +244,15 @@ class LiveProject(
             )
 
         if compare_interval is not None and not isinstance(compare_interval, timedelta):
-            raise RuntimeError(
-                f'Could not interpret type of compare_interval argument (type="{type(compare_interval)}"'
-            )
+            raise RuntimeError(f'Could not interpret type of compare_interval argument (type="{type(compare_interval)}"')
 
         now = datetime.now()
 
         if compare_interval is None:
-            record = self.popularity_data.order_by(
-                PopularityRecord.datestamp.desc()
-            ).first()
+            record = self.popularity_data.order_by(PopularityRecord.datestamp.desc()).first()
         else:
             record = (
-                self.popularity_data.filter(
-                    PopularityRecord.datestamp <= now - compare_interval
-                )
-                .order_by(PopularityRecord.datestamp.desc())
-                .first()
+                self.popularity_data.filter(PopularityRecord.datestamp <= now - compare_interval).order_by(PopularityRecord.datestamp.desc()).first()
             )
 
         # return None if no value stored, or if stored value is too stale (> 1 day old)
@@ -428,9 +406,7 @@ class LiveProject(
         Return time history of bookmarks rank
         :return:
         """
-        return self._get_popularity_history(
-            lambda x: (x.bookmarks_rank, x.total_number)
-        )
+        return self._get_popularity_history(lambda x: (x.bookmarks_rank, x.total_number))
 
     def selections_rank(
         self,
@@ -464,17 +440,11 @@ class LiveProject(
         Return time history of selections rank
         :return:
         """
-        return self._get_popularity_history(
-            lambda x: (x.selections_rank, x.total_number)
-        )
+        return self._get_popularity_history(lambda x: (x.selections_rank, x.total_number))
 
     @property
     def show_popularity_data(self):
-        return (
-            self.parent.show_popularity
-            or self.parent.show_bookmarks
-            or self.parent.show_selections
-        )
+        return self.parent.show_popularity or self.parent.show_bookmarks or self.parent.show_selections
 
     @property
     def ordered_bookmarks(self):
@@ -516,9 +486,7 @@ class LiveProject(
     def requests_confirmed(self):
         return self._is_confirmed_query.all()
 
-    def _custom_offers_pending_query(
-        self, period: SubmissionPeriodDefinitionLike = None
-    ):
+    def _custom_offers_pending_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
         if _pd is not None:
@@ -538,9 +506,7 @@ class LiveProject(
     def number_offers_pending(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_pending_query(period))
 
-    def _custom_offers_declined_query(
-        self, period: SubmissionPeriodDefinitionLike = None
-    ):
+    def _custom_offers_declined_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
         if _pd is not None:
@@ -560,9 +526,7 @@ class LiveProject(
     def number_offers_declined(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_declined_query(period))
 
-    def _custom_offers_accepted_query(
-        self, period: SubmissionPeriodDefinitionLike = None
-    ):
+    def _custom_offers_accepted_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
         if _pd is not None:
@@ -635,10 +599,7 @@ class LiveProject(
 
         data = {"label": f"{num} bookmark{pl}", "type": "info"}
         if popover and num > 0:
-            project_tags = [
-                "{name}".format(name=rec.owner.student.user.name)
-                for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()
-            ]
+            project_tags = ["{name}".format(name=rec.owner.student.user.name) for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             data["popover"] = project_tags
 
         return data
@@ -663,12 +624,8 @@ class LiveProject(
 
         if popover and num > 0:
             project_tags = [
-                "{name} (rank #{rank})".format(
-                    name=rec.owner.student.user.name, rank=rec.rank
-                )
-                for rec in self.selections.order_by(SelectionRecord.rank)
-                .limit(10)
-                .all()
+                "{name} (rank #{rank})".format(name=rec.owner.student.user.name, rank=rec.rank)
+                for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()
             ]
             data["popover"] = project_tags
 
@@ -682,9 +639,7 @@ class LiveProject(
             return None
 
         if matches > 1:
-            raise RuntimeError(
-                "Inconsistent number of degree preferences match a single SelectingStudent"
-            )
+            raise RuntimeError("Inconsistent number of degree preferences match a single SelectingStudent")
 
         if matches == 1:
             return True
@@ -807,16 +762,12 @@ def _LiveProject_assessors_append_handler(target, value, initiator):
             cache.delete_memoized(_MatchingRecord_is_valid, record.id)
             cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
 
-        schedule_slots = db.session.query(ScheduleSlot).filter(
-            ScheduleSlot.talks.any(project_id=target.id)
-        )
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.talks.any(project_id=target.id))
         for slot in schedule_slots:
             cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
             cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
             if slot.owner is not None:
-                cache.delete_memoized(
-                    _PresentationAssessment_is_valid, slot.owner.owner_id
-                )
+                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
 
 
 @listens_for(LiveProject.assessors, "remove")
@@ -834,16 +785,12 @@ def _LiveProject_assessors_remove_handler(target, value, initiator):
             cache.delete_memoized(_MatchingRecord_is_valid, record.id)
             cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
 
-        schedule_slots = db.session.query(ScheduleSlot).filter(
-            ScheduleSlot.talks.any(project_id=target.id)
-        )
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.talks.any(project_id=target.id))
         for slot in schedule_slots:
             cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
             cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
             if slot.owner is not None:
-                cache.delete_memoized(
-                    _PresentationAssessment_is_valid, slot.owner.owner_id
-                )
+                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
 
 
 class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
@@ -890,9 +837,7 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
     response_timestamp = db.Column(db.DateTime())
 
     # if declined, a short justification
-    decline_justification = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
+    decline_justification = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # resolved/confirmed by
     resolved_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
@@ -909,14 +854,10 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
     def confirm(self, resolved_by=None, comment=None):
         if self.state != ConfirmRequest.CONFIRMED:
             self.owner.student.user.post_message(
-                'Your confirmation request for project "{name}" has been approved.'.format(
-                    name=self.project.name
-                ),
+                'Your confirmation request for project "{name}" has been approved.'.format(name=self.project.name),
                 "success",
             )
-            add_notification(
-                self.owner.student.user, EmailNotification.CONFIRMATION_GRANTED, self
-            )
+            add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANTED, self)
 
         self.state = ConfirmRequest.CONFIRMED
 
@@ -946,9 +887,7 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
                 "with the supervisor.".format(name=self.project.name),
                 "info",
             )
-            add_notification(
-                self.owner.student.user, EmailNotification.CONFIRMATION_TO_PENDING, self
-            )
+            add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_TO_PENDING, self)
 
         self.response_timestamp = None
         self.resolved_by = None
@@ -999,9 +938,7 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
         elif self.state == ConfirmRequest.REQUESTED:
             if notify_student:
                 self.owner.student.user.post_message(
-                    'Your request for confirmation approval for project "{name}" has been removed.'.format(
-                        name=self.project.name
-                    ),
+                    'Your request for confirmation approval for project "{name}" has been removed.'.format(name=self.project.name),
                     "info",
                 )
                 add_notification(
@@ -1033,9 +970,7 @@ class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
         "LiveProject",
         foreign_keys=[parent_id],
         uselist=False,
-        backref=db.backref(
-            "alternatives", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("alternatives", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # alternative project
@@ -1064,11 +999,7 @@ class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
         if alt_p is None:
             return None
 
-        return (
-            db.session.query(ProjectAlternative)
-            .filter_by(parent_id=p.id, alternative_id=alt_p.id)
-            .first()
-        )
+        return db.session.query(ProjectAlternative).filter_by(parent_id=p.id, alternative_id=alt_p.id).first()
 
     @property
     def in_library(self):
@@ -1084,11 +1015,7 @@ class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
         get reciprocal version of this alternative, if one exists
         :return:
         """
-        return (
-            db.session.query(LiveProjectAlternative)
-            .filter_by(parent_id=self.alternative_id, alternative_id=self.parent_id)
-            .first()
-        )
+        return db.session.query(LiveProjectAlternative).filter_by(parent_id=self.alternative_id, alternative_id=self.parent_id).first()
 
     @property
     def has_reciprocal(self):
@@ -1136,9 +1063,7 @@ def _SelectingStudent_is_valid(sid):
     if not config.select_in_previous_cycle:
         num_submitters = get_count(obj.submitters)
         if num_submitters > 1:
-            warnings["paired_submitter"] = {
-                "msg": f"Selector has too many ({num_submitters}) paired submitters"
-            }
+            warnings["paired_submitter"] = {"msg": f"Selector has too many ({num_submitters}) paired submitters"}
         elif num_submitters == 0:
             warnings["paired_submitter"] = {"msg": f"Selector has no paired submitter"}
 
@@ -1308,9 +1233,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             query = query.filter(CustomOffer.period_id == _pd.id)
         return get_count(query)
 
-    def _custom_offers_pending_query(
-        self, period: SubmissionPeriodDefinitionLike = None
-    ):
+    def _custom_offers_pending_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
         if _pd is not None:
@@ -1330,9 +1253,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     def number_offers_pending(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_pending_query(period))
 
-    def _custom_offers_declined_query(
-        self, period: SubmissionPeriodDefinitionLike = None
-    ):
+    def _custom_offers_declined_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
         if _pd is not None:
@@ -1352,9 +1273,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     def number_offers_declined(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_declined_query(period))
 
-    def _custom_offers_accepted_query(
-        self, period: SubmissionPeriodDefinitionLike = None
-    ):
+    def _custom_offers_accepted_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
         if _pd is not None:
@@ -1394,9 +1313,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return self.student.has_graduated
 
     def academic_year_label(self, current_year=None, show_details=False):
-        return self.student.academic_year_label(
-            self.config.year, show_details=show_details, current_year=current_year
-        )
+        return self.student.academic_year_label(self.config.year, show_details=show_details, current_year=current_year)
 
     @property
     def is_initial_selection(self):
@@ -1429,9 +1346,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return (
             db.session.query(SubmittingStudent)
             .filter(SubmittingStudent.student_id == self.student_id)
-            .join(
-                ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id
-            )
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
             .filter(
                 ProjectClassConfig.pclass_id == self.config.pclass_id,
                 ProjectClassConfig.year < self.config.year,
@@ -1475,8 +1390,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             valid = False
             if not self.has_submitted:
                 messages.append(
-                    "You have insufficient bookmarks. You must submit at least {n} "
-                    "choice{pl}.".format(
+                    "You have insufficient bookmarks. You must submit at least {n} choice{pl}.".format(
                         n=num_choices, pl="" if num_choices == 1 else "s"
                     )
                 )
@@ -1527,18 +1441,14 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                 if project.hidden:
                     valid = False
                     messages.append(
-                        "Project <em>{name}</em> (currently ranked #{rk}) is no longer available to be selected.".format(
-                            name=project.name, rk=rank
-                        )
+                        "Project <em>{name}</em> (currently ranked #{rk}) is no longer available to be selected.".format(name=project.name, rk=rank)
                     )
 
                 # STEP 2d - if the student has ATAS restrictions, they cannot select ATAS-restricted projects
                 if sd.ATAS_restricted and project.ATAS_restricted:
                     valid = False
                     messages.append(
-                        "Project <em>{name}</em> (currently ranked #{rk}) is restricted and cannot be selected.".format(
-                            name=project.name, rk=rank
-                        )
+                        "Project <em>{name}</em> (currently ranked #{rk}) is restricted and cannot be selected.".format(name=project.name, rk=rank)
                     )
 
             if rank >= num_choices:
@@ -1598,9 +1508,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         elif isinstance(proj, LiveProject):
             proj_id = proj.id
         else:
-            raise RuntimeError(
-                'Could not interpret "proj" parameter of type {x}'.format(x=type(proj))
-            )
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
 
         if self.number_offers_accepted() > 0:
             accepted_offers = self.accepted_offers()
@@ -1609,9 +1517,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             else:
                 return {"submitted": False}
 
-        selrec: SelectionRecord = self.selections.filter_by(
-            liveproject_id=proj_id
-        ).first()
+        selrec: SelectionRecord = self.selections.filter_by(liveproject_id=proj_id).first()
         if selrec is None:
             return {"submitted": False}
 
@@ -1623,9 +1529,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         elif isinstance(proj, LiveProject):
             proj_id = proj.id
         else:
-            raise RuntimeError(
-                'Could not interpret "proj" parameter of type {x}'.format(x=type(proj))
-            )
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
 
         bkrec: Bookmark = self.bookmarks.filter_by(liveproject_id=proj_id).first()
         if bkrec is None:
@@ -1646,9 +1550,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         elif isinstance(proj, LiveProject):
             proj_id = proj.id
         else:
-            raise RuntimeError(
-                'Could not interpret "proj" parameter of type {x}'.format(x=type(proj))
-            )
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
 
         if not self.has_submitted:
             return None
@@ -1674,9 +1576,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         elif isinstance(proj, LiveProject):
             proj_id = proj.id
         else:
-            raise RuntimeError(
-                'Could not interpret "proj" parameter of type {x}'.format(x=type(proj))
-            )
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
 
         data = {"project": None, "priority": 1000}
 
@@ -1699,9 +1599,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
     def accepted_offers(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
-        query = self.ordered_custom_offers.filter(
-            CustomOffer.status == CustomOffer.ACCEPTED
-        )
+        query = self.ordered_custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
         if _pd is not None:
             query = query.filter(CustomOffer.period_id == _pd.id)
         return query
@@ -1829,16 +1727,12 @@ def _SubmittingStudent_is_valid(sid):
 
     if records_errors:
         if config.number_submissions > 1:
-            errors["records"] = (
-                "Project or role assignments for some submission periods have errors"
-            )
+            errors["records"] = "Project or role assignments for some submission periods have errors"
         else:
             errors["records"] = "Project or role assignments have errors"
     elif records_warnings:
         if config.number_submissions > 1:
-            warnings["records"] = (
-                "Project or role assignments for some submission periods have warnings"
-            )
+            warnings["records"] = "Project or role assignments for some submission periods have warnings"
         else:
             warnings["records"] = "Project or role assignments have warnings"
 
@@ -1883,9 +1777,7 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
     )
 
     # capture parent SelectingStudent, if one exists
-    selector_id = db.Column(
-        db.Integer(), db.ForeignKey("selecting_students.id"), default=None
-    )
+    selector_id = db.Column(db.Integer(), db.ForeignKey("selecting_students.id"), default=None)
     selector = db.relationship(
         "SelectingStudent",
         foreign_keys=[selector_id],
@@ -1940,9 +1832,7 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         return self.student.compute_academic_year(self.config.year)
 
     def academic_year_label(self, show_details=False, current_year=None):
-        return self.student.academic_year_label(
-            self.config.year, show_details=show_details, current_year=current_year
-        )
+        return self.student.academic_year_label(self.config.year, show_details=show_details, current_year=current_year)
 
     def get_assignment(self, period=None):
         from .project_class import SubmissionPeriodRecord
@@ -1955,9 +1845,7 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         elif isinstance(period, int):
             period_number = period
         else:
-            raise TypeError(
-                "Expected period to be a SubmissionPeriodRecord or an integer"
-            )
+            raise TypeError("Expected period to be a SubmissionPeriodRecord or an integer")
 
         records: List[SubmissionRecord] = (
             self.records.join(

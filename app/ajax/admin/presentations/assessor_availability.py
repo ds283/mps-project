@@ -141,8 +141,7 @@ def assessor_session_availability_data(assessment, session, assessors, editable=
         {
             "name": {
                 "display": render_template_string(_name, rec=assessor),
-                "sortstring": assessor.faculty.user.last_name
-                + assessor.faculty.user.first_name,
+                "sortstring": assessor.faculty.user.last_name + assessor.faculty.user.first_name,
             },
             "confirmed": render_template_string(_confirmed, a=assessment, rec=assessor),
             "comment": render_template_string(_comment, rec=assessor),
@@ -150,9 +149,7 @@ def assessor_session_availability_data(assessment, session, assessors, editable=
                 "display": render_template_string(_availability, rec=assessor),
                 "sortvalue": assessor.number_available,
             },
-            "menu": render_template_string(
-                _session_actions, s=session, f=assessor.faculty, editable=editable
-            ),
+            "menu": render_template_string(_session_actions, s=session, f=assessor.faculty, editable=editable),
         }
         for assessor in assessors
     ]
@@ -165,8 +162,7 @@ def presentation_assessors_data(assessment, assessors, editable=False):
         {
             "name": {
                 "display": render_template_string(_name, rec=assessor),
-                "sortstring": assessor.faculty.user.last_name
-                + assessor.faculty.user.first_name,
+                "sortstring": assessor.faculty.user.last_name + assessor.faculty.user.first_name,
             },
             "confirmed": render_template_string(_confirmed, a=assessment, rec=assessor),
             "comment": render_template_string(_comment, rec=assessor),
@@ -174,9 +170,7 @@ def presentation_assessors_data(assessment, assessors, editable=False):
                 "display": render_template_string(_availability, rec=assessor),
                 "sortvalue": assessor.number_available,
             },
-            "menu": render_template_string(
-                _assessor_actions, a=assessment, f=assessor.faculty, editable=editable
-            ),
+            "menu": render_template_string(_assessor_actions, a=assessment, f=assessor.faculty, editable=editable),
         }
         for assessor in assessors
     ]

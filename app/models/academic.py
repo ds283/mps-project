@@ -46,9 +46,7 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     )
 
     # abbreviation for use in space-limited contexts
-    abbreviation = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
-    )
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
 
     # long-form name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -91,9 +89,7 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         return self._make_label(text)
 
 
-class DegreeType(
-    db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLevelsMixin
-):
+class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLevelsMixin):
     """
     Model a degree type
     """
@@ -104,14 +100,10 @@ class DegreeType(
     id = db.Column(db.Integer(), primary_key=True)
 
     # degree type label (MSc, MPhys, BSc, etc.)
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # degree type abbreviation
-    abbreviation = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True
-    )
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
 
     # number of years before graduation
     duration = db.Column(db.Integer())
@@ -153,9 +145,7 @@ class DegreeType(
     def make_label(self, text=None, show_type=False):
         if text is None:
             if show_type:
-                text = "{abbrv} ({type})".format(
-                    abbrv=self.abbreviation, type=self._level_text(self.level)
-                )
+                text = "{abbrv} ({type})".format(abbrv=self.abbreviation, type=self._level_text(self.level))
             else:
                 text = self.abbreviation
 
@@ -185,9 +175,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # programme abbreviation
-    abbreviation = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
-    )
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # show degree type in name
     show_type = db.Column(db.Boolean(), default=True)
@@ -206,9 +194,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
 
     # degree type
     type_id = db.Column(db.Integer(), db.ForeignKey("degree_types.id"), index=True)
-    degree_type = db.relationship(
-        "DegreeType", backref=db.backref("degree_programmes", lazy="dynamic")
-    )
+    degree_type = db.relationship("DegreeType", backref=db.backref("degree_programmes", lazy="dynamic"))
 
     # modules that are part of this programme
     modules = db.relationship(
@@ -219,9 +205,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
     )
 
     # course code, used to uniquely identify this degree programme
-    course_code = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
-    )
+    course_code = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     def disable(self):
         """
@@ -261,9 +245,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
     @property
     def short_name(self):
         if self.show_type:
-            return "{p} {t}".format(
-                p=self.abbreviation, t=self.degree_type.abbreviation
-            )
+            return "{p} {t}".format(p=self.abbreviation, t=self.degree_type.abbreviation)
 
         return self.abbreviation
 
@@ -283,27 +265,17 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
 
     @property
     def ordered_modules(self):
-        query = (
-            db.session.query(programmes_to_modules.c.module_id)
-            .filter(programmes_to_modules.c.programme_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(programmes_to_modules.c.module_id).filter(programmes_to_modules.c.programme_id == self.id).subquery()
 
         return (
             db.session.query(Module)
             .join(query, query.c.module_id == Module.id)
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id)
-            .order_by(
-                FHEQ_Level.numeric_level.asc(), Module.semester.asc(), Module.name.asc()
-            )
+            .order_by(FHEQ_Level.numeric_level.asc(), Module.semester.asc(), Module.name.asc())
         )
 
     def _level_modules_query(self, level_id):
-        query = (
-            db.session.query(programmes_to_modules.c.module_id)
-            .filter(programmes_to_modules.c.programme_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(programmes_to_modules.c.module_id).filter(programmes_to_modules.c.programme_id == self.id).subquery()
 
         return (
             db.session.query(Module)
@@ -313,11 +285,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
         )
 
     def _levels_query(self):
-        query = (
-            db.session.query(programmes_to_modules.c.module_id)
-            .filter(programmes_to_modules.c.programme_id == self.id)
-            .subquery()
-        )
+        query = db.session.query(programmes_to_modules.c.module_id).filter(programmes_to_modules.c.programme_id == self.id).subquery()
 
         return (
             db.session.query(FHEQ_Level)
@@ -348,9 +316,7 @@ class SkillGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of skill group
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # active?
     active = db.Column(db.Boolean())
@@ -476,9 +442,7 @@ class Module(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # unique course code
-    code = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True
-    )
+    code = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True, index=True)
 
     # course name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -567,14 +531,10 @@ class FHEQ_Level(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # short version of name
-    short_name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    short_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # numerical level
     numeric_level = db.Column(db.Integer(), unique=True)

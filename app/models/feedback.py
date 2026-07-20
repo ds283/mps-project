@@ -35,15 +35,11 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
         "ProjectClass",
         foreign_keys=[pclass_id],
         uselist=False,
-        backref=db.backref(
-            "feedback_assets", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("feedback_assets", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # link to SubmittedAsset representing this asset
-    asset_id = db.Column(
-        db.Integer(), db.ForeignKey("submitted_assets.id"), default=None
-    )
+    asset_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     asset = db.relationship(
         "SubmittedAsset",
         foreign_keys=[asset_id],
@@ -79,18 +75,14 @@ class FeedbackTemplate(db.Model, EditingMetadataMixin):
         "ProjectClass",
         foreign_keys=[pclass_id],
         uselist=False,
-        backref=db.backref(
-            "feedback_templates", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("feedback_templates", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # template body, usually a Jinja2 HTML template
     template_body = db.Column(db.Text())
 
     # unique label
-    label = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
-    )
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
@@ -125,9 +117,7 @@ class FeedbackTemplateTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     )
 
     # name of label
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     def make_label(self, text=None):
         label_text = text if text is not None else self.name
@@ -152,15 +142,11 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
         "ProjectClass",
         foreign_keys=[pclass_id],
         uselist=False,
-        backref=db.backref(
-            "feedback_recipes", lazy="dynamic", cascade="all, delete, delete-orphan"
-        ),
+        backref=db.backref("feedback_recipes", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # unique label
-    label = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True
-    )
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # primary template
     template_id = db.Column(db.Integer(), db.ForeignKey("feedback_templates.id"))

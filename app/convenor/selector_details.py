@@ -201,21 +201,14 @@ def delete_student_bookmark(sid, bid):
         return redirect(redirect_url())
 
     title = "Delete selector bookmark"
-    panel_title = (
-        'Delete bookmark for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, '
-        "project <strong>{proj}</strong>".format(
-            name=sel.student.user.name, proj=bookmark.liveproject.name
-        )
+    panel_title = 'Delete bookmark for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, project <strong>{proj}</strong>'.format(
+        name=sel.student.user.name, proj=bookmark.liveproject.name
     )
-    action_url = url_for(
-        "convenor.perform_delete_student_bookmark", sid=sid, bid=bid, url=url
-    )
+    action_url = url_for("convenor.perform_delete_student_bookmark", sid=sid, bid=bid, url=url)
     message = (
         '<p>Please confirm that you wish to delete the bookmark held by selector <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
         "for project <strong>{proj}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(
-            name=sel.student.user.name, proj=bookmark.liveproject.name
-        )
+        "<p>This action cannot be undone.</p>".format(name=sel.student.user.name, proj=bookmark.liveproject.name)
     )
     submit_label = "Delete bookmark"
 
@@ -347,8 +340,7 @@ def create_student_bookmark(sel_id, proj_id):
     # check project and selector belong to the same project class
     if proj.config_id != sel.config_id:
         flash(
-            'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
-            "bookmark cannot be created for this pair.".format(
+            'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a bookmark cannot be created for this pair.'.format(
                 pname=proj.name, sname=sel.student.user.name
             ),
             "error",
@@ -361,16 +353,12 @@ def create_student_bookmark(sel_id, proj_id):
     if get_count(q) > 0:
         flash(
             'A request to create a bookmark for project "{pname}" and selector "{sname}" was ignored, '
-            "because a bookmark for this pair already exists".format(
-                pname=proj.name, sname=sel.student.user.name
-            ),
+            "because a bookmark for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),
             "info",
         )
         return redirect(url)
 
-    bm = Bookmark(
-        liveproject_id=proj.id, owner_id=sel.id, rank=sel.number_bookmarks + 1
-    )
+    bm = Bookmark(liveproject_id=proj.id, owner_id=sel.id, rank=sel.number_bookmarks + 1)
 
     try:
         db.session.add(bm)
@@ -546,24 +534,17 @@ def delete_student_choice(sid, cid):
         return redirect(redirect_url())
 
     title = "Delete selector ranking"
-    panel_title = (
-        'Delete ranking for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, '
-        "project <strong>{proj}</strong>".format(
-            name=sel.student.user.name, proj=record.liveproject.name
-        )
+    panel_title = 'Delete ranking for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, project <strong>{proj}</strong>'.format(
+        name=sel.student.user.name, proj=record.liveproject.name
     )
-    action_url = url_for(
-        "convenor.perform_delete_student_choice", sid=sid, cid=cid, url=url
-    )
+    action_url = url_for("convenor.perform_delete_student_choice", sid=sid, cid=cid, url=url)
     message = (
         '<p>Please confirm that you wish to delete <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
         "ranking #{num} for project <strong>{proj}</strong>.</p>"
         "<p>This action cannot be undone.</p>"
         "<p><strong>Student-submitted rankings should be deleted only when there "
         "is a clear rationale for doing "
-        "so.</strong></p>".format(
-            name=sel.student.user.name, num=record.rank, proj=record.liveproject.name
-        )
+        "so.</strong></p>".format(name=sel.student.user.name, num=record.rank, proj=record.liveproject.name)
     )
     submit_label = "Delete ranking"
 
@@ -708,8 +689,7 @@ def create_student_ranking(sel_id, proj_id):
     # check project and selector belong to the same project class
     if proj.config_id != sel.config_id:
         flash(
-            'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
-            "ranking cannot be created for this pair.".format(
+            'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a ranking cannot be created for this pair.'.format(
                 pname=proj.name, sname=sel.student.user.name
             ),
             "error",
@@ -722,9 +702,7 @@ def create_student_ranking(sel_id, proj_id):
     if get_count(q) > 0:
         flash(
             'A request to create a ranking for project "{pname}" and selector "{sname}" was ignored, '
-            "because a ranking for this pair already exists".format(
-                pname=proj.name, sname=sel.student.user.name
-            ),
+            "because a ranking for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),
             "info",
         )
         return redirect(url)
@@ -934,9 +912,7 @@ def new_selector_offer_ajax(sel_id):
 
     # get list of available projects, excluding any projects for which this selector already holds offers
     config: ProjectClassConfig = sel.config
-    projects = config.live_projects.filter(
-        ~LiveProject.custom_offers.any(selector_id=sel_id)
-    )
+    projects = config.live_projects.filter(~LiveProject.custom_offers.any(selector_id=sel_id))
 
     return ajax.convenor.new_student_offer_projects(projects.all(), sel)
 
@@ -993,9 +969,7 @@ def new_project_offer_ajax(proj_id):
 
     # get list of available selectors, excluding any selectors who already hold offers for this project
     config: ProjectClassConfig = proj.config
-    selectors = config.selecting_students.filter(
-        ~SelectingStudent.custom_offers.any(liveproject_id=proj_id)
-    )
+    selectors = config.selecting_students.filter(~SelectingStudent.custom_offers.any(liveproject_id=proj_id))
 
     return ajax.convenor.new_project_offer_selectors(selectors.all(), proj)
 
@@ -1022,9 +996,7 @@ def create_custom_offer(sel_id, proj_id):
     if proj.config_id != sel.config_id:
         flash(
             'Project "{pname}" and selector "{sname}" do not belong to the same project cycle, so a '
-            "custom offer cannot be created for this pair.".format(
-                pname=proj.name, sname=sel.student.user.name
-            ),
+            "custom offer cannot be created for this pair.".format(pname=proj.name, sname=sel.student.user.name),
             "error",
         )
         return redirect(url)
@@ -1034,19 +1006,11 @@ def create_custom_offer(sel_id, proj_id):
         return redirect(redirect_url())
 
     # check whether an offer with this selector and project already exists
-    q = (
-        db.session.query(CustomOffer)
-        .filter(
-            CustomOffer.liveproject_id == proj_id, CustomOffer.selector_id == sel_id
-        )
-        .first()
-    )
+    q = db.session.query(CustomOffer).filter(CustomOffer.liveproject_id == proj_id, CustomOffer.selector_id == sel_id).first()
     if q is not None:
         flash(
             'A request to create a custom offer for project "{pname}" and selector "{sname}" was ignored, '
-            "because an offer for this pair already exists".format(
-                pname=proj.name, sname=sel.student.user.name
-            ),
+            "because an offer for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),
             "info",
         )
         return redirect(url)
@@ -1073,14 +1037,8 @@ def create_custom_offer(sel_id, proj_id):
             db.session.add(offer)
             db.session.flush()
 
-            programme_name = (
-                sel.student.programme.full_name if sel.student.programme else "unknown"
-            )
-            academic_year = (
-                f"Year {sel.student.academic_year}"
-                if sel.student.academic_year
-                else "unknown"
-            )
+            programme_name = sel.student.programme.full_name if sel.student.programme else "unknown"
+            academic_year = f"Year {sel.student.academic_year}" if sel.student.academic_year else "unknown"
             html = (
                 f"<p>Custom offer created for project <strong>{proj.name}</strong> "
                 f"(project class <strong>{pclass.name}</strong>).</p>"
@@ -1210,9 +1168,7 @@ def accept_custom_offer(offer_id):
     if sel.number_offers_accepted() >= sel.number_choices:
         flash(
             "The maximum number of custom offers have already been accepted for selector {name}. "
-            "Please decline this offer before accepting a new one.".format(
-                name=offer.selector.student.user.name
-            ),
+            "Please decline this offer before accepting a new one.".format(name=offer.selector.student.user.name),
             "error",
         )
         return redirect(redirect_url())
@@ -1328,14 +1284,8 @@ def delete_custom_offer(offer_id):
     _offer_config = offer.liveproject.config
     _offer_student = offer.selector.student
 
-    programme_name = (
-        _offer_student.programme.full_name if _offer_student.programme else "unknown"
-    )
-    academic_year = (
-        f"Year {_offer_student.academic_year}"
-        if _offer_student.academic_year
-        else "unknown"
-    )
+    programme_name = _offer_student.programme.full_name if _offer_student.programme else "unknown"
+    academic_year = f"Year {_offer_student.academic_year}" if _offer_student.academic_year else "unknown"
     journal_html = (
         f"<p>Custom offer deleted for project <strong>{_offer_project_name}</strong> "
         f"(project class <strong>{_offer_pclass.name}</strong>).</p>"
@@ -1387,17 +1337,12 @@ def reject_custom_offer_hint(hint_id):
         return redirect(redirect_url())
 
     _student = sel.student
-    _record_project_name = (
-        hint.submission_record.project.name
-        if hint.submission_record and hint.submission_record.project
-        else "unknown"
-    )
+    _record_project_name = hint.submission_record.project.name if hint.submission_record and hint.submission_record.project else "unknown"
 
     try:
         db.session.delete(hint)
         log_db_commit(
-            f"Rejected CustomOfferHint for {_student.user.name} "
-            f"(previous project: {_record_project_name}) in {config.name}",
+            f"Rejected CustomOfferHint for {_student.user.name} (previous project: {_record_project_name}) in {config.name}",
             user=current_user,
             student=_student,
             project_classes=config.project_class,
@@ -1426,9 +1371,7 @@ def accept_custom_offer_hint(hint_id):
 
     # Resolve context from the previous supervision record
     record = hint.submission_record
-    prev_project_name = (
-        record.project.name if record and record.project else "unknown project"
-    )
+    prev_project_name = record.project.name if record and record.project else "unknown project"
     prev_sub_config = record.owner.config if record and record.owner else None
     prev_year_a = prev_sub_config.submit_year_a if prev_sub_config else "unknown"
     prev_year_b = prev_sub_config.submit_year_b if prev_sub_config else "unknown"
@@ -1442,11 +1385,7 @@ def accept_custom_offer_hint(hint_id):
     try:
         for lp in live_projects:
             # Skip if a CustomOffer for this (liveproject, selector) pair already exists
-            existing = (
-                db.session.query(CustomOffer)
-                .filter_by(liveproject_id=lp.id, selector_id=sel.id)
-                .first()
-            )
+            existing = db.session.query(CustomOffer).filter_by(liveproject_id=lp.id, selector_id=sel.id).first()
             if existing is not None:
                 continue
 
@@ -1466,9 +1405,7 @@ def accept_custom_offer_hint(hint_id):
             db.session.add(offer)
             db.session.flush()
 
-            supervisor_name = (
-                lp.owner.user.name if lp.owner and lp.owner.user else "unknown"
-            )
+            supervisor_name = lp.owner.user.name if lp.owner and lp.owner.user else "unknown"
             journal_html = (
                 f"<p>Custom offer created for project <strong>{lp.name}</strong> "
                 f"(supervisor: <strong>{supervisor_name}</strong>, "
@@ -1492,9 +1429,7 @@ def accept_custom_offer_hint(hint_id):
 
         db.session.delete(hint)
 
-        faculty_name = (
-            hint.faculty.user.name if hint.faculty and hint.faculty.user else "unknown"
-        )
+        faculty_name = hint.faculty.user.name if hint.faculty and hint.faculty.user else "unknown"
         log_db_commit(
             f"Accepted CustomOfferHint for {sel.student.user.name} in {config.name}: "
             f"created {offers_created} custom offer(s) for faculty {faculty_name}",

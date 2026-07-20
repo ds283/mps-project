@@ -409,10 +409,10 @@ def _build_availability_templ() -> Template:
 
 
 def _element_base(
-        f: FacultyData,
-        enrolment_template: Template,
-        allocation_template: Template,
-        workload_template: Template,
+    f: FacultyData,
+    enrolment_template: Template,
+    allocation_template: Template,
+    workload_template: Template,
 ):
     CATS_workload = {}
 
@@ -481,9 +481,7 @@ def _element_base(
     total_moderating = sum(num_moderating.values())
     total_presentations = sum(num_presentations.values())
 
-    total_allocation = (
-            total_supervising + total_marking + total_moderating + total_presentations
-    )
+    total_allocation = total_supervising + total_marking + total_moderating + total_presentations
 
     availability, unbounded = f.student_availability
 

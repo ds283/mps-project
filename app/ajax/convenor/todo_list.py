@@ -142,15 +142,9 @@ def _map(t, pclass_id):
                 type=task_type,
                 return_url=url_for("convenor.todo_list", id=pclass_id),
             ),
-            "due_date": t.due_date.strftime("%a %d %b %Y %H:%M")
-            if t.due_date is not None
-            else '<span class="badge bg-secondary">None</span>',
-            "defer_date": t.defer_date.strftime("%a %d %b %Y %H:%M")
-            if t.defer_date is not None
-            else '<span class="badge bg-secondary">None</span>',
-            "status": render_template_string(
-                _status, available=t.is_available, overdue=t.is_overdue, tk=t
-            ),
+            "due_date": t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
+            "defer_date": t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
+            "status": render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
             "menu": render_template_string(
                 _student_menu,
                 tk=t,
@@ -165,15 +159,9 @@ def _map(t, pclass_id):
                 tk=t,
                 return_url=url_for("convenor.todo_list", id=pclass_id),
             ),
-            "due_date": t.due_date.strftime("%a %d %b %Y %H:%M")
-            if t.due_date is not None
-            else '<span class="badge bg-secondary">None</span>',
-            "defer_date": t.defer_date.strftime("%a %d %b %Y %H:%M")
-            if t.defer_date is not None
-            else '<span class="badge bg-secondary">None</span>',
-            "status": render_template_string(
-                _status, available=t.is_available, overdue=t.is_overdue, tk=t
-            ),
+            "due_date": t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
+            "defer_date": t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
+            "status": render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
             "menu": render_template_string(
                 _project_menu,
                 tk=t,

@@ -104,9 +104,7 @@ def _cleanup_redis(job: FeedbackOrchestrationJob) -> None:
         r = _get_orchestration_redis()
         r.delete(job.redis_queue_key, job.redis_inflight_key)
     except Exception as exc:
-        current_app.logger.warning(
-            f"feedback_orchestration: could not clean up Redis keys for job {job.uuid}: {exc}"
-        )
+        current_app.logger.warning(f"feedback_orchestration: could not clean up Redis keys for job {job.uuid}: {exc}")
 
 
 def _populate_redis_queue(job: FeedbackOrchestrationJob, cr_ids: List[int]) -> None:
@@ -179,9 +177,7 @@ def _dispatch_coordinator_if_pending() -> None:
     try:
         r = _get_orchestration_redis()
         active_jobs: List[FeedbackOrchestrationJob] = (
-            db.session.query(FeedbackOrchestrationJob)
-            .filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES))
-            .all()
+            db.session.query(FeedbackOrchestrationJob).filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES)).all()
         )
         if not active_jobs:
             return
@@ -189,9 +185,7 @@ def _dispatch_coordinator_if_pending() -> None:
         if has_pending:
             _dispatch_global_coordinator()
     except Exception as exc:
-        current_app.logger.warning(
-            f"feedback_orchestration._dispatch_coordinator_if_pending: error checking queues: {exc}"
-        )
+        current_app.logger.warning(f"feedback_orchestration._dispatch_coordinator_if_pending: error checking queues: {exc}")
 
 
 def _recover_active_jobs() -> None:
@@ -212,23 +206,17 @@ def _recover_active_jobs() -> None:
     try:
         r = _get_orchestration_redis()
     except Exception as exc:
-        current_app.logger.error(
-            f"!! feedback_orchestration._recover_active_jobs: cannot connect to Redis: {exc}"
-        )
+        current_app.logger.error(f"!! feedback_orchestration._recover_active_jobs: cannot connect to Redis: {exc}")
         return
 
     if not r.set(RECOVERY_LOCK_KEY, "1", nx=True, ex=RECOVERY_LOCK_TTL):
-        current_app.logger.info(
-            "** feedback_orchestration._recover_active_jobs: recovery lock held by another worker — skipping"
-        )
+        current_app.logger.info("** feedback_orchestration._recover_active_jobs: recovery lock held by another worker — skipping")
         return
 
     try:
         try:
             active_jobs: List[FeedbackOrchestrationJob] = (
-                db.session.query(FeedbackOrchestrationJob)
-                .filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES))
-                .all()
+                db.session.query(FeedbackOrchestrationJob).filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES)).all()
             )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
@@ -243,29 +231,23 @@ def _recover_active_jobs() -> None:
 
         needs_coordinator = False
         for job in active_jobs:
-            current_app.logger.info(
-                f"** feedback_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})"
-            )
+            current_app.logger.info(f"** feedback_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})")
             recovered = 0
             try:
                 while r.rpoplpush(job.redis_inflight_key, job.redis_queue_key):
                     recovered += 1
             except Exception as exc:
                 current_app.logger.warning(
-                    f"!! feedback_orchestration._recover_active_jobs: Redis error recovering "
-                    f"inflight items for job {job.uuid}: {exc}"
+                    f"!! feedback_orchestration._recover_active_jobs: Redis error recovering inflight items for job {job.uuid}: {exc}"
                 )
 
             if recovered:
                 current_app.logger.info(
-                    f"@@ feedback_orchestration._recover_active_jobs: re-queued {recovered} "
-                    f"inflight record(s) for job {job.uuid}"
+                    f"@@ feedback_orchestration._recover_active_jobs: re-queued {recovered} inflight record(s) for job {job.uuid}"
                 )
                 needs_coordinator = True
             else:
-                current_app.logger.info(
-                    f"@@ feedback_orchestration._recover_active_jobs: no inflight records for job {job.uuid}"
-                )
+                current_app.logger.info(f"@@ feedback_orchestration._recover_active_jobs: no inflight records for job {job.uuid}")
 
             try:
                 pending_count = r.llen(job.redis_queue_key)
@@ -278,13 +260,9 @@ def _recover_active_jobs() -> None:
         if needs_coordinator:
             try:
                 _dispatch_global_coordinator()
-                current_app.logger.info(
-                    "** feedback_orchestration._recover_active_jobs: dispatched global coordinator"
-                )
+                current_app.logger.info("** feedback_orchestration._recover_active_jobs: dispatched global coordinator")
             except Exception as exc:
-                current_app.logger.warning(
-                    f"!! feedback_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
-                )
+                current_app.logger.warning(f"!! feedback_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}")
     finally:
         try:
             r.delete(RECOVERY_LOCK_KEY)
@@ -348,9 +326,7 @@ def register_feedback_orchestration_tasks(celery):
             try:
                 _recover_active_jobs()
             except Exception as exc:
-                flask_app.logger.exception(
-                    "feedback_orchestration.on_worker_ready: recovery failed", exc_info=exc
-                )
+                flask_app.logger.exception("feedback_orchestration.on_worker_ready: recovery failed", exc_info=exc)
 
     # ------------------------------------------------------------------
     # feedback_record_done
@@ -368,21 +344,15 @@ def register_feedback_orchestration_tasks(celery):
             r.lrem(f"feedback_inflight:{job_uuid}", 0, str(cr_id).encode())
         except Exception as exc:
             current_app.logger.warning(
-                f"feedback_orchestration.feedback_record_done: Redis LREM failed "
-                f"for job {job_uuid} / ConflationReport #{cr_id}: {exc}"
+                f"feedback_orchestration.feedback_record_done: Redis LREM failed for job {job_uuid} / ConflationReport #{cr_id}: {exc}"
             )
 
         try:
-            job: FeedbackOrchestrationJob = (
-                db.session.query(FeedbackOrchestrationJob).filter_by(uuid=job_uuid).first()
-            )
+            job: FeedbackOrchestrationJob = db.session.query(FeedbackOrchestrationJob).filter_by(uuid=job_uuid).first()
             if job is not None:
                 job.increment_completed()
                 # Use >= (not ==) to correctly handle the double-processing race.
-                if (
-                    (job.completed_count + job.failed_count) >= job.total_count
-                    and job.status == FeedbackOrchestrationJob.STATUS_RUNNING
-                ):
+                if (job.completed_count + job.failed_count) >= job.total_count and job.status == FeedbackOrchestrationJob.STATUS_RUNNING:
                     job.mark_complete()
                     convenor: Optional[User] = job.convenor
                     total = job.completed_count + job.failed_count
@@ -401,8 +371,7 @@ def register_feedback_orchestration_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
-                f"feedback_orchestration.feedback_record_done: SQLAlchemyError "
-                f"for job {job_uuid} / ConflationReport #{cr_id}",
+                f"feedback_orchestration.feedback_record_done: SQLAlchemyError for job {job_uuid} / ConflationReport #{cr_id}",
                 exc_info=exc,
             )
 
@@ -424,20 +393,14 @@ def register_feedback_orchestration_tasks(celery):
             r.lrem(f"feedback_inflight:{job_uuid}", 0, str(cr_id).encode())
         except Exception as exc:
             current_app.logger.warning(
-                f"feedback_orchestration.feedback_record_error: Redis LREM failed "
-                f"for job {job_uuid} / ConflationReport #{cr_id}: {exc}"
+                f"feedback_orchestration.feedback_record_error: Redis LREM failed for job {job_uuid} / ConflationReport #{cr_id}: {exc}"
             )
 
         try:
-            job: FeedbackOrchestrationJob = (
-                db.session.query(FeedbackOrchestrationJob).filter_by(uuid=job_uuid).first()
-            )
+            job: FeedbackOrchestrationJob = db.session.query(FeedbackOrchestrationJob).filter_by(uuid=job_uuid).first()
             if job is not None:
                 job.increment_failed()
-                if (
-                    (job.completed_count + job.failed_count) >= job.total_count
-                    and job.status == FeedbackOrchestrationJob.STATUS_RUNNING
-                ):
+                if (job.completed_count + job.failed_count) >= job.total_count and job.status == FeedbackOrchestrationJob.STATUS_RUNNING:
                     job.mark_complete()
                     convenor: Optional[User] = job.convenor
                     total = job.completed_count + job.failed_count
@@ -449,8 +412,7 @@ def register_feedback_orchestration_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
-                f"feedback_orchestration.feedback_record_error: SQLAlchemyError "
-                f"for job {job_uuid} / ConflationReport #{cr_id}",
+                f"feedback_orchestration.feedback_record_error: SQLAlchemyError for job {job_uuid} / ConflationReport #{cr_id}",
                 exc_info=exc,
             )
 
@@ -464,8 +426,7 @@ def register_feedback_orchestration_tasks(celery):
         except SQLAlchemyError as exc:
             db.session.rollback()
             current_app.logger.exception(
-                f"feedback_orchestration.feedback_record_error: failed to update "
-                f"ConflationReport #{cr_id} failure flags",
+                f"feedback_orchestration.feedback_record_error: failed to update ConflationReport #{cr_id} failure flags",
                 exc_info=exc,
             )
 
@@ -495,9 +456,7 @@ def register_feedback_orchestration_tasks(celery):
         # ------- load active jobs -------
         try:
             active_jobs: List[FeedbackOrchestrationJob] = (
-                db.session.query(FeedbackOrchestrationJob)
-                .filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES))
-                .all()
+                db.session.query(FeedbackOrchestrationJob).filter(FeedbackOrchestrationJob.status.in_(FeedbackOrchestrationJob.ACTIVE_STATUSES)).all()
             )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
@@ -563,9 +522,7 @@ def register_feedback_orchestration_tasks(celery):
         # ------- filter per-job pause state -------
         dispatchable_jobs = [j for j in active_jobs if not j.paused]
         if not dispatchable_jobs:
-            current_app.logger.info(
-                "feedback_orchestration.global_feedback_orchestration_step: all active jobs are paused"
-            )
+            current_app.logger.info("feedback_orchestration.global_feedback_orchestration_step: all active jobs are paused")
             return
 
         # ------- compute available slots -------
@@ -599,8 +556,7 @@ def register_feedback_orchestration_tasks(celery):
                 cr_id_bytes = r.rpoplpush(job.redis_queue_key, job.redis_inflight_key)
             except Exception as exc:
                 current_app.logger.exception(
-                    f"feedback_orchestration.global_feedback_orchestration_step: Redis RPOPLPUSH error "
-                    f"for job {job.uuid}",
+                    f"feedback_orchestration.global_feedback_orchestration_step: Redis RPOPLPUSH error for job {job.uuid}",
                     exc_info=exc,
                 )
                 continue
@@ -614,8 +570,7 @@ def register_feedback_orchestration_tasks(celery):
                 cr: ConflationReport = db.session.query(ConflationReport).filter_by(id=cr_id).first()
             except SQLAlchemyError as exc:
                 current_app.logger.exception(
-                    f"feedback_orchestration.global_feedback_orchestration_step: SQLAlchemyError loading "
-                    f"ConflationReport #{cr_id}",
+                    f"feedback_orchestration.global_feedback_orchestration_step: SQLAlchemyError loading ConflationReport #{cr_id}",
                     exc_info=exc,
                 )
                 r.lrem(job.redis_inflight_key, 0, cr_id_bytes)
@@ -629,16 +584,12 @@ def register_feedback_orchestration_tasks(celery):
 
             if cr is None:
                 current_app.logger.warning(
-                    f"feedback_orchestration.global_feedback_orchestration_step: skipping "
-                    f"ConflationReport #{cr_id} (not found)"
+                    f"feedback_orchestration.global_feedback_orchestration_step: skipping ConflationReport #{cr_id} (not found)"
                 )
                 r.lrem(job.redis_inflight_key, 0, cr_id_bytes)
                 try:
                     job.increment_failed()
-                    if (
-                        (job.completed_count + job.failed_count) >= job.total_count
-                        and job.status == FeedbackOrchestrationJob.STATUS_RUNNING
-                    ):
+                    if (job.completed_count + job.failed_count) >= job.total_count and job.status == FeedbackOrchestrationJob.STATUS_RUNNING:
                         job.mark_complete()
                     db.session.commit()
                 except Exception:
@@ -670,9 +621,7 @@ def register_feedback_orchestration_tasks(celery):
         try:
             _dispatch_coordinator_if_pending()
         except Exception as exc:
-            current_app.logger.exception(
-                "feedback_orchestration.feedback_watchdog: failed", exc_info=exc
-            )
+            current_app.logger.exception("feedback_orchestration.feedback_watchdog: failed", exc_info=exc)
             raise self.retry()
 
     return (

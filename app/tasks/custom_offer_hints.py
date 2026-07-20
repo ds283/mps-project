@@ -71,9 +71,7 @@ def generate_hints_for_selector(
     )
 
     if restrict_to_faculty_id is not None:
-        retired_supervisors_q = retired_supervisors_q.filter(
-            SubmissionRole.user_id == restrict_to_faculty_id
-        )
+        retired_supervisors_q = retired_supervisors_q.filter(SubmissionRole.user_id == restrict_to_faculty_id)
 
     retired_supervisors = retired_supervisors_q.all()
 
@@ -87,9 +85,7 @@ def generate_hints_for_selector(
 
         if fd is not None:
             # Only create a hint if the faculty member has live projects in the current config
-            has_live_projects = (
-                config.live_projects.filter_by(owner_id=fd.id).count() > 0
-            )
+            has_live_projects = config.live_projects.filter_by(owner_id=fd.id).count() > 0
             if not has_live_projects:
                 print(
                     f"@@ student {suser.name} has previous supervisor {fuser.name} (#{fd.id}), but this supervisor has no projects in the current cycle"
@@ -97,12 +93,7 @@ def generate_hints_for_selector(
                 continue
 
             # Skip if a hint already exists for this (selector, submission_record) pair
-            exists = (
-                db.session.query(CustomOfferHint)
-                .filter_by(selector_id=selector.id, submission_record_id=record.id)
-                .first()
-                is not None
-            )
+            exists = db.session.query(CustomOfferHint).filter_by(selector_id=selector.id, submission_record_id=record.id).first() is not None
             if exists:
                 print(
                     f"@@ student {suser.name} has previous supervisor {fuser.name} (#{fd.id}), but a hint already exists for this (selector, submission_record) pair"
@@ -140,9 +131,7 @@ def register_custom_offer_hint_tasks(celery):
         recreated when a single new LiveProject is injected during the selection period.
         """
         try:
-            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
-                id=config_id
-            ).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -157,14 +146,11 @@ def register_custom_offer_hint_tasks(celery):
 
         for selector in selectors:
             try:
-                n = generate_hints_for_selector(
-                    selector, config, restrict_to_faculty_id=restrict_to_faculty_id
-                )
+                n = generate_hints_for_selector(selector, config, restrict_to_faculty_id=restrict_to_faculty_id)
                 total_hints += n
                 if n > 0:
                     log_db_commit(
-                        f"Generated {n} CustomOfferHint(s) for selector "
-                        f"{selector.student.user.name} in {config.name}",
+                        f"Generated {n} CustomOfferHint(s) for selector {selector.student.user.name} in {config.name}",
                         project_classes=config.project_class,
                         endpoint=self.name,
                     )
@@ -178,8 +164,7 @@ def register_custom_offer_hint_tasks(celery):
             config.offer_hints_generated = True
             config.offer_hints_generated_timestamp = datetime.now()
             log_db_commit(
-                f"CustomOfferHint generation complete for {config.name}: "
-                f"{total_hints} hint(s) created across {len(selectors)} selector(s)",
+                f"CustomOfferHint generation complete for {config.name}: {total_hints} hint(s) created across {len(selectors)} selector(s)",
                 project_classes=config.project_class,
                 endpoint=self.name,
             )

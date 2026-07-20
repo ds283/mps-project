@@ -86,7 +86,6 @@ SENT_CV_NOTE_HIGH = 0.85
 SENT_CV_STRONG_HIGH = 1.10
 
 
-
 def classify_mattr(value: float | None) -> str:
     if value is None:
         return "unknown"
@@ -180,23 +179,23 @@ EM_DASH_PATTERN = r"(\u2014|---)"
 # ---------------------------------------------------------------------------
 
 BURSTINESS_WORD_GROUPS = [
-    {"group": "suggest",    "lemmas": {"suggest"}},
-    {"group": "indicate",   "lemmas": {"indicate"}},
-    {"group": "demonstrate","lemmas": {"demonstrate"}},
-    {"group": "show",       "lemmas": {"show"}},
-    {"group": "appear",     "lemmas": {"appear"}},
-    {"group": "estimate",   "lemmas": {"estimate"}},
-    {"group": "assume",     "lemmas": {"assume"}},
-    {"group": "imply",      "lemmas": {"imply"}},
-    {"group": "significant","lemmas": {"significant", "insignificant"}},
-    {"group": "important",  "lemmas": {"important", "relevant"}},
+    {"group": "suggest", "lemmas": {"suggest"}},
+    {"group": "indicate", "lemmas": {"indicate"}},
+    {"group": "demonstrate", "lemmas": {"demonstrate"}},
+    {"group": "show", "lemmas": {"show"}},
+    {"group": "appear", "lemmas": {"appear"}},
+    {"group": "estimate", "lemmas": {"estimate"}},
+    {"group": "assume", "lemmas": {"assume"}},
+    {"group": "imply", "lemmas": {"imply"}},
+    {"group": "significant", "lemmas": {"significant", "insignificant"}},
+    {"group": "important", "lemmas": {"important", "relevant"}},
     {"group": "consistent", "lemmas": {"consistent", "inconsistent"}},
     {"group": "unexpected", "lemmas": {"unexpected", "surprising"}},
-    {"group": "clear",      "lemmas": {"clear", "unclear"}},
-    {"group": "compare",    "lemmas": {"compare"}},
-    {"group": "contrast",   "lemmas": {"contrast", "differ"}},
-    {"group": "agree",      "lemmas": {"agree", "disagree", "confirm"}},
-    {"group": "support",    "lemmas": {"support", "contradict"}},
+    {"group": "clear", "lemmas": {"clear", "unclear"}},
+    {"group": "compare", "lemmas": {"compare"}},
+    {"group": "contrast", "lemmas": {"contrast", "differ"}},
+    {"group": "agree", "lemmas": {"agree", "disagree", "confirm"}},
+    {"group": "support", "lemmas": {"support", "contradict"}},
 ]
 
 BURSTINESS_MIN_OCCURRENCES = 8
@@ -224,9 +223,7 @@ _TAB_REF = re.compile(
 _NUMBERED_ENTRY = re.compile(r"^\s*(\[\d{1,3}\]|\d{1,3}\.)\s+[A-Z]", re.MULTILINE)
 _NUMBERED_CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _ENGLISH_WORD = re.compile(r"[a-zA-Z]{5,}")
-_APPENDIX_HEADING = re.compile(
-    r"(?im)^\s*appendix(?:[ \t]+(?-i:[A-Z])(?:[:\t \-\.].*)?)?$"
-)
+_APPENDIX_HEADING = re.compile(r"(?im)^\s*appendix(?:[ \t]+(?-i:[A-Z])(?:[:\t \-\.].*)?)?$")
 _REF_YEAR = re.compile(r"\(\d{4}[a-z]?\)")
 _ARXIV_ID_PAT = re.compile(r"\barXiv:\d{4}\.\d{4,5}\b", re.IGNORECASE)
 _DOI = re.compile(r"\bdoi:\s*10\.\d{4,}", re.IGNORECASE)
@@ -235,7 +232,7 @@ _MIN_APPENDIX_FRACTION = 0.25
 
 # Code-listing detection used to exclude source-code sentences from sentence CV.
 _CODE_CHARS = frozenset("=()[]{}#")
-_CODE_CHAR_RATIO_THRESHOLD = 0.04   # >4 % of chars are code punctuation
+_CODE_CHAR_RATIO_THRESHOLD = 0.04  # >4 % of chars are code punctuation
 _UNDERSCORE_TOKEN_THRESHOLD = 0.15  # >15 % of whitespace-split tokens contain '_'
 
 # ---------------------------------------------------------------------------
@@ -250,6 +247,7 @@ def _get_nlp():
     global _nlp
     if _nlp is None:
         import spacy  # noqa: PLC0415 — intentional late import
+
         _nlp = spacy.load("en_core_web_sm", disable=["ner", "parser"])
         if not _nlp.has_pipe("senter") and not _nlp.has_pipe("sentencizer"):
             _nlp.add_pipe("sentencizer", first=True)
@@ -274,13 +272,7 @@ def extract_pdf_text(path: str) -> tuple[str, int]:
     for page in doc:
         page_height = page.rect.height
         blocks = page.get_text("blocks")
-        body_blocks = [
-            b[4]
-            for b in blocks
-            if b[1] > page_height * 0.08
-            and b[3] < page_height * 0.92
-            and b[6] == 0
-        ]
+        body_blocks = [b[4] for b in blocks if b[1] > page_height * 0.08 and b[3] < page_height * 0.92 and b[6] == 0]
         pages.append("\n".join(body_blocks))
     page_count = len(doc)
     doc.close()
@@ -291,6 +283,7 @@ def get_pymupdf_version() -> str:
     """Return the installed PyMuPDF version string, or 'unknown' on import failure."""
     try:
         import fitz  # noqa: PLC0415
+
         return fitz.__version__
     except Exception:
         return "unknown"
@@ -306,7 +299,7 @@ def _split_at_last_biblio(text: str) -> tuple[str, str]:
     matches = list(_BIBLIO_HEADING.finditer(text))
     if matches:
         m = matches[-1]
-        return text[: m.start()], text[m.start():]
+        return text[: m.start()], text[m.start() :]
     return text, ""
 
 
@@ -335,13 +328,13 @@ def split_document(raw_text: str) -> tuple[str, str, str]:
     # Type B: appendix lives after the reference list
     app_match = _APPENDIX_HEADING.search(pre_biblio)
     if app_match:
-        return pre_core, pre_biblio[: app_match.start()], pre_biblio[app_match.start():]
+        return pre_core, pre_biblio[: app_match.start()], pre_biblio[app_match.start() :]
 
     # Type A: appendix lives before the reference list (heuristic position guard)
     min_pos = int(len(pre_core) * _MIN_APPENDIX_FRACTION)
     for match in _APPENDIX_HEADING.finditer(pre_core):
         if match.start() > min_pos:
-            return pre_core[: match.start()], pre_biblio, pre_core[match.start():]
+            return pre_core[: match.start()], pre_biblio, pre_core[match.start() :]
 
     # Type C: no appendix
     return pre_core, pre_biblio, ""
@@ -475,14 +468,8 @@ def count_bibliography(biblio_text: str) -> tuple[int, list[str]]:
 
     # Author-year heuristic: count lines that carry a year, arXiv ID, or DOI
     lines = [ln.strip() for ln in biblio_text.splitlines() if ln.strip()]
-    body_lines = [
-        ln for ln in lines[1:]
-        if not ln.lower().startswith(("ref", "biblio", "works"))
-    ]
-    candidates = [
-        ln for ln in body_lines
-        if _REF_YEAR.search(ln) or _ARXIV_ID_PAT.search(ln) or _DOI.search(ln)
-    ]
+    body_lines = [ln for ln in lines[1:] if not ln.lower().startswith(("ref", "biblio", "works"))]
+    candidates = [ln for ln in body_lines if _REF_YEAR.search(ln) or _ARXIV_ID_PAT.search(ln) or _DOI.search(ln)]
     if len(candidates) >= 3:
         return len(candidates), []
     return len(body_lines), []
@@ -528,14 +515,8 @@ def check_figure_table_refs(text: str) -> tuple[list[str], list[str]]:
     def _cited(pattern: str) -> bool:
         return len(re.findall(pattern, text, re.IGNORECASE)) > 1
 
-    uncaptioned_figs = [
-        label for n, label in fig_labels.items()
-        if not _cited(rf"\b(?:figure|fig\.)\s+{re.escape(n)}[a-z]?\b")
-    ]
-    uncaptioned_tabs = [
-        label for n, label in tab_labels.items()
-        if not _cited(rf"\btable\s+{re.escape(n)}[a-z]?\b")
-    ]
+    uncaptioned_figs = [label for n, label in fig_labels.items() if not _cited(rf"\b(?:figure|fig\.)\s+{re.escape(n)}[a-z]?\b")]
+    uncaptioned_tabs = [label for n, label in tab_labels.items() if not _cited(rf"\btable\s+{re.escape(n)}[a-z]?\b")]
     return uncaptioned_figs, uncaptioned_tabs
 
 
@@ -554,6 +535,7 @@ def compute_mattr_mtld(text: str) -> tuple[float | None, float | None]:
     """
     try:
         from lexicalrichness import LexicalRichness  # noqa: PLC0415
+
         clean = strip_code_blocks(text)
         lex = LexicalRichness(clean)
         if lex.words < 100:
@@ -584,9 +566,7 @@ def compute_burstiness(raw_text: str) -> float | None:
         return None
 
     doc = nlp(raw_text)
-    token_lemmas = [
-        (i, tok.lemma_.lower()) for i, tok in enumerate(doc) if tok.is_alpha
-    ]
+    token_lemmas = [(i, tok.lemma_.lower()) for i, tok in enumerate(doc) if tok.is_alpha]
 
     eligible: list[float] = []
     for group_def in BURSTINESS_WORD_GROUPS:
@@ -643,11 +623,7 @@ def compute_sentence_cv(clean_content_text: str) -> float | None:
         return None
 
     doc = nlp(clean_content_text)
-    lengths = [
-        sum(1 for tok in sent if not tok.is_punct and not tok.is_space)
-        for sent in doc.sents
-        if not _looks_like_code(sent.text)
-    ]
+    lengths = [sum(1 for tok in sent if not tok.is_punct and not tok.is_space) for sent in doc.sents if not _looks_like_code(sent.text)]
     lengths = [ln for ln in lengths if ln > 1]
     if len(lengths) < 5:
         return None

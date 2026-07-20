@@ -120,8 +120,7 @@ def print_split_diagnostics(raw_text: str, _core: str, _references: str, _append
             print(f"    [{i}] pos={m.start()}  match={m.group()!r}  context: ...{ctx}...")
     else:
         min_pos = int(len(_core) * _MIN_APPENDIX_FRACTION)
-        print(f"\n  No appendix heading detected (type C / no appendix).  "
-              f"Heuristic min_pos was {min_pos} chars.")
+        print(f"\n  No appendix heading detected (type C / no appendix).  Heuristic min_pos was {min_pos} chars.")
         print(f"  _core={len(_core)} chars, _references={len(_references)} chars, _appendices=0 chars")
 
 
@@ -136,7 +135,7 @@ def count_bibliography_verbose(biblio_text: str) -> tuple[int, list[str]]:
     app_match = _APPENDIX_HEADING.search(biblio_text)
     if app_match:
         print(f"\n  Appendix heading found at pos {app_match.start()} — truncating bibliography there.")
-        print(f"  Appendix heading matched: {biblio_text[app_match.start():app_match.end()]!r}")
+        print(f"  Appendix heading matched: {biblio_text[app_match.start() : app_match.end()]!r}")
         biblio_text = biblio_text[: app_match.start()]
         print(f"  Bibliography text after truncation: {len(biblio_text)} chars")
     else:
@@ -160,24 +159,17 @@ def count_bibliography_verbose(biblio_text: str) -> tuple[int, list[str]]:
                 print(f"  Minimum key={min_key} ≤ 5 — treating as genuine numbered bibliography.")
                 return len(keys), keys
             else:
-                print(f"  Minimum key={min_key} > 5 — likely line-wrap false positive; "
-                      f"falling through to author-year heuristic.")
+                print(f"  Minimum key={min_key} > 5 — likely line-wrap false positive; falling through to author-year heuristic.")
         except ValueError:
             return len(keys), keys  # non-integer keys — trust the match
 
     # Author-year heuristic
     print("\n  No genuine numbered entries found — falling back to author-year line heuristic.")
     lines = [ln.strip() for ln in biblio_text.splitlines() if ln.strip()]
-    body_lines = [
-        ln for ln in lines[1:]
-        if not ln.lower().startswith(("ref", "biblio", "works"))
-    ]
+    body_lines = [ln for ln in lines[1:] if not ln.lower().startswith(("ref", "biblio", "works"))]
     print(f"  Body lines (non-blank, after skipping heading): {len(body_lines)}")
 
-    candidates = [
-        ln for ln in body_lines
-        if _REF_YEAR.search(ln) or _ARXIV_ID_PAT.search(ln) or _DOI.search(ln)
-    ]
+    candidates = [ln for ln in body_lines if _REF_YEAR.search(ln) or _ARXIV_ID_PAT.search(ln) or _DOI.search(ln)]
     print(f"\n  Entry candidates (year / arXiv / DOI signal): {len(candidates)}")
     print("  First 20 candidate lines:")
     for ln in candidates[:20]:
@@ -214,15 +206,12 @@ def _hr(title=""):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Standalone diagnostic script for the language analysis pipeline"
-    )
+    parser = argparse.ArgumentParser(description="Standalone diagnostic script for the language analysis pipeline")
     parser.add_argument("pdf_path", help="Path to the PDF to analyse")
     parser.add_argument(
         "--student",
         default=STUDENT_FILE,
-        help=f"Student report Excel file used as the pre-LLM calibration sample "
-        f"[default: {STUDENT_FILE}]",
+        help=f"Student report Excel file used as the pre-LLM calibration sample [default: {STUDENT_FILE}]",
     )
     args = parser.parse_args()
 
@@ -234,6 +223,7 @@ def main():
     # Detect whether spaCy is available (it needs the Python 3.12 venv)
     try:
         from language_analysis_core import _get_nlp
+
         _get_nlp()
         spacy_available = True
     except Exception:
@@ -264,7 +254,7 @@ def main():
     removed = raw_lines - clean_lines
     print(f"Core lines before : {raw_lines}")
     print(f"Core lines after  : {clean_lines}")
-    print(f"Lines removed (math/noise): {removed}  ({100*removed/max(raw_lines,1):.1f}%)")
+    print(f"Lines removed (math/noise): {removed}  ({100 * removed / max(raw_lines, 1):.1f}%)")
     print(f"Clean core text words: {len(clean_core_text.split())}")
 
     # ---- Stage 4: Word count ------------------------------------------------
@@ -329,8 +319,11 @@ def main():
     if spacy_available:
         print("Computing burstiness on raw text (spaCy lemmatisation)...")
         burstiness = compute_burstiness(raw_text)
-        print(f"Burstiness B : {burstiness:.4f}  [{classify_burstiness(burstiness)}]"
-              if burstiness is not None else "Burstiness B : None  [unknown — no eligible word groups]")
+        print(
+            f"Burstiness B : {burstiness:.4f}  [{classify_burstiness(burstiness)}]"
+            if burstiness is not None
+            else "Burstiness B : None  [unknown — no eligible word groups]"
+        )
     else:
         burstiness = None
         print("spaCy not available in this environment.")
@@ -341,8 +334,11 @@ def main():
     if spacy_available:
         print("Computing sentence-length CV on core + appendices text (spaCy sentence segmentation)...")
         sentence_cv = compute_sentence_cv(clean_content_text)
-        print(f"Sentence CV  : {sentence_cv:.4f}  [{classify_sentence_cv(sentence_cv)}]"
-              if sentence_cv is not None else "Sentence CV  : None  [unknown — fewer than 5 sentences]")
+        print(
+            f"Sentence CV  : {sentence_cv:.4f}  [{classify_sentence_cv(sentence_cv)}]"
+            if sentence_cv is not None
+            else "Sentence CV  : None  [unknown — fewer than 5 sentences]"
+        )
     else:
         sentence_cv = None
         print("spaCy not available in this environment.")

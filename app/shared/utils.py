@@ -78,11 +78,7 @@ def home_dashboard():
 def redirect_url(default=None):
     return (
         request.args.get("next")
-        or (
-            request.referrer
-            if (request.referrer is not None and "/login" not in request.referrer)
-            else None
-        )
+        or (request.referrer if (request.referrer is not None and "/login" not in request.referrer) else None)
         or (url_for(default) if default is not None else None)
         or home_dashboard()
     )
@@ -92,11 +88,7 @@ def get_approval_queue_data():
     total = 0
     data = {}
 
-    if (
-        current_user.has_role("user_approver")
-        or current_user.has_role("root")
-        or current_user.has_role("manage_users")
-    ):
+    if current_user.has_role("user_approver") or current_user.has_role("root") or current_user.has_role("manage_users"):
         user_data = _get_user_approvals_data()
         data.update(user_data)
 
@@ -177,8 +169,7 @@ def build_project_approval_queues():
         .join(User, User.id == FacultyData.id, isouter=True)
         .filter(
             ProjectDescription.confirmed,
-            ProjectDescription.workflow_state
-            != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
+            ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
             Project.active.is_(True),
             or_(
                 Project.use_supervisor_pool.is_(True),
@@ -207,9 +198,7 @@ def build_project_approval_queues():
 
 @cache.memoize()
 def allow_approval_for_description(desc_id):
-    desc: ProjectDescription = (
-        db.session.query(ProjectDescription).filter_by(id=desc_id).first()
-    )
+    desc: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
 
     if desc is None:
         return False
@@ -256,10 +245,7 @@ def allow_approval_for_description(desc_id):
             continue
 
         # if the user is not in the approvals pool for this project class, there is nothing to do
-        in_team = (
-            current_user.has_role("root")
-            or pcl.approvals_team.filter_by(id=current_user.id).first() is not None
-        )
+        in_team = current_user.has_role("root") or pcl.approvals_team.filter_by(id=current_user.id).first() is not None
         if not in_team:
             continue
 
@@ -272,10 +258,7 @@ def allow_approval_for_description(desc_id):
 
         # don't include projects if project owner is not enrolled normally as a supervisor
         record: EnrollmentRecord = owner.get_enrollment_record(pcl.id)
-        if (
-            record is None
-            or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
-        ):
+        if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
             continue
 
         # for project classes that require project confirmations:
@@ -316,17 +299,13 @@ def _approvals_ProjectDescription_delete_handler(mapper, connection, target):
 
 
 @listens_for(ProjectDescription.project_classes, "append")
-def _approvals_ProjectDescription_project_classes_append_handler(
-    target, value, initiator
-):
+def _approvals_ProjectDescription_project_classes_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
 
 
 @listens_for(ProjectDescription.project_classes, "remove")
-def _approvals_ProjectDescription_project_classes_remove_handler(
-    target, value, initiator
-):
+def _approvals_ProjectDescription_project_classes_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
 
@@ -360,9 +339,7 @@ def _approvals_ProjectClassConfig_insert_handler(mapper, connection, target):
         if target.project_class is not None:
             _approvals_delete_ProjectClass_cache(target.project_class)
         elif target.pclass_id is not None:
-            pclass = (
-                db.session.query(ProjectClass).filter_by(id=target.pclass_id).first()
-            )
+            pclass = db.session.query(ProjectClass).filter_by(id=target.pclass_id).first()
             if pclass is not None:
                 _approvals_delete_ProjectClass_cache(pclass)
 
@@ -380,17 +357,13 @@ def _approvals_ProjectClassConfig_delete_handler(mapper, connection, target):
 
 
 @listens_for(ProjectClassConfig.confirmation_required, "append")
-def _approvals_ProjectClassConfig_confirmation_required_append_handler(
-    target, value, initiator
-):
+def _approvals_ProjectClassConfig_confirmation_required_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
 
 
 @listens_for(ProjectClassConfig.confirmation_required, "remove")
-def _approvals_ProjectClassConfig_confirmation_required_remove_handler(
-    target, value, initiator
-):
+def _approvals_ProjectClassConfig_confirmation_required_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
 
@@ -441,11 +414,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     # build base query -- either all users, or attached users, or not attached faculty
     if state_filter == "attached":
         # build list of all active faculty users who are attached
-        sq = (
-            db.session.query(project_assessors.c.faculty_id)
-            .filter(project_assessors.c.project_id == proj.id)
-            .subquery()
-        )
+        sq = db.session.query(project_assessors.c.faculty_id).filter(project_assessors.c.project_id == proj.id).subquery()
 
         query = (
             db.session.query(FacultyData)
@@ -471,11 +440,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
 
     else:
         # build list of all active faculty
-        query = (
-            db.session.query(FacultyData)
-            .join(User, User.id == FacultyData.id)
-            .filter(User.active.is_(True), User.id != proj.owner_id)
-        )
+        query = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active.is_(True), User.id != proj.owner_id)
 
     # add filters for research group, if a filter is applied
     flag, value = is_integer(group_filter)
@@ -487,9 +452,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     flag, value = is_integer(pclass_filter)
 
     if flag:
-        query = query.filter(
-            FacultyData.enrollments.any(EnrollmentRecord.pclass_id == value)
-        )
+        query = query.filter(FacultyData.enrollments.any(EnrollmentRecord.pclass_id == value))
 
     query = query.order_by(User.last_name, User.first_name)
 
@@ -528,9 +491,7 @@ def detuple(x):
     return x
 
 
-def build_enrol_selector_candidates(
-    config: ProjectClassConfig, disable_programme_filter: bool = False
-):
+def build_enrol_selector_candidates(config: ProjectClassConfig, disable_programme_filter: bool = False):
     """
     Build a query that returns possible candidates for manual enrolment as selectors
     :param disable_programme_filter:
@@ -546,17 +507,13 @@ def build_enrol_selector_candidates(
     )
 
 
-def build_enrol_submitter_candidates(
-    config: ProjectClassConfig, disable_programme_filter: bool = False
-):
+def build_enrol_submitter_candidates(config: ProjectClassConfig, disable_programme_filter: bool = False):
     """
     Build a query that returns possible candidate for manual enrolment as submitters
     :param config:
     :return:
     """
-    return _build_generic_enroll_candidate(
-        config, 0, SubmittingStudent, disable_programme_filter=disable_programme_filter
-    )
+    return _build_generic_enroll_candidate(config, 0, SubmittingStudent, disable_programme_filter=disable_programme_filter)
 
 
 def _build_generic_enroll_candidate(
@@ -589,11 +546,7 @@ def _build_generic_enroll_candidate(
     if disable_programme_filter or config.selection_open_to_all:
         allowed_programmes = None
     else:
-        allowed_programmes = (
-            config.project_class.programmes.with_entities(DegreeProgramme.id)
-            .distinct()
-            .all()
-        )
+        allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
         allowed_programmes = set(detuple(x) for x in allowed_programmes)
 
     # build a list of eligible students who are not already attached as selectors
@@ -607,9 +560,7 @@ def _build_generic_enroll_candidate(
 
     # build a list of existing selecting students associated with this ProjectClassConfig instance
     existing_students = (
-        db.session.query(StudentRecordType.student_id)
-        .filter(StudentRecordType.config_id == config.id, ~StudentRecordType.retired)
-        .subquery()
+        db.session.query(StudentRecordType.student_id).filter(StudentRecordType.config_id == config.id, ~StudentRecordType.retired).subquery()
     )
 
     # find students in candidates who are not also in selectors
@@ -673,20 +624,14 @@ def get_automatch_pclasses():
     :return:
     """
 
-    pclasses = (
-        db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
-    )
+    pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
 
     return pclasses
 
 
-def build_submitters_data(
-    config, cohort_filter, prog_filter, state_filter, year_filter
-) -> List[SubmittingStudent]:
+def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter) -> List[SubmittingStudent]:
     # build a list of live students submitting work for evaluation in this project class
-    submitters: List[SubmittingStudent] = config.submitting_students.filter_by(
-        retired=False
-    )
+    submitters: List[SubmittingStudent] = config.submitting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -694,9 +639,7 @@ def build_submitters_data(
     year_flag, year_value = is_integer(year_filter)
 
     if cohort_flag or prog_flag or state_filter == "twd":
-        submitters = submitters.join(
-            StudentData, StudentData.id == SubmittingStudent.student_id
-        )
+        submitters = submitters.join(StudentData, StudentData.id == SubmittingStudent.student_id)
 
     if cohort_flag:
         submitters = submitters.filter(StudentData.cohort == cohort_value)
@@ -725,11 +668,7 @@ def build_submitters_data(
         data = submitters.all()
 
     if year_flag:
-        data = [
-            s
-            for s in data
-            if (s.academic_year is None or s.academic_year == year_value)
-        ]
+        data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
 
     return data
 

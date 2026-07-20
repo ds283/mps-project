@@ -101,12 +101,8 @@ def submitter_documents():
     if sub_id is None and sid is None:
         abort(404)
 
-    submitter: SubmittingStudent = (
-        SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
-    )
-    record: SubmissionRecord = (
-        SubmissionRecord.query.get_or_404(sid) if sid is not None else None
-    )
+    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
 
     if submitter is not None:
         config: ProjectClassConfig = submitter.config
@@ -132,9 +128,7 @@ def submitter_documents():
 
         else:
             if hasattr(form, "selector") and form.selector.data is not None:
-                record: SubmissionRecord = submitter.get_assignment(
-                    period=form.selector.data
-                )
+                record: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
             else:
                 record: SubmissionRecord = submitter.get_assignment()
 
@@ -165,16 +159,10 @@ def submitter_documents():
         url=url,
         text=text,
         form=form,
-        is_editable=partial(
-            is_editable, record, period=period, config=config, message=False
-        ),
+        is_editable=partial(is_editable, record, period=period, config=config, message=False),
         deletable=is_deletable(record, period=period, config=config, message=False),
-        report_uploadable=is_uploadable(
-            record, message=False, allow_student=False, allow_faculty=False
-        ),
-        attachment_uploadable=is_uploadable(
-            record, message=False, allow_student=True, allow_faculty=True
-        ),
+        report_uploadable=is_uploadable(record, message=False, allow_student=False, allow_faculty=False),
+        attachment_uploadable=is_uploadable(record, message=False, allow_student=True, allow_faculty=True),
     )
 
 
@@ -208,9 +196,7 @@ def generate_processed_report(sid):
     finalize = celery.tasks["app.tasks.process_report.finalize"]
     error = celery.tasks["app.tasks.process_report.error"]
 
-    work = chain(process.si(record.id), finalize.si(record.id)).on_error(
-        error.si(record.id, current_user.id)
-    )
+    work = chain(process.si(record.id), finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
     work.apply_async()
 
     record.celery_started = True
@@ -269,9 +255,7 @@ def clear_and_regenerate_processed_report(sid):
             if store is not None:
                 store.delete(old_asset.unique_name)
         except Exception as exc:
-            current_app.logger.warning(
-                f"Could not delete processed report asset during regeneration: {exc}"
-            )
+            current_app.logger.warning(f"Could not delete processed report asset during regeneration: {exc}")
         db.session.delete(old_asset)
 
     # Reset processing state flags and dispatch the process_report chain
@@ -284,9 +268,7 @@ def clear_and_regenerate_processed_report(sid):
     finalize = celery.tasks["app.tasks.process_report.finalize"]
     error = celery.tasks["app.tasks.process_report.error"]
 
-    work = chain(process.si(record.id), finalize.si(record.id)).on_error(
-        error.si(record.id, current_user.id)
-    )
+    work = chain(process.si(record.id), finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
     work.apply_async()
 
     try:
@@ -376,9 +358,7 @@ def clear_language_analysis(sid):
             if store is not None:
                 store.delete(old_asset.unique_name)
         except Exception as exc:
-            current_app.logger.warning(
-                f"Could not delete processed report asset during analysis clear: {exc}"
-            )
+            current_app.logger.warning(f"Could not delete processed report asset during analysis clear: {exc}")
         db.session.delete(old_asset)
 
     try:
@@ -640,9 +620,7 @@ def delete_submitter_report(sid):
     text = request.args.get("text", None)
 
     title = "Delete project report"
-    action_url = url_for(
-        "documents.perform_delete_submitter_report", sid=sid, url=url, text=text
-    )
+    action_url = url_for("documents.perform_delete_submitter_report", sid=sid, url=url, text=text)
 
     message = (
         "<p>Please confirm that you wish to remove the project report for "
@@ -730,9 +708,7 @@ def perform_delete_submitter_report(sid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(
-        url_for("documents.submitter_documents", sid=sid, url=url, text=text)
-    )
+    return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
 
 @documents.route("/upload_submitter_report/<int:sid>", methods=["GET", "POST"])
@@ -751,9 +727,7 @@ def upload_submitter_report(sid):
     # check is convenor for the project's class, or has suitable admin/root privileges
     config: ProjectClassConfig = record.owner.config
     pclass: ProjectClass = config.project_class
-    if not is_uploadable(
-        record, message=True, allow_student=False, allow_faculty=False
-    ):
+    if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -795,9 +769,7 @@ def upload_submitter_report(sid):
                     "error",
                 )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(
-                    url_for("documents.submitter_documents", sid=record.sid)
-                )
+                return redirect(url_for("documents.submitter_documents", sid=record.sid))
 
             dispatch_thumbnail_task(asset)
 
@@ -816,9 +788,7 @@ def upload_submitter_report(sid):
                 asset.grant_user(record.owner.student.user)
 
             # set up list of roles that should have access, if they exist
-            asset.grant_roles(
-                ["office", "convenor", "moderator", "exam_board", "external_examiner"]
-            )
+            asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
 
             # remove processed report, if that has not already been done
             if record.processed_report is not None:
@@ -847,9 +817,7 @@ def upload_submitter_report(sid):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:
                 flash(
-                    'Report "{file}" was successfully uploaded.'.format(
-                        file=report_file.filename
-                    ),
+                    'Report "{file}" was successfully uploaded.'.format(file=report_file.filename),
                     "info",
                 )
 
@@ -860,30 +828,23 @@ def upload_submitter_report(sid):
                 except SQLAlchemyError as e:
                     db.session.rollback()
                     flash(
-                        "A database error was encountered while initiating language analysis. "
-                        "Please contact an administrator.",
+                        "A database error was encountered while initiating language analysis. Please contact an administrator.",
                         "error",
                     )
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-            return redirect(
-                url_for("documents.submitter_documents", sid=sid, url=url, text=text)
-            )
+            return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
     else:
         if request.method == "GET":
             # default to 'Exam' license if one is available
-            default_report_license = (
-                db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
-            )
+            default_report_license = db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
             if default_report_license is None:
                 default_report_license = current_user.default_license
 
             form.license.data = default_report_license
 
-    return render_template_context(
-        "documents/upload_report.html", record=record, form=form, url=url, text=text
-    )
+    return render_template_context("documents/upload_report.html", record=record, form=form, url=url, text=text)
 
 
 @documents.route("/pull_report_from_canvas/<int:rid>")
@@ -900,9 +861,7 @@ def pull_report_from_canvas(rid):
         return redirect(redirect_url())
 
     # check is convenor for the project's class, or has suitable admin/root privileges
-    if not is_uploadable(
-        record, message=True, allow_student=False, allow_faculty=False
-    ):
+    if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -914,9 +873,7 @@ def pull_report_from_canvas(rid):
     finalize = celery.tasks["app.tasks.canvas.pull_report_finalize"]
     error = celery.tasks["app.tasks.canvas.pull_report_error"]
 
-    work = chain(
-        process.s(record.id, current_user.id), finalize.s(record.id, current_user.id)
-    ).on_error(error.si(record.id, current_user.id))
+    work = chain(process.s(record.id, current_user.id), finalize.s(record.id, current_user.id)).on_error(error.si(record.id, current_user.id))
     work.apply_async()
 
     if url:
@@ -946,9 +903,7 @@ def pull_all_reports_from_canvas(pid):
     summary = celery.tasks["app.tasks.canvas.pull_all_reports_summary"]
 
     available = (
-        period.submissions.join(
-            SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id
-        )
+        period.submissions.join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         .filter(
             and_(
                 SubmissionRecord.report_id == None,
@@ -963,9 +918,7 @@ def pull_all_reports_from_canvas(pid):
         [
             chain(
                 process.s(record.id, None),
-                finalize_batch.s(record.id, None).on_error(
-                    error.si(record.id, current_user.id)
-                ),
+                finalize_batch.s(record.id, None).on_error(error.si(record.id, current_user.id)),
             )
             for record in available
         ],
@@ -1024,13 +977,9 @@ def edit_submitter_report(sid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(
-            url_for("documents.submitter_documents", sid=record.id, url=url, text=text)
-        )
+        return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
 
-    action_url = url_for(
-        "documents.edit_submitter_report", sid=record.id, url=url, text=text
-    )
+    action_url = url_for("documents.edit_submitter_report", sid=record.id, url=url, text=text)
     return render_template_context(
         "documents/edit_attachment.html",
         form=form,
@@ -1081,9 +1030,7 @@ def edit_submission_record_settings(sid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(
-            url_for("documents.submitter_documents", sid=record.id, url=url, text=text)
-        )
+        return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
 
     else:
         if request.method == "GET":
@@ -1092,9 +1039,7 @@ def edit_submission_record_settings(sid):
             form.report_exemplar.data = record.report_exemplar
             form.exemplar_comment.data = record.exemplar_comment
 
-    action_url = url_for(
-        "documents.edit_submission_record_settings", sid=record.id, url=url, text=text
-    )
+    action_url = url_for("documents.edit_submission_record_settings", sid=record.id, url=url, text=text)
     return render_template_context(
         "documents/edit_submission_record_settings.html",
         form=form,
@@ -1129,9 +1074,7 @@ def edit_submitter_attachment(aid):
     text = request.args.get("text", None)
 
     has_admin_rights = is_admin(current_user)
-    EditSubmitterAttachmentForm = EditSubmitterAttachmentFormFactory(
-        admin=has_admin_rights
-    )
+    EditSubmitterAttachmentForm = EditSubmitterAttachmentFormFactory(admin=has_admin_rights)
     form = EditSubmitterAttachmentForm(obj=attachment)
 
     if form.validate_on_submit():
@@ -1168,9 +1111,7 @@ def edit_submitter_attachment(aid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(
-            url_for("documents.submitter_documents", sid=record.id, url=url, text=text)
-        )
+        return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
 
     else:
         if request.method == "GET":
@@ -1179,9 +1120,7 @@ def edit_submitter_attachment(aid):
             if has_admin_rights:
                 form.roles.data = list(attachment.role_set)
 
-    action_url = url_for(
-        "documents.edit_submitter_attachment", aid=attachment.id, url=url, text=text
-    )
+    action_url = url_for("documents.edit_submitter_attachment", aid=attachment.id, url=url, text=text)
     return render_template_context(
         "documents/edit_attachment.html",
         form=form,
@@ -1216,9 +1155,7 @@ def delete_submitter_attachment(aid):
         )
         return redirect(redirect_url())
 
-    if current_user.has_role("student") and not attachment.has_role_access(
-        SubmissionRoleTypesMixin.ROLE_STUDENT
-    ):
+    if current_user.has_role("student") and not attachment.has_role_access(SubmissionRoleTypesMixin.ROLE_STUDENT):
         # give no indication that this asset actually exists
         abort(404)
 
@@ -1315,9 +1252,7 @@ def perform_delete_submitter_attachment(aid, sid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(
-        url_for("documents.submitter_documents", sid=sid, url=url, text=text)
-    )
+    return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
 
 @documents.route("/upload_submitter_attachment/<int:sid>", methods=["GET", "POST"])
@@ -1336,9 +1271,7 @@ def upload_submitter_attachment(sid):
     text = request.args.get("text", None)
 
     has_admin_rights = is_admin(current_user)
-    UploadSubmitterAttachmentForm = UploadSubmitterAttachmentFormFactory(
-        admin=has_admin_rights
-    )
+    UploadSubmitterAttachmentForm = UploadSubmitterAttachmentFormFactory(admin=has_admin_rights)
     form = UploadSubmitterAttachmentForm(request.form)
 
     if form.validate_on_submit():
@@ -1374,11 +1307,7 @@ def upload_submitter_attachment(sid):
                     "error",
                 )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(
-                    url_for(
-                        "documents.submitter_documents", sid=sid, url=url, text=text
-                    )
-                )
+                return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
             dispatch_thumbnail_task(asset)
 
@@ -1395,11 +1324,7 @@ def upload_submitter_attachment(sid):
             else:
                 attachment.type = SubmissionAttachment.ATTACHMENT_OTHER
                 # non-admin uploads: student uploads are visible to students; others are unrestricted
-                selected_roles = (
-                    [SubmissionRoleTypesMixin.ROLE_STUDENT]
-                    if current_user.has_role("student")
-                    else []
-                )
+                selected_roles = [SubmissionRoleTypesMixin.ROLE_STUDENT] if current_user.has_role("student") else []
 
             # uploading user has access
             asset.grant_user(current_user)
@@ -1413,9 +1338,7 @@ def upload_submitter_attachment(sid):
                 asset.grant_user(record.owner.student.user)
 
             # broad role grants that always apply
-            asset.grant_roles(
-                ["office", "convenor", "moderator", "exam_board", "external_examiner"]
-            )
+            asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
 
             try:
                 db.session.add(attachment)
@@ -1435,15 +1358,11 @@ def upload_submitter_attachment(sid):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:
                 flash(
-                    'Attachment "{file}" was successfully uploaded.'.format(
-                        file=attachment_file.filename
-                    ),
+                    'Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename),
                     "info",
                 )
 
-            return redirect(
-                url_for("documents.submitter_documents", sid=sid, url=url, text=text)
-            )
+            return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
     else:
         if request.method == "GET":
@@ -1461,9 +1380,7 @@ def upload_submitter_attachment(sid):
 
 def _get_attachment_asset(attach_type, attach_id):
     if attach_type == ATTACHMENT_TYPE_SUBMISSION:
-        attachment: SubmissionAttachment = (
-            db.session.query(SubmissionAttachment).filter_by(id=attach_id).first()
-        )
+        attachment: SubmissionAttachment = db.session.query(SubmissionAttachment).filter_by(id=attach_id).first()
         if attachment is None:
             raise KeyError
 
@@ -1483,9 +1400,7 @@ def _get_attachment_asset(attach_type, attach_id):
         return attachment, asset, pclass
 
     if attach_type == ATTACHMENT_TYPE_UPLOADED_REPORT:
-        record: SubmissionRecord = (
-            db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
-        )
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
         if record is None:
             raise KeyError
 
@@ -1495,9 +1410,7 @@ def _get_attachment_asset(attach_type, attach_id):
         return record, asset, pclass
 
     if attach_type == ATTACHMENT_TYPE_PROCESSED_REPORT:
-        record: SubmissionRecord = (
-            db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
-        )
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
         if record is None:
             return KeyError
 
@@ -1507,9 +1420,7 @@ def _get_attachment_asset(attach_type, attach_id):
         return record, asset, pclass
 
     if attach_type == ATTACHMENT_TYPE_FEEDBACK_REPORT:
-        record: FeedbackReport = (
-            db.session.query(FeedbackReport).filter_by(id=attach_id).first()
-        )
+        record: FeedbackReport = db.session.query(FeedbackReport).filter_by(id=attach_id).first()
         if record is None:
             raise KeyError
 
@@ -1582,13 +1493,7 @@ def acl_user_ajax(attach_type, attach_id):
         state_filter = "all"
 
     user_list = db.session.query(User).filter_by(active=True).all()
-    role_list = (
-        db.session.query(Role)
-        .filter(
-            or_(Role.name == "faculty", Role.name == "student", Role.name == "office")
-        )
-        .all()
-    )
+    role_list = db.session.query(Role).filter(or_(Role.name == "faculty", Role.name == "student", Role.name == "office")).all()
 
     if state_filter == "access":
         user_list = [u for u in user_list if asset.has_access(u)]
@@ -1880,10 +1785,7 @@ def llm_report(record_id):
     # Access control: convenors, admin, root, office, or the submitting student's supervisors
     # and markers all need to be able to access this.
     allowed = (
-        current_user.has_role("root")
-        or current_user.has_role("admin")
-        or current_user.has_role("office")
-        or pclass.is_convenor(current_user.id)
+        current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office") or pclass.is_convenor(current_user.id)
     )
     if not allowed:
         # Check if the current user has a role on this submission
@@ -1894,9 +1796,7 @@ def llm_report(record_id):
     if not allowed:
         abort(403)
 
-    url = request.args.get(
-        "url", url_for("documents.submitter_documents", sid=record.owner_id, url="/")
-    )
+    url = request.args.get("url", url_for("documents.submitter_documents", sid=record.owner_id, url="/"))
     text = request.args.get("text", "Back")
 
     la = record.language_analysis_data
@@ -1906,9 +1806,7 @@ def llm_report(record_id):
     errors = la.get("errors", [])
 
     # Prepare Python-side display data — keeps Jinja2 templates free of business logic
-    metrics_data = (
-        record.llm_metrics_for_display() if record.language_analysis_complete else None
-    )
+    metrics_data = record.llm_metrics_for_display() if record.language_analysis_complete else None
     rf_summary = record.risk_factors_ui_summary()
     rf_items = record.risk_factor_display_items()
 

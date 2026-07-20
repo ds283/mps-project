@@ -246,11 +246,19 @@ def analyse_chunk(chunk_type, records, workbook, summary_rows):
     print(f"  Jaccard ≥ {MINHASH_LSH_THRESHOLD}: {frac_lsh:.4f} ({int(frac_lsh * P)}/{P} pairs)")
 
     jac_stats = percentile_stats(jac_vals, MINHASH_LSH_THRESHOLD)
-    summary_rows.append([
-        chunk_type, "jaccard", P,
-        jac_stats["median"], jac_stats["p75"], jac_stats["p90"],
-        jac_stats["p95"], jac_stats["p99"], jac_stats["count_above"],
-    ])
+    summary_rows.append(
+        [
+            chunk_type,
+            "jaccard",
+            P,
+            jac_stats["median"],
+            jac_stats["p75"],
+            jac_stats["p90"],
+            jac_stats["p95"],
+            jac_stats["p99"],
+            jac_stats["count_above"],
+        ]
+    )
 
     # ---- Cosine similarity — three models ----
     cosine_vals = {}
@@ -265,6 +273,7 @@ def analyse_chunk(chunk_type, records, workbook, summary_rows):
         gc.collect()
         try:
             import torch
+
             torch.cuda.empty_cache()
         except Exception:
             pass
@@ -280,11 +289,19 @@ def analyse_chunk(chunk_type, records, workbook, summary_rows):
             print(f"  [ok]  [{key}]: 0 LSH false negatives above cosine threshold")
 
         cos_stats = percentile_stats(cos_vals, threshold)
-        summary_rows.append([
-            chunk_type, f"cosine_{key}", P,
-            cos_stats["median"], cos_stats["p75"], cos_stats["p90"],
-            cos_stats["p95"], cos_stats["p99"], cos_stats["count_above"],
-        ])
+        summary_rows.append(
+            [
+                chunk_type,
+                f"cosine_{key}",
+                P,
+                cos_stats["median"],
+                cos_stats["p75"],
+                cos_stats["p90"],
+                cos_stats["p95"],
+                cos_stats["p99"],
+                cos_stats["count_above"],
+            ]
+        )
 
     # ---- Write per-chunk Excel sheet ----
     write_excel(workbook, chunk_type, pair_ids_a.tolist(), pair_ids_b.tolist(), jac_vals, cosine_vals)

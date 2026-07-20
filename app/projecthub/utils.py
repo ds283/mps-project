@@ -55,14 +55,7 @@ class HubRoleMap:
         self.admin: bool = admin
 
     def __bool__(self):
-        return (
-            self.student
-            or self.supervisor
-            or self.marker
-            or self.moderator
-            or self.convenor
-            or self.admin
-        )
+        return self.student or self.supervisor or self.marker or self.moderator or self.convenor or self.admin
 
     @property
     def is_student(self) -> bool:
@@ -133,9 +126,7 @@ class HubRoleMap:
         return ui_elements
 
 
-def validate_project_hub(
-    record: SubmissionRecord, user: User, current_role=None, message=False
-) -> HubRoleMap:
+def validate_project_hub(record: SubmissionRecord, user: User, current_role=None, message=False) -> HubRoleMap:
     """
     Validate whether a given user instance is entitled to view the
     ProjectHub for a given SubmissionRecord
@@ -220,9 +211,7 @@ def validate_project_hub(
                 "info",
             )
         else:
-            flash(
-                f'You are not currently authorized to view the project hub for student "{suser.name}"'
-            )
+            flash(f'You are not currently authorized to view the project hub for student "{suser.name}"')
 
     return hub_role
 
@@ -253,16 +242,12 @@ def validate_set_attendance(event: SupervisionEvent, user: User, message=False):
         owner: SubmittingStudent = record.owner
         sd: StudentData = owner.student
         suser: User = sd.user
-        flash(
-            f'You are not currently authorized to set attendance for event "{event.name}" and student "{suser.name}"'
-        )
+        flash(f'You are not currently authorized to set attendance for event "{event.name}" and student "{suser.name}"')
 
     return False
 
 
-def doughnut_diagram(
-    burn_fraction: float, burned_colour="tomato", unburned_colour="palegreen"
-) -> DoughnutDiagram:
+def doughnut_diagram(burn_fraction: float, burned_colour="tomato", unburned_colour="palegreen") -> DoughnutDiagram:
     angle = 2 * pi * min(burn_fraction, 0.995)
     start_angle = pi / 2.0
     end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
@@ -306,9 +291,7 @@ def doughnut_diagram(
         y=0,
         x_units="data",
         y_units="data",
-        text="{p:.2g}%".format(p=burn_fraction * 100)
-        if burn_fraction < 1.0
-        else "100%",
+        text="{p:.2g}%".format(p=burn_fraction * 100) if burn_fraction < 1.0 else "100%",
         background_fill_alpha=0.0,
         text_align="center",
         text_baseline="middle",

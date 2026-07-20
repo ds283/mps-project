@@ -81,9 +81,7 @@ def _build_enrolments_templ() -> Template:
     return env.from_string(_enrolments)
 
 
-def build_assessor_data(
-    faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False
-):
+def build_assessor_data(faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     # pre-compile template string
@@ -102,9 +100,7 @@ def build_assessor_data(
                 "sortstring": f.user.last_name + f.user.first_name,
             },
             "attached": render_template(attached_templ, f=f),
-            "groups": render_template(
-                affiliations_templ, f=f, simple_label=simple_label
-            ),
+            "groups": render_template(affiliations_templ, f=f, simple_label=simple_label),
             "status": render_template(status_templ, f=f, proj=proj),
             "enrolments": render_template(
                 enrolments_templ,

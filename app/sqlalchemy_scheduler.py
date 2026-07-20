@@ -170,9 +170,7 @@ class DatabaseScheduler(Scheduler):
 
     def should_sync(self):
         sync_reason_time = (time.time() - self._last_sync) > self.sync_every
-        sync_reason_task_count = (
-                self.sync_every_tasks and self._tasks_since_sync >= self.sync_every_tasks
-        )
+        sync_reason_task_count = self.sync_every_tasks and self._tasks_since_sync >= self.sync_every_tasks
         bool_ = sync_reason_time or sync_reason_task_count
         self.logger.debug("DatabaseScheduler: should_sync: {0}".format(bool_))
         return bool_

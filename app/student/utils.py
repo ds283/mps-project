@@ -32,8 +32,7 @@ def verify_submitter(sub: SubmittingStudent, message: bool = False):
 
     if message:
         flash(
-            "You do not have permission to perform operations for this user. "
-            "If you believe this is incorrect, contract the system administrator.",
+            "You do not have permission to perform operations for this user. If you believe this is incorrect, contract the system administrator.",
             "error",
         )
     return False
@@ -66,8 +65,7 @@ def verify_selector(sel: SelectingStudent, message=False):
     # convenor is able to take actions on a student's behalf
     if message:
         flash(
-            "You do not have permission to perform operations for this user. "
-            "If you believe this is incorrect, contract the system administrator.",
+            "You do not have permission to perform operations for this user. If you believe this is incorrect, contract the system administrator.",
             "error",
         )
     return False
@@ -104,16 +102,14 @@ def verify_open(config, state=None, strict=False, message=False):
 
     if strict and state != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
-            "It is not possible to perform this operations because selections for "
-            '"{proj}" are not open.'.format(proj=config.name),
+            'It is not possible to perform this operations because selections for "{proj}" are not open.'.format(proj=config.name),
             "error",
         )
         return False
 
     if not strict and state < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash(
-            "It is not possible to perform this operations because selections for "
-            '"{proj}" are not yet open.'.format(proj=config.name),
+            'It is not possible to perform this operations because selections for "{proj}" are not yet open.'.format(proj=config.name),
             "error",
         )
         return False

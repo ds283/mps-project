@@ -136,11 +136,7 @@ def return_to_owner(id):
         if config is not None:
             if config.requests_issued and not config.live:
                 enrollment = owner.get_enrollment_record(pcl.id)
-                if (
-                        enrollment is not None
-                        and enrollment.supervisor_state
-                        == EnrollmentRecord.SUPERVISOR_ENROLLED
-                ):
+                if enrollment is not None and enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
                     record.confirmed = False
                     names.add(pcl.name)
 
@@ -203,13 +199,9 @@ def edit_comment(id):
     else:
         if request.method == "GET":
             form.comment.data = comment.comment
-            form.limit_visibility.data = (
-                    comment.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM
-            )
+            form.limit_visibility.data = comment.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM
 
-    return render_template_context(
-        "project_approver/edit_comment.html", comment=comment, form=form, url=url
-    )
+    return render_template_context("project_approver/edit_comment.html", comment=comment, form=form, url=url)
 
 
 @project_approver.route("/delete_comment/<int:id>")
@@ -236,10 +228,7 @@ def delete_comment(id):
     panel_title = "Delete comment"
 
     action_url = url_for("project_approver.perform_delete_comment", id=id, url=url)
-    message = (
-        "<p>Are you sure that you wish to delete this comment?</p>"
-        "<p>This action cannot be undone.</p>"
-    )
+    message = "<p>Are you sure that you wish to delete this comment?</p><p>This action cannot be undone.</p>"
     submit_label = "Delete comment"
 
     form = ConfirmActionForm()

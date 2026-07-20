@@ -76,13 +76,9 @@ def enrol_submitters_data(students: List[StudentData], config):
                 "sortstring": s.user.last_name + s.user.first_name,
             },
             "userid": s.user.username,
-            "programme": render_template(
-                programme_templ, s=s, simple_label=simple_label
-            ),
+            "programme": render_template(programme_templ, s=s, simple_label=simple_label),
             "cohort": {
-                "display": render_template(
-                    cohort_templ, s=s, simple_label=simple_label
-                ),
+                "display": render_template(cohort_templ, s=s, simple_label=simple_label),
                 "sortvalue": s.cohort,
             },
             "acadyear": {
@@ -93,9 +89,7 @@ def enrol_submitters_data(students: List[StudentData], config):
                     current_year=current_year,
                     simple_label=simple_label,
                 ),
-                "sortvalue": s.compute_academic_year(
-                    desired_year=config.year, current_year=current_year
-                ),
+                "sortvalue": s.compute_academic_year(desired_year=config.year, current_year=current_year),
             },
             "actions": render_template(enrol_templ, s=s, config=config),
         }

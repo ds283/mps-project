@@ -156,21 +156,15 @@ RecordDeltaListType = List[RecordDeltaType]
 
 
 def compare_match_data(
-        records: RecordDeltaListType,
-        left_attempt: MatchingAttempt,
-        right_attempt: MatchingAttempt,
+    records: RecordDeltaListType,
+    left_attempt: MatchingAttempt,
+    right_attempt: MatchingAttempt,
 ):
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
 
-    student_offcanvas = get_template_attribute(
-        "admin/matching/student_offcanvas.html", "student_offcanvas"
-    )
-    project_tag = get_template_attribute(
-        "admin/matching/project_tag.html", "project_tag"
-    )
-    student_marker_tag = get_template_attribute(
-        "admin/matching/marker_tag.html", "student_marker_tag"
-    )
+    student_offcanvas = get_template_attribute("admin/matching/student_offcanvas.html", "student_offcanvas")
+    project_tag = get_template_attribute("admin/matching/project_tag.html", "project_tag")
+    student_marker_tag = get_template_attribute("admin/matching/marker_tag.html", "student_marker_tag")
 
     student_templ: Template = _build_student_templ()
     pclass_templ: Template = _build_pclass_templ()

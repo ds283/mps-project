@@ -9,6 +9,7 @@ Changes:
   - Add error_log column (TEXT, nullable) — JSON list of {timestamp, message} dicts
   - Add next_retry_time column (DATETIME, nullable, indexed) — per-item exponential backoff gate
 """
+
 from alembic import op
 import sqlalchemy as sa
 

@@ -178,14 +178,13 @@ def _build_event_lookups(event: MarkingEvent) -> tuple[dict, dict, dict, list, o
     supervisor_wfs = [
         wf
         for wf in event_wfs
-        if wf.role in (
+        if wf.role
+        in (
             SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
             SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
         )
     ]
-    presentation_wfs = [
-        wf for wf in event_wfs if wf.role == SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR
-    ]
+    presentation_wfs = [wf for wf in event_wfs if wf.role == SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR]
 
     return sr_lookup, mr_lookup, record_map, marker_wfs, supervisor_wfs, presentation_wfs
 
@@ -237,14 +236,10 @@ def _build_submission_row(
 
     report_moderation_triggered = primary_marker_sr.out_of_tolerance if primary_marker_sr else None
     report_moderator_uuid = (
-        primary_marker_sr.moderator_accepted_by.user.uuid
-        if primary_marker_sr and primary_marker_sr.moderator_accepted_by
-        else None
+        primary_marker_sr.moderator_accepted_by.user.uuid if primary_marker_sr and primary_marker_sr.moderator_accepted_by else None
     )
     report_moderator_grade = (
-        primary_marker_sr.accepted_moderator_report.grade
-        if primary_marker_sr and primary_marker_sr.accepted_moderator_report
-        else None
+        primary_marker_sr.accepted_moderator_report.grade if primary_marker_sr and primary_marker_sr.accepted_moderator_report else None
     )
 
     # --- ROLE_SUPERVISOR / ROLE_RESPONSIBLE_SUPERVISOR grade and identity ---
@@ -253,22 +248,16 @@ def _build_submission_row(
     supervisor_uuid = supervisor_mr.role.user.uuid if supervisor_mr else None
 
     # --- ROLE_PRESENTATION_ASSESSOR grades and moderation ---
-    primary_presentation_sr, pa, pb = _get_assessor_ab(
-        presentation_wfs, rid, sr_lookup, mr_lookup
-    )
+    primary_presentation_sr, pa, pb = _get_assessor_ab(presentation_wfs, rid, sr_lookup, mr_lookup)
 
     pres_a_uuid = pa.role.user.uuid if pa else None
     pres_a_grade = pa.grade if pa else None
     pres_b_uuid = pb.role.user.uuid if pb else None
     pres_b_grade = pb.grade if pb else None
 
-    pres_moderation_triggered = (
-        primary_presentation_sr.out_of_tolerance if primary_presentation_sr else None
-    )
+    pres_moderation_triggered = primary_presentation_sr.out_of_tolerance if primary_presentation_sr else None
     pres_moderator_uuid = (
-        primary_presentation_sr.moderator_accepted_by.user.uuid
-        if primary_presentation_sr and primary_presentation_sr.moderator_accepted_by
-        else None
+        primary_presentation_sr.moderator_accepted_by.user.uuid if primary_presentation_sr and primary_presentation_sr.moderator_accepted_by else None
     )
     pres_moderator_grade = (
         primary_presentation_sr.accepted_moderator_report.grade
@@ -295,9 +284,7 @@ def _build_submission_row(
     llm_result = la.get("llm_result")
 
     stated_word_count = llm_result.get("stated_word_count") if llm_result is not None else None
-    genai_statement_found = (
-        llm_result.get("genai_statement_found") if llm_result is not None else None
-    )
+    genai_statement_found = llm_result.get("genai_statement_found") if llm_result is not None else None
 
     # AI concern — lexical calibration only
     cal_results = flags.get("calibration_results", [])
@@ -420,14 +407,10 @@ def register_data_export_tasks(celery):
             raise self.retry()
 
         if user is None:
-            progress_update(
-                task_id, TaskRecord.FAILURE, 100, "User not found.", autocommit=True
-            )
+            progress_update(task_id, TaskRecord.FAILURE, 100, "User not found.", autocommit=True)
             return
 
-        progress_update(
-            task_id, TaskRecord.RUNNING, 15, "Building export data...", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.RUNNING, 15, "Building export data...", autocommit=True)
 
         try:
             import openpyxl
@@ -444,9 +427,7 @@ def register_data_export_tasks(celery):
             max_year: int | None = None
 
             for i, event in enumerate(events):
-                sr_lookup, mr_lookup, event_record_map, marker_wfs, supervisor_wfs, presentation_wfs = (
-                    _build_event_lookups(event)
-                )
+                sr_lookup, mr_lookup, event_record_map, marker_wfs, supervisor_wfs, presentation_wfs = _build_event_lookups(event)
 
                 year = event.period.config.year
                 if year is not None:
@@ -456,9 +437,7 @@ def register_data_export_tasks(celery):
                         max_year = year
 
                 # Index ConflationReports by record id for this event (may be empty).
-                cr_lookup = {
-                    cr.submission_record_id: cr for cr in event.conflation_reports
-                }
+                cr_lookup = {cr.submission_record_id: cr for cr in event.conflation_reports}
                 is_historical = not cr_lookup
 
                 # Iterate over every record that appears in any workflow for this event.
@@ -522,11 +501,7 @@ def register_data_export_tasks(celery):
                     except Exception:
                         year_a = year_b = pclass_a = pclass_b = None
 
-                    year_gap = (
-                        abs(year_a - year_b)
-                        if year_a is not None and year_b is not None
-                        else None
-                    )
+                    year_gap = abs(year_a - year_b) if year_a is not None and year_b is not None else None
 
                     similarity_rows.append(
                         {
@@ -551,9 +526,7 @@ def register_data_export_tasks(celery):
             # ----------------------------------------------------------------
             # Build workbook
             # ----------------------------------------------------------------
-            progress_update(
-                task_id, TaskRecord.RUNNING, 85, "Writing Excel workbook...", autocommit=True
-            )
+            progress_update(task_id, TaskRecord.RUNNING, 85, "Writing Excel workbook...", autocommit=True)
 
             wb = openpyxl.Workbook()
             ws1 = wb.active
@@ -598,10 +571,7 @@ def register_data_export_tasks(celery):
                         storage=object_store,
                         audit_data="data_export.export_tenant_marking_data_xlsx",
                         length=size,
-                        mimetype=(
-                            "application/vnd.openxmlformats-officedocument"
-                            ".spreadsheetml.sheet"
-                        ),
+                        mimetype=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
                     ):
                         pass
 
@@ -624,16 +594,10 @@ def register_data_export_tasks(celery):
 
         except Exception as exc:
             db.session.rollback()
-            current_app.logger.exception(
-                "Unhandled error in export_tenant_marking_data_xlsx", exc_info=exc
-            )
-            progress_update(
-                task_id, TaskRecord.FAILURE, 100, "Export failed.", autocommit=True
-            )
+            current_app.logger.exception("Unhandled error in export_tenant_marking_data_xlsx", exc_info=exc)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Export failed.", autocommit=True)
             raise self.retry()
 
-        progress_update(
-            task_id, TaskRecord.SUCCESS, 100, "Export complete.", autocommit=True
-        )
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Export complete.", autocommit=True)
 
     return export_tenant_marking_data_xlsx

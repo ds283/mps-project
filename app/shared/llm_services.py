@@ -80,10 +80,7 @@ def _call_llm(
     so that est_input_tokens matches the assumptions of the chunk-budget formula.
     """
     _user_tpw = user_tokens_per_word if user_tokens_per_word is not None else _TOKENS_PER_WORD
-    est_input_tokens = int(
-        len(system_prompt.split()) * _TOKENS_PER_WORD
-        + len(user_prompt.split()) * _user_tpw
-    )
+    est_input_tokens = int(len(system_prompt.split()) * _TOKENS_PER_WORD + len(user_prompt.split()) * _user_tpw)
     accumulated = ""
     last_exc: Exception | None = None
     parsed_result: dict | None = None
@@ -163,9 +160,7 @@ def _call_llm(
                         f"after {elapsed:.0f}s on attempt {attempt + 1} "
                         f"(~{est_input_tokens} est. input tokens); aborting stream"
                     )
-                    raise requests.exceptions.ReadTimeout(
-                        f"wall-clock limit of {max_request_seconds}s exceeded after {elapsed:.0f}s"
-                    )
+                    raise requests.exceptions.ReadTimeout(f"wall-clock limit of {max_request_seconds}s exceeded after {elapsed:.0f}s")
 
             if usage is not None:
                 current_app.logger.debug(
@@ -187,9 +182,7 @@ def _call_llm(
 
             parsed = json.loads(accumulated)
             if validate_fn is not None and not validate_fn(parsed):
-                raise ValueError(
-                    f"LLM response missing required keys; got: {list(parsed.keys())}"
-                )
+                raise ValueError(f"LLM response missing required keys; got: {list(parsed.keys())}")
             parsed_result = parsed
             last_exc = None
             actual_usage = usage
@@ -199,13 +192,9 @@ def _call_llm(
             last_exc = exc
             status = exc.response.status_code if exc.response is not None else 0
             if 400 <= status < 500:
-                current_app.logger.error(
-                    f"{label}: permanent HTTP {status} error (~{est_input_tokens} est. input tokens): {exc}"
-                )
+                current_app.logger.error(f"{label}: permanent HTTP {status} error (~{est_input_tokens} est. input tokens): {exc}")
                 break
-            current_app.logger.warning(
-                f"{label}: transient HTTP error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
-            )
+            current_app.logger.warning(f"{label}: transient HTTP error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}")
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
 
@@ -215,10 +204,7 @@ def _call_llm(
         except (json.JSONDecodeError, ValueError) as exc:
             last_exc = exc
             _tail = accumulated[-300:] if len(accumulated) > 300 else accumulated
-            _usage_str = (
-                f" prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')}"
-                if usage else ""
-            )
+            _usage_str = f" prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')}" if usage else ""
             current_app.logger.warning(
                 f"{label}: JSON parse failure on attempt {attempt + 1} "
                 f"(~{est_input_tokens} est. input tokens): {exc}\n"
@@ -232,8 +218,7 @@ def _call_llm(
         except (requests.ConnectionError, requests.Timeout) as exc:
             last_exc = exc
             current_app.logger.warning(
-                f"{label}: transient network error on attempt {attempt + 1} "
-                f"(~{est_input_tokens} est. input tokens): {type(exc).__name__}: {exc}"
+                f"{label}: transient network error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {type(exc).__name__}: {exc}"
             )
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
@@ -241,12 +226,9 @@ def _call_llm(
         except Exception as exc:
             last_exc = exc
             current_app.logger.warning(
-                f"{label}: transient [{type(exc).__name__}] error on attempt {attempt + 1} "
-                f"(~{est_input_tokens} est. input tokens): {exc}"
+                f"{label}: transient [{type(exc).__name__}] error on attempt {attempt + 1} (~{est_input_tokens} est. input tokens): {exc}"
             )
-            current_app.logger.warning(
-                f"{label}: traceback (attempt {attempt + 1}):\n{traceback.format_exc()}"
-            )
+            current_app.logger.warning(f"{label}: traceback (attempt {attempt + 1}):\n{traceback.format_exc()}")
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
 

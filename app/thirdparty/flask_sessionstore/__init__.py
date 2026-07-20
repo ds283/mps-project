@@ -74,9 +74,7 @@ class Session(object):
         config.setdefault("SESSION_KEY_PREFIX", "session:")
         config.setdefault("SESSION_REDIS", None)
         config.setdefault("SESSION_MEMCACHED", None)
-        config.setdefault(
-            "SESSION_FILE_DIR", os.path.join(os.getcwd(), "flask_sessionstore")
-        )
+        config.setdefault("SESSION_FILE_DIR", os.path.join(os.getcwd(), "flask_sessionstore"))
         config.setdefault("SESSION_FILE_THRESHOLD", 500)
         config.setdefault("SESSION_FILE_MODE", 384)
         config.setdefault("SESSION_MONGODB", None)

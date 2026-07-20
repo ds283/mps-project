@@ -125,14 +125,12 @@ def _build_menu_templ() -> Template:
 
 
 def submission_period_units_data(
-        units: List[SubmissionPeriodUnit],
-        period: SubmissionPeriodRecord,
-        url: str = None,
-        text: str = None,
+    units: List[SubmissionPeriodUnit],
+    period: SubmissionPeriodRecord,
+    url: str = None,
+    text: str = None,
 ):
-    return_url = url_for(
-        "convenor.inspect_period_units", period_id=period.id, url=url, text=text
-    )
+    return_url = url_for("convenor.inspect_period_units", period_id=period.id, url=url, text=text)
 
     name_templ: Template = _build_name_templ()
     start_date_templ: Template = _build_start_date_templ()
@@ -145,17 +143,13 @@ def submission_period_units_data(
             "name": render_template(name_templ, unit=u),
             "start_date": {
                 "display": render_template(start_date_templ, unit=u),
-                "sortvalue": u.start_date.isoformat()
-                if u.start_date is not None
-                else "",
+                "sortvalue": u.start_date.isoformat() if u.start_date is not None else "",
             },
             "end_date": {
                 "display": render_template(end_date_templ, unit=u),
                 "sortvalue": u.end_date.isoformat() if u.end_date is not None else "",
             },
-            "event_templates": render_template(
-                event_templates_templ, unit=u, return_url=return_url
-            ),
+            "event_templates": render_template(event_templates_templ, unit=u, return_url=return_url),
             "menu": render_template(menu_templ, unit=u, return_url=return_url),
         }
         for u in units

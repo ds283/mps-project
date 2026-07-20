@@ -25,9 +25,7 @@ from ..shared.workflow_logging import log_db_commit
 from . import api
 
 
-@api.route(
-    "/set_event_attendance/<int:event_id>/<int:owner_id>/<int:record_id>/<int:submitter_id>/<int:value>"
-)
+@api.route("/set_event_attendance/<int:event_id>/<int:owner_id>/<int:record_id>/<int:submitter_id>/<int:value>")
 def set_event_attendance(event_id, owner_id, record_id, submitter_id, value):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
     record: SubmissionRecord = event.sub_record

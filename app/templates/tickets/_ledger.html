@@ -13,6 +13,7 @@
                     <th style="width:90px">Watchers</th>
                     <th style="width:120px">Scope</th>
                     <th style="width:110px">Due</th>
+                    <th style="width:140px">Updated</th>
                 </tr>
             </thead>
         </table>
@@ -36,9 +37,10 @@
                     { data: 'assignee', searchable: false, orderable: false },
                     { data: 'watchers', searchable: false, orderable: false },
                     { data: 'scope', searchable: false, orderable: false },
-                    { data: 'due', searchable: false, orderable: true }
+                    { data: 'due', searchable: false, orderable: true },
+                    { data: 'updated', searchable: false, orderable: true }
                 ],
-                order: [[0, 'asc']]
+                order: [[6, 'desc']]
             });
         });
     </script>

@@ -103,7 +103,7 @@ def create_ticket(
         status=Ticket.OPEN,
         creator_id=(opener.id if opener is not None else None),
         creation_timestamp=now,
-        updated_at=now,
+        # last_edit_timestamp / last_edit_id are set by the OPENED event below (touch())
         due_date=due_date,
         assignee_id=(assignee.id if assignee is not None else None),
     )

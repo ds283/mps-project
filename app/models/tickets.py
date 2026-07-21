@@ -192,9 +192,10 @@ class Ticket(db.Model, TicketWorkflowStatesMixin, EditingMetadataMixin):
     tenant_id = db.Column(db.Integer(), db.ForeignKey("tenants.id"), nullable=True, index=True)
     tenant = db.relationship("Tenant", foreign_keys=[tenant_id], backref=db.backref("tickets", lazy="dynamic"))
 
-    # explicit activity timestamps. creation_timestamp (from EditingMetadataMixin) records creation;
-    # updated_at is bumped by the service layer on any activity and drives the "Recently updated" sort.
-    updated_at = db.Column(db.DateTime(), default=datetime.now, index=True)
+    # Activity recency uses EditingMetadataMixin.last_edit_timestamp (paired with last_edit_id):
+    # the service layer bumps both on every event (see app/shared/tickets/events.py touch()), and
+    # it drives the "Recently updated" sort. creation_timestamp records the original creation.
+    __table_args__ = (db.Index("ix_tickets_last_edit_timestamp", "last_edit_timestamp"),)
 
     # derived class scope (cached; refreshed by the Phase 2 service layer on subject change)
     scope_classes = db.relationship(

@@ -68,6 +68,11 @@ _due = """
 {% if t.due_date %}{{ t.due_date.strftime('%d %b %Y') }}{% else %}<span class="text-muted">—</span>{% endif %}
 """
 
+# language=jinja2
+_updated = """
+{% if t.last_edit_timestamp %}<span class="text-muted">{{ t.last_edit_timestamp.strftime('%d %b %Y, %H:%M') }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+"""
+
 
 def _build_templ(src: str) -> Template:
     env: Environment = current_app.jinja_env
@@ -87,6 +92,7 @@ def ledger_data(base_query):
         "watchers": {},
         "scope": {},
         "due": {"order": Ticket.due_date},
+        "updated": {"order": Ticket.last_edit_timestamp},
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
@@ -96,6 +102,7 @@ def ledger_data(base_query):
         watchers_templ = _build_templ(_watchers)
         scope_templ = _build_templ(_scope)
         due_templ = _build_templ(_due)
+        updated_templ = _build_templ(_updated)
 
         def row_formatter(rows):
             return [
@@ -106,6 +113,7 @@ def ledger_data(base_query):
                     "watchers": render_template(watchers_templ, t=t),
                     "scope": render_template(scope_templ, t=t),
                     "due": render_template(due_templ, t=t),
+                    "updated": render_template(updated_templ, t=t),
                 }
                 for t in rows
             ]

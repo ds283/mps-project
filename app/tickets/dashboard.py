@@ -107,7 +107,7 @@ def ledger_ajax():
     else:
         base_query = _mine_base_query(current_user, request.args.get("view", "all"))
 
-    base_query = _apply_common_filters(base_query, request.args).order_by(Ticket.updated_at.desc())
+    base_query = _apply_common_filters(base_query, request.args).order_by(Ticket.last_edit_timestamp.desc())
     return ajax.tickets.ledger_data(base_query)
 
 
@@ -161,7 +161,7 @@ def convenor_dashboard():
 
     # needs-triage: unassigned tickets in my scope that span more than one class
     triage_query = _convenor_base_query(current_user, class_id).filter(Ticket.assignee_id.is_(None))
-    needs_triage = [t for t in triage_query.order_by(Ticket.updated_at.desc()).all() if t.scope_classes.count() > 1]
+    needs_triage = [t for t in triage_query.order_by(Ticket.last_edit_timestamp.desc()).all() if t.scope_classes.count() > 1]
 
     convened_classes = None
     if ids is not None:

@@ -47,6 +47,7 @@ from ..models import (
     ProjectDescription,
     ResearchGroup,
     SelectingStudent,
+    StudentJournalEntry,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmittingStudent,
@@ -56,6 +57,7 @@ from ..models import (
 from ..models.emails import encode_email_payload
 from ..shared.actions import do_cancel_confirm, do_confirm, do_deconfirm_to_pending
 from ..shared.context.global_context import render_template_context
+from ..shared.journal import create_auto_journal_entry
 from ..shared.workflow_logging import log_db_commit
 from ..shared.projects import (
     project_list_in_memory_handler,
@@ -79,6 +81,8 @@ from ..shared.forms.forms import ChooseEmailTemplateForm, ConfirmActionForm
 from ..shared.forms.queries import GetWorkflowTemplates
 from .forms import (
     ChangeDeadlineFormFactory,
+    ConfirmDisableConversionForm,
+    ConfirmEnableConversionForm,
     GoLiveFormFactory,
     IssueFacultyConfirmRequestFormFactory,
 )
@@ -1885,62 +1889,105 @@ def student_make_all_confirms_pending(sid):
     return redirect(redirect_url())
 
 
-@convenor.route("/enable_conversion/<int:sid>")
+def _change_conversion_status(sid, *, enable: bool, endpoint: str):
+    """
+    Shared implementation for enable_conversion/disable_conversion: shows a confirmation form
+    that also collects a reason, which is recorded in the student's journal.
+    """
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not validate_is_convenor(sel.config.project_class):
+        return home_dashboard()
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    Form = ConfirmEnableConversionForm if enable else ConfirmDisableConversionForm
+    form = Form(request.form)
+
+    if form.validate_on_submit():
+        student = sel.student
+        pclass = sel.config.project_class
+        config = sel.config
+        reason = form.reason.data
+        verb = "enabled" if enable else "disabled"
+
+        programme_name = student.programme.full_name if student.programme else "unknown"
+        academic_year = f"Year {student.academic_year}" if student.academic_year else "unknown"
+        year = config.year
+        year_str = f"{year}/{str(year + 1)[-2:]}" if isinstance(year, int) else str(year)
+        journal_html = (
+            f"<p>Conversion to submitter <strong>{verb}</strong> for project class "
+            f"<strong>{pclass.name}</strong> ({year_str}).</p>"
+            f"<ul>"
+            f"<li>Student academic year: {academic_year}</li>"
+            f"<li>Degree programme: {programme_name}</li>"
+            f"<li>Action initiated by: {current_user.name}</li>"
+            f"</ul>"
+            f"<p><strong>Reason for status change:</strong> {reason}</p>"
+            f"<p><em>This entry was created automatically.</em></p>"
+        )
+
+        try:
+            sel.convert_to_submitter = enable
+            db.session.flush()
+
+            create_auto_journal_entry(
+                student,
+                journal_html,
+                title=f"Conversion {verb}: {pclass.name} ({year_str})",
+                project_class_config=config,
+                entry_type=StudentJournalEntry.JOURNAL_TYPE_STATUS_CHANGE,
+            )
+
+            log_db_commit(
+                f'{"Enabled" if enable else "Disabled"} conversion to submitter for selector "{student.user.name}" in "{config.name}"',
+                user=current_user,
+                student=student,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not change conversion status because of a database error. Please contact a system administrator",
+                "error",
+            )
+
+        return redirect(url)
+
+    action_verb = "Enable" if enable else "Disable"
+    title = '{verb} conversion for "{name}"'.format(verb=action_verb, name=sel.student.user.name)
+    panel_title = '{verb} conversion <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(verb=action_verb, name=sel.student.user.name)
+    message = (
+        "<p>Are you sure that you wish to {verb} conversion to submitter for selector "
+        '<i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'.format(verb="enable" if enable else "disable", name=sel.student.user.name)
+    )
+
+    return render_template_context(
+        "convenor/journal/change_conversion_status.html",
+        form=form,
+        title=title,
+        panel_title=panel_title,
+        action_url=url_for(endpoint, sid=sid, url=url),
+        message=message,
+        cancel_url=url,
+    )
+
+
+@convenor.route("/enable_conversion/<int:sid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def enable_conversion(sid):
-    # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
-
-    # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_is_convenor(sel.config.project_class):
-        return home_dashboard()
-
-    sel.convert_to_submitter = True
-
-    try:
-        log_db_commit(
-            f'Enabled conversion to submitter for selector "{sel.student.user.name}" in "{sel.config.name}"',
-            user=current_user,
-            project_classes=sel.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(
-            "Could not change conversion status because of a database error. Please contact a system administrator",
-            "error",
-        )
-
-    return redirect(redirect_url())
+    return _change_conversion_status(sid, enable=True, endpoint="convenor.enable_conversion")
 
 
-@convenor.route("/disable_conversion/<int:sid>")
+@convenor.route("/disable_conversion/<int:sid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def disable_conversion(sid):
-    # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
-
-    # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_is_convenor(sel.config.project_class):
-        return home_dashboard()
-
-    sel.convert_to_submitter = False
-
-    try:
-        log_db_commit(
-            f'Disabled conversion to submitter for selector "{sel.student.user.name}" in "{sel.config.name}"',
-            user=current_user,
-            project_classes=sel.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(
-            "Could not change conversion status because of a database error. Please contact a system administrator",
-            "error",
-        )
-
-    return redirect(redirect_url())
+    return _change_conversion_status(sid, enable=False, endpoint="convenor.disable_conversion")
 
 
 @convenor.route("/email_selectors/<int:configid>")

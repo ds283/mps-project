@@ -1554,6 +1554,23 @@ class ConfirmDeleteWithReasonForm(Form):
     submit = SubmitField("Delete")
 
 
+class ConversionStatusReasonMixin:
+    reason = TextAreaField(
+        "Reason for status change",
+        render_kw={"rows": 4},
+        description="Please provide a brief explanation for why the conversion status is being changed",
+        validators=[InputRequired(message="A reason for this status change is required")],
+    )
+
+
+class ConfirmEnableConversionForm(ConversionStatusReasonMixin, Form):
+    submit = SubmitField("Enable conversion")
+
+
+class ConfirmDisableConversionForm(ConversionStatusReasonMixin, Form):
+    submit = SubmitField("Disable conversion")
+
+
 class ResolveTurnitinForm(Form):
     """Convenor review form for SubmitterReports with high Turnitin similarity scores."""
 

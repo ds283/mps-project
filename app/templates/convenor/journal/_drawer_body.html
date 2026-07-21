@@ -27,7 +27,7 @@
                        href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id) }}">
                         {{ entry.title or "Untitled" }}
                     </a>
-                    {% if entry.created_timestamp >= recent_cutoff %}
+                    {% if not entry.is_read_by(current_user) %}
                         <span class="recent-tag">new</span>
                     {% endif %}
                 </div>

@@ -342,7 +342,6 @@ def status(id):
         consent_stats=consent_stats,
         consent_form=consent_form,
         journal_summary=journal_summary,
-        recent_cutoff=datetime.now() - timedelta(days=30),
     )
 
 

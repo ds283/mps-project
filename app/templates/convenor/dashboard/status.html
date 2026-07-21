@@ -190,7 +190,7 @@
                                    data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
                                     {{ entry.title or "Untitled" }}
                                 </a>
-                                {% if entry.created_timestamp >= recent_cutoff %}
+                                {% if not entry.is_read_by(current_user) %}
                                     <span class="recent-tag">new</span>
                                 {% endif %}
                                 <span class="text-body-secondary ms-auto">

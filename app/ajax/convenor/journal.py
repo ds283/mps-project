@@ -108,7 +108,7 @@ _tab_entry = """
    data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
     {% if entry.title %}{{ entry.title }}{% else %}<span class="fst-italic">Untitled</span>{% endif %}
 </a>
-{% if entry.created_timestamp >= recent_cutoff %}<span class="recent-tag">new</span>{% endif %}
+{% if unread %}<span class="recent-tag">new</span>{% endif %}
 {% if entry.entry %}
     <div class="small text-muted mt-1">{{ entry.entry | striptags | truncate(100) }}</div>
 {% endif %}
@@ -151,7 +151,7 @@ def _build_templ(template_str: str) -> Template:
     return env.from_string(template_str)
 
 
-def journal_tab_data(entries: List[StudentJournalEntry], pclass=None, recent_cutoff=None) -> list:
+def journal_tab_data(entries: List[StudentJournalEntry], pclass=None) -> list:
     """
     Row formatter for the aggregate per-project-class Journal tab (all entries visible to
     the convenor, across selectors and submitters). Unlike journal_data() (single-student
@@ -168,7 +168,7 @@ def journal_tab_data(entries: List[StudentJournalEntry], pclass=None, recent_cut
     def _process(e: StudentJournalEntry):
         unread = not e.is_read_by(current_user)
         return {
-            "entry": render_template(entry_templ, entry=e, recent_cutoff=recent_cutoff),
+            "entry": render_template(entry_templ, entry=e, unread=unread),
             "student": render_template(student_templ, entry=e, pclass=pclass),
             "type": render_template(type_templ, entry=e),
             "owner": render_template(owner_templ, entry=e),

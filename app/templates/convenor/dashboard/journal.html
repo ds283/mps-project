@@ -25,7 +25,9 @@
                 ajax: {
                     url: $SCRIPT_ROOT + '/convenor/journal_tab_ajax/{{ pclass.id }}?filter={{ filter_ }}',
                     type: 'POST',
-                    data: function (args) { return { "args": JSON.stringify(args) }; }
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
                 },
                 "fnDrawCallback": function () {
                     $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
@@ -94,7 +96,7 @@
     <div class="d-flex gap-3 flex-wrap mb-3">
         <div class="jt-stat">
             <div class="fs-4 fw-bold">{{ summary.visible }}</div>
-            <div class="small text-body-secondary">accessible entries</div>
+            <div class="small text-body-secondary">viewable entries</div>
         </div>
         <div class="jt-stat">
             <div class="fs-4 fw-bold text-primary">{{ summary.unread }}</div>
@@ -116,7 +118,8 @@
                href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='all') }}">All</a>
             <a class="jt-fbtn{% if filter_ == 'unread' %} active{% endif %}"
                href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='unread') }}">
-                Unread{% if summary.unread %} <span class="badge bg-light text-dark">{{ summary.unread }}</span>{% endif %}
+                Unread{% if summary.unread %}
+                <span class="badge bg-light text-dark">{{ summary.unread }}</span>{% endif %}
             </a>
             <a class="jt-fbtn{% if filter_ == 'month' %} active{% endif %}"
                href="{{ url_for('convenor.journal_tab', id=pclass.id, filter='month') }}">This month</a>

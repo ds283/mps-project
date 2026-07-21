@@ -194,7 +194,6 @@ def journal_drawer_ajax(student_id):
         entries=entries,
         counts=counts,
         locked_count=locked_count,
-        recent_cutoff=datetime.now() - timedelta(days=30),
         mark_read_form=JournalDrawerActionForm(),
     )
 
@@ -590,4 +589,4 @@ def journal_tab_ajax(id):
     }
 
     with ServerSideSQLHandler(request, base_query, columns, secondary_order=[StudentJournalEntry.id.desc()]) as handler:
-        return handler.build_payload(lambda items: ajax.convenor.journal_tab_data(items, pclass=pclass, recent_cutoff=recent_cutoff))
+        return handler.build_payload(lambda items: ajax.convenor.journal_tab_data(items, pclass=pclass))

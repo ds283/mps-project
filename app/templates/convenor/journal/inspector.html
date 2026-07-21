@@ -135,10 +135,13 @@
             </div>
             <div class="d-flex flex-row justify-content-center align-items-center gap-2 mt-3 mb-2">
                 <a class="btn btn-lg btn-secondary"
-                   href="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=request.url, text='Back to journal') }}">
+                   href="{{ url_for('convenor.add_journal_entry', student_id=student.id,
+                                     url=url_for('convenor.student_journal_inspector', student_id=student.id, url=url, text=text),
+                                     text='Back to journal') }}">
                     <i class="fas fa-plus fa-fw"></i> Add entry...
                 </a>
-                <button type="button" class="btn btn-lg btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+                <button type="button" class="btn btn-lg btn-outline-secondary" data-bs-toggle="modal"
+                        data-bs-target="#journalAddModal"
                         data-student-id="{{ student.id }}" data-student-name="{{ student.user.name }}">
                     <i class="fas fa-bolt fa-fw"></i> Quick add...
                 </button>

@@ -57,7 +57,9 @@
         }
         bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
 
-        fetch(scriptRoot() + "/convenor/journal_drawer_ajax/" + studentId, {credentials: "same-origin"})
+        var params = new URLSearchParams({url: window.location.href, text: document.title.trim()});
+
+        fetch(scriptRoot() + "/convenor/journal_drawer_ajax/" + studentId + "?" + params.toString(), {credentials: "same-origin"})
             .then(function (response) {
                 if (!response.ok) {
                     throw new Error("Failed to load journal entries");

@@ -188,6 +188,9 @@ def journal_drawer_ajax(student_id):
     total_count = student.journal_entries.count()
     locked_count = max(total_count - counts["visible"], 0)
 
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
     return render_template_context(
         "convenor/journal/_drawer_body.html",
         student=student,
@@ -195,6 +198,8 @@ def journal_drawer_ajax(student_id):
         counts=counts,
         locked_count=locked_count,
         mark_read_form=JournalDrawerActionForm(),
+        url=url,
+        text=text,
     )
 
 

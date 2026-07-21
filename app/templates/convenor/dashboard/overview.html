@@ -1,11 +1,5 @@
 {% extends "base_app.html" %}
 
-{% from "convenor/journal/_macros.html" import journal_type_ico %}
-
-{% if journal_summary is not defined or journal_summary is none %}
-    {% set journal_summary = {"visible": 0, "unread": 0, "recent": 0, "recent_entries": []} %}
-{% endif %}
-
 {% block title %}
     Convenor overview
 {% endblock %}
@@ -15,7 +9,6 @@
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
     </script>
-    <script src="{{ url_for('static', filename='js/convenor/journal.js') }}"></script>
 {% endblock %}
 
 {% block bodyblock %}
@@ -32,49 +25,6 @@
                     </a>
                 {% endif %}
             </div>
-
-            {% if journal_summary.visible > 0 %}
-                <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center py-2">
-                        <span class="small">
-                            <i class="fas fa-book me-1 text-primary"></i> <strong>Journal activity</strong>
-                            <span class="text-body-secondary">
-                                &middot; <span class="text-primary fw-semibold">{{ journal_summary.unread }}</span> unread
-                                &middot; <span class="text-warning-emphasis fw-semibold">{{ journal_summary.recent }}</span> this month
-                                &middot; {{ journal_summary.visible }} accessible
-                            </span>
-                        </span>
-                        {% if items %}
-                            <a class="btn btn-sm btn-outline-primary py-0"
-                               href="{{ url_for('convenor.journal_tab', id=items[0]['pclass'].id) }}">
-                                Open journal <i class="fas fa-arrow-right"></i>
-                            </a>
-                        {% endif %}
-                    </div>
-                    <ul class="list-group list-group-flush small">
-                        {% for entry in journal_summary.recent_entries %}
-                            <li class="list-group-item d-flex align-items-center gap-2 py-2{% if not entry.is_read_by(current_user) %} bg-primary-subtle{% endif %}">
-                                {{ journal_type_ico(entry, size=24) }}
-                                <a href="#" class="text-decoration-none fw-semibold"
-                                   data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
-                                   data-student-id="{{ entry.student_id }}"
-                                   data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
-                                    {{ entry.title or "Untitled" }}
-                                </a>
-                                {% if entry.created_timestamp >= recent_cutoff %}
-                                    <span class="recent-tag">new</span>
-                                {% endif %}
-                                <span class="text-body-secondary ms-auto">
-                                    {{ entry.student.user.name if entry.student and entry.student.user else "Unknown student" }}
-                                    &middot;
-                                    {% if entry.owner %}{{ entry.owner.name }}{% else %}<span class="badge bg-secondary">Auto</span>{% endif %}
-                                    &middot; {{ entry.created_timestamp.strftime("%d %b %H:%M") }}
-                                </span>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
 
             {# Separate published and unpublished items #}
             {%- set published = [] -%}
@@ -245,8 +195,4 @@
         </div>
         <div class="col-1"></div>
     </div>
-
-    {% if journal_summary.visible > 0 %}
-        {% include "convenor/journal/_drawer.html" %}
-    {% endif %}
 {% endblock %}

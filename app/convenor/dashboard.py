@@ -43,7 +43,6 @@ from ..models import (
     ProjectDescription,
     ProjectTag,
     ProjectTagGroup,
-    SelectingStudent,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmittingStudent,
@@ -81,6 +80,7 @@ from .forms import (
     GoLiveFormFactory,
     IssueFacultyConfirmRequestFormFactory,
 )
+from .journal import _config_student_scope
 
 _POPULAR_INTERVAL_MAP = {
     "1h": timedelta(hours=1),
@@ -109,29 +109,9 @@ def overview():
         data = get_convenor_dashboard_data(pclass, config)
         items.append({"pclass": pclass, "config": config, "data": data})
 
-    config_ids = [item["config"].id for item in items]
-    student_ids = set()
-    if config_ids:
-        student_ids.update(
-            sid
-            for (sid,) in db.session.query(SelectingStudent.student_id)
-            .filter(SelectingStudent.config_id.in_(config_ids), SelectingStudent.retired.is_(False))
-            .distinct()
-        )
-        student_ids.update(
-            sid
-            for (sid,) in db.session.query(SubmittingStudent.student_id)
-            .filter(SubmittingStudent.config_id.in_(config_ids), SubmittingStudent.retired.is_(False))
-            .distinct()
-        )
-
-    journal_summary = journal_activity_summary(current_user, student_ids)
-
     return render_template_context(
         "convenor/dashboard/overview.html",
         items=items,
-        journal_summary=journal_summary,
-        recent_cutoff=datetime.now() - timedelta(days=30),
     )
 
 
@@ -156,6 +136,9 @@ def status(id):
             "error",
         )
         return redirect(redirect_url())
+
+    selecting_ids, submitting_ids = _config_student_scope(config)
+    journal_summary = journal_activity_summary(current_user, selecting_ids | submitting_ids)
 
     # BUILD FORMS
 
@@ -358,6 +341,8 @@ def status(id):
         return_text=return_text,
         consent_stats=consent_stats,
         consent_form=consent_form,
+        journal_summary=journal_summary,
+        recent_cutoff=datetime.now() - timedelta(days=30),
     )
 
 

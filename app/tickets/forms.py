@@ -15,7 +15,15 @@ CSRF; only the two content-bearing actions (comment, log email) need dedicated f
 """
 
 from flask_security.forms import Form
-from wtforms import BooleanField, SelectField, StringField, SubmitField, TextAreaField
+from wtforms import (
+    BooleanField,
+    DateTimeField,
+    SelectField,
+    SelectMultipleField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+)
 from wtforms.validators import DataRequired, Length, Optional
 
 from ..models import TicketEmail
@@ -44,3 +52,20 @@ class TicketLogEmailForm(Form):
     body = TextAreaField("Body", validators=[Optional()])
 
     submit = SubmitField("Log email")
+
+
+class TicketComposeForm(Form):
+    """
+    New-ticket form (design screens 2b faculty / 3b office). The subject picker is a select2
+    multiple whose option values are opaque tokens ("sub:<id>", "sel:<id>", "pc:<id>"); the
+    candidate set is scoped by role and enforced server-side, so validate_choice is disabled here
+    and the view re-validates every submitted token. Labels are label ids, likewise re-checked.
+    """
+
+    subjects = SelectMultipleField("What is this ticket about?", coerce=str, validate_choice=False)
+    title = StringField("Title", validators=[DataRequired(), Length(max=255)])
+    description = TextAreaField("Description", validators=[Optional()])
+    due_date = DateTimeField("Due date", format="%d/%m/%Y", validators=[Optional()])
+    labels = SelectMultipleField("Labels", coerce=int, validate_choice=False)
+
+    submit = SubmitField("Create ticket")

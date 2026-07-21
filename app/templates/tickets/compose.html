@@ -1,0 +1,151 @@
+{% extends "base_app.html" %}
+{% from "select2.html" import import_select2 %}
+
+{% block title %}
+    New ticket
+{% endblock %}
+
+{% block bodyblock %}
+    <style>
+        .tk-crumb { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--bs-secondary-color); padding:10px 0; }
+        .tk-crumb .sep { color:var(--bs-border-color); }
+        .tk-lbl { font-size:11px; font-weight:700; color:var(--bs-secondary-color); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+        .tk-route { border:1px solid var(--bs-warning-border-subtle); border-radius:9px; background:var(--bs-warning-bg-subtle); padding:13px 14px; margin-bottom:12px; font-size:12.5px; }
+        .tk-route.single { border-color:var(--bs-success-border-subtle); background:var(--bs-success-bg-subtle); }
+        .tk-route .hd { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; color:var(--bs-warning-text-emphasis); }
+        .tk-route.single .hd { color:var(--bs-success-text-emphasis); }
+        .tk-hint { border:1px dashed var(--bs-border-color); border-radius:9px; background:var(--bs-tertiary-bg); padding:11px 13px; margin-bottom:12px; color:var(--bs-secondary-color); line-height:1.5; font-size:11.5px; }
+        .tk-side-card { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); padding:13px 14px; margin-bottom:12px; font-size:12.5px; }
+    </style>
+
+    <div class="container-fluid">
+        <div class="tk-crumb">
+            <i class="fas fa-ticket-alt text-primary"></i> Tickets <span class="sep">/</span> <strong class="text-body">New ticket</strong>
+        </div>
+
+        <form method="POST" action="{{ url_for('tickets.compose') }}">
+            {{ form.hidden_tag() }}
+            <div class="d-flex gap-4 align-items-start flex-wrap flex-lg-nowrap pb-4">
+                {# ---------- main column ---------- #}
+                <div class="flex-grow-1" style="min-width:0">
+                    <div style="font-size:19px; font-weight:700" class="mb-3">Open a new ticket</div>
+
+                    <div class="mb-3">
+                        <div class="tk-lbl">{{ form.subjects.label.text }}</div>
+                        <div class="form-text mb-1">
+                            {% if is_office %}
+                                You may attach <strong>any</strong> submitting or selecting student, or whole project classes, in your tenants.
+                            {% else %}
+                                You may attach your <strong>supervisees</strong> or the <strong>classes you supervise</strong>.
+                            {% endif %}
+                        </div>
+                        {{ form.subjects(class="form-select", multiple="multiple", id="tk-subjects") }}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="tk-lbl">{{ form.title.label.text }}</div>
+                        {{ form.title(class="form-control") }}
+                        {% for err in form.title.errors %}<div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="tk-lbl">{{ form.description.label.text }}</div>
+                        {{ form.description(class="form-control", rows=5) }}
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="tk-lbl">{{ form.labels.label.text }}</div>
+                            {{ form.labels(class="form-select", multiple="multiple", id="tk-labels") }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="tk-lbl">{{ form.due_date.label.text }}</div>
+                            {{ form.due_date(class="form-control", placeholder="dd/mm/yyyy") }}
+                            {% for err in form.due_date.errors %}<div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                {# ---------- routing side panel ---------- #}
+                <div style="width:290px; flex:none" class="w-100 w-lg-auto">
+                    <div id="tk-routing">
+                        <div class="tk-hint"><i class="fas fa-lightbulb"></i> Select at least one subject to see how this ticket will be routed.</div>
+                    </div>
+                    <div class="tk-side-card">
+                        <div class="tk-lbl">Subscribers</div>
+                        <div class="text-secondary">You and any in-scope convenors are added automatically.</div>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            const $subjects = $('#tk-subjects');
+            $subjects.select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2-small',
+                dropdownCssClass: 'select2-small',
+                width: '100%',
+                multiple: true,
+                placeholder: 'Search students or classes…',
+                minimumInputLength: 0,
+                ajax: {
+                    url: $SCRIPT_ROOT + '{{ url_for("tickets.compose_people") }}',
+                    dataType: 'json',
+                    delay: 200,
+                    data: params => ({ q: params.term || '' }),
+                    processResults: data => ({ results: data.results }),
+                    cache: true
+                }
+            });
+
+            $('#tk-labels').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2-small',
+                dropdownCssClass: 'select2-small',
+                width: '100%',
+                multiple: true,
+                placeholder: 'Add labels…'
+            });
+
+            function renderRouting(d) {
+                const box = document.getElementById('tk-routing');
+                if (!d || d.count === 0) {
+                    box.innerHTML = '<div class="tk-hint"><i class="fas fa-lightbulb"></i> Select at least one subject to see how this ticket will be routed.</div>';
+                    return;
+                }
+                const conv = (d.convenors || []).map(n => '<div class="mt-1">' + n + '</div>').join('');
+                if (d.multi) {
+                    box.innerHTML = '<div class="tk-route"><div class="hd"><i class="fas fa-route"></i> Routing · ' + d.count + ' classes in scope</div>' +
+                        '<div><strong>No auto-assignee.</strong> In scope for more than one class; it will not be auto-assigned. Surfaces on every in-scope convenor’s triage board.</div>' +
+                        '<div class="mt-2">' + conv + '</div></div>';
+                } else {
+                    box.innerHTML = '<div class="tk-route single"><div class="hd"><i class="fas fa-route"></i> Routing · 1 class in scope</div>' +
+                        '<div><strong>Auto-assigns</strong> to ' + (d.assignee || 'the class convenor') + '.</div>' +
+                        '<div class="mt-2">' + conv + '</div></div>';
+                }
+            }
+
+            function refreshRouting() {
+                const vals = $subjects.val() || [];
+                const qs = vals.map(v => 't=' + encodeURIComponent(v)).join('&');
+                fetch($SCRIPT_ROOT + '{{ url_for("tickets.compose_routing") }}' + (qs ? ('?' + qs) : ''))
+                    .then(r => r.json()).then(renderRouting).catch(() => {});
+            }
+
+            $subjects.on('change', refreshRouting);
+            refreshRouting();
+        });
+    </script>
+{% endblock %}

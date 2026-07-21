@@ -28,7 +28,16 @@ from ..database import db
 from ..models import Label, ProjectClass, Ticket, TicketSubscription
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
-from ..shared.tickets import assign, can_assign
+from ..shared.tickets import (
+    add_label,
+    assign,
+    can_assign,
+    can_change_status,
+    can_label,
+    change_status,
+    remove_label,
+    unassign,
+)
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
 
@@ -212,5 +221,59 @@ def claim(ticket_id):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
             flash("Could not claim the ticket due to a database error.", "error")
+
+    return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+
+
+# ------------------------------------------------------------------------------------------------
+# bulk actions (5b)
+
+
+@tickets.route("/bulk", methods=["POST"])
+@login_required
+def bulk():
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+
+    ids = request.form.getlist("ids", type=int)
+    action = request.form.get("action", "")
+    if not ids:
+        flash("No tickets were selected.", "info")
+        return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+
+    label_id = request.form.get("label_id", type=int)
+    status = request.form.get("status", type=int)
+    label = Label.query.get(label_id) if label_id is not None else None
+
+    applied = 0
+    for ticket in Ticket.query.filter(Ticket.id.in_(ids)).all():
+        if action == "add_label" and label is not None and label.tenant_id == ticket.tenant_id and can_label(current_user, ticket):
+            add_label(ticket, label, actor=current_user)
+            applied += 1
+        elif action == "remove_label" and label is not None and can_label(current_user, ticket):
+            remove_label(ticket, label, actor=current_user)
+            applied += 1
+        elif action == "set_status" and status in Ticket._labels and can_change_status(current_user, ticket):
+            change_status(ticket, status, actor=current_user)
+            applied += 1
+        elif action == "assign_me" and can_assign(current_user, ticket):
+            assign(ticket, current_user, actor=current_user)
+            applied += 1
+        elif action == "unassign" and can_assign(current_user, ticket):
+            unassign(ticket, actor=current_user)
+            applied += 1
+
+    if applied > 0:
+        try:
+            log_db_commit(f"Bulk action '{action}' applied to {applied} ticket(s)", user=current_user)
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
+            flash("Could not apply the bulk action due to a database error.", "error")
+            return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+        flash(f"Applied to {applied} ticket(s).", "info")
+    else:
+        flash("No changes applied — you may not have permission on the selected tickets.", "info")
 
     return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))

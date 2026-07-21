@@ -12,4 +12,4 @@ from flask import Blueprint
 
 tickets = Blueprint("tickets", __name__)
 
-from . import compose, dashboard, detail  # noqa: E402,F401
+from . import compose, dashboard, detail, labels  # noqa: E402,F401

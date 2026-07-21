@@ -54,6 +54,19 @@ class TicketLogEmailForm(Form):
     submit = SubmitField("Log email")
 
 
+class LabelForm(Form):
+    """
+    Create / edit a tenant-scoped label (design screens 4b / 5a). `colour` is a hidden field set by
+    clicking a palette swatch; when blank on create the view auto-assigns the next unused palette
+    colour. The view clamps any submitted colour to the fixed palette.
+    """
+
+    name = StringField("Name", validators=[DataRequired(), Length(max=255)])
+    colour = StringField("Colour", validators=[Optional(), Length(max=32)])
+
+    submit = SubmitField("Save")
+
+
 class TicketComposeForm(Form):
     """
     New-ticket form (design screens 2b faculty / 3b office). The subject picker is a select2

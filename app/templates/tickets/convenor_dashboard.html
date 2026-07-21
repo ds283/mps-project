@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
 {% from "datatables.html" import import_datatables %}
-{% from "tickets/_ledger.html" import ledger_table, ledger_script %}
+{% from "tickets/_ledger.html" import ledger_table, ledger_script, bulk_bar, bulk_script %}
 
 {% block title %}
     Convenor tickets
@@ -29,7 +29,8 @@
         <div class="d-flex align-items-center gap-2 mt-2 mb-3">
             <h3 class="m-0"><i class="fas fa-ticket-alt text-primary"></i> Tickets</h3>
             <span class="text-secondary">· convenor dashboard</span>
-            <a href="{{ url_for('tickets.compose') }}" class="btn btn-primary btn-sm ms-auto"><i class="fas fa-plus"></i> New ticket</a>
+            <a href="{{ url_for('tickets.labels_manage') }}" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fas fa-tags"></i> Manage labels</a>
+            <a href="{{ url_for('tickets.compose') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New ticket</a>
         </div>
 
         {# class selector #}
@@ -83,12 +84,14 @@
             {% endfor %}
         </div>
 
-        {{ ledger_table('convenor-ledger') }}
+        {{ bulk_bar(url_for('tickets.bulk'), action_form, labels, all_statuses) }}
+        {{ ledger_table('convenor-ledger', bulk=True) }}
     </div>
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
-    {{ ledger_script('convenor-ledger', LEDGER_URL) }}
+    {{ ledger_script('convenor-ledger', LEDGER_URL, bulk=True) }}
+    {{ bulk_script('convenor-ledger') }}
 {% endblock %}

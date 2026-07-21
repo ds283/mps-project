@@ -21,6 +21,11 @@ from ...models import Ticket
 from ...tools import ServerSideSQLHandler
 
 # language=jinja2
+_select = """
+<input type="checkbox" class="form-check-input tk-row-check" value="{{ t.id }}" aria-label="Select ticket">
+"""
+
+# language=jinja2
 _ticket = """
 <div class="fw-bold"><a class="text-decoration-none" href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a></div>
 {% if t.labels.count() > 0 %}
@@ -96,6 +101,7 @@ def ledger_data(base_query):
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
+        select_templ = _build_templ(_select)
         ticket_templ = _build_templ(_ticket)
         status_templ = _build_templ(_status)
         assignee_templ = _build_templ(_assignee)
@@ -107,6 +113,7 @@ def ledger_data(base_query):
         def row_formatter(rows):
             return [
                 {
+                    "select": render_template(select_templ, t=t),
                     "ticket": render_template(ticket_templ, t=t),
                     "status": render_template(status_templ, t=t),
                     "assignee": render_template(assignee_templ, t=t),

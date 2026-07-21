@@ -151,6 +151,8 @@
         <span><span class="udot"></span> = unread by you</span>
     </div>
 
+    {% set drawer_return_url = url_for('convenor.journal_tab', id=pclass.id) %}
+    {% set drawer_return_text = 'journal tab' %}
     {% include "convenor/journal/_drawer.html" %}
     {% with form = quick_add_form, students = picker_students %}
         {% include "convenor/journal/_add_modal.html" %}

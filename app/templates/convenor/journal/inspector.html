@@ -62,7 +62,7 @@
     <div class="d-flex flex-row justify-content-start align-items-center mt-3 mb-2 gap-2 flex-wrap">
         {% if url %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
-                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize or "Return" }}
+                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize_first or "Return" }}
             </a>
         {% endif %}
         <h4 class="mb-0 me-auto">
@@ -149,6 +149,8 @@
         </div>
     </div>
 
+    {% set drawer_return_url = url_for('convenor.student_journal_inspector', student_id=student.id, url=url, text=text) %}
+    {% set drawer_return_text = 'Back to journal' %}
     {% include "convenor/journal/_drawer.html" %}
     {% with form = quick_add_form %}
         {% include "convenor/journal/_add_modal.html" %}

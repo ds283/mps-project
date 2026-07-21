@@ -242,6 +242,8 @@
         </div>
     </div>
 
+    {% set drawer_return_url = url_for('convenor.selectors', id=pclass.id) %}
+    {% set drawer_return_text = 'selectors view' %}
     {% include "convenor/journal/_drawer.html" %}
     {% with form = quick_add_form %}
         {% include "convenor/journal/_add_modal.html" %}

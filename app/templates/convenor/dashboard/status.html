@@ -1087,6 +1087,8 @@
     </div>
 
     {% if journal_summary.visible > 0 %}
+        {% set drawer_return_url = url_for('convenor.status', id=pclass.id) %}
+        {% set drawer_return_text = 'convenor dashboard' %}
         {% include "convenor/journal/_drawer.html" %}
     {% endif %}
 {% endblock %}

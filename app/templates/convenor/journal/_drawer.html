@@ -4,8 +4,14 @@
   AJAX (convenor.journal_drawer_ajax) whenever it is opened via an element
   carrying data-bs-toggle="offcanvas" data-bs-target="#journalDrawer" and
   data-student-id="...". See .prompts/journal-redesign/04-shared-drawer.md.
+
+  Set drawer_return_url / drawer_return_text before including this template
+  so links opened from the drawer (e.g. an entry title, "Open full journal
+  page") can return the user to this exact page rather than falling back to
+  the page's own URL/title.
 #}
-<div class="offcanvas offcanvas-end" tabindex="-1" id="journalDrawer" aria-labelledby="journalDrawerLabel">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="journalDrawer" aria-labelledby="journalDrawerLabel"
+     data-return-url="{{ drawer_return_url|default('') }}" data-return-text="{{ drawer_return_text|default('') }}">
     <div class="offcanvas-header bg-primary text-white">
         <div>
             <h5 class="offcanvas-title mb-0" id="journalDrawerLabel"><i class="fas fa-book me-1"></i> Journal</h5>

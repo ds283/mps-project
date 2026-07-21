@@ -1223,6 +1223,8 @@
 
 </div>{# /chrome #}
 
+{% set drawer_return_url = _back_url %}
+{% set drawer_return_text = 'submitters view' %}
 {% include "convenor/journal/_drawer.html" %}
 {% with form = quick_add_form %}
     {% include "convenor/journal/_add_modal.html" %}

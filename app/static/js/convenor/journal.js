@@ -57,7 +57,9 @@
         }
         bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
 
-        var params = new URLSearchParams({url: window.location.href, text: document.title.trim()});
+        var returnUrl = drawerEl.getAttribute("data-return-url") || window.location.href;
+        var returnText = drawerEl.getAttribute("data-return-text") || document.title.trim();
+        var params = new URLSearchParams({url: returnUrl, text: returnText});
 
         fetch(scriptRoot() + "/convenor/journal_drawer_ajax/" + studentId + "?" + params.toString(), {credentials: "same-origin"})
             .then(function (response) {

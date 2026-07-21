@@ -277,19 +277,34 @@ def comment(ticket_id):
 
     form = TicketCommentForm()
     if form.validate_on_submit():
-        add_comment(ticket, current_user, form.body.data, actor=current_user)
+        new_comment = add_comment(ticket, current_user, form.body.data, actor=current_user)
         resolve = form.submit_resolve.data
         if resolve and can_change_status(current_user, ticket):
             change_status(ticket, Ticket.RESOLVED, actor=current_user)
-        _commit_or_flash(
+        committed = _commit_or_flash(
             f"Commented on ticket #{ticket.id}" + (" and resolved it" if resolve else ""),
             ticket,
             "Could not post comment due to a database error. Please contact a system administrator.",
         )
+        if committed and form.notify.data:
+            _notify_subscribers(ticket, new_comment)
     else:
         flash("Your comment could not be posted — please enter some text.", "error")
 
     return _back(ticket)
+
+
+def _notify_subscribers(ticket, comment):
+    """Enqueue the subscriber email fan-out for a new comment (Phase 7)."""
+    celery = current_app.extensions["celery"]
+    ticket_url = url_for("tickets.detail", ticket_id=ticket.id, _external=True)
+    settings_url = url_for("tickets.inbox", _external=True)
+    try:
+        celery.tasks["app.tasks.ticket_notifications.send_ticket_comment_notifications"].apply_async(
+            args=(ticket.id, comment.id, current_user.id, ticket_url, settings_url)
+        )
+    except Exception as exc:
+        current_app.logger.exception("Failed to enqueue ticket comment notification", exc_info=exc)
 
 
 @tickets.route("/<int:ticket_id>/log_email", methods=["POST"])

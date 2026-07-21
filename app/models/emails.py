@@ -136,6 +136,9 @@ class EmailTemplateTypesMixin:
     CONSENT_REMINDER = 71
     CONSENT_SUPERVISOR_APPROVAL_REQUEST = 72
 
+    # ticket system
+    TICKET_COMMENT_NOTIFICATION = 73
+
 
 # Human-readable names for each template type
 _TYPE_NAMES = {
@@ -195,6 +198,7 @@ _TYPE_NAMES = {
     EmailTemplateTypesMixin.CONSENT_INVITATION: "Consent: Student invitation",
     EmailTemplateTypesMixin.CONSENT_REMINDER: "Consent: Student reminder",
     EmailTemplateTypesMixin.CONSENT_SUPERVISOR_APPROVAL_REQUEST: "Consent: Supervisor approval request",
+    EmailTemplateTypesMixin.TICKET_COMMENT_NOTIFICATION: "Ticket: New comment notification",
 }
 
 TENANT_SPECIALIZABLE_TEMPLATES = [

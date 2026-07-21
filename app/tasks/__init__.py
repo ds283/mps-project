@@ -24,6 +24,7 @@ from .cloud_api_audit import register_cloud_api_audit_tasks
 from .email import register_email
 from .email_notifications import register_email_notification_tasks
 from .email_workflow import register_email_workflow_tasks
+from .ticket_notifications import register_ticket_notification_tasks
 from .events import register_supervision_event_tasks
 from .go_live import register_golive_tasks
 from .issue_confirm import register_issue_confirm_tasks

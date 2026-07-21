@@ -24,6 +24,7 @@ from . import (
     site,
     student,
     tenants,
+    tickets,
     user_approver,
     users,
 )

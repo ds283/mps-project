@@ -1,0 +1,94 @@
+{% extends "base_app.html" %}
+{% from "datatables.html" import import_datatables %}
+{% from "tickets/_ledger.html" import ledger_table, ledger_script %}
+
+{% block title %}
+    Convenor tickets
+{% endblock %}
+
+{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='convenor', class_id=selected_class_id, status=selected_status, label_id=selected_label) %}
+
+{% macro pill(label, href, active) %}
+    <a href="{{ href }}" class="tk-pill-btn {{ 'active' if active else '' }}">{{ label }}</a>
+{% endmacro %}
+
+{% block bodyblock %}
+    <style>
+        .tk-pill-btn { display:inline-block; border-radius:20px; font-size:12px; padding:3px 11px; text-decoration:none;
+            background:var(--bs-body-bg); border:1px solid var(--bs-border-color); color:var(--bs-body-color); }
+        .tk-pill-btn:hover { border-color:var(--bs-secondary-color); }
+        .tk-pill-btn.active { background:var(--bs-primary); color:#fff; border-color:var(--bs-primary); }
+        .tk-triage { border:1px solid var(--bs-danger-border-subtle); border-radius:9px; overflow:hidden; background:var(--bs-body-bg); margin-bottom:20px; }
+        .tk-triage-head { background:var(--bs-danger-bg-subtle); border-bottom:1px solid var(--bs-danger-border-subtle); color:var(--bs-danger-text-emphasis);
+            padding:11px 16px; display:flex; align-items:center; gap:9px; font-weight:700; font-size:14px; }
+        .tk-triage-row { padding:13px 16px; display:flex; gap:12px; align-items:flex-start; border-bottom:1px solid var(--bs-border-color); }
+        .tk-triage-row:last-child { border-bottom:none; }
+    </style>
+
+    <div class="container-fluid">
+        <div class="d-flex align-items-center gap-2 mt-2 mb-3">
+            <h3 class="m-0"><i class="fas fa-ticket-alt text-primary"></i> Tickets</h3>
+            <span class="text-secondary">· convenor dashboard</span>
+            <a href="{{ url_for('tickets.compose') }}" class="btn btn-primary btn-sm ms-auto"><i class="fas fa-plus"></i> New ticket</a>
+        </div>
+
+        {# class selector #}
+        {% if convened_classes %}
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {{ pill('All my classes', url_for('tickets.convenor_dashboard', status=selected_status, label_id=selected_label), selected_class_id is none) }}
+                {% for pclass in convened_classes %}
+                    {{ pill(pclass.name, url_for('tickets.convenor_dashboard', class_id=pclass.id, status=selected_status, label_id=selected_label), selected_class_id == pclass.id) }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# needs triage #}
+        {% if needs_triage %}
+            <div class="tk-triage">
+                <div class="tk-triage-head">
+                    <i class="fas fa-inbox"></i> Routed to you · needs triage
+                    <span class="badge rounded-pill bg-danger">{{ needs_triage | length }}</span>
+                    <span class="ms-auto small fw-normal">Multiple classes in scope — no auto-assignee</span>
+                </div>
+                {% for t in needs_triage %}
+                    {% set m = needs_triage_meta[loop.index0] %}
+                    <div class="tk-triage-row">
+                        <div class="flex-grow-1" style="min-width:0">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <a class="fw-bold text-body text-decoration-none" href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a>
+                                {% for label in t.labels %}<span class="badge rounded-pill" style="{{ label.make_CSS_style() }}">{{ label.name }}</span>{% endfor %}
+                            </div>
+                            <div class="small text-secondary mt-1">
+                                #{{ t.id }} · opened by {{ t.created_by.name if t.created_by else 'someone' }} ·
+                                scope: {{ m.scope_names | join(' + ') }} ·
+                                <span class="text-danger fw-semibold">unassigned</span>
+                                {% if m.overdue %} · <span class="text-danger fw-semibold"><i class="far fa-clock"></i> overdue</span>{% endif %}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn btn-sm btn-outline-secondary align-self-center">Assign…</a>
+                        <form method="POST" action="{{ url_for('tickets.claim', ticket_id=t.id) }}" class="align-self-center">
+                            {{ action_form.hidden_tag() }}
+                            <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-hand-paper"></i> Claim</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# status filter + ledger #}
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            {{ pill('Any status', url_for('tickets.convenor_dashboard', class_id=selected_class_id, label_id=selected_label), selected_status is none) }}
+            {% for value, label in all_statuses %}
+                {{ pill(label, url_for('tickets.convenor_dashboard', class_id=selected_class_id, status=value, label_id=selected_label), selected_status == value) }}
+            {% endfor %}
+        </div>
+
+        {{ ledger_table('convenor-ledger') }}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+    {{ ledger_script('convenor-ledger', LEDGER_URL) }}
+{% endblock %}

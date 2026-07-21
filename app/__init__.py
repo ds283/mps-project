@@ -553,6 +553,10 @@ def create_app():
 
     app.register_blueprint(dashboards_blueprint, url_prefix="/dashboards")
 
+    from .tickets import tickets as tickets_blueprint
+
+    app.register_blueprint(tickets_blueprint, url_prefix="/tickets")
+
     from .api import api as api_blueprint
 
     app.register_blueprint(api_blueprint, url_prefix="/api")

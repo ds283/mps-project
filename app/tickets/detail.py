@@ -1,0 +1,469 @@
+#
+# Created by David Seery on 21/07/2026.
+# Copyright (c) 2026 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+
+"""
+Ticket detail view (design screen 2a) and its POST actions, plus the assign picker (4a). The view
+is shared by all roles; per-ticket permission is enforced through the service-layer predicates
+(app/shared/tickets/permissions.py), not a blanket role gate.
+"""
+
+from datetime import datetime
+
+from flask import abort, current_app, flash, redirect, url_for
+from flask_security import current_user, login_required
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.tickets import tickets
+
+from ..database import db
+from ..models import Label, Role, SubmissionRole, Ticket, TicketEvent, TicketSubject, User
+from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ConfirmActionForm
+from ..shared.tickets import (
+    add_comment,
+    add_label,
+    assign,
+    can_assign,
+    can_change_status,
+    can_comment,
+    can_label,
+    can_view,
+    change_status,
+    convenors_in_scope,
+    is_subscribed,
+    log_email,
+    remove_label,
+    subscribe,
+    unassign,
+    unsubscribe,
+)
+from ..shared.workflow_logging import log_db_commit
+from .forms import TicketCommentForm, TicketLogEmailForm
+
+# supervisor roles offered in the assign picker
+_SUPERVISOR_ROLES = (SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR)
+
+# events already represented in the thread as rich cards (or as the header) are hidden from the
+# inline timeline; they still appear in the side-panel actions log.
+_TIMELINE_HIDDEN = {TicketEvent.OPENED, TicketEvent.COMMENT_ADDED, TicketEvent.EMAIL_LOGGED}
+
+
+def _load_ticket(ticket_id: int) -> Ticket:
+    ticket = Ticket.query.get(ticket_id)
+    if ticket is None:
+        abort(404)
+    return ticket
+
+
+def _scope_pclasses(ticket):
+    return list(ticket.scope_classes)
+
+
+def _uname(user_id):
+    if user_id is None:
+        return "someone"
+    user = User.query.get(user_id)
+    return user.name if user is not None else "a former user"
+
+
+def _describe_event(event: TicketEvent) -> dict:
+    """Render an event as an icon + human sentence for the timeline / actions log."""
+    payload = event.payload or {}
+    kind = event.kind
+
+    if kind == TicketEvent.STATUS_CHANGED:
+        old = Ticket._labels.get(payload.get("from"), "?")
+        new = Ticket._labels.get(payload.get("to"), "?")
+        return {"icon": "flag", "text": f"changed status from {old} to {new}"}
+
+    if kind == TicketEvent.ASSIGNED:
+        to = _uname(payload.get("to"))
+        frm = payload.get("from")
+        if payload.get("auto"):
+            return {"icon": "user-check", "text": f"auto-assigned to {to}"}
+        if frm is not None:
+            return {"icon": "user-check", "text": f"reassigned from {_uname(frm)} to {to}"}
+        return {"icon": "user-check", "text": f"assigned to {to}"}
+
+    if kind == TicketEvent.UNASSIGNED:
+        return {"icon": "user-slash", "text": "unassigned this ticket"}
+
+    if kind == TicketEvent.LABEL_ADDED:
+        return {"icon": "tag", "text": f"added label {payload.get('name', '')}"}
+
+    if kind == TicketEvent.LABEL_REMOVED:
+        return {"icon": "tag", "text": f"removed label {payload.get('name', '')}"}
+
+    if kind == TicketEvent.SUBSCRIBED:
+        return {"icon": "eye", "text": f"subscribed {_uname(payload.get('user'))}"}
+
+    if kind == TicketEvent.UNSUBSCRIBED:
+        return {"icon": "eye-slash", "text": f"unsubscribed {_uname(payload.get('user'))}"}
+
+    if kind == TicketEvent.SUBJECT_ADDED:
+        return {"icon": "link", "text": "added a subject"}
+
+    if kind == TicketEvent.SUBJECT_REMOVED:
+        return {"icon": "unlink", "text": "removed a subject"}
+
+    return {"icon": "circle", "text": event.kind_label}
+
+
+def _build_timeline(ticket):
+    """Merge comments, logged emails and non-hidden events into one chronological list."""
+    items = []
+
+    for comment in ticket.comments:
+        items.append({"type": "comment", "when": comment.created_at, "obj": comment})
+
+    for email in ticket.emails:
+        items.append({"type": "email", "when": email.logged_at, "obj": email})
+
+    for event in ticket.events:
+        if event.kind in _TIMELINE_HIDDEN:
+            continue
+        entry = {"type": "event", "when": event.created_at, "obj": event}
+        entry.update(_describe_event(event))
+        items.append(entry)
+
+    items.sort(key=lambda it: it["when"] or datetime.min)
+    return items
+
+
+def _actions_log(ticket):
+    """All events, newest first, for the side-panel actions log."""
+    log = []
+    for event in ticket.events.order_by(TicketEvent.created_at.desc()):
+        entry = {"obj": event}
+        entry.update(_describe_event(event))
+        log.append(entry)
+    return log
+
+
+def _supervisors_for(ticket):
+    users = {}
+    for subject in ticket.subjects:
+        if subject.kind != TicketSubject.SUBMITTING_STUDENT:
+            continue
+        student = subject.submitting_student
+        if student is None:
+            continue
+        for record in student.records:
+            for role in record.roles:
+                if role.role in _SUPERVISOR_ROLES and role.user is not None:
+                    users[role.user.id] = role.user
+    return list(users.values())
+
+
+def _office_users(ticket):
+    query = User.query.filter(User.roles.any(Role.name == "office"))
+    if ticket.tenant_id is not None:
+        from ..models import Tenant
+
+        query = query.filter(User.tenants.any(Tenant.id == ticket.tenant_id))
+    return query.order_by(User.last_name.asc()).limit(25).all()
+
+
+def _build_assign_options(ticket):
+    """Assemble the assign picker (screen 4a). Each user appears once, in its first section."""
+    seen = set()
+    sections = []
+
+    def _section(title, users, note=None):
+        rows = []
+        for user in users:
+            if user is None or user.id in seen:
+                continue
+            seen.add(user.id)
+            rows.append({"user": user, "note": note})
+        if rows:
+            sections.append({"title": title, "rows": rows})
+
+    _section("Convenors in scope", convenors_in_scope(ticket))
+    _section("Supervisors of attached students", _supervisors_for(ticket))
+    _section("Office", _office_users(ticket))
+    return sections
+
+
+def _student_name(student):
+    data = getattr(student, "student", None)
+    user = getattr(data, "user", None)
+    return user.name if user is not None else "Student"
+
+
+def _subjects_display(ticket):
+    """Resolve each subject to a display row {label, name} for the side-panel Context section."""
+    rows = []
+    for subject in ticket.subjects:
+        if subject.kind == TicketSubject.PROJECT_CLASS and subject.project_class is not None:
+            rows.append({"label": "Class", "name": subject.project_class.name})
+        elif subject.kind == TicketSubject.SUBMITTING_STUDENT and subject.submitting_student is not None:
+            rows.append({"label": "Submitter", "name": _student_name(subject.submitting_student)})
+        elif subject.kind == TicketSubject.SELECTING_STUDENT and subject.selecting_student is not None:
+            rows.append({"label": "Selector", "name": _student_name(subject.selecting_student)})
+    return rows
+
+
+def _available_labels(ticket):
+    if ticket.tenant_id is None:
+        return []
+    applied = {label.id for label in ticket.labels}
+    return [label for label in Label.query.filter_by(tenant_id=ticket.tenant_id).order_by(Label.name.asc()).all() if label.id not in applied]
+
+
+# ------------------------------------------------------------------------------------------------
+# views
+
+
+@tickets.route("/<int:ticket_id>")
+@login_required
+def detail(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_view(current_user, ticket):
+        abort(403)
+
+    return render_template_context(
+        "tickets/detail.html",
+        ticket=ticket,
+        timeline=_build_timeline(ticket),
+        actions_log=_actions_log(ticket),
+        assign_sections=_build_assign_options(ticket),
+        subjects=_subjects_display(ticket),
+        subscribers=list(ticket.subscriptions),
+        available_labels=_available_labels(ticket),
+        all_statuses=[(value, label) for value, label in Ticket._labels.items()],
+        watching=is_subscribed(current_user, ticket),
+        comment_form=TicketCommentForm(),
+        email_form=TicketLogEmailForm(),
+        action_form=ConfirmActionForm(),
+        perms={
+            "comment": can_comment(current_user, ticket),
+            "status": can_change_status(current_user, ticket),
+            "assign": can_assign(current_user, ticket),
+            "label": can_label(current_user, ticket),
+        },
+    )
+
+
+def _commit_or_flash(summary, ticket, failure_message):
+    """Commit via log_db_commit, or roll back and flash on database error. Returns success bool."""
+    try:
+        log_db_commit(summary, user=current_user, project_classes=_scope_pclasses(ticket))
+        return True
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
+        flash(failure_message, "error")
+        return False
+
+
+def _back(ticket):
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+@tickets.route("/<int:ticket_id>/comment", methods=["POST"])
+@login_required
+def comment(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_comment(current_user, ticket):
+        abort(403)
+
+    form = TicketCommentForm()
+    if form.validate_on_submit():
+        add_comment(ticket, current_user, form.body.data, actor=current_user)
+        resolve = form.submit_resolve.data
+        if resolve and can_change_status(current_user, ticket):
+            change_status(ticket, Ticket.RESOLVED, actor=current_user)
+        _commit_or_flash(
+            f"Commented on ticket #{ticket.id}" + (" and resolved it" if resolve else ""),
+            ticket,
+            "Could not post comment due to a database error. Please contact a system administrator.",
+        )
+    else:
+        flash("Your comment could not be posted — please enter some text.", "error")
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/log_email", methods=["POST"])
+@login_required
+def log_email_action(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_comment(current_user, ticket):
+        abort(403)
+
+    form = TicketLogEmailForm()
+    if form.validate_on_submit():
+        log_email(
+            ticket,
+            direction=form.direction.data,
+            subject=form.subject.data,
+            body=form.body.data,
+            from_addr=form.from_addr.data,
+            to_addrs=form.to_addrs.data,
+            logged_by=current_user,
+            actor=current_user,
+        )
+        _commit_or_flash(
+            f"Logged an email against ticket #{ticket.id}",
+            ticket,
+            "Could not log the email due to a database error. Please contact a system administrator.",
+        )
+    else:
+        flash("The email could not be logged — a subject is required.", "error")
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/status/<int:status>", methods=["POST"])
+@login_required
+def set_status(ticket_id, status):
+    ticket = _load_ticket(ticket_id)
+    if not can_change_status(current_user, ticket):
+        abort(403)
+    if status not in Ticket._labels:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        change_status(ticket, status, actor=current_user)
+        _commit_or_flash(
+            f"Set status of ticket #{ticket.id} to {Ticket._labels[status]}",
+            ticket,
+            "Could not update the ticket status due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/assign/<int:user_id>", methods=["POST"])
+@login_required
+def assign_to(ticket_id, user_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_assign(current_user, ticket):
+        abort(403)
+
+    target = User.query.get(user_id)
+    if target is None:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        assign(ticket, target, actor=current_user)
+        _commit_or_flash(
+            f"Assigned ticket #{ticket.id} to {target.name}",
+            ticket,
+            "Could not assign the ticket due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/unassign", methods=["POST"])
+@login_required
+def unassign_ticket(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_assign(current_user, ticket):
+        abort(403)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        unassign(ticket, actor=current_user)
+        _commit_or_flash(
+            f"Unassigned ticket #{ticket.id}",
+            ticket,
+            "Could not unassign the ticket due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/label/add/<int:label_id>", methods=["POST"])
+@login_required
+def label_add(ticket_id, label_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_label(current_user, ticket):
+        abort(403)
+
+    label = Label.query.get(label_id)
+    if label is None or label.tenant_id != ticket.tenant_id:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        add_label(ticket, label, actor=current_user)
+        _commit_or_flash(
+            f"Added label '{label.name}' to ticket #{ticket.id}",
+            ticket,
+            "Could not add the label due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/label/remove/<int:label_id>", methods=["POST"])
+@login_required
+def label_remove(ticket_id, label_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_label(current_user, ticket):
+        abort(403)
+
+    label = Label.query.get(label_id)
+    if label is None:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        remove_label(ticket, label, actor=current_user)
+        _commit_or_flash(
+            f"Removed label '{label.name}' from ticket #{ticket.id}",
+            ticket,
+            "Could not remove the label due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/watch", methods=["POST"])
+@login_required
+def watch(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_view(current_user, ticket):
+        abort(403)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        subscribe(ticket, current_user, actor=current_user)
+        _commit_or_flash(
+            f"Subscribed to ticket #{ticket.id}",
+            ticket,
+            "Could not subscribe due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/unwatch", methods=["POST"])
+@login_required
+def unwatch(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_view(current_user, ticket):
+        abort(403)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        unsubscribe(ticket, current_user, actor=current_user)
+        _commit_or_flash(
+            f"Unsubscribed from ticket #{ticket.id}",
+            ticket,
+            "Could not unsubscribe due to a database error.",
+        )
+
+    return _back(ticket)

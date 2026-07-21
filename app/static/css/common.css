@@ -928,11 +928,6 @@ p.copyright {
     border: 2px solid var(--bs-body-bg);
 }
 
-.jchip.jquick-add {
-    color: var(--bs-success-text-emphasis);
-    border-color: var(--bs-success-border-subtle);
-}
-
 .recent-tag {
     font-size: 0.68rem;
     font-weight: 700;
@@ -942,6 +937,30 @@ p.copyright {
     padding: 0.05rem 0.35rem;
     text-transform: uppercase;
     letter-spacing: 0.02em;
+}
+
+/* Single, shared "unread by current user" row treatment — tint + left accent
+   border + leading dot. Used on the overview Journal activity card, the
+   Journal tab table and the per-student journal inspector table, so unread
+   state always reads the same way wherever a journal entry appears in a row. */
+.unread-row,
+tr.unread-row > td:first-child,
+tr.unread-row > th:first-child {
+    border-left: 3px solid var(--bs-primary);
+}
+
+.unread-row {
+    background: var(--bs-primary-bg-subtle);
+}
+
+.udot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    border-radius: 999px;
+    background: var(--bs-primary);
+    flex: none;
 }
 
 .locked-note {

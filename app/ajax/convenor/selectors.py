@@ -38,6 +38,10 @@ _menu = """
            data-student-id="{{ student.student_id }}" data-student-name="{{ student.student.user.name }}">
             <i class="fas fa-book fa-fw"></i> View journal...
         </a>
+        <a class="dropdown-item d-flex gap-2" href="#" data-bs-toggle="modal" data-bs-target="#journalAddModal"
+           data-student-id="{{ student.student_id }}" data-student-name="{{ student.student.user.name }}">
+            <i class="fas fa-plus fa-fw"></i> Add journal entry...
+        </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_journal_inspector', student_id=student.student_id, url=url_for('convenor.selectors', id=pclass.id), text='selectors view') }}">
             <i class="fas fa-external-link-alt fa-fw"></i> Open full journal page
         </a>
@@ -247,18 +251,6 @@ _confirmations = """
 
 
 # language=jinja2
-_journal = """
-<div class="d-flex align-items-center justify-content-center gap-2">
-    {{ journal_indicator(counts, sel.student_id, sel.student.user.name) }}
-    <button type="button" class="jchip jquick-add" data-bs-toggle="modal" data-bs-target="#journalAddModal"
-            data-student-id="{{ sel.student_id }}" data-student-name="{{ sel.student.user.name }}"
-            title="Quick add journal entry">
-        <i class="fas fa-plus"></i>
-    </button>
-</div>
-"""
-
-# language=jinja2
 _name = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 {% if sel.has_issues %}
@@ -275,6 +267,7 @@ _name = """
 {% if num_tasks > 0 %}
     <div class="badge bg-info">{{ num_tasks }} task{{ pl }}</div>
 {% endif %}
+<div class="mt-1">{{ journal_indicator(counts, sel.student_id, sel.student.user.name) }}</div>
 </div>
 {% if sel.has_issues %}
     <div class="mt-1">
@@ -320,11 +313,6 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def _build_journal_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_journal)
-
-
 def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig, quickfix_factory=None, journal_counts=None):
     # cache selector lifecycle information
     state = config.selector_lifecycle
@@ -347,7 +335,6 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
     confirmations_templ: Template = _build_confirmations_templ()
     submitted_templ: Template = _build_submitted_templ()
     menu_templ: Template = _build_menu_templ()
-    journal_templ: Template = _build_journal_templ()
 
     def _process(s: SelectingStudent):
         is_valid_selection = s.is_valid_selection[0]
@@ -359,6 +346,8 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
                     sel=s,
                     error_block_inline=error_block_inline,
                     quickfix_factory=quickfix_factory,
+                    counts=journal_counts.get(s.student_id, empty_counts),
+                    journal_indicator=journal_indicator,
                 ),
                 "sortstring": s.student.user.last_name + s.student.user.first_name,
             },
@@ -381,12 +370,6 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
                 state=state,
                 is_valid_selection=is_valid_selection,
                 truncate=truncate,
-            ),
-            "journal": render_template(
-                journal_templ,
-                sel=s,
-                counts=journal_counts.get(s.student_id, empty_counts),
-                journal_indicator=journal_indicator,
             ),
             "menu": render_template(
                 menu_templ,

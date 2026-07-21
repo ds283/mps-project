@@ -51,7 +51,6 @@
                         type: 'value'
                       } },
                     { data: 'submitted' },
-                    { data: 'journal', orderable: false, searchable: false },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -199,48 +198,47 @@
                 {% endif %}
             </div>
 
-            <div class="d-flex flex-row justify-content-end align-items-end gap-2">
-                <a href="mailto:{{ selector_emails|join(",") }}" class="btn btn-sm btn-outline-primary top-row-button">
-                    <i class="fas fa-envelope"></i> Email using local client
-                </a>
-                {% if is_admin or is_root or is_emailer %}
-                    <a href="{{ url_for('convenor.email_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
-                       class="btn btn-sm btn-outline-primary top-row-button">
-                        <i class="fas fa-envelope"></i> Email matching selectors
+            <div class="d-flex flex-row justify-content-between align-items-end gap-2 flex-wrap">
+                <span class="small text-secondary">
+                    <span class="jchip muted" style="cursor: default;"><i class="fas fa-book"></i></span>
+                    = no entries visible to you
+                    &nbsp;&middot;&nbsp;
+                    <span class="udot" style="display: inline-block;"></span>
+                    = unread by you
+                </span>
+                <div class="d-flex flex-row align-items-end gap-2 flex-wrap">
+                    <a href="mailto:{{ selector_emails|join(",") }}" class="btn btn-sm btn-outline-primary top-row-button">
+                        <i class="fas fa-envelope"></i> Email using local client
                     </a>
-                {% endif %}
-                <a href="{{ url_for('convenor.convert_all', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
-                   class="btn btn-sm btn-outline-primary top-row-button">
-                    <i class="fas fa-check"></i> Change to Convert
-                </a>
-                <a href="{{ url_for('convenor.convert_none', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
-                   class="btn btn-sm btn-outline-primary top-row-button">
-                    <i class="fas fa-times"></i> Change to Don't convert
-                </a>
+                    {% if is_admin or is_root or is_emailer %}
+                        <a href="{{ url_for('convenor.email_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
+                           class="btn btn-sm btn-outline-primary top-row-button">
+                            <i class="fas fa-envelope"></i> Email matching selectors
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('convenor.convert_all', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
+                       class="btn btn-sm btn-outline-primary top-row-button">
+                        <i class="fas fa-check"></i> Change to Convert
+                    </a>
+                    <a href="{{ url_for('convenor.convert_none', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
+                       class="btn btn-sm btn-outline-primary top-row-button">
+                        <i class="fas fa-times"></i> Change to Don't convert
+                    </a>
+                </div>
             </div>
 
             <table id="selectors-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="14%"> Name</th>
-                    <th width="24%"> Programme</th>
-                    <th width="20%"> Confirmations</th>
-                    <th width="10%"> Bookmarks</th>
-                    <th width="10%"> Submitted</th>
-                    <th width="10%" class="text-center"> Journal</th>
-                    <th width="12%"> Actions</th>
+                    <th width="16%"> Name</th>
+                    <th width="26%"> Programme</th>
+                    <th width="22%"> Confirmations</th>
+                    <th width="11%"> Bookmarks</th>
+                    <th width="11%"> Submitted</th>
+                    <th width="14%"> Actions</th>
                 </tr>
                 </thead>
             </table>
-            <div class="d-flex justify-content-end">
-                <span class="small text-secondary">
-                    <span class="jchip muted" style="cursor: default;"><i class="fas fa-book"></i></span>
-                    = no entries visible to you
-                    &nbsp;&middot;&nbsp;
-                    <span class="jdot" style="position: static; display: inline-block;"></span>
-                    = unread
-                </span>
-            </div>
         </div>
     </div>
 

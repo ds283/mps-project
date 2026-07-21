@@ -182,7 +182,9 @@
                     </div>
                     <ul class="list-group list-group-flush small">
                         {% for entry in journal_summary.recent_entries %}
-                            <li class="list-group-item d-flex align-items-center gap-2 py-2{% if not entry.is_read_by(current_user) %} bg-primary-subtle{% endif %}">
+                            {% set unread = not entry.is_read_by(current_user) %}
+                            <li class="list-group-item d-flex align-items-center gap-2 py-2{% if unread %} unread-row{% endif %}">
+                                {% if unread %}<span class="udot"></span>{% endif %}
                                 {{ journal_type_ico(entry, size=24) }}
                                 <a href="#" class="text-decoration-none fw-semibold"
                                    data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
@@ -190,7 +192,7 @@
                                    data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
                                     {{ entry.title or "Untitled" }}
                                 </a>
-                                {% if not entry.is_read_by(current_user) %}
+                                {% if unread %}
                                     <span class="recent-tag">new</span>
                                 {% endif %}
                                 <span class="text-body-secondary ms-auto">

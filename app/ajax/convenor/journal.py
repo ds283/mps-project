@@ -51,14 +51,17 @@ _type = """
 
 # language=jinja2
 _title = """
-<a class="text-decoration-none"
-   href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=return_url, text=return_text) }}">
-    {% if entry.title %}
-        <span class="fw-semibold">{{ entry.title }}</span>
-    {% else %}
-        <span class="text-secondary fst-italic">Untitled</span>
-    {% endif %}
-</a>
+<div class="d-flex align-items-center gap-2">
+    {% if unread %}<span class="udot"></span>{% endif %}
+    <a class="text-decoration-none"
+       href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=return_url, text=return_text) }}">
+        {% if entry.title %}
+            <span class="fw-semibold">{{ entry.title }}</span>
+        {% else %}
+            <span class="text-secondary fst-italic">Untitled</span>
+        {% endif %}
+    </a>
+</div>
 {% if entry.entry %}
     <div class="small text-muted mt-1">{{ entry.entry | striptags | truncate(100) }}</div>
 {% endif %}
@@ -102,13 +105,16 @@ _menu = """
 
 # language=jinja2
 _tab_entry = """
-<a class="text-decoration-none fw-semibold" href="#"
-   data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
-   data-student-id="{{ entry.student_id }}"
-   data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
-    {% if entry.title %}{{ entry.title }}{% else %}<span class="fst-italic">Untitled</span>{% endif %}
-</a>
-{% if unread %}<span class="recent-tag">new</span>{% endif %}
+<div class="d-flex align-items-center gap-2">
+    {% if unread %}<span class="udot"></span>{% endif %}
+    <a class="text-decoration-none fw-semibold" href="#"
+       data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
+       data-student-id="{{ entry.student_id }}"
+       data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
+        {% if entry.title %}{{ entry.title }}{% else %}<span class="fst-italic">Untitled</span>{% endif %}
+    </a>
+    {% if unread %}<span class="recent-tag">new</span>{% endif %}
+</div>
 {% if entry.entry %}
     <div class="small text-muted mt-1">{{ entry.entry | striptags | truncate(100) }}</div>
 {% endif %}
@@ -137,7 +143,7 @@ _tab_owner = """
 
 # language=jinja2
 _tab_review = """
-<button type="button" class="btn btn-sm {% if unread %}btn-primary{% else %}btn-outline-primary{% endif %}"
+<button type="button" class="btn btn-sm btn-outline-primary"
         data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
         data-student-id="{{ entry.student_id }}"
         data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
@@ -174,7 +180,7 @@ def journal_tab_data(entries: List[StudentJournalEntry], pclass=None) -> list:
             "owner": render_template(owner_templ, entry=e),
             "timestamp": render_template(timestamp_templ, entry=e),
             "review": render_template(review_templ, entry=e, unread=unread),
-            "DT_RowClass": "bg-primary-subtle" if unread else "",
+            "DT_RowClass": "unread-row" if unread else "",
         }
 
     return [_process(e) for e in entries]
@@ -190,14 +196,16 @@ def journal_data(entries: List[StudentJournalEntry], return_url: str = None, ret
     menu_templ: Template = _build_templ(_menu)
 
     def _process(e: StudentJournalEntry):
+        unread = not e.is_read_by(current_user)
         return {
             "timestamp": render_template(timestamp_templ, entry=e),
             "year": render_template(year_templ, entry=e),
             "classes": render_template(classes_templ, entry=e),
             "type": render_template(type_templ, entry=e),
-            "title": render_template(title_templ, entry=e, return_url=return_url, return_text=return_text),
+            "title": render_template(title_templ, entry=e, return_url=return_url, return_text=return_text, unread=unread),
             "owner": render_template(owner_templ, entry=e),
             "actions": render_template(menu_templ, entry=e, current_user=current_user, return_url=return_url, return_text=return_text),
+            "DT_RowClass": "unread-row" if unread else "",
         }
 
     return [_process(e) for e in entries]

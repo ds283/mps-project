@@ -1,0 +1,85 @@
+#
+# Created by David Seery on 21/07/2026.
+# Copyright (c) 2026 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+
+"""
+Ticket service layer: the pure, request-context-free core of the ticket system (scope derivation,
+routing/auto-assign, subscriptions, event log, state transitions, permissions). UI phases build on
+these; none of the functions commit — the caller owns the transaction (log_db_commit()).
+"""
+
+from .actions import (
+    add_comment,
+    add_label,
+    assign,
+    change_status,
+    log_email,
+    remove_label,
+    unassign,
+)
+from .events import record_event, touch
+from .permissions import (
+    can_assign,
+    can_change_status,
+    can_comment,
+    can_label,
+    can_manage_labels,
+    can_view,
+    is_admin_or_root,
+    is_assignee,
+    is_convenor_in_scope,
+)
+from .routing import apply_auto_assign
+from .scope import (
+    class_convenor_users,
+    compute_scope_classes,
+    convenors_in_scope,
+    derive_tenant_id,
+    home_class,
+    primary_convenor_user,
+    recompute_scope,
+)
+from .subjects import add_subject, create_ticket, remove_subject
+from .subscriptions import is_subscribed, subscribe, sync_convenor_subscriptions, unsubscribe
+
+__all__ = [
+    "add_comment",
+    "add_label",
+    "add_subject",
+    "apply_auto_assign",
+    "assign",
+    "can_assign",
+    "can_change_status",
+    "can_comment",
+    "can_label",
+    "can_manage_labels",
+    "can_view",
+    "change_status",
+    "class_convenor_users",
+    "compute_scope_classes",
+    "convenors_in_scope",
+    "create_ticket",
+    "derive_tenant_id",
+    "home_class",
+    "is_admin_or_root",
+    "is_assignee",
+    "is_convenor_in_scope",
+    "is_subscribed",
+    "log_email",
+    "primary_convenor_user",
+    "record_event",
+    "recompute_scope",
+    "remove_label",
+    "remove_subject",
+    "subscribe",
+    "sync_convenor_subscriptions",
+    "touch",
+    "unassign",
+    "unsubscribe",
+]

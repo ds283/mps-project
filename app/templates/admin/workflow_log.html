@@ -80,7 +80,7 @@
     {% if url and text %}
         <div class="d-flex align-items-center mt-3 mb-2">
             <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
-                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize }}
+                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize_first }}
             </a>
         </div>
     {% endif %}

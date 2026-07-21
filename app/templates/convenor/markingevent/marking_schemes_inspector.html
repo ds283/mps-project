@@ -58,7 +58,7 @@
     {% if url is not none and text is not none %}
         <div class="d-flex align-items-center">
             <a href="{{ url }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize }}
+                <i class="fas fa-arrow-left me-1"></i> {{ text|capitalize_first }}
             </a>
         </div>
     {% endif %}

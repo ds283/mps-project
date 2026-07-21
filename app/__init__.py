@@ -411,6 +411,18 @@ def create_app():
 
         return [f"{prefix}{item}{suffix}" for item in s]
 
+    @app.template_filter("capitalize_first")
+    def capitalize_first(s):
+        """
+        Upper-case only the first character, leaving the rest of the string untouched.
+        Unlike Jinja's built-in |capitalize, this does not lower-case the remainder,
+        so it is safe to use on strings that are already sentence- or title-cased.
+        """
+        if not s:
+            return s
+
+        return s[0].upper() + s[1:]
+
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template_context("errors/404.html"), 404

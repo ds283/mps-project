@@ -36,11 +36,11 @@ _menu = """
         {% endif %}
         <a class="dropdown-item d-flex gap-2" href="#" data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
            data-student-id="{{ student.student_id }}" data-student-name="{{ student.student.user.name }}">
-            <i class="fas fa-book fa-fw"></i> View journal...
+            <i class="fas fa-book fa-fw"></i> Quick view journal...
         </a>
         <a class="dropdown-item d-flex gap-2" href="#" data-bs-toggle="modal" data-bs-target="#journalAddModal"
            data-student-id="{{ student.student_id }}" data-student-name="{{ student.student.user.name }}">
-            <i class="fas fa-plus fa-fw"></i> Add journal entry...
+            <i class="fas fa-plus fa-fw"></i> Quick add journal entry...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_journal_inspector', student_id=student.student_id, url=url_for('convenor.selectors', id=pclass.id), text='selectors view') }}">
             <i class="fas fa-external-link-alt fa-fw"></i> Open full journal page
@@ -313,15 +313,24 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig, quickfix_factory=None, journal_counts=None):
+def selectors_data(
+    students: List[SelectingStudent],
+    config: ProjectClassConfig,
+    quickfix_factory=None,
+    journal_counts=None,
+):
     # cache selector lifecycle information
     state = config.selector_lifecycle
 
     is_admin = current_user.has_role("admin") or current_user.has_role("root")
 
     simple_label = get_template_attribute("labels.html", "simple_label")
-    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
-    journal_indicator = get_template_attribute("convenor/journal/_macros.html", "journal_indicator")
+    error_block_inline = get_template_attribute(
+        "error_block.html", "error_block_inline"
+    )
+    journal_indicator = get_template_attribute(
+        "convenor/journal/_macros.html", "journal_indicator"
+    )
 
     truncate = get_template_attribute("macros.html", "truncate")
 
@@ -352,7 +361,9 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
                 "sortstring": s.student.user.last_name + s.student.user.first_name,
             },
             "cohort": {
-                "display": render_template(cohort_templ, sel=s, simple_label=simple_label),
+                "display": render_template(
+                    cohort_templ, sel=s, simple_label=simple_label
+                ),
                 "value": s.student.cohort,
             },
             "bookmarks": {

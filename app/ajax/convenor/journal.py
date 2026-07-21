@@ -143,12 +143,14 @@ _tab_owner = """
 
 # language=jinja2
 _tab_review = """
-<button type="button" class="btn btn-sm btn-outline-primary"
-        data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
-        data-student-id="{{ entry.student_id }}"
-        data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
-    Open
-</button>
+<div class="text-end">
+    <button type="button" class="btn btn-sm btn-outline-primary"
+            data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
+            data-student-id="{{ entry.student_id }}"
+            data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
+        Open
+    </button>
+</div>
 """
 
 

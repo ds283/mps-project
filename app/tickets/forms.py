@@ -24,7 +24,7 @@ from wtforms import (
     SubmitField,
     TextAreaField,
 )
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms.validators import DataRequired, Email, Length, Optional
 
 from ..models import TicketEmail
 
@@ -32,7 +32,7 @@ from ..models import TicketEmail
 class TicketCommentForm(Form):
     body = TextAreaField("Comment", validators=[DataRequired()])
 
-    # Phase 3 stores the intent only; the actual subscriber fan-out is wired in Phase 7.
+    # Fan-out to subscribers is wired via EmailWorkflow (app/tasks/ticket_notifications.py).
     notify = BooleanField("Email subscribers", default=True)
 
     submit = SubmitField("Comment")
@@ -65,6 +65,14 @@ class LabelForm(Form):
     colour = StringField("Colour", validators=[Optional(), Length(max=32)])
 
     submit = SubmitField("Save")
+
+
+class TicketExternalSubscriberForm(Form):
+    """Add an external (non-User) email address as a ticket subscriber (design screen 2a)."""
+
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
+
+    submit = SubmitField("Add")
 
 
 class TicketComposeForm(Form):

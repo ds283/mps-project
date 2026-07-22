@@ -33,7 +33,7 @@
         .tk-card-body { padding:14px; font-size:13.5px; line-height:1.6; color:var(--bs-body-color); }
         .tk-email { border:1px solid var(--bs-success-border-subtle); border-radius:9px; overflow:hidden; background:var(--bs-success-bg-subtle); }
         .tk-email-head { background:var(--bs-success-bg-subtle); border-bottom:1px solid var(--bs-success-border-subtle); color:var(--bs-success-text-emphasis); padding:8px 14px; font-size:12px; display:flex; align-items:center; gap:8px; }
-        .tk-event { display:flex; align-items:flex-start; gap:9px; padding:11px 4px 11px 16px; font-size:12.5px; color:var(--bs-secondary-color); position:relative; }
+        .tk-event { display:flex; align-items:flex-start; gap:9px; padding:11px 4px 11px 16px; font-size:13px; color:var(--bs-body-color); position:relative; }
         .tk-event .rail { position:absolute; left:11px; top:-4px; bottom:-4px; width:2px; background:var(--bs-border-color); }
         .tk-event .ico { width:24px; height:24px; border-radius:50%; background:var(--bs-secondary-bg); color:var(--bs-secondary-color); display:inline-flex; align-items:center; justify-content:center; font-size:10px; z-index:1; flex:none; }
         .tk-panel { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); overflow:hidden; font-size:12.5px; }
@@ -47,6 +47,11 @@
         .tk-composer textarea { border:none; width:100%; resize:vertical; min-height:64px; padding:12px 13px; font-size:13px; background:transparent; color:var(--bs-body-color); }
         .tk-composer textarea:focus { outline:none; }
         .tk-assign-row { display:flex; align-items:center; gap:10px; }
+        .tk-assign-suggested .dropdown-item { background:var(--bs-success-bg-subtle); }
+        .tk-sub-search { padding:0 8px 8px; }
+        .tk-sub-row { display:flex; align-items:center; gap:8px; }
+        .tk-sub-avatar-wrap, .tk-sub-pill-wrap { position:relative; display:inline-flex; }
+        .tk-sub-remove { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--bs-danger); color:var(--bs-white); border:none; font-size:8px; display:inline-flex; align-items:center; justify-content:center; line-height:1; padding:0; }
         .tk-inline-form { display:inline; }
         .tk-card, .tk-email { box-shadow:0 1px 2px rgba(0,0,0,.04); }
         .tk-panel { box-shadow:0 1px 3px rgba(0,0,0,.06); }
@@ -139,9 +144,16 @@
                         <div class="tk-event">
                             <span class="rail"></span>
                             <span class="ico"><i class="fas fa-{{ item.icon }}"></i></span>
-                            <span>
+                            <span class="d-flex align-items-center flex-wrap gap-1">
                                 <strong class="text-body">{{ item.obj.actor.name if item.obj.actor else 'Someone' }}</strong>
-                                {{ item.text }}
+                                {% if item.kind == 'status_changed' %}
+                                    changed status from {{ status_pill(item.from_status) }} to {{ status_pill(item.to_status) }}
+                                {% elif item.kind == 'reassigned' %}
+                                    reassigned {{ avatar(item.from_user, 16) }} <i class="fas fa-arrow-right" style="font-size:9px"></i> {{ avatar(item.to_user, 16) }}
+                                    <span class="text-secondary">({{ item.to_user.name if item.to_user else 'a former user' }})</span>
+                                {% else %}
+                                    {{ item.text }}
+                                {% endif %}
                                 <span class="text-secondary">· {{ item.when.strftime('%d %b') if item.when else '' }}</span>
                             </span>
                         </div>
@@ -226,16 +238,23 @@
                             {% if perms.assign %}
                                 <div class="dropdown ms-auto">
                                     <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-pen"></i></button>
-                                    <div class="dropdown-menu dropdown-menu-end" style="width:300px; max-height:420px; overflow:auto">
+                                    <div class="dropdown-menu dropdown-menu-end tk-assign-menu" style="min-width:340px; max-width:min(460px, calc(100vw - 2rem)); max-height:420px; overflow:auto">
+                                        <div class="px-2 pb-2">
+                                            <input type="text" class="form-control form-control-sm tk-assign-search" placeholder="Search people…" autocomplete="off">
+                                        </div>
                                         <h6 class="dropdown-header"><i class="fas fa-shield-alt"></i> Acting as convenor / admin</h6>
                                         {% for section in assign_sections %}
                                             <h6 class="dropdown-header">{{ section.title }}</h6>
                                             {% for row in section.rows %}
-                                                <form method="POST" action="{{ url_for('tickets.assign_to', ticket_id=ticket.id, user_id=row.user.id) }}">
+                                                <form method="POST" action="{{ url_for('tickets.assign_to', ticket_id=ticket.id, user_id=row.user.id) }}" class="tk-assign-option {{ 'tk-assign-suggested' if section.suggested else '' }}" data-name="{{ row.user.name|lower }}">
                                                     {{ action_form.hidden_tag() }}
-                                                    <button type="submit" class="dropdown-item tk-assign-row {{ 'active' if ticket.assignee_id == row.user.id else '' }}">
+                                                    <button type="submit" class="dropdown-item tk-assign-row {{ 'active' if ticket.assignee_id == row.user.id else '' }}" style="white-space:normal">
                                                         {{ avatar(row.user, 24) }}
-                                                        <span class="flex-grow-1 text-start">{{ row.user.name }}</span>
+                                                        <span class="flex-grow-1 text-start">
+                                                            <span class="d-block">{{ row.user.name }}</span>
+                                                            {% if row.note %}<span class="d-block" style="font-size:11px; color:var(--bs-success-text-emphasis)">{{ row.note }}</span>{% endif %}
+                                                        </span>
+                                                        {% if row.pill %}<span class="tk-pill" style="font-size:10px; padding:2px 8px; background:var(--bs-secondary-bg); color:var(--bs-secondary-color)">{{ row.pill }}</span>{% endif %}
                                                         {% if ticket.assignee_id == row.user.id %}<i class="fas fa-check text-primary"></i>{% endif %}
                                                     </button>
                                                 </form>
@@ -261,15 +280,66 @@
 
                     {# Subscribers #}
                     <div class="tk-panel-sec">
-                        <div class="tk-panel-lbl">Subscribers</div>
-                        <div class="mt-2 d-flex align-items-center gap-1 flex-wrap">
+                        <div class="tk-panel-lbl">
+                            Subscribers
+                            {% if perms.subscribe %}
+                                <div class="dropdown ms-auto">
+                                    <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-plus"></i></button>
+                                    <div class="dropdown-menu dropdown-menu-end tk-sub-menu" style="min-width:280px; max-height:420px; overflow:auto">
+                                        <div class="tk-sub-search">
+                                            <input type="text" class="form-control form-control-sm tk-sub-search-input" placeholder="Search people…" autocomplete="off">
+                                        </div>
+                                        {% for section in subscriber_sections %}
+                                            <h6 class="dropdown-header">{{ section.title }}</h6>
+                                            {% for row in section.rows %}
+                                                <form method="POST" action="{{ url_for('tickets.subscriber_add', ticket_id=ticket.id, user_id=row.user.id) }}" class="tk-sub-option" data-name="{{ row.user.name|lower }}">
+                                                    {{ action_form.hidden_tag() }}
+                                                    <button type="submit" class="dropdown-item tk-assign-row">
+                                                        {{ avatar(row.user, 22) }}
+                                                        <span class="flex-grow-1 text-start">{{ row.user.name }}</span>
+                                                    </button>
+                                                </form>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="dropdown-item-text text-secondary small">No one else to add</span>
+                                        {% endfor %}
+                                        <div class="dropdown-divider"></div>
+                                        <form method="POST" action="{{ url_for('tickets.external_subscriber_add', ticket_id=ticket.id) }}" class="px-3 py-2">
+                                            {{ external_form.hidden_tag() }}
+                                            <label class="form-label small mb-1">External email</label>
+                                            <div class="d-flex gap-1">
+                                                {{ external_form.email(class="form-control form-control-sm", placeholder="name@example.com") }}
+                                                {{ external_form.submit(class="btn btn-sm btn-outline-primary") }}
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                             {% for sub in subscribers %}
-                                {{ avatar(sub.user, 26) }}
+                                <span class="tk-sub-avatar-wrap">
+                                    {{ avatar(sub.user, 26) }}
+                                    {% if perms.subscribe %}
+                                        <form method="POST" action="{{ url_for('tickets.subscriber_remove', ticket_id=ticket.id, user_id=sub.user_id) }}" class="tk-inline-form">
+                                            {{ action_form.hidden_tag() }}
+                                            <button type="submit" class="tk-sub-remove" title="Remove subscriber"><i class="fas fa-times"></i></button>
+                                        </form>
+                                    {% endif %}
+                                </span>
                             {% else %}
-                                <span class="text-secondary">No subscribers</span>
+                                {% if not external_subscribers %}<span class="text-secondary">No subscribers</span>{% endif %}
                             {% endfor %}
-                            {% for ext in ticket.external_subscribers %}
-                                <span class="tk-pill" style="background:var(--bs-secondary-bg); color:var(--bs-secondary-color)"><i class="fas fa-at"></i> {{ ext.email }}</span>
+                            {% for ext in external_subscribers %}
+                                <span class="tk-sub-pill-wrap">
+                                    <span class="tk-pill" style="background:var(--bs-secondary-bg); color:var(--bs-secondary-color)"><i class="fas fa-at"></i> {{ ext.email }}</span>
+                                    {% if perms.subscribe %}
+                                        <form method="POST" action="{{ url_for('tickets.external_subscriber_remove', ticket_id=ticket.id, ext_id=ext.id) }}" class="tk-inline-form">
+                                            {{ action_form.hidden_tag() }}
+                                            <button type="submit" class="tk-sub-remove" title="Remove subscriber"><i class="fas fa-times"></i></button>
+                                        </form>
+                                    {% endif %}
+                                </span>
                             {% endfor %}
                         </div>
                     </div>
@@ -339,4 +409,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function tkWireSearch(inputSelector, optionSelector) {
+            var input = document.querySelector(inputSelector);
+            if (!input) return;
+            input.addEventListener('click', function (evt) { evt.stopPropagation(); });
+            input.addEventListener('input', function () {
+                var term = input.value.trim().toLowerCase();
+                document.querySelectorAll(optionSelector).forEach(function (row) {
+                    var name = row.getAttribute('data-name') || '';
+                    row.style.display = (term === '' || name.indexOf(term) !== -1) ? '' : 'none';
+                });
+            });
+        }
+        tkWireSearch('.tk-assign-search', '.tk-assign-option');
+        tkWireSearch('.tk-sub-search-input', '.tk-sub-option');
+    </script>
 {% endblock %}

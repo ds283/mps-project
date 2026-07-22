@@ -23,30 +23,33 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.tickets import tickets
 
 from ..database import db
-from ..models import Label, Role, SubmissionRole, Ticket, TicketEvent, TicketSubject, User
+from ..models import Label, Role, SubmissionRole, Ticket, TicketEvent, TicketExternalSubscriber, TicketSubject, User
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.tickets import (
     add_comment,
+    add_external_subscriber,
     add_label,
     assign,
     can_assign,
     can_change_status,
     can_comment,
     can_label,
+    can_manage_subscribers,
     can_view,
     change_status,
     convenors_in_scope,
     is_subscribed,
     log_email,
     mark_read,
+    remove_external_subscriber,
     remove_label,
     subscribe,
     unassign,
     unsubscribe,
 )
 from ..shared.workflow_logging import log_db_commit
-from .forms import TicketCommentForm, TicketLogEmailForm
+from .forms import TicketCommentForm, TicketExternalSubscriberForm, TicketLogEmailForm
 
 # supervisor roles offered in the assign picker
 _SUPERVISOR_ROLES = (SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR)
@@ -80,41 +83,53 @@ def _describe_event(event: TicketEvent) -> dict:
     kind = event.kind
 
     if kind == TicketEvent.STATUS_CHANGED:
-        old = Ticket._labels.get(payload.get("from"), "?")
-        new = Ticket._labels.get(payload.get("to"), "?")
-        return {"icon": "flag", "text": f"changed status from {old} to {new}"}
+        return {
+            "icon": "flag",
+            "text": "changed status",
+            "kind": "status_changed",
+            "from_status": payload.get("from"),
+            "to_status": payload.get("to"),
+        }
 
     if kind == TicketEvent.ASSIGNED:
         to = _uname(payload.get("to"))
         frm = payload.get("from")
         if payload.get("auto"):
-            return {"icon": "user-check", "text": f"auto-assigned to {to}"}
+            return {"icon": "user-check", "text": f"auto-assigned to {to}", "kind": "generic"}
         if frm is not None:
-            return {"icon": "user-check", "text": f"reassigned from {_uname(frm)} to {to}"}
-        return {"icon": "user-check", "text": f"assigned to {to}"}
+            return {
+                "icon": "user-check",
+                "text": "reassigned",
+                "kind": "reassigned",
+                "from_user": User.query.get(frm),
+                "to_user": User.query.get(payload.get("to")),
+            }
+        return {"icon": "user-check", "text": f"assigned to {to}", "kind": "generic"}
 
     if kind == TicketEvent.UNASSIGNED:
-        return {"icon": "user-slash", "text": "unassigned this ticket"}
+        return {"icon": "user-slash", "text": "unassigned this ticket", "kind": "generic"}
 
     if kind == TicketEvent.LABEL_ADDED:
-        return {"icon": "tag", "text": f"added label {payload.get('name', '')}"}
+        return {"icon": "tag", "text": f"added label {payload.get('name', '')}", "kind": "generic"}
 
     if kind == TicketEvent.LABEL_REMOVED:
-        return {"icon": "tag", "text": f"removed label {payload.get('name', '')}"}
+        return {"icon": "tag", "text": f"removed label {payload.get('name', '')}", "kind": "generic"}
 
     if kind == TicketEvent.SUBSCRIBED:
-        return {"icon": "eye", "text": f"subscribed {_uname(payload.get('user'))}"}
+        who = payload.get("email") or _uname(payload.get("user"))
+        return {"icon": "eye", "text": f"subscribed {who}", "kind": "generic"}
 
     if kind == TicketEvent.UNSUBSCRIBED:
-        return {"icon": "eye-slash", "text": f"unsubscribed {_uname(payload.get('user'))}"}
+        who = payload.get("email") or _uname(payload.get("user"))
+        return {"icon": "eye-slash", "text": f"unsubscribed {who}", "kind": "generic"}
 
     if kind == TicketEvent.SUBJECT_ADDED:
-        return {"icon": "link", "text": "added a subject"}
+        return {"icon": "link", "text": "added a subject", "kind": "generic"}
 
     if kind == TicketEvent.SUBJECT_REMOVED:
-        return {"icon": "unlink", "text": "removed a subject"}
+        return {"icon": "unlink", "text": "removed a subject", "kind": "generic"}
 
-    return {"icon": "circle", "text": event.kind_label}
+    return {"icon": "circle", "text": event.kind_label, "kind": "generic"}
 
 
 def _build_timeline(ticket):
@@ -172,6 +187,26 @@ def _office_users(ticket):
     return query.order_by(User.last_name.asc()).limit(25).all()
 
 
+def _management_watchers(ticket):
+    query = User.query.filter(User.roles.any(Role.name == "ticket_subscriber"))
+    if ticket.tenant_id is not None:
+        from ..models import Tenant
+
+        query = query.filter(User.tenants.any(Tenant.id == ticket.tenant_id))
+    return query.order_by(User.last_name.asc()).limit(25).all()
+
+
+def _current_user_convened_class(ticket):
+    """The name of an in-scope class current_user convenes, or None."""
+    faculty = getattr(current_user, "faculty_data", None)
+    if faculty is None:
+        return None
+    for pclass in ticket.scope_classes:
+        if pclass.is_convenor(faculty.id):
+            return pclass.name
+    return None
+
+
 def _build_assign_options(ticket):
     """Assemble the assign picker (screen 4a). Each user appears once, in its first section."""
     seen = set()
@@ -187,9 +222,51 @@ def _build_assign_options(ticket):
         if rows:
             sections.append({"title": title, "rows": rows})
 
+    convened_class = _current_user_convened_class(ticket)
+    if convened_class is not None:
+        seen.add(current_user.id)
+        is_current = ticket.assignee_id == current_user.id
+        sections.append(
+            {
+                "title": "Suggested",
+                "suggested": True,
+                "rows": [
+                    {
+                        "user": current_user,
+                        "note": f"Convenes {convened_class}",
+                        "pill": "current · auto" if is_current else None,
+                    }
+                ],
+            }
+        )
+
     _section("Convenors in scope", convenors_in_scope(ticket))
     _section("Supervisors of attached students", _supervisors_for(ticket))
     _section("Office", _office_users(ticket))
+    return sections
+
+
+def _build_subscriber_options(ticket):
+    """Assemble the subscriber "add" picker. Already-subscribed users are excluded so the list only
+    shows addable people."""
+    already = {sub.user_id for sub in ticket.subscriptions}
+    seen = set(already)
+    sections = []
+
+    def _section(title, users):
+        rows = []
+        for user in users:
+            if user is None or user.id in seen:
+                continue
+            seen.add(user.id)
+            rows.append({"user": user})
+        if rows:
+            sections.append({"title": title, "rows": rows})
+
+    _section("Convenors in scope", convenors_in_scope(ticket))
+    _section("Supervisors of attached students", _supervisors_for(ticket))
+    _section("Office", _office_users(ticket))
+    _section("Management watchers", _management_watchers(ticket))
     return sections
 
 
@@ -265,17 +342,21 @@ def detail(ticket_id):
         assign_sections=_build_assign_options(ticket),
         subjects=_subjects_display(ticket),
         subscribers=list(ticket.subscriptions),
+        external_subscribers=list(ticket.external_subscribers),
+        subscriber_sections=_build_subscriber_options(ticket),
         available_labels=_available_labels(ticket),
         all_statuses=[(value, label) for value, label in Ticket._labels.items()],
         watching=is_subscribed(current_user, ticket),
         comment_form=TicketCommentForm(),
         email_form=TicketLogEmailForm(),
         action_form=ConfirmActionForm(),
+        external_form=TicketExternalSubscriberForm(),
         perms={
             "comment": can_comment(current_user, ticket),
             "status": can_change_status(current_user, ticket),
             "assign": can_assign(current_user, ticket),
             "label": can_label(current_user, ticket),
+            "subscribe": can_manage_subscribers(current_user, ticket),
         },
     )
 
@@ -323,7 +404,7 @@ def comment(ticket_id):
 
 
 def _notify_subscribers(ticket, comment):
-    """Enqueue the subscriber email fan-out for a new comment (Phase 7)."""
+    """Enqueue the subscriber email fan-out for a new comment."""
     celery = current_app.extensions["celery"]
     ticket_url = url_for("tickets.detail", ticket_id=ticket.id, _external=True)
     settings_url = url_for("tickets.inbox", _external=True)
@@ -507,6 +588,96 @@ def unwatch(ticket_id):
             f"Unsubscribed from ticket #{ticket.id}",
             ticket,
             "Could not unsubscribe due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/subscriber/add/<int:user_id>", methods=["POST"])
+@login_required
+def subscriber_add(ticket_id, user_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_manage_subscribers(current_user, ticket):
+        abort(403)
+
+    target = User.query.get(user_id)
+    if target is None:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        subscribe(ticket, target, actor=current_user)
+        _commit_or_flash(
+            f"Added {target.name} as a subscriber to ticket #{ticket.id}",
+            ticket,
+            "Could not add the subscriber due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/subscriber/remove/<int:user_id>", methods=["POST"])
+@login_required
+def subscriber_remove(ticket_id, user_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_manage_subscribers(current_user, ticket):
+        abort(403)
+
+    target = User.query.get(user_id)
+    if target is None:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        unsubscribe(ticket, target, actor=current_user)
+        _commit_or_flash(
+            f"Removed {target.name} as a subscriber from ticket #{ticket.id}",
+            ticket,
+            "Could not remove the subscriber due to a database error.",
+        )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/external_subscriber/add", methods=["POST"])
+@login_required
+def external_subscriber_add(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_manage_subscribers(current_user, ticket):
+        abort(403)
+
+    form = TicketExternalSubscriberForm()
+    if form.validate_on_submit():
+        add_external_subscriber(ticket, form.email.data, actor=current_user)
+        _commit_or_flash(
+            f"Added {form.email.data} as a subscriber to ticket #{ticket.id}",
+            ticket,
+            "Could not add the subscriber due to a database error.",
+        )
+    else:
+        flash("Could not add the subscriber — please enter a valid email address.", "error")
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/external_subscriber/remove/<int:ext_id>", methods=["POST"])
+@login_required
+def external_subscriber_remove(ticket_id, ext_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_manage_subscribers(current_user, ticket):
+        abort(403)
+
+    external = TicketExternalSubscriber.query.get(ext_id)
+    if external is None or external.ticket_id != ticket.id:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        remove_external_subscriber(ticket, external, actor=current_user)
+        _commit_or_flash(
+            f"Removed {external.email} as a subscriber from ticket #{ticket.id}",
+            ticket,
+            "Could not remove the subscriber due to a database error.",
         )
 
     return _back(ticket)

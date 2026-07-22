@@ -417,6 +417,11 @@ _REQUIRED_ROLES: List[Dict] = [
         "permissions.",
         "colour": "#1a8a8a",
     },
+    {
+        "name": "ticket_subscriber",
+        "description": "Eligible to be added as a ticket watcher; grants no operational permissions.",
+        "colour": "#7a5ad6",
+    },
 ]
 
 

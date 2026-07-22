@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Optional
 
 from ...database import db
-from ...models import TicketEvent, TicketSubscription
+from ...models import TicketEvent, TicketExternalSubscriber, TicketSubscription
 from .events import record_event
 from .scope import convenors_in_scope
 
@@ -65,3 +65,33 @@ def sync_convenor_subscriptions(ticket, actor=None) -> None:
     """Ensure every in-scope convenor is subscribed (reason = convenor). Idempotent."""
     for user in convenors_in_scope(ticket):
         subscribe(ticket, user, reason=TicketSubscription.CONVENOR, actor=actor)
+
+
+def add_external_subscriber(ticket, email: str, actor=None) -> Optional[TicketExternalSubscriber]:
+    """
+    Subscribe an external (non-User) email address to a ticket. Idempotent: if the address is
+    already subscribed, the existing row is returned unchanged.
+    """
+    if not email:
+        return None
+    email = email.strip()
+    if not email:
+        return None
+
+    existing = ticket.external_subscribers.filter_by(email=email).first()
+    if existing is not None:
+        return existing
+
+    external = TicketExternalSubscriber(ticket=ticket, email=email, created_at=datetime.now())
+    db.session.add(external)
+    record_event(ticket, actor, TicketEvent.SUBSCRIBED, {"email": email})
+    return external
+
+
+def remove_external_subscriber(ticket, external: TicketExternalSubscriber, actor=None) -> None:
+    if external is None:
+        return
+
+    email = external.email
+    db.session.delete(external)
+    record_event(ticket, actor, TicketEvent.UNSUBSCRIBED, {"email": email})

@@ -30,6 +30,7 @@ from .permissions import (
     can_comment,
     can_label,
     can_manage_labels,
+    can_manage_subscribers,
     can_view,
     is_admin_or_root,
     is_assignee,
@@ -47,10 +48,18 @@ from .scope import (
     recompute_scope,
 )
 from .subjects import add_subject, create_ticket, remove_subject
-from .subscriptions import is_subscribed, subscribe, sync_convenor_subscriptions, unsubscribe
+from .subscriptions import (
+    add_external_subscriber,
+    is_subscribed,
+    remove_external_subscriber,
+    subscribe,
+    sync_convenor_subscriptions,
+    unsubscribe,
+)
 
 __all__ = [
     "add_comment",
+    "add_external_subscriber",
     "add_label",
     "add_subject",
     "apply_auto_assign",
@@ -60,6 +69,7 @@ __all__ = [
     "can_comment",
     "can_label",
     "can_manage_labels",
+    "can_manage_subscribers",
     "can_view",
     "change_status",
     "class_convenor_users",
@@ -79,6 +89,7 @@ __all__ = [
     "record_event",
     "record_inbox_visit",
     "recompute_scope",
+    "remove_external_subscriber",
     "remove_label",
     "remove_subject",
     "subscribe",

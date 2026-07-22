@@ -52,6 +52,18 @@
         .tk-composer textarea:focus { outline:none; }
         .tk-assign-row { display:flex; align-items:center; gap:10px; }
         .tk-inline-form { display:inline; }
+        .tk-card, .tk-email { box-shadow:0 1px 2px rgba(0,0,0,.04); }
+        .tk-panel { box-shadow:0 1px 3px rgba(0,0,0,.06); }
+        .tk-composer { box-shadow:0 1px 3px rgba(13,110,253,.06); }
+        /* robust two-column layout: stacked on small screens, side-by-side from lg up.
+           avoids Bootstrap w-100/w-lg-auto !important fighting the flex basis. */
+        .tk-2col { display:flex; flex-direction:column; gap:1.5rem; align-items:stretch; }
+        .tk-2col > .tk-main { min-width:0; }
+        @media (min-width:992px) {
+            .tk-2col { flex-direction:row; align-items:flex-start; }
+            .tk-2col > .tk-main { flex:1 1 0; }
+            .tk-2col > .tk-side { flex:0 0 var(--tk-side, 290px); }
+        }
     </style>
 
     <div class="container-fluid">
@@ -87,9 +99,9 @@
             </form>
         </div>
 
-        <div class="d-flex gap-4 align-items-start flex-wrap flex-lg-nowrap pb-4">
+        <div class="tk-2col pb-4">
             {# ================= THREAD ================= #}
-            <div class="flex-grow-1" style="min-width:0">
+            <div class="tk-main">
                 {# original post #}
                 <div class="tk-card">
                     <div class="tk-card-head op">
@@ -187,7 +199,7 @@
             </div>
 
             {# ================= SIDE PANEL ================= #}
-            <div style="width:290px; flex:none" class="w-100 w-lg-auto">
+            <div class="tk-side" style="--tk-side:290px">
                 <div class="tk-panel">
                     {# Status #}
                     <div class="tk-panel-sec">

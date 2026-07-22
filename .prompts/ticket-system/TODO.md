@@ -33,10 +33,9 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 - ✅ **Return link from manage-labels page** (uncommitted): `?return_to=` (validated local path)
   threaded through create/edit/delete; "Back" link in the header. Convenor "Manage labels" also
   passes `tenant_id=pclass.tenant_id` so it opens on the *class's* tenant.
-- ◻ **Manage-labels layout — GitHub-style (optional).** User can live with the two-column card
-  layout but noted GitHub's pattern (full-width label list + create/edit in a **modal dialog**) is
-  closer to existing app patterns. Offered as a follow-up redesign; the colour-control macro is
-  reusable inside a modal.
+- ✅ **Manage-labels layout — GitHub-style** (uncommitted): full-width list of defined labels;
+  create/edit in a **modal dialog** with a live preview pill; Back button restyled to
+  `btn btn-sm btn-outline-secondary` + `fa-arrow-left fa-fw`.
 - ◻ **Labels entry-point discoverability.** Only entry points are the inbox rail "Manage" link
   (inside `{% if labels %}` in `_inbox.html`, so hidden when zero labels exist) and the convenor
   per-class pane. Add an always-visible entry point (+ maybe a nav item).

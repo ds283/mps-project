@@ -5,9 +5,9 @@
 {% endblock %}
 
 {# colour control: fixed palette swatches + a final "custom" swatch that reveals a free colour
-   picker (any #rrggbb). `scope` makes the colorpicker component id unique across the create form
-   and each inline edit form. `seed` is the current colour; if it is not a palette value the custom
-   swatch starts selected and the picker is shown. #}
+   picker (any #rrggbb). `scope` makes the colorpicker component id unique across each modal.
+   `seed` is the current colour; if it is not a palette value the custom swatch starts selected
+   and the picker is shown. #}
 {% macro colour_control(palette, scope, seed) %}
     {% set is_custom = seed not in palette %}
     <label class="small text-secondary d-block mb-1">Colour</label>
@@ -26,22 +26,38 @@
     </div>
 {% endmacro %}
 
+{# the body of the create / edit modal form (name + live preview + colour control) #}
+{% macro label_fields(palette, scope, name_value, colour_value) %}
+    <div class="mb-3">
+        <div class="small text-secondary mb-1">Preview</div>
+        <span class="badge rounded-pill tk-preview" style="font-size:12px">{{ name_value or 'Label preview' }}</span>
+    </div>
+    <div class="mb-3">
+        <label class="small text-secondary d-block mb-1">Name</label>
+        <input type="text" name="name" class="form-control tk-name-input" value="{{ name_value }}" placeholder="Label name" required>
+    </div>
+    <div class="mb-1">
+        {{ colour_control(palette, scope, colour_value) }}
+    </div>
+{% endmacro %}
+
 {% block bodyblock %}
     <style>
         .tk-swatch { width:22px; height:22px; border-radius:50%; cursor:pointer; display:inline-block; }
         .tk-swatch.selected { box-shadow: 0 0 0 2px var(--bs-body-bg), 0 0 0 4px var(--bs-secondary-color); }
         .tk-swatch-custom { background: conic-gradient(from 0deg, #f00, #ff8000, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
-        .tk-label-row { display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--bs-border-color); }
+        .tk-label-row { display:flex; align-items:center; gap:14px; padding:12px 4px; border-bottom:1px solid var(--bs-border-color); }
         .tk-label-row:last-child { border-bottom:none; }
-        .tk-dot { width:13px; height:13px; border-radius:50%; flex:none; }
-        .tk-count { min-width:2.2em; text-align:right; }
+        .tk-count { color:var(--bs-secondary-color); font-size:12.5px; }
     </style>
 
     <div class="container-fluid">
-        {# return link + title #}
-        <div class="mt-2 mb-2">
-            <a href="{{ return_to }}" class="small text-decoration-none"><i class="fas fa-arrow-left"></i> Back</a>
+        <div class="mt-2 mb-3">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ return_to }}">
+                <i class="fas fa-arrow-left fa-fw"></i> Back
+            </a>
         </div>
+
         <div class="d-flex align-items-center gap-2 mb-3">
             <h3 class="m-0"><i class="fas fa-tags text-primary"></i> Ticket labels</h3>
             {% if tenants | length > 1 %}
@@ -56,68 +72,88 @@
             {% else %}
                 <span class="text-secondary">· {{ tenant.name }}</span>
             {% endif %}
+            <button class="btn btn-primary btn-sm ms-auto" type="button" data-bs-toggle="modal" data-bs-target="#tk-create-modal">
+                <i class="fas fa-plus fa-fw"></i> New label
+            </button>
         </div>
 
-        <div class="row g-4">
-            {# new label creator (4b) #}
-            <div class="col-12 col-lg-5 col-xl-4">
-                <div class="card h-100">
-                    <div class="card-header fw-semibold small text-uppercase text-secondary">New label</div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ url_for('tickets.label_create') }}">
-                            {{ form.hidden_tag() }}
-                            <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
+        {# full-width list of currently-defined labels #}
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <span class="fw-semibold small text-uppercase text-secondary">{{ labels | length }} label{{ '' if labels | length == 1 else 's' }}</span>
+            </div>
+            <div class="card-body">
+                {% for label in labels %}
+                    <div class="tk-label-row">
+                        <span class="badge rounded-pill" style="{{ label.make_CSS_style() }}; font-size:12px">{{ label.name }}</span>
+                        <span class="tk-count flex-grow-1">{{ label.tickets.count() }} ticket{{ '' if label.tickets.count() == 1 else 's' }}</span>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#tk-edit-modal-{{ label.id }}">
+                            <i class="fas fa-pen fa-fw"></i> Edit
+                        </button>
+                        <form method="POST" action="{{ url_for('tickets.label_delete', label_id=label.id) }}" onsubmit="return confirm('Delete label {{ label.name }}? It will be removed from all tickets.');" class="d-inline">
+                            {{ action_form.hidden_tag() }}
                             <input type="hidden" name="return_to" value="{{ return_to }}">
-                            <div class="mb-3">
-                                {{ form.name(class="form-control", placeholder="Label name") }}
-                            </div>
-                            <div class="mb-3">
-                                {{ colour_control(palette, 'create', default_colour) }}
-                            </div>
-                            {{ form.submit(class="btn btn-primary", value="Create label") }}
+                            <button class="btn btn-sm btn-outline-secondary" type="submit" title="Delete"
+                                    style="border-color:var(--bs-danger-border-subtle); color:var(--bs-danger-text-emphasis)">
+                                <i class="fas fa-trash fa-fw"></i>
+                            </button>
                         </form>
                     </div>
-                </div>
-            </div>
-
-            {# existing labels (with inline edit 5a) #}
-            <div class="col-12 col-lg-7 col-xl-8">
-                <div class="card h-100">
-                    <div class="card-header fw-semibold small text-uppercase text-secondary">Existing labels</div>
-                    <div class="card-body">
-                        {% for label in labels %}
-                            <div class="tk-label-row">
-                                <span class="tk-dot" style="background:{{ label.colour }}"></span>
-                                <span class="fw-medium flex-grow-1">{{ label.name }}</span>
-                                <span class="small text-muted tk-count" title="Tickets with this label">{{ label.tickets.count() }}</span>
-                                <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="collapse" data-bs-target="#tk-edit-{{ label.id }}" title="Edit"><i class="fas fa-pen"></i></button>
-                                <form method="POST" action="{{ url_for('tickets.label_delete', label_id=label.id) }}" onsubmit="return confirm('Delete label {{ label.name }}? It will be removed from all tickets.');" class="d-inline">
-                                    {{ action_form.hidden_tag() }}
-                                    <input type="hidden" name="return_to" value="{{ return_to }}">
-                                    <button class="btn btn-sm btn-link text-danger p-0" type="submit" title="Delete"><i class="fas fa-trash"></i></button>
-                                </form>
-                            </div>
-                            <div class="collapse" id="tk-edit-{{ label.id }}">
-                                <form method="POST" action="{{ url_for('tickets.label_edit', label_id=label.id) }}" class="p-3 my-2 rounded" style="background:var(--bs-tertiary-bg)">
-                                    {{ form.hidden_tag() }}
-                                    <input type="hidden" name="return_to" value="{{ return_to }}">
-                                    <div class="mb-3">
-                                        <input type="text" name="name" class="form-control form-control-sm" value="{{ label.name }}" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        {{ colour_control(palette, label.id, label.colour) }}
-                                    </div>
-                                    <button class="btn btn-sm btn-primary" type="submit">Save changes</button>
-                                </form>
-                            </div>
-                        {% else %}
-                            <div class="text-secondary small">No labels yet — create one on the left.</div>
-                        {% endfor %}
-                    </div>
-                </div>
+                {% else %}
+                    <div class="text-secondary small py-2">No labels yet — use <strong>New label</strong> to create one.</div>
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    {# create modal #}
+    <div class="modal fade" id="tk-create-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('tickets.label_create') }}">
+                    {{ form.hidden_tag() }}
+                    <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
+                    <input type="hidden" name="return_to" value="{{ return_to }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">New label</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        {{ label_fields(palette, 'create', '', default_colour) }}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create label</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# edit modals (one per label) #}
+    {% for label in labels %}
+        <div class="modal fade" id="tk-edit-modal-{{ label.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="{{ url_for('tickets.label_edit', label_id=label.id) }}">
+                        {{ form.hidden_tag() }}
+                        <input type="hidden" name="return_to" value="{{ return_to }}">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit label</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            {{ label_fields(palette, label.id, label.name, label.colour) }}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 {% endblock %}
 
 {% block scripts %}
@@ -130,24 +166,43 @@
     {% endassets %}
     <script>
         $(document).ready(function () {
-            // free colour picker on every custom-colour control (create form + each inline edit form)
             $('.tk-cp').colorpicker({ format: 'hex', useAlpha: false });
 
+            // contrasting text colour for the live preview pill (mirrors get_text_colour server-side)
+            function textColorFor(hex) {
+                const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+                if (!m) { return '#212529'; }
+                const n = parseInt(m[1], 16);
+                const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+                const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                return L > 0.6 ? '#212529' : '#fff';
+            }
             function controlOf(el) {
                 const form = el.closest('form');
                 return {
+                    form: form,
                     value: form.querySelector('.tk-colour-value'),
                     pickerWrap: form.querySelector('.tk-custom-picker'),
                     cpInput: form.querySelector('.tk-cp-input'),
                     palette: form.querySelector('.tk-palette'),
                 };
             }
+            function refreshPreview(form) {
+                const preview = form.querySelector('.tk-preview');
+                if (!preview) { return; }
+                const value = form.querySelector('.tk-colour-value');
+                const nameInput = form.querySelector('.tk-name-input');
+                const colour = (value && value.value) || '#0d6efd';
+                preview.textContent = (nameInput && nameInput.value.trim()) || 'Label preview';
+                preview.style.background = colour;
+                preview.style.color = textColorFor(colour);
+            }
             function markSelected(palette, swatch) {
                 palette.querySelectorAll('.tk-swatch').forEach(function (s) { s.classList.remove('selected'); });
                 swatch.classList.add('selected');
             }
 
-            // swatch clicks: palette swatch sets the value & hides the picker; custom swatch reveals it
+            // swatch clicks: palette swatch sets the value & hides the picker; custom reveals it
             document.querySelectorAll('.tk-palette').forEach(function (palette) {
                 palette.addEventListener('click', function (e) {
                     const swatch = e.target.closest('.tk-swatch');
@@ -161,19 +216,27 @@
                         c.pickerWrap.style.display = 'none';
                     }
                     markSelected(palette, swatch);
+                    refreshPreview(c.form);
                 });
             });
 
-            // free picker change → authoritative hidden value (keep the custom swatch selected)
+            // free picker change → authoritative hidden value + preview
             document.querySelectorAll('.tk-cp').forEach(function (cp) {
                 function sync() {
                     const c = controlOf(cp);
                     if (c.cpInput && c.value) { c.value.value = c.cpInput.value; }
+                    refreshPreview(c.form);
                 }
                 $(cp).on('colorpickerChange', sync);
                 const input = cp.querySelector('.tk-cp-input');
                 if (input) { input.addEventListener('input', sync); }
             });
+
+            // name typing → preview; and seed each preview on load
+            document.querySelectorAll('.tk-name-input').forEach(function (input) {
+                input.addEventListener('input', function () { refreshPreview(input.closest('form')); });
+            });
+            document.querySelectorAll('.tk-preview').forEach(function (p) { refreshPreview(p.closest('form')); });
         });
     </script>
 {% endblock %}

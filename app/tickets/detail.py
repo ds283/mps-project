@@ -16,7 +16,7 @@ is shared by all roles; per-ticket permission is enforced through the service-la
 
 from datetime import datetime
 
-from flask import abort, current_app, flash, redirect, url_for
+from flask import abort, current_app, flash, redirect, request, url_for
 from flask_security import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -353,23 +353,34 @@ def _available_labels(ticket):
     return [label for label in Label.query.filter_by(tenant_id=ticket.tenant_id).order_by(Label.name.asc()).all() if label.id not in applied]
 
 
-def _breadcrumb(ticket):
-    """Breadcrumb data for the detail header. The 'Tickets' root links to a convenor ledger for an
-    in-scope class the user convenes (also used for each class crumb), else the personal inbox."""
+def _safe_local(url):
+    """Accept only a local, same-site path (open-redirect guard); otherwise return None."""
+    if url and url.startswith("/") and not url.startswith("//"):
+        return url
+    return None
+
+
+def _breadcrumb(ticket, return_url=None):
+    """Breadcrumb data for the detail header. The 'Tickets' root returns the user to wherever they
+    opened the ticket from (`return_url`, threaded via the canonical `url` query param from the
+    inbox / ledger link, validated as a local path). When no return URL is supplied it falls back
+    to a convenor ledger for an in-scope class the user convenes, else the personal inbox. Class
+    crumbs always link to the convenor ledger for classes the user convenes."""
     faculty = getattr(current_user, "faculty_data", None)
     convened = set()
     if faculty is not None:
         convened = {p.id for p in faculty.convenor_for} | {p.id for p in faculty.coconvenor_for}
 
     classes = []
-    home_url = None
+    ledger_url = None
     for pclass in ticket.scope_classes:
         url = url_for("convenor.tickets_tab", id=pclass.id) if pclass.id in convened else None
         classes.append({"name": pclass.name, "url": url})
-        if home_url is None and url is not None:
-            home_url = url
+        if ledger_url is None and url is not None:
+            ledger_url = url
 
-    return {"home_url": home_url or url_for("tickets.inbox"), "classes": classes}
+    home_url = _safe_local(return_url) or ledger_url or url_for("tickets.inbox")
+    return {"home_url": home_url, "classes": classes}
 
 
 # ------------------------------------------------------------------------------------------------
@@ -393,7 +404,7 @@ def detail(ticket_id):
     return render_template_context(
         "tickets/detail.html",
         ticket=ticket,
-        breadcrumb=_breadcrumb(ticket),
+        breadcrumb=_breadcrumb(ticket, request.args.get("url")),
         timeline=_build_timeline(ticket),
         actions_log=_actions_log(ticket),
         assign_sections=_build_assign_options(ticket),

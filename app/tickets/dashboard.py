@@ -202,7 +202,7 @@ def ledger_ajax():
         base_query = _mine_base_query(current_user, request.args.get("view", "all_open"))
 
     base_query = _apply_common_filters(base_query, request.args).order_by(Ticket.last_edit_timestamp.desc())
-    return ajax.tickets.ledger_data(base_query)
+    return ajax.tickets.ledger_data(base_query, return_url=request.args.get("url"))
 
 
 # ------------------------------------------------------------------------------------------------

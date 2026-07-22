@@ -107,13 +107,13 @@
                         <div>
                             {% if item.kind == 'comment' %}
                                 <strong>{{ item.obj.author.name if item.obj.author else 'Someone' }}</strong> commented on
-                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id) }}">#{{ item.ticket_id }}</a>
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path) }}">#{{ item.ticket_id }}</a>
                             {% elif item.kind == 'email' %}
                                 <i class="fas fa-envelope text-success"></i> <strong>Email logged</strong> on
-                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id) }}">#{{ item.ticket_id }}</a>
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path) }}">#{{ item.ticket_id }}</a>
                             {% else %}
                                 <strong>{{ item.obj.actor.name if item.obj.actor else 'Someone' }}</strong> {{ item.text }} on
-                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id) }}">#{{ item.ticket_id }}</a>
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path) }}">#{{ item.ticket_id }}</a>
                             {% endif %}
                             <div class="when">{{ item.when.strftime('%d %b, %H:%M') if item.when }}</div>
                         </div>

@@ -35,6 +35,7 @@ from ..models import (
     SubmissionRecord,
     SubmissionRole,
     SubmittingStudent,
+    Tenant,
     TicketSubject,
     User,
 )
@@ -129,6 +130,34 @@ def _faculty_supervisee_query(user):
     )
 
 
+def _available_tenants(user):
+    """Distinct tenants the acting user could compose a ticket against, for the tenant selector.
+
+    Office/admin/root → the user's subscribed tenants. Faculty → the tenants of the classes they
+    supervise plus the home-class tenants of their supervisees. Returned sorted by name. A ticket
+    is single-tenant, so this only drives a chooser that keeps the subject picker within one tenant.
+    """
+    if _is_office_like(user):
+        return user.tenants.order_by(Tenant.name.asc()).all()
+
+    faculty = getattr(user, "faculty_data", None)
+    if faculty is None:
+        return []
+
+    tenant_ids = {pclass.tenant_id for pclass in _faculty_classes(faculty).values() if pclass.tenant_id is not None}
+    sup_tenant_ids = (
+        _faculty_supervisee_query(user)
+        .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
+        .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
+        .with_entities(ProjectClass.tenant_id)
+        .distinct()
+    )
+    tenant_ids.update(tid for (tid,) in sup_tenant_ids if tid is not None)
+    if not tenant_ids:
+        return []
+    return Tenant.query.filter(Tenant.id.in_(tenant_ids)).order_by(Tenant.name.asc()).all()
+
+
 def _authorized(user, kind, target) -> bool:
     """Server-side authorisation: may this user attach this subject to a ticket?"""
     if _is_office_like(user):
@@ -186,11 +215,13 @@ def _class_results(query_term, tenant_ids):
     return {"text": "Project classes", "children": rows} if rows else None
 
 
-def _faculty_candidates(user, query_term):
+def _faculty_candidates(user, query_term, tenant_id=None):
     groups = []
     faculty = user.faculty_data
 
     classes = list(_faculty_classes(faculty).values())
+    if tenant_id is not None:
+        classes = [pclass for pclass in classes if pclass.tenant_id == tenant_id]
     if query_term:
         classes = [pclass for pclass in classes if query_term.lower() in (pclass.name or "").lower()]
     class_rows = [{"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)"} for pclass in classes]
@@ -205,6 +236,8 @@ def _faculty_candidates(user, query_term):
     sup_rows = []
     for student in sup_query.limit(_SEARCH_LIMIT).all():
         hc = home_class(student)
+        if tenant_id is not None and (hc is None or hc.tenant_id != tenant_id):
+            continue
         suffix = f" · {hc.name}" if hc is not None else ""
         sup_rows.append({"id": _token(TicketSubject.SUBMITTING_STUDENT, student.id), "text": f"{_student_name(student)}{suffix}"})
     if sup_rows:
@@ -213,8 +246,10 @@ def _faculty_candidates(user, query_term):
     return groups
 
 
-def _office_candidates(user, query_term):
+def _office_candidates(user, query_term, tenant_id=None):
     tenant_ids = _user_tenant_ids(user)
+    if tenant_id is not None:
+        tenant_ids = [tenant_id] if tenant_id in tenant_ids else []
     if not tenant_ids:
         return []
     groups = []
@@ -314,8 +349,23 @@ def compose():
             if item is None or not _authorized(current_user, *item):
                 flash("One of the selected subjects is invalid or outside your permitted scope.", "error")
                 form.subjects.choices = _selected_subject_options(tokens)
-                return render_template_context("tickets/compose.html", form=form, office_scope=_is_office_like(current_user))
+                return render_template_context(
+                    "tickets/compose.html", form=form, office_scope=_is_office_like(current_user), tenants=_available_tenants(current_user)
+                )
             resolved.append(item)
+
+        # A ticket concerns exactly one tenant: reject a subject set that spans more than one
+        # (the tenant selector prevents this in the UI; this is the server-side backstop).
+        tenant_ids = {tid for tid in (_target_tenant_id(kind, target) for kind, target in resolved) if tid is not None}
+        if len(tenant_ids) > 1:
+            flash(
+                "A ticket can only concern one tenant. The selected subjects belong to more than one; please split them into separate tickets.",
+                "error",
+            )
+            form.subjects.choices = _selected_subject_options(tokens)
+            return render_template_context(
+                "tickets/compose.html", form=form, office_scope=_is_office_like(current_user), tenants=_available_tenants(current_user)
+            )
 
         ticket = create_ticket(
             title=form.title.data,
@@ -347,7 +397,9 @@ def compose():
 
     # GET (or invalid submit that fell through) — echo any posted tokens back into the select
     form.subjects.choices = _selected_subject_options(form.subjects.data or [])
-    return render_template_context("tickets/compose.html", form=form, office_scope=_is_office_like(current_user))
+    return render_template_context(
+        "tickets/compose.html", form=form, office_scope=_is_office_like(current_user), tenants=_available_tenants(current_user)
+    )
 
 
 @tickets.route("/compose/people")
@@ -355,10 +407,11 @@ def compose():
 def compose_people():
     """select2 remote data: role-scoped candidate students / classes for the subject picker."""
     query_term = (request.args.get("q") or "").strip()
+    tenant_id = request.args.get("tenant_id", type=int)
     if _is_office_like(current_user):
-        groups = _office_candidates(current_user, query_term)
+        groups = _office_candidates(current_user, query_term, tenant_id)
     else:
-        groups = _faculty_candidates(current_user, query_term)
+        groups = _faculty_candidates(current_user, query_term, tenant_id)
     return jsonify({"results": groups})
 
 

@@ -37,6 +37,18 @@
                 <div class="tk-main">
                     <div style="font-size:19px; font-weight:700" class="mb-3">Open a new ticket</div>
 
+                    {% if tenants and tenants | length > 1 %}
+                        <div class="mb-3">
+                            <div class="tk-lbl">Tenant</div>
+                            <div class="form-text mb-1">A ticket concerns a single tenant. Choose one to scope the subject picker.</div>
+                            <select class="form-select" id="tk-tenant" style="max-width:360px">
+                                {% for t in tenants %}
+                                    <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+
                     <div class="mb-3">
                         <div class="tk-lbl">{{ form.subjects.label.text }}</div>
                         <div class="form-text mb-1">
@@ -99,6 +111,7 @@
 
         $(document).ready(function () {
             const $subjects = $('#tk-subjects');
+            const tenantEl = document.getElementById('tk-tenant');
             $subjects.select2({
                 theme: 'bootstrap-5',
                 selectionCssClass: 'select2-small',
@@ -111,11 +124,22 @@
                     url: $SCRIPT_ROOT + '{{ url_for("tickets.compose_people") }}',
                     dataType: 'json',
                     delay: 200,
-                    data: params => ({ q: params.term || '' }),
+                    data: params => {
+                        const d = { q: params.term || '' };
+                        if (tenantEl && tenantEl.value) { d.tenant_id = tenantEl.value; }
+                        return d;
+                    },
                     processResults: data => ({ results: data.results }),
                     cache: true
                 }
             });
+
+            // Switching tenant re-scopes the picker; drop any picks from the previous tenant.
+            if (tenantEl) {
+                tenantEl.addEventListener('change', function () {
+                    $subjects.val(null).trigger('change');
+                });
+            }
 
             $('#tk-labels').select2({
                 theme: 'bootstrap-5',

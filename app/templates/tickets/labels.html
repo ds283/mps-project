@@ -53,7 +53,7 @@
 
     <div class="container-fluid">
         <div class="mt-2 mb-3">
-            <a class="btn btn-sm btn-outline-secondary" href="{{ return_to }}">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
                 <i class="fas fa-arrow-left fa-fw"></i> Back
             </a>
         </div>
@@ -65,7 +65,7 @@
                     <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown" type="button">{{ tenant.name }} <i class="fas fa-chevron-down"></i></button>
                     <div class="dropdown-menu">
                         {% for t in tenants %}
-                            <a class="dropdown-item {{ 'active' if t.id == tenant.id else '' }}" href="{{ url_for('tickets.labels_manage', tenant_id=t.id, return_to=return_to) }}">{{ t.name }}</a>
+                            <a class="dropdown-item {{ 'active' if t.id == tenant.id else '' }}" href="{{ url_for('tickets.labels_manage', tenant_id=t.id, url=url) }}">{{ t.name }}</a>
                         {% endfor %}
                     </div>
                 </div>
@@ -92,7 +92,7 @@
                         </button>
                         <form method="POST" action="{{ url_for('tickets.label_delete', label_id=label.id) }}" onsubmit="return confirm('Delete label {{ label.name }}? It will be removed from all tickets.');" class="d-inline">
                             {{ action_form.hidden_tag() }}
-                            <input type="hidden" name="return_to" value="{{ return_to }}">
+                            <input type="hidden" name="url" value="{{ url }}">
                             <button class="btn btn-sm btn-outline-secondary" type="submit" title="Delete"
                                     style="border-color:var(--bs-danger-border-subtle); color:var(--bs-danger-text-emphasis)">
                                 <i class="fas fa-trash fa-fw"></i>
@@ -113,7 +113,7 @@
                 <form method="POST" action="{{ url_for('tickets.label_create') }}">
                     {{ form.hidden_tag() }}
                     <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
-                    <input type="hidden" name="return_to" value="{{ return_to }}">
+                    <input type="hidden" name="url" value="{{ url }}">
                     <div class="modal-header">
                         <h5 class="modal-title">New label</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -137,7 +137,7 @@
                 <div class="modal-content">
                     <form method="POST" action="{{ url_for('tickets.label_edit', label_id=label.id) }}">
                         {{ form.hidden_tag() }}
-                        <input type="hidden" name="return_to" value="{{ return_to }}">
+                        <input type="hidden" name="url" value="{{ url }}">
                         <div class="modal-header">
                             <h5 class="modal-title">Edit label</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

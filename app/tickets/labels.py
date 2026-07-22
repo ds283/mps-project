@@ -61,12 +61,18 @@ def _manageable_tenants(user):
 
 
 def _resolve_tenant(user, tenant_id):
-    """Return a tenant the user may manage labels for, or abort."""
+    """Return a tenant the user may manage labels for, or abort.
+
+    A tenant must always be supplied explicitly: label management is only ever reached from a
+    convenor class ledger (whose owning class fixes the tenant) or from the in-page tenant
+    selector, both of which pass an explicit ``tenant_id``. There is deliberately no default —
+    guessing a tenant is what silently routed labels onto the wrong (empty) tenant.
+    """
     manageable = {tenant.id: tenant for tenant in _manageable_tenants(user)}
     if not manageable:
         abort(403)
     if tenant_id is None:
-        return sorted(manageable.values(), key=lambda t: t.id)[0]
+        abort(400)
     tenant = manageable.get(tenant_id)
     if tenant is None:
         abort(403)
@@ -112,14 +118,14 @@ def labels_manage():
         labels=labels,
         palette=LABEL_PALETTE,
         default_colour=_next_unused_colour(tenant.id),
-        return_to=_safe_return(request.args.get("return_to")),
+        url=_safe_return(request.args.get("url")),
         form=LabelForm(),
         action_form=ConfirmActionForm(),
     )
 
 
-def _back(tenant_id, return_to=None):
-    return redirect(url_for("tickets.labels_manage", tenant_id=tenant_id, return_to=return_to))
+def _back(tenant_id, url=None):
+    return redirect(url_for("tickets.labels_manage", tenant_id=tenant_id, url=url))
 
 
 @tickets.route("/labels/create", methods=["POST"])
@@ -129,13 +135,13 @@ def label_create():
         abort(403)
 
     tenant = _resolve_tenant(current_user, request.form.get("tenant_id", type=int))
-    return_to = _safe_return(request.form.get("return_to"))
+    url = _safe_return(request.form.get("url"))
     form = LabelForm()
     if form.validate_on_submit():
         name = form.name.data.strip()
         if Label.query.filter_by(tenant_id=tenant.id, name=name).first() is not None:
             flash(f"A label named '{name}' already exists in this tenant.", "error")
-            return _back(tenant.id, return_to)
+            return _back(tenant.id, url)
 
         colour = _resolve_colour(form.colour.data, tenant.id)
         label = Label(tenant_id=tenant.id, name=name, colour=colour)
@@ -144,7 +150,7 @@ def label_create():
     else:
         flash("The label could not be created — a name is required.", "error")
 
-    return _back(tenant.id, return_to)
+    return _back(tenant.id, url)
 
 
 @tickets.route("/labels/<int:label_id>/edit", methods=["POST"])
@@ -157,7 +163,7 @@ def label_edit(label_id):
     if label is None:
         abort(404)
     tenant = _resolve_tenant(current_user, label.tenant_id)
-    return_to = _safe_return(request.form.get("return_to"))
+    url = _safe_return(request.form.get("url"))
 
     form = LabelForm()
     if form.validate_on_submit():
@@ -165,7 +171,7 @@ def label_edit(label_id):
         clash = Label.query.filter(Label.tenant_id == tenant.id, Label.name == name, Label.id != label.id).first()
         if clash is not None:
             flash(f"A label named '{name}' already exists in this tenant.", "error")
-            return _back(tenant.id, return_to)
+            return _back(tenant.id, url)
 
         label.name = name
         label.colour = _resolve_colour(form.colour.data, tenant.id, fallback=label.colour)
@@ -173,7 +179,7 @@ def label_edit(label_id):
     else:
         flash("The label could not be updated — a name is required.", "error")
 
-    return _back(tenant.id, return_to)
+    return _back(tenant.id, url)
 
 
 @tickets.route("/labels/<int:label_id>/delete", methods=["POST"])
@@ -186,7 +192,7 @@ def label_delete(label_id):
     if label is None:
         abort(404)
     tenant = _resolve_tenant(current_user, label.tenant_id)
-    return_to = _safe_return(request.form.get("return_to"))
+    url = _safe_return(request.form.get("url"))
 
     form = ConfirmActionForm()
     if form.validate_on_submit():
@@ -194,7 +200,7 @@ def label_delete(label_id):
         db.session.delete(label)
         _commit_or_flash(f"Deleted ticket label '{name}'", "Could not delete the label due to a database error.")
 
-    return _back(tenant.id, return_to)
+    return _back(tenant.id, url)
 
 
 def _commit_or_flash(summary, failure_message):

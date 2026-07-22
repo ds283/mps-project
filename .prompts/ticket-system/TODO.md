@@ -25,6 +25,10 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 ## Polish / fix backlog (agreed sequencing: fix + polish, THEN teardown)
 
 ### Labels
+- ✅ **Labels entry-point discoverability — resolved by design** (uncommitted). Consolidated onto the
+  convenor ledger "Manage labels" button (unique tenant). The tenantless personal-inbox rail "Manage"
+  link was **removed** (`_inbox.html`) — it was the sole trigger of the bad tenant default. No
+  always-visible personal-inbox entry point; admin/root manage labels via the convenor dashboards too.
 - ✅ **Manage-labels page: full-width layout + free colour picker.** (uncommitted)
   Two-column card layout; backend accepts any `#rrggbb` hex (`_resolve_colour`).
 - ✅ **Colour picker UX** (uncommitted): fixed palette swatches + a final "custom" (rainbow)
@@ -36,9 +40,6 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 - ✅ **Manage-labels layout — GitHub-style** (uncommitted): full-width list of defined labels;
   create/edit in a **modal dialog** with a live preview pill; Back button restyled to
   `btn btn-sm btn-outline-secondary` + `fa-arrow-left fa-fw`.
-- ◻ **Labels entry-point discoverability.** Only entry points are the inbox rail "Manage" link
-  (inside `{% if labels %}` in `_inbox.html`, so hidden when zero labels exist) and the convenor
-  per-class pane. Add an always-visible entry point (+ maybe a nav item).
 - ❌ **Inline label creation from compose box.** Intentionally NOT supported (no pool pollution).
 
 ### Ticket detail (2a)
@@ -64,26 +65,27 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   side-by-side before/after. This is the main genuine polish item.
 
 ### Tenant scoping (design question — item 4) — PRIORITY, causing real breakage
-- ◻ **Manage-labels tenant default is wrong for root/admin.** `_resolve_tenant(None)` picks the
-  lowest tenant id = tenant 1 "Default", which has **no project classes**. Root created labels
-  there, so they never appear on real (tenant-2) tickets. Fix: default to a tenant that actually
-  has classes (or the user's "primary"), and/or make the selector state obvious. Partial mitigation
-  already shipped: opening "Manage labels" from a convenor class ledger now pre-selects that
-  class's tenant (`tenant_id=pclass.tenant_id`).
-- ◻ **Single-tenant-per-ticket enforcement + scope-selector polish (compose).** `Ticket.tenant_id`
-  is already a single scalar FK, so the model already assumes one tenant per ticket; not enforced
-  at compose and the scope selector doesn't filter by tenant. Plan: reject subject sets spanning
-  >1 tenant server-side; set `Ticket.tenant_id` from that tenant. Convenor compose → tenant implied
-  by class. Faculty inbox compose spanning >1 tenant → tenant selector filtering the subject picker
-  (server-side check as backstop). Do together with the scope-selector polish.
+- ✅ **Manage-labels tenant default eliminated** (uncommitted). Decision: label management always has a
+  single well-defined tenant (the owning class's), because it is reached **only from a convenor class
+  ledger** (admin/root use the convenor dashboards too). So there is no default heuristic: removed the
+  `if tenant_id is None` guess in `_resolve_tenant` → now `abort(400)`; removed the tenantless
+  personal-inbox "Manage" link that was the only way to hit it. Supplied-id validation
+  (`manageable.get` / `abort(403)`) unchanged.
+- ✅ **Single-tenant-per-ticket enforcement + scope-selector polish (compose)** (uncommitted).
+  Server-side backstop in `compose()`: reject a resolved subject set spanning >1 tenant (via
+  `_target_tenant_id`) before `create_ticket`, so `Ticket.tenant_id` (derived by `recompute_scope`)
+  is always unambiguous. UI: `_available_tenants(user)` drives a tenant `<select>` shown only when the
+  user's candidate scope spans >1 tenant; `compose_people` + `_office_candidates`/`_faculty_candidates`
+  take an optional `tenant_id` filter; changing the selector clears stale picks and re-scopes the
+  select2 picker. `derive_tenant_id` left as-is (now only ever fed one tenant).
 
 ---
 
 ## Suggested order
-1. Labels entry-point discoverability (small; unblocks the whole label feature).
+1. ✅ Labels entry-point / tenant default — resolved (removed inbox link; convenor-ledger only).
 2. Inbox reconciliation vs reference 2c (export the `.dc.html` first).
 3. Convenor triage empty-state (small; fold in during dashboard work).
-4. Compose scope-selector polish + single-tenant enforcement.
+4. ✅ Compose scope-selector polish + single-tenant enforcement — done.
 5. **Phase 8 teardown** (last).
 
 ## Uncommitted work right now (verify, then commit)
@@ -92,3 +94,6 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 - Return-link entry points pass `return_to` (`convenor/dashboard/tickets.html`,
   `tickets/_inbox.html`); convenor link also pre-selects the class tenant.
 - Ticket-detail breadcrumb fix (`app/tickets/detail.py` `_breadcrumb`, `templates/tickets/detail.html`).
+- Tenant scoping: remove tenantless inbox "Manage" link (`tickets/_inbox.html`); `_resolve_tenant`
+  aborts instead of guessing (`app/tickets/labels.py`); compose single-tenant backstop + tenant
+  selector (`app/tickets/compose.py`, `templates/tickets/compose.html`).

@@ -305,6 +305,12 @@
                                 </a>
                             </div>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.blueprint == 'tickets' %}active{% endif %}"
+                               href="{{ url_for('tickets.inbox') }}">
+                                My tickets
+                            </a>
+                        </li>
                         {# add student version of 'my projects' if user is a student #}
                     {% elif is_student %}
                         <li class="nav-item dropdown">
@@ -323,6 +329,14 @@
                                     </a>
                                 {% endif %}
                             </div>
+                        </li>
+                    {% elif is_office %}
+                        {# office navbar — parallel to the faculty navbar; will gain more items #}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.blueprint == 'tickets' %}active{% endif %}"
+                               href="{{ url_for('tickets.inbox') }}">
+                                Tickets
+                            </a>
                         </li>
                     {% endif %}
 
@@ -363,16 +377,6 @@
                             <a class="nav-link {% if request.blueprint == 'convenor' %}active{% endif %}"
                                href="{{ url_for('convenor.overview') }}">
                                 Convenor
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    {# add tickets link for staff users #}
-                    {% if is_faculty or is_office or is_admin or is_root %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.blueprint == 'tickets' %}active{% endif %}"
-                               href="{{ url_for('tickets.convenor_dashboard') if is_convenor or is_admin or is_root else url_for('tickets.inbox') }}">
-                                Tickets
                             </a>
                         </li>
                     {% endif %}

@@ -29,4 +29,5 @@ from . import (
     selectors,
     student_tasks,
     submitters,
+    tickets,
 )

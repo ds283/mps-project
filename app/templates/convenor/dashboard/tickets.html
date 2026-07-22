@@ -1,12 +1,7 @@
-{% extends "base_app.html" %}
-{% from "datatables.html" import import_datatables %}
+{% extends "convenor/dashboard/pclass_base.html" %}
 {% from "tickets/_ledger.html" import ledger_table, ledger_script, bulk_bar, bulk_script %}
 
-{% block title %}
-    Convenor tickets
-{% endblock %}
-
-{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='convenor', class_id=selected_class_id, status=selected_status, label_id=selected_label) %}
+{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='convenor', class_id=pclass.id, status=selected_status, label_id=selected_label) %}
 
 {% macro pill(label, href, active) %}
     <a href="{{ href }}" class="tk-pill-btn {{ 'active' if active else '' }}">{{ label }}</a>
@@ -25,23 +20,12 @@
         .tk-triage-row:last-child { border-bottom:none; }
     </style>
 
-    <div class="container-fluid">
-        <div class="d-flex align-items-center gap-2 mt-2 mb-3">
-            <h3 class="m-0"><i class="fas fa-ticket-alt text-primary"></i> Tickets</h3>
-            <span class="text-secondary">· convenor dashboard</span>
+    <div class="container-fluid mt-3">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <h5 class="m-0">Tickets for {{ pclass.name }}</h5>
             <a href="{{ url_for('tickets.labels_manage') }}" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fas fa-tags"></i> Manage labels</a>
             <a href="{{ url_for('tickets.compose') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New ticket</a>
         </div>
-
-        {# class selector #}
-        {% if convened_classes %}
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                {{ pill('All my classes', url_for('tickets.convenor_dashboard', status=selected_status, label_id=selected_label), selected_class_id is none) }}
-                {% for pclass in convened_classes %}
-                    {{ pill(pclass.name, url_for('tickets.convenor_dashboard', class_id=pclass.id, status=selected_status, label_id=selected_label), selected_class_id == pclass.id) }}
-                {% endfor %}
-            </div>
-        {% endif %}
 
         {# needs triage #}
         {% if needs_triage %}
@@ -78,9 +62,9 @@
 
         {# status filter + ledger #}
         <div class="d-flex flex-wrap gap-2 mb-2">
-            {{ pill('Any status', url_for('tickets.convenor_dashboard', class_id=selected_class_id, label_id=selected_label), selected_status is none) }}
+            {{ pill('Any status', url_for('convenor.tickets_tab', id=pclass.id, label_id=selected_label), selected_status is none) }}
             {% for value, label in all_statuses %}
-                {{ pill(label, url_for('tickets.convenor_dashboard', class_id=selected_class_id, status=value, label_id=selected_label), selected_status == value) }}
+                {{ pill(label, url_for('convenor.tickets_tab', id=pclass.id, status=value, label_id=selected_label), selected_status == value) }}
             {% endfor %}
         </div>
 
@@ -91,7 +75,6 @@
 
 {% block scripts %}
     {{ super() }}
-    {{ import_datatables() }}
     {{ ledger_script('convenor-ledger', LEDGER_URL, bulk=True) }}
     {{ bulk_script('convenor-ledger') }}
 {% endblock %}

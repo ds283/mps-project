@@ -9,15 +9,17 @@
 #
 
 """
-Ticket dashboards: the faculty/office personal inbox (design screen 2c), the convenor triage
-dashboard (3a), and the shared server-side ledger AJAX feed (1a). The ledger endpoint always
-receives a permission-scoped base query built here; scope is never taken from the client.
+Ticket dashboards (tickets blueprint): the faculty/office personal inbox (design screen 2c) and the
+shared server-side ledger AJAX feed (1a), plus the scope-agnostic claim / bulk actions. The
+convenor per-class ticket dashboard (3a) lives in the convenor blueprint (convenor.tickets_tab) so
+it renders inside the shared per-class dashboard chrome. The ledger endpoint always receives a
+permission-scoped base query built here; scope is never taken from the client.
 """
 
 from datetime import datetime
 
 from flask import abort, current_app, flash, redirect, request, url_for
-from flask_security import current_user, login_required, roles_accepted
+from flask_security import current_user, login_required
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -152,51 +154,11 @@ def inbox():
 
 
 # ------------------------------------------------------------------------------------------------
-# convenor dashboard (3a)
-
-
-@tickets.route("/convenor")
-@roles_accepted("faculty", "admin", "root")
-def convenor_dashboard():
-    faculty = getattr(current_user, "faculty_data", None)
-    if not _is_admin_or_root(current_user) and (faculty is None or not faculty.is_convenor):
-        flash("You do not convene any project classes.", "info")
-        return redirect(url_for("tickets.inbox"))
-
-    class_id = request.args.get("class_id", type=int)
-    ids = _convened_class_ids(current_user)
-    if class_id is not None and ids is not None and class_id not in ids:
-        abort(403)
-
-    # needs-triage: unassigned tickets in my scope that span more than one class
-    triage_query = _convenor_base_query(current_user, class_id).filter(Ticket.assignee_id.is_(None))
-    needs_triage = [t for t in triage_query.order_by(Ticket.last_edit_timestamp.desc()).all() if t.scope_classes.count() > 1]
-
-    convened_classes = None
-    if ids is not None:
-        convened_classes = ProjectClass.query.filter(ProjectClass.id.in_(ids)).order_by(ProjectClass.name.asc()).all()
-
-    return render_template_context(
-        "tickets/convenor_dashboard.html",
-        needs_triage=needs_triage,
-        needs_triage_meta=[_triage_meta(t) for t in needs_triage],
-        convened_classes=convened_classes,
-        selected_class_id=class_id,
-        labels=_user_labels(current_user),
-        selected_label=request.args.get("label_id", type=int),
-        selected_status=request.args.get("status", type=int),
-        all_statuses=[(value, label) for value, label in Ticket._labels.items()],
-        action_form=ConfirmActionForm(),
-    )
-
-
-def _triage_meta(ticket):
-    classes = list(ticket.scope_classes)
-    return {
-        "id": ticket.id,
-        "scope_names": [pclass.name for pclass in classes],
-        "overdue": ticket.due_date is not None and ticket.status in Ticket.OPEN_STATES and ticket.due_date < datetime.now(),
-    }
+# claim / bulk actions
+#
+# The convenor per-class ticket dashboard (design 3a) lives in the convenor blueprint as a pane
+# (convenor.tickets_tab) so it renders inside the shared per-class dashboard chrome. This module
+# keeps the shared, scope-agnostic actions used from there and from the ledger.
 
 
 @tickets.route("/<int:ticket_id>/claim", methods=["POST"])
@@ -222,7 +184,7 @@ def claim(ticket_id):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
             flash("Could not claim the ticket due to a database error.", "error")
 
-    return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+    return redirect(redirect_url() or url_for("tickets.inbox"))
 
 
 # ------------------------------------------------------------------------------------------------
@@ -240,7 +202,7 @@ def bulk():
     action = request.form.get("action", "")
     if not ids:
         flash("No tickets were selected.", "info")
-        return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+        return redirect(redirect_url() or url_for("tickets.inbox"))
 
     label_id = request.form.get("label_id", type=int)
     status = request.form.get("status", type=int)
@@ -271,9 +233,9 @@ def bulk():
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
             flash("Could not apply the bulk action due to a database error.", "error")
-            return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+            return redirect(redirect_url() or url_for("tickets.inbox"))
         flash(f"Applied to {applied} ticket(s).", "info")
     else:
         flash("No changes applied — you may not have permission on the selected tickets.", "info")
 
-    return redirect(redirect_url() or url_for("tickets.convenor_dashboard"))
+    return redirect(redirect_url() or url_for("tickets.inbox"))

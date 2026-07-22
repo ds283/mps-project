@@ -96,6 +96,12 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link {% if pane == 'tickets' %}active{% endif %}"
+               href="{{ url_for('convenor.tickets_tab', id=pclass.id) }}">
+                Tickets
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link {% if pane == 'journal' %}active{% endif %}"
                href="{{ url_for('convenor.journal_tab', id=pclass.id) }}">
                 Journal

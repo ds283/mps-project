@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e8e4d8;font-family:Helvetica,Arial,sans-serif}
+a{color:#0d6efd}a:hover{color:#0a58ca}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(0,0,0,.09);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 14px/1.3 system-ui,sans-serif;color:#1a1a1a}
+.dv-tsub{font:400 12.5px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.55);max-width:760px;margin:0 0 24px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:11px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.09);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 13px/1.3 system-ui,sans-serif;color:#1a1a1a}
+.dv-olabel .sub{font-weight:400;color:rgba(0,0,0,.5)}
+.dv-opt:target .dv-oid{background:#0d6efd;color:#fff}
+.dv-next{margin:26px 0 0;font:12.5px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.screen{width:1240px;max-width:100%;background:antiquewhite;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.14);font-family:Helvetica,Arial,sans-serif}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Label editing, bulk actions &amp; the comment email</span></div>
+<p class="dv-tsub">Finishing the label surfaces and the notification. <a class="dv-oid" href="#5a">5a</a> is an existing label in its rename + recolour state (same palette, current colour pre-selected). <a class="dv-oid" href="#5b">5b</a> is a bulk action bar on the Ledger: multi-select rows, then add/remove a label or set status across all of them — gated to convenor / admin&middot;root / assigned owner, as in <a class="dv-oid" href="#4b">4b</a>. The subscriber <strong>comment email</strong> is a separate send-ready HTML file (<a href="Comment notification email.html">Comment notification email.html</a>), authored to be stored as an <code>EmailTemplate</code> instance with substitution tokens. Note: there is no &ldquo;first/second&rdquo; convenor &mdash; each in-scope convenor simply sees a multi-class ticket on their own <a class="dv-oid" href="#3a">3a</a> dashboard, scoped to their class.</p>
+<div class="dv-opts">
+
+<!-- 5a LABEL EDIT STATE -->
+<div class="dv-opt" id="5a">
+<div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Edit a label <span class="sub">— rename + recolour an existing label; current swatch pre-selected</span></div>
+<div style="width:400px;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.16);overflow:hidden;font-family:Helvetica,Arial,sans-serif">
+  <div style="padding:12px 15px;border-bottom:1px solid #eef1f5;display:flex;align-items:center;gap:8px"><i class="fas fa-pen" style="color:#0d6efd;font-size:12px"></i><span style="font-weight:700;color:#212529;font-size:13.5px">Edit label</span><span style="margin-left:auto;font-size:11.5px;color:#adb5bd">MPhys FYP · 5 in use</span></div>
+  <div style="padding:14px 15px">
+    <div style="font-size:10.5px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Name</div>
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">
+      <div style="flex:1;border:1.5px solid #0d6efd;border-radius:7px;background:#fff;padding:7px 10px;font-size:13px;color:#212529;box-shadow:0 0 0 3px rgba(13,110,253,.1)">Projects<span style="display:inline-block;width:1px;height:15px;background:#0d6efd;vertical-align:middle;margin-left:1px"></span></div>
+      <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Colour</div>
+    <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="width:22px;height:22px;border-radius:50%;background:#0a58ca;box-shadow:0 0 0 2px #fff,0 0 0 3.5px #0a58ca"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#b60205"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#997404"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#0f5132"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#59359a"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#087990"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#b5480b"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#d63384"></span>
+      <span style="width:22px;height:22px;border-radius:50%;background:#41464b"></span>
+    </div>
+    <div style="font-size:10.5px;color:#adb5bd;line-height:1.5">Currently <strong style="color:#0a58ca">Blue</strong>. Renaming or recolouring updates all 5 tickets using this label.</div>
+  </div>
+  <div style="padding:11px 15px;border-top:1px solid #eef1f5;display:flex;align-items:center;gap:8px">
+    <span style="font-size:12px;color:#b02a37"><i class="fas fa-trash" style="font-size:11px"></i> Delete</span>
+    <span style="margin-left:auto;padding:7px 14px;border-radius:7px;border:1px solid #ced4da;background:#fff;color:#495057;font-size:12.5px">Cancel</span>
+    <span style="padding:7px 15px;border-radius:7px;background:#0d6efd;color:#fff;font-size:12.5px;font-weight:500">Save</span>
+  </div>
+</div>
+</div>
+
+<!-- 5b BULK LABEL -->
+<div class="dv-opt" id="5b">
+<div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Bulk actions on the Ledger <span class="sub">— multi-select rows, add/remove labels or set status for all</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px"><span>Dashboards</span><span style="color:#fff">Convenor</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Convenor)</span></div>
+  </div>
+  <!-- bulk action bar -->
+  <div style="background:#0d6efd;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;font-size:13px">
+    <span style="display:inline-flex;align-items:center;gap:8px;font-weight:600"><i class="fas fa-check-circle"></i> 3 selected</span>
+    <span style="opacity:.5">|</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:6px"><i class="fas fa-tag" style="font-size:11px"></i> Add label <i class="fas fa-chevron-down" style="font-size:9px"></i></span>
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 8px"><i class="fas fa-tag-minus"></i> Remove label</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 8px"><i class="fas fa-flag" style="font-size:11px"></i> Set status <i class="fas fa-chevron-down" style="font-size:9px"></i></span>
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 8px"><i class="fas fa-user-check" style="font-size:11px"></i> Assign</span>
+    <span style="margin-left:auto;opacity:.85;font-size:12px">Clear selection</span>
+  </div>
+  <div style="position:relative;padding:0 20px 20px">
+    <!-- add-label dropdown floating under the bar -->
+    <div style="position:absolute;left:96px;top:6px;width:230px;background:#fff;border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.2);z-index:5;overflow:hidden;font-size:13px">
+      <div style="padding:8px 12px;border-bottom:1px solid #eef1f5;color:#adb5bd;font-size:12px"><i class="fas fa-search" style="font-size:11px"></i> Filter labels…</div>
+      <div style="padding:4px 0">
+        <div style="padding:7px 12px;display:flex;align-items:center;gap:9px"><i class="far fa-square" style="color:#c3ccd6"></i><span style="width:11px;height:11px;border-radius:50%;background:#b60205"></span>ATAS</div>
+        <div style="padding:7px 12px;display:flex;align-items:center;gap:9px;background:#f3f8ff"><i class="fas fa-minus-square" style="color:#0d6efd"></i><span style="width:11px;height:11px;border-radius:50%;background:#0a58ca"></span>Projects <span style="margin-left:auto;font-size:10px;color:#adb5bd">on 2 of 3</span></div>
+        <div style="padding:7px 12px;display:flex;align-items:center;gap:9px"><i class="fas fa-check-square" style="color:#0d6efd"></i><span style="width:11px;height:11px;border-radius:50%;background:#0f5132"></span>Students</div>
+        <div style="padding:7px 12px;display:flex;align-items:center;gap:9px"><i class="far fa-square" style="color:#c3ccd6"></i><span style="width:11px;height:11px;border-radius:50%;background:#59359a"></span>Policy</div>
+      </div>
+      <div style="padding:8px 12px;border-top:1px solid #eef1f5;color:#0d6efd;font-size:12px">Apply to 3 tickets</div>
+    </div>
+    <div style="border:1px solid #e6e2d6;border-radius:9px;overflow:hidden;background:#fff;margin-top:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+        <thead><tr style="border-bottom:2px solid #efeade;text-align:left;color:#8a94a3;font-size:11px;text-transform:uppercase;letter-spacing:.03em"><th style="padding:9px 16px;width:34px"><i class="fas fa-check-square" style="color:#0d6efd;font-size:13px"></i></th><th style="padding:9px 10px;font-weight:700">Ticket</th><th style="padding:9px 10px;font-weight:700;width:120px">Status</th><th style="padding:9px 10px;font-weight:700;width:100px">Assignee</th><th style="padding:9px 16px;font-weight:700;width:150px">Labels</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #f2eee2;background:#f7faff"><td style="padding:12px 16px"><i class="fas fa-check-square" style="color:#0d6efd;font-size:14px"></i></td><td style="padding:12px 10px;font-weight:600;color:#212529">Extension request — illness during write-up</td><td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#cfe2ff;color:#0a58ca"><span style="width:7px;height:7px;border-radius:50%;background:#0a58ca"></span>Open</span></td><td style="padding:12px 10px"><span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span></td><td style="padding:12px 16px"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></td></tr>
+          <tr style="border-bottom:1px solid #f2eee2;background:#f7faff"><td style="padding:12px 16px"><i class="fas fa-check-square" style="color:#0d6efd;font-size:14px"></i></td><td style="padding:12px 10px;font-weight:600;color:#212529">Add tick-box on lab projects (not-ATAS suitable)</td><td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></td><td style="padding:12px 10px"><span style="width:26px;height:26px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">MB</span></td><td style="padding:12px 16px"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span> <span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span></td></tr>
+          <tr style="border-bottom:1px solid #f2eee2;background:#f7faff"><td style="padding:12px 16px"><i class="fas fa-check-square" style="color:#0d6efd;font-size:14px"></i></td><td style="padding:12px 10px;font-weight:600;color:#212529">Marking spreadsheet formulae broken for MO role</td><td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#cfe2ff;color:#0a58ca"><span style="width:7px;height:7px;border-radius:50%;background:#0a58ca"></span>Open</span></td><td style="padding:12px 10px"><span style="width:26px;height:26px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">RA</span></td><td style="padding:12px 16px"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span></td></tr>
+          <tr><td style="padding:12px 16px"><i class="far fa-square" style="color:#c3ccd6;font-size:14px"></i></td><td style="padding:12px 10px;color:#495057">Create policy documents / marking guidance</td><td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></td><td style="padding:12px 10px"><span style="width:26px;height:26px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">RA</span></td><td style="padding:12px 16px"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: “design the ‘Set status’ bulk dropdown state” · “show the label delete confirmation” · “add a plain-text fallback part to the comment email template”</p>
+</section>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Assigning owners &amp; managing labels</span></div>
+<p class="dv-tsub">Two management surfaces and who may use them. The <strong>Assign</strong> control <a class="dv-oid" href="#4a">4a</a> is available to convenors and to <strong>admin/root</strong> users (who also see the convenor dashboard); it lists the people it makes sense to hand a ticket to — in-scope convenors, the supervisors of any attached students, and the office — plus <em>Unassign</em>. <strong>Label management</strong> <a class="dv-oid" href="#4b">4b</a> lives in the ticket editor (colour auto-assigned from a fixed palette, overridable) and also works inline from a row in the Inbox <a class="dv-oid" href="#2c">2c</a> or Ledger <a class="dv-oid" href="#1a">1a</a>/<a class="dv-oid" href="#3a">3a</a>. Adding or removing labels is limited to convenors, admin/root, and the assigned owner; watchers see labels read-only. Also reconciled the drifted 3a columns — <strong>Watchers</strong> and <strong>Due</strong> are back alongside <strong>Scope</strong>.</p>
+<div class="dv-opts">
+
+<!-- ============ 4a ASSIGN PICKER ============ -->
+<div class="dv-opt" id="4a">
+<div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Assign picker <span class="sub">— convenor / admin / root; in-scope convenors, student supervisors, office, or unassign</span></div>
+<div style="width:460px;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.16);overflow:hidden;font-family:Helvetica,Arial,sans-serif">
+  <div style="padding:12px 15px;border-bottom:1px solid #eef1f5;display:flex;align-items:center;gap:8px">
+    <i class="fas fa-user-check" style="color:#0d6efd;font-size:13px"></i><span style="font-weight:700;color:#212529;font-size:13.5px">Assign owner</span>
+    <span style="font-size:11.5px;color:#adb5bd">#423 · Extension request</span>
+    <i class="fas fa-times" style="margin-left:auto;color:#c3ccd6;font-size:13px"></i>
+  </div>
+  <div style="padding:7px 15px;background:#f3f8ff;border-bottom:1px solid #e6eefb;font-size:11px;color:#0a58ca"><i class="fas fa-shield-alt"></i> You are acting as <strong>Convenor</strong> · admin &amp; root users see this same control</div>
+  <div style="padding:10px 15px;border-bottom:1px solid #eef1f5"><div style="border:1px solid #ced4da;border-radius:7px;padding:8px 11px;font-size:13px;color:#adb5bd"><i class="fas fa-search" style="font-size:12px"></i> Search people…</div></div>
+  <div style="max-height:none">
+    <div style="padding:9px 15px 4px;font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em">Suggested</div>
+    <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px;background:#f7faff"><span style="width:28px;height:28px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">DS</span><div style="flex:1"><div style="color:#212529;font-weight:600">Assign to me <span style="color:#8a94a3;font-weight:400">· D. Seery</span></div><div style="font-size:11px;color:#0f5132">Convenor of MPhys FYP — the class in scope</div></div><span style="font-size:10px;color:#0f5132;background:#d1e7dd;border-radius:20px;padding:2px 8px;font-weight:600">current · auto</span></div>
+    <div style="padding:9px 15px 4px;font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em">Convenors in scope</div>
+    <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:28px;height:28px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">DS</span><div style="flex:1"><div style="color:#212529;font-weight:600">David Seery</div><div style="font-size:11px;color:#8a94a3">MPhys FYP</div></div><i class="fas fa-check" style="color:#0d6efd"></i></div>
+    <div style="padding:9px 15px 4px;font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em">Supervisors of attached students</div>
+    <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:28px;height:28px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">JS</span><div style="flex:1"><div style="color:#212529;font-weight:600">Jane Smith</div><div style="font-size:11px;color:#8a94a3">Supervises Sophie Franks</div></div></div>
+    <div style="padding:9px 15px 4px;font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em">Office</div>
+    <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:28px;height:28px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">SO</span><div style="flex:1"><div style="color:#212529;font-weight:600">School Office</div><div style="font-size:11px;color:#8a94a3">office1</div></div></div>
+    <div style="padding:9px 15px;border-top:1px solid #eef1f5;display:flex;align-items:center;gap:10px;font-size:13px;color:#b02a37"><span style="width:28px;height:28px;border-radius:50%;background:#fdeef0;color:#b02a37;display:inline-flex;align-items:center;justify-content:center;font-size:11px"><i class="fas fa-user-slash"></i></span><span style="font-weight:600">Unassign</span><span style="font-size:11px;color:#c98a91;margin-left:auto">stays on convenor dashboards</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 4b LABEL MANAGEMENT ============ -->
+<div class="dv-opt" id="4b">
+<div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Label management <span class="sub">— create/edit with palette colours; add &amp; remove inline; watchers read-only</span></div>
+<div style="display:flex;gap:18px;align-items:flex-start">
+  <!-- manage labels editor -->
+  <div style="width:400px;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.16);overflow:hidden;font-family:Helvetica,Arial,sans-serif">
+    <div style="padding:12px 15px;border-bottom:1px solid #eef1f5;display:flex;align-items:center;gap:8px"><i class="fas fa-tags" style="color:#0d6efd;font-size:13px"></i><span style="font-weight:700;color:#212529;font-size:13.5px">Manage labels</span><span style="margin-left:auto;font-size:11.5px;color:#adb5bd">MPhys FYP</span></div>
+    <!-- new label creator -->
+    <div style="padding:13px 15px;border-bottom:1px solid #eef1f5;background:#faf8f2">
+      <div style="font-size:10.5px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">New label</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="flex:1;border:1px solid #ced4da;border-radius:7px;background:#fff;padding:7px 10px;font-size:13px;color:#212529">Deadlines</div>
+        <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#fff3cd;color:#997404">Deadlines</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:#8a94a3;margin-right:2px">Colour</span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#997404;box-shadow:0 0 0 2px #fff,0 0 0 3.5px #997404"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#b60205"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#0a58ca"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#0f5132"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#59359a"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#087990"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#b5480b"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#d63384"></span>
+        <span style="width:20px;height:20px;border-radius:50%;background:#41464b"></span>
+        <span style="margin-left:auto;padding:6px 13px;border-radius:7px;background:#0d6efd;color:#fff;font-size:12px;font-weight:500">Create</span>
+      </div>
+      <div style="font-size:10.5px;color:#adb5bd;margin-top:8px;line-height:1.5">A colour is auto-assigned from the palette (next unused); click a swatch to override.</div>
+    </div>
+    <!-- existing labels -->
+    <div style="padding:4px 0">
+      <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px;border-bottom:1px solid #f4f0e6"><span style="width:12px;height:12px;border-radius:50%;background:#b60205"></span><span style="color:#212529;font-weight:500;flex:1">ATAS</span><span style="font-size:11px;color:#adb5bd">3</span><i class="fas fa-pen" style="font-size:11px;color:#c3ccd6"></i><i class="fas fa-trash" style="font-size:11px;color:#e0b4b4"></i></div>
+      <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px;border-bottom:1px solid #f4f0e6"><span style="width:12px;height:12px;border-radius:50%;background:#0a58ca"></span><span style="color:#212529;font-weight:500;flex:1">Projects</span><span style="font-size:11px;color:#adb5bd">5</span><i class="fas fa-pen" style="font-size:11px;color:#c3ccd6"></i><i class="fas fa-trash" style="font-size:11px;color:#e0b4b4"></i></div>
+      <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px;border-bottom:1px solid #f4f0e6"><span style="width:12px;height:12px;border-radius:50%;background:#0f5132"></span><span style="color:#212529;font-weight:500;flex:1">Students</span><span style="font-size:11px;color:#adb5bd">8</span><i class="fas fa-pen" style="font-size:11px;color:#c3ccd6"></i><i class="fas fa-trash" style="font-size:11px;color:#e0b4b4"></i></div>
+      <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px;border-bottom:1px solid #f4f0e6"><span style="width:12px;height:12px;border-radius:50%;background:#59359a"></span><span style="color:#212529;font-weight:500;flex:1">Policy</span><span style="font-size:11px;color:#adb5bd">4</span><i class="fas fa-pen" style="font-size:11px;color:#c3ccd6"></i><i class="fas fa-trash" style="font-size:11px;color:#e0b4b4"></i></div>
+      <div style="padding:8px 15px;display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:12px;height:12px;border-radius:50%;background:#b5480b"></span><span style="color:#212529;font-weight:500;flex:1">Urgent</span><span style="font-size:11px;color:#adb5bd">2</span><i class="fas fa-pen" style="font-size:11px;color:#c3ccd6"></i><i class="fas fa-trash" style="font-size:11px;color:#e0b4b4"></i></div>
+    </div>
+  </div>
+  <!-- inline picker + permission states -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="width:300px;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.16);overflow:hidden;font-family:Helvetica,Arial,sans-serif">
+      <div style="padding:10px 14px;border-bottom:1px solid #eef1f5;font-size:11.5px;color:#6c757d">Apply labels to <strong style="color:#212529">#412</strong> <span style="color:#adb5bd">· inline from a row</span></div>
+      <div style="padding:9px 12px;border-bottom:1px solid #eef1f5"><div style="border:1px solid #ced4da;border-radius:7px;padding:6px 9px;font-size:12.5px;color:#adb5bd"><i class="fas fa-search" style="font-size:11px"></i> Filter labels…</div></div>
+      <div style="padding:4px 0">
+        <div style="padding:7px 13px;display:flex;align-items:center;gap:9px;font-size:13px"><i class="fas fa-check-square" style="color:#0d6efd"></i><span style="width:11px;height:11px;border-radius:50%;background:#b60205"></span><span style="color:#212529">ATAS</span></div>
+        <div style="padding:7px 13px;display:flex;align-items:center;gap:9px;font-size:13px"><i class="fas fa-check-square" style="color:#0d6efd"></i><span style="width:11px;height:11px;border-radius:50%;background:#0a58ca"></span><span style="color:#212529">Projects</span></div>
+        <div style="padding:7px 13px;display:flex;align-items:center;gap:9px;font-size:13px"><i class="far fa-square" style="color:#c3ccd6"></i><span style="width:11px;height:11px;border-radius:50%;background:#0f5132"></span><span style="color:#495057">Students</span></div>
+        <div style="padding:7px 13px;display:flex;align-items:center;gap:9px;font-size:13px"><i class="far fa-square" style="color:#c3ccd6"></i><span style="width:11px;height:11px;border-radius:50%;background:#59359a"></span><span style="color:#495057">Policy</span></div>
+        <div style="padding:7px 13px;display:flex;align-items:center;gap:9px;font-size:13px"><i class="far fa-square" style="color:#c3ccd6"></i><span style="width:11px;height:11px;border-radius:50%;background:#087990"></span><span style="color:#495057">Rollover</span></div>
+      </div>
+      <div style="padding:9px 13px;border-top:1px solid #eef1f5;font-size:12px;color:#0d6efd"><i class="fas fa-cog" style="font-size:11px"></i> Edit labels…</div>
+    </div>
+    <div style="width:300px;background:#f6f4ee;border:1px dashed #d7d2c4;border-radius:10px;padding:12px 14px;font-family:Helvetica,Arial,sans-serif">
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">As a watcher</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:9px"><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span><span style="padding:3px 9px;border-radius:20px;font-size:11px;color:#adb5bd;background:#eee;text-decoration:line-through">+ add</span></div>
+      <div style="font-size:11.5px;color:#8a94a3;line-height:1.5"><i class="fas fa-lock" style="font-size:10px"></i> Labels are read-only. Only convenors, admin/root, and the assigned owner can add or remove them.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: “show the label editor’s rename + recolour state for an existing label” · “add a bulk-label action for multi-selected rows in the Ledger” · “design the ‘reassigned’ event as it appears in the detail thread 2a” · “write the ticket data model — subjects, scope, assignment, labels — as a short spec”</p>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Routing model — convenor triage &amp; office compose</span></div>
+<p class="dv-tsub">Working through routing. A ticket carries one or more <strong>subjects</strong> — students and/or project classes — and the set of project classes “in scope” is the union of any pinned classes plus the home class of every attached student. <strong>Auto-assignment rule:</strong> exactly one class in scope → auto-assigned to that class’s convenor; more than one (or none pinned to a class) → left <strong>unassigned</strong> and surfaced on every relevant convenor’s dashboard for triage. Tickets may be unassigned and may name several students/classes at once. <a class="dv-oid" href="#3a">3a</a> is the convenor’s triage view of incoming routed tickets; <a class="dv-oid" href="#3b">3b</a> is the office compose form with its wider, multi-select scope.</p>
+<div class="dv-opts">
+
+<!-- ============ 3a CONVENOR TRIAGE ============ -->
+<div class="dv-opt" id="3a">
+<div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Convenor triage <span class="sub">— incoming routed tickets on the Ledger; unassigned multi-class ones need a claim</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px">
+      <span>My projects</span><span>Reports</span><span>Dashboards</span><span style="color:#fff">Convenor</span><span>Admin</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Convenor)</span>
+    </div>
+  </div>
+  <div style="padding:14px 20px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Overview</span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Projects <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">106</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Faculty <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">46/48</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Submitters <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">10</span></span>
+    <span style="padding:6px 12px;border-radius:6px;background:#0d6efd;color:#fff;font-size:14px;font-weight:500">Tickets <span style="background:rgba(255,255,255,.85);color:#0d6efd;border-radius:20px;padding:1px 7px;font-size:11px">8</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Journal <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">0</span></span>
+  </div>
+  <div style="background:#f4f2ec;border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.09);padding:9px 20px;display:flex;align-items:center;gap:10px;font-size:13px;color:#6c757d;margin-top:6px">
+    <span style="color:#6c757d">All classes</span><span style="color:#c9c4b6">/</span><span style="font-weight:600;color:#212529;font-size:14px">Final Year Project (MPhys)</span>
+    <span style="font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid #d7d2c4;background:#efece2;color:#6c757d">2025–2026</span>
+    <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:#d1e7dd;color:#0f5132;border:1px solid #badbcc">Selections open</span>
+  </div>
+  <div style="padding:20px">
+    <!-- NEEDS TRIAGE -->
+    <div style="border:1px solid #f2c9cf;border-radius:9px;overflow:hidden;background:#fff;margin-bottom:20px">
+      <div style="background:#fdf2f3;border-bottom:1px solid #f2c9cf;padding:11px 16px;display:flex;align-items:center;gap:9px">
+        <i class="fas fa-inbox" style="color:#b02a37"></i><span style="font-weight:700;color:#b02a37;font-size:14px">Routed to you · needs triage</span>
+        <span style="font-size:11px;background:#dc3545;color:#fff;border-radius:20px;padding:1px 9px;font-weight:600">2</span>
+        <span style="margin-left:auto;font-size:11.5px;color:#a05860">Multiple classes in scope — no auto-assignee</span>
+      </div>
+      <div style="padding:13px 16px;display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid #f6e7e9">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:#212529;font-size:14px">Chinese universities 2+2 BSc — ATAS review</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span></div>
+          <div style="font-size:12px;color:#8a94a3;margin-top:6px">#418 · opened by School Office · scope: <strong style="color:#6c757d">MPhys FYP</strong> + <strong style="color:#6c757d">BSc 2+2</strong> · <span style="color:#b02a37;font-weight:600">unassigned</span> · <i class="far fa-clock" style="color:#b5480b"></i> <span style="color:#b5480b;font-weight:600">overdue</span></div>
+        </div>
+        <span style="font-size:10.5px;color:#6c757d;background:#f1f2f3;border:1px solid #dcdfe2;border-radius:20px;padding:3px 9px;flex:none;align-self:center">Also on A. Bianchi’s board</span>
+        <span style="padding:6px 13px;border:1px solid #ced4da;border-radius:7px;font-size:12px;color:#495057;background:#fff;flex:none;align-self:center">Assign…</span>
+        <span style="padding:6px 15px;border-radius:7px;font-size:12px;color:#fff;font-weight:500;background:#0d6efd;flex:none;align-self:center"><i class="fas fa-hand-paper" style="font-size:11px"></i> Claim</span>
+      </div>
+      <div style="padding:13px 16px;display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:#212529;font-size:14px">GDPR query — two selectors across programmes</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span></div>
+          <div style="font-size:12px;color:#8a94a3;margin-top:6px">#421 · opened by School Office · scope: <strong style="color:#6c757d">MPhys FYP</strong> + <strong style="color:#6c757d">BSc Physics</strong> · <span style="color:#b02a37;font-weight:600">unassigned</span> · 2 selecting students</div>
+        </div>
+        <span style="font-size:10.5px;color:#6c757d;background:#f1f2f3;border:1px solid #dcdfe2;border-radius:20px;padding:3px 9px;flex:none;align-self:center">Also on 1 other board</span>
+        <span style="padding:6px 13px;border:1px solid #ced4da;border-radius:7px;font-size:12px;color:#495057;background:#fff;flex:none;align-self:center">Assign…</span>
+        <span style="padding:6px 15px;border-radius:7px;font-size:12px;color:#fff;font-weight:500;background:#0d6efd;flex:none;align-self:center"><i class="fas fa-hand-paper" style="font-size:11px"></i> Claim</span>
+      </div>
+    </div>
+    <!-- MAIN LIST -->
+    <div style="border:1px solid #e6e2d6;border-radius:9px;overflow:hidden;background:#fff">
+      <div style="padding:11px 16px;border-bottom:1px solid #efeade;display:flex;align-items:center;gap:10px;background:#faf8f2">
+        <span style="font-weight:700;color:#212529;font-size:14px">All tickets for this class</span>
+        <span style="font-size:12px;color:#8a94a3">assigned to you, or scoped to a student/class here</span>
+        <span style="margin-left:auto;font-size:12px;color:#0d6efd"><i class="fas fa-th-large"></i> Board view</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+        <thead><tr style="border-bottom:2px solid #efeade;text-align:left;color:#8a94a3;font-size:11px;text-transform:uppercase;letter-spacing:.03em"><th style="padding:9px 16px;font-weight:700">Ticket</th><th style="padding:9px 10px;font-weight:700;width:120px">Status</th><th style="padding:9px 10px;font-weight:700;width:110px">Assignee</th><th style="padding:9px 10px;font-weight:700;width:100px">Watchers</th><th style="padding:9px 10px;font-weight:700;width:110px">Scope</th><th style="padding:9px 16px;font-weight:700;width:110px">Due</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #f2eee2">
+            <td style="padding:12px 16px"><div style="font-weight:700;color:#212529;font-size:14px">Extension request — illness during write-up</div><div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div><div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#423 · opened by J. Smith · Sophie Franks · <i class="far fa-comment"></i> 0</div></td>
+            <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#cfe2ff;color:#0a58ca"><span style="width:7px;height:7px;border-radius:50%;background:#0a58ca"></span>Open</span></td>
+            <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span><span style="font-size:10px;color:#0f5132;background:#d1e7dd;border-radius:20px;padding:1px 7px;font-weight:600">auto</span></span></td>
+            <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">JS</span></td>
+            <td style="padding:12px 16px;font-size:12px;color:#6c757d">1 class</td>
+            <td style="padding:12px 16px;color:#495057;font-size:12.5px">04 Sep 2026</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f2eee2">
+            <td style="padding:12px 16px"><div style="font-weight:700;color:#212529;font-size:14px">Add tick-box on lab projects to indicate not-ATAS suitable</div><div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span></div><div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#412 · opened by D. Seery · <i class="far fa-comment"></i> 3</div></td>
+            <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></td>
+            <td style="padding:12px 10px"><span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span></td>
+            <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:-8px;border:2px solid #fff">JS</span><span style="width:24px;height:24px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">MB</span><span style="font-size:11px;color:#adb5bd;margin-left:5px">+2</span></td>
+            <td style="padding:12px 16px;font-size:12px;color:#6c757d">Project class</td>
+            <td style="padding:12px 16px;color:#adb5bd;font-size:12.5px">—</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 16px"><div style="font-weight:700;color:#212529;font-size:14px">Create policy documents / marking guidance for staff</div><div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2e3e5;color:#41464b">Staff</span></div><div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#405 · opened by D. Seery · <i class="far fa-comment"></i> 5</div></td>
+            <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></td>
+            <td style="padding:12px 10px"><span style="width:26px;height:26px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">RA</span></td>
+            <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:-8px;border:2px solid #fff">DS</span><span style="width:24px;height:24px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">RA</span></td>
+            <td style="padding:12px 16px;font-size:12px;color:#6c757d">Project class</td>
+            <td style="padding:12px 16px;color:#495057;font-size:12.5px">02 Sep 2026</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 16px;font-size:11.5px;color:#8a94a3;border-top:1px solid #f2eee2;background:#faf8f2"><i class="fas fa-info-circle" style="color: rgb(173, 181, 189);"></i> #423 was <strong style="color: rgb(15, 81, 50);">auto-assigned</strong> to you: only one student (Sophie Franks) belonging to this project class is in scope.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 3b OFFICE COMPOSE ============ -->
+<div class="dv-opt" id="3b">
+<div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Office compose <span class="sub">— wider multi-select scope; two classes → no auto-assignee, routes to both convenors</span></div>
+<div class="screen" style="width:960px">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px"><span>Dashboards</span><span style="color:#fff"><i class="fas fa-user-circle"></i> office1 (Office)</span></div>
+  </div>
+  <div style="background:#f4f2ec;border-bottom:1px solid rgba(0,0,0,.09);padding:10px 20px;font-size:13px;color:#6c757d"><span style="color:#0d6efd"><i class="fas fa-ticket-alt" style="font-size:12px"></i> Tickets</span><span style="color:#c9c4b6"> / </span><span style="font-weight:600;color:#212529">New ticket</span></div>
+  <div style="padding:22px;display:flex;gap:22px;align-items:flex-start">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:19px;font-weight:700;color:#1a1a1a;margin-bottom:16px">Open a new ticket</div>
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">What is this ticket about?</div>
+      <div style="display:inline-flex;border:1px solid #ced4da;border-radius:8px;overflow:hidden;font-size:12.5px;margin-bottom:10px;background:#fff">
+        <span style="padding:7px 14px;background:#0d6efd;color:#fff;font-weight:500"><i class="fas fa-user-graduate" style="font-size:11px"></i> Students</span>
+        <span style="padding:7px 14px;color:#495057;border-left:1px solid #ced4da"><i class="fas fa-layer-group" style="font-size:11px"></i> Project classes</span>
+        <span style="padding:7px 14px;color:#495057;border-left:1px solid #ced4da">General</span>
+      </div>
+      <div style="font-size:11.5px;color:#8a94a3;margin-bottom:8px">You may attach <strong>any</strong> submitting or selecting student, or entire project classes</div>
+      <!-- selected chips + search -->
+      <div style="border:1px solid #ced4da;border-radius:8px;background:#fff;margin-bottom:16px;overflow:hidden">
+        <div style="padding:9px 10px;border-bottom:1px solid #eef1f5;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 4px;border-radius:20px;background:#eef4ff;border:1px solid #d3e2ff;font-size:12px;color:#0a58ca"><span style="width:20px;height:20px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700">SF</span>Sophie Franks · MPhys FYP <i class="fas fa-times" style="font-size:9px;color:#7c9cd6"></i></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 4px;border-radius:20px;background:#eef4ff;border:1px solid #d3e2ff;font-size:12px;color:#0a58ca"><span style="width:20px;height:20px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700">WC</span>Wei Chen · BSc 2+2 <span style="font-size:10px;opacity:.7">(Selector)</span> <i class="fas fa-times" style="font-size:9px;color:#7c9cd6"></i></span>
+          <span style="color:#adb5bd;font-size:12.5px;padding:2px 4px">Search students or classes…</span>
+        </div>
+        <div style="padding:6px 0">
+          <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em;padding:5px 12px">Submitting students · Physics &amp; Astronomy tenant</div>
+          <div style="padding:7px 12px;display:flex;align-items:center;gap:9px;font-size:13px"><span style="width:24px;height:24px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">NP</span><div><div style="color:#212529;font-weight:600">Nina Patel</div><div style="font-size:11px;color:#8a94a3">Submitter · MPhys FYP</div></div></div>
+          <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em;padding:8px 12px 5px">Selecting students</div>
+          <div style="padding:7px 12px;display:flex;align-items:center;gap:9px;font-size:13px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">LO</span><div><div style="color:#212529;font-weight:600">Leah Osei</div><div style="font-size:11px;color:#8a94a3">Selector · BSc Physics</div></div></div>
+          <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em;padding:8px 12px 5px">Project classes</div>
+          <div style="padding:7px 12px;display:flex;align-items:center;gap:9px;font-size:13px"><span style="width:24px;height:24px;border-radius:6px;background:#e2d9f3;color:#59359a;display:inline-flex;align-items:center;justify-content:center;font-size:10px"><i class="fas fa-layer-group"></i></span><div><div style="color:#212529;font-weight:600">MSc Physics dissertation</div><div style="font-size:11px;color:#8a94a3">Whole class · convenor T. Okafor</div></div></div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Title</div>
+      <div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:10px 12px;font-size:13.5px;color:#212529;margin-bottom:14px">ATAS documentation missing for two incoming students</div>
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Description</div>
+      <div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:11px 12px;font-size:13px;color:#adb5bd;min-height:64px;line-height:1.6;margin-bottom:14px">Both students are flagged for ATAS review but we have no certificate on file. Can the relevant convenors confirm status before enrolment…</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px"><div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Labels</div><div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:8px 10px;display:flex;gap:5px;flex-wrap:wrap;align-items:center"><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span><span style="color:#adb5bd;font-size:12px">+ add</span></div></div>
+        <div style="flex:1;min-width:180px"><div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Due date</div><div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:8px 10px;color:#495057;font-size:13px"><i class="far fa-calendar"></i> 01 Sep 2026</div></div>
+      </div>
+    </div>
+    <!-- routing side -->
+    <div style="width:270px;flex:none;font-size:12.5px">
+      <div style="border:1px solid #f2c9cf;border-radius:9px;background:#fdf2f3;padding:13px 14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#b02a37;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"><i class="fas fa-route"></i> Routing · 2 classes in scope</div>
+        <div style="color:#7a4046;line-height:1.55;margin-bottom:10px"><strong>No auto-assignee.</strong> This ticket is in scope for more than one project class and will not be auto-assigned to a convenor.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">DS</span><div style="line-height:1.3"><span style="color:#343a40;font-weight:500">D. Seery</span> <div style="font-size:11px;color:#a05860">MPhys FYP</div></div></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#d63384;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">AB</span><div style="line-height:1.3"><span style="color:#343a40;font-weight:500">A. Bianchi</span> <div style="font-size:11px;color:#a05860">BSc 2+2</div></div></div>
+      </div>
+      <div style="border:1px dashed #d7d2c4;border-radius:9px;background:#faf8f2;padding:11px 13px;margin-bottom:12px;color:#8a94a3;line-height:1.5;font-size:11.5px"><i class="fas fa-lightbulb" style="color:#b59a3b"></i> Narrow to a single student or one class and it <strong style="color:#6c757d">auto-assigns</strong> to that class’s convenor instead.</div>
+      <div style="border:1px solid #e6e2d6;border-radius:9px;background:#fff;padding:13px 14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Subscribers</div>
+        <div style="display:flex;align-items:center;gap:6px;color:#6c757d"><span style="width:24px;height:24px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">You</span><span>You &amp; both convenors auto-added</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="text-align:center;padding:9px;border-radius:8px;background:#0d6efd;color:#fff;font-weight:500;font-size:13px">Create ticket</span>
+        <span style="text-align:center;padding:9px;border-radius:8px;border:1px solid #ced4da;background:#fff;color:#495057;font-size:13px">Cancel</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: “design the ‘Assign…’ picker the convenor uses to claim a triage ticket” · “show a multi-class ticket on the second convenor’s (A. Bianchi) board” · “design the subscriber email sent on a new comment” · “write the ticket data model — subjects, scope, assignment — as a short spec”</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Detail view, compose &amp; faculty/office dashboard</span></div>
+<p class="dv-tsub">Resolved plan (from the roadmap, not yet a final sign-off): <strong>convenors</strong> land on the Ledger <a class="dv-oid" href="#1a">1a</a> as default because it can surface every ticket in a class, with the Board <a class="dv-oid" href="#1c">1c</a> as an optional lens; <strong>faculty</strong> and <strong>office</strong> users work from the Inbox <a class="dv-oid" href="#1b">1b</a>, whose personal view is strictly tickets <em>assigned to them or that they watch</em> — even when they are themselves a convenor. This turn adds the three missing pieces: a detail view shared across all roles, a compose form whose “about” picker is scoped by role and routes to the right convenor, and a faculty/office home that surfaces new assignments and new comments.</p>
+<div class="dv-opts">
+
+<!-- ============ 2a DETAIL ============ -->
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Ticket detail <span class="sub">— shared by convenor &amp; faculty/office; thread, email logging, side panel, actions log</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px">
+      <span>My projects</span><span>Reports</span><span style="color:#fff">Dashboards</span><span>Convenor</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Faculty)</span>
+    </div>
+  </div>
+  <div style="background:#f4f2ec;border-bottom:1px solid rgba(0,0,0,.09);padding:10px 20px;display:flex;align-items:center;gap:10px;font-size:13px;color:#6c757d">
+    <span style="color:#0d6efd"><i class="fas fa-ticket-alt" style="font-size:12px"></i> Tickets</span><span style="color:#c9c4b6">/</span>
+    <span style="color:#6c757d">Final Year Project (MPhys)</span><span style="color:#c9c4b6">/</span>
+    <span style="font-weight:600;color:#212529">#412</span>
+  </div>
+  <div style="padding:20px 22px 8px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:20px;font-weight:700;color:#1a1a1a;line-height:1.3">Add tick-box on lab projects to indicate not-ATAS suitable</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span>
+          <span style="font-size:12.5px;color:#6c757d"><strong style="color:#343a40">D. Seery</strong> opened this ticket · 14 Jul 2026 · <i class="far fa-comment"></i> 3 comments</span>
+        </div>
+      </div>
+      <span style="padding:7px 13px;border:1px solid #ced4da;border-radius:7px;font-size:12.5px;color:#495057;background:#fff;flex:none"><i class="fas fa-eye" style="font-size:11px"></i> Watching</span>
+      <span style="padding:7px 13px;border:1px solid #ced4da;border-radius:7px;font-size:12.5px;color:#495057;background:#fff;flex:none"><i class="fas fa-ellipsis-h"></i></span>
+    </div>
+  </div>
+  <div style="display:flex;gap:22px;padding:8px 22px 24px;align-items:flex-start">
+    <!-- THREAD -->
+    <div style="flex:1;min-width:0">
+      <!-- original post -->
+      <div style="border:1px solid #e6e2d6;border-radius:9px;overflow:hidden;background:#fff">
+        <div style="background:#eef4ff;border-bottom:1px solid #dbe6fb;padding:8px 14px;font-size:12.5px;color:#334">
+          <span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;vertical-align:middle">DS</span>
+          <strong style="margin-left:7px">David Seery</strong> <span style="color:#8a94a3">· 14 Jul 2026, 09:12</span>
+          <span style="float:right;color:#8a94a3">Opened ticket</span>
+        </div>
+        <div style="padding:14px;font-size:13.5px;line-height:1.6;color:#343a40">Lab-based projects frequently involve equipment or techniques that make them unsuitable for ATAS-restricted students. We need a per-project tick-box so supervisors can flag “not ATAS suitable” at the point of project entry, and have that surface on the selection list.</div>
+      </div>
+      <!-- event: label -->
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 4px 11px 16px;font-size:12.5px;color:#6c757d;position:relative">
+        <span style="position:absolute;left:11px;top:-4px;bottom:-4px;width:2px;background:#ece8dc"></span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#e9ecef;color:#6c757d;display:inline-flex;align-items:center;justify-content:center;font-size:10px;z-index:1"><i class="fas fa-tag"></i></span>
+        <span><strong style="color:#343a40">D. Seery</strong> added labels <span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span> <span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span> <span style="color:#adb5bd">· 14 Jul</span></span>
+      </div>
+      <!-- comment -->
+      <div style="border:1px solid #e6e2d6;border-radius:9px;overflow:hidden;background:#fff">
+        <div style="background:#faf8f2;border-bottom:1px solid #efeade;padding:8px 14px;font-size:12.5px;color:#334">
+          <span style="width:24px;height:24px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;vertical-align:middle">MB</span>
+          <strong style="margin-left:7px">Matthew Brown</strong> <span style="color:#8a94a3">· 15 Jul 2026, 16:40</span>
+        </div>
+        <div style="padding:14px;font-size:13.5px;line-height:1.6;color:#343a40">Agreed. Should this be a free-text exemption reason as well, or just the boolean? The ATAS office usually wants a short justification on file.</div>
+      </div>
+      <!-- event: email logged -->
+      <div style="position:relative;padding-left:16px;margin-top:11px">
+        <span style="position:absolute;left:11px;top:-15px;height:26px;width:2px;background:#ece8dc"></span>
+        <div style="border:1px solid #d9e8de;border-radius:9px;overflow:hidden;background:#f4fbf7">
+          <div style="background:#e6f4ec;border-bottom:1px solid #cfe8da;padding:8px 14px;font-size:12px;color:#0f5132;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-envelope"></i><strong>Email logged</strong>
+            <span style="color:#5f8a72">from atas-office@sussex.ac.uk · 16 Jul 2026, 08:03</span>
+            <span style="margin-left:auto;font-size:11px;color:#5f8a72">Auto-linked by subject <code style="background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #cfe8da">[#412]</code></span>
+          </div>
+          <div style="padding:13px 14px;font-size:13px;line-height:1.6;color:#3a4a41">
+            <div style="font-size:11.5px;color:#5f8a72;margin-bottom:6px">Subject: RE: [#412] ATAS suitability flag on lab projects</div>
+            A short free-text reason would help our records — even one line is enough. We reconcile against the flag when we process visa cases, so please make the field visible on export. Thanks.
+          </div>
+        </div>
+      </div>
+      <!-- event: status change -->
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 4px 11px 16px;font-size:12.5px;color:#6c757d;position:relative">
+        <span style="position:absolute;left:11px;top:-4px;bottom:-4px;width:2px;background:#ece8dc"></span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;z-index:1">DS</span>
+        <span><strong style="color:#343a40">D. Seery</strong> moved this from <span style="color:#0a58ca;font-weight:600">Open</span> to <span style="color:#997404;font-weight:600">In progress</span> and self-assigned <span style="color:#adb5bd">· 16 Jul</span></span>
+      </div>
+      <!-- event: reassigned -->
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 4px 11px 16px;font-size:12.5px;color:#6c757d;position:relative">
+        <span style="position:absolute;left:11px;top:-4px;bottom:-4px;width:2px;background:#ece8dc"></span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;z-index:1">MB</span>
+        <span><strong style="color:#343a40">M. Brown</strong> reassigned this from <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600;color:#343a40"><span style="width:15px;height:15px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:7px">DS</span>D. Seery</span> to <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600;color:#343a40"><span style="width:15px;height:15px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:7px">MB</span>M. Brown</span> <span style="color:#adb5bd">· 17 Jul</span></span>
+      </div>
+      <!-- reply composer -->
+      <div style="border:1px solid #cdd7e6;border-radius:9px;background:#fff;margin-top:14px;box-shadow:0 1px 3px rgba(13,110,253,.06)">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid #eef1f5;font-size:12px;color:#6c757d">
+          <span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span>
+          <span>Reply as <strong style="color:#343a40">David Seery</strong></span>
+          <span style="margin-left:auto;display:flex;gap:12px;font-size:13px;color:#adb5bd"><i class="fas fa-bold"></i><i class="fas fa-italic"></i><i class="fas fa-link"></i><i class="fas fa-paperclip"></i><i class="fas fa-at"></i></span>
+        </div>
+        <div style="padding:12px 13px;font-size:13px;color:#adb5bd;min-height:56px">Leave a comment…</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 13px;border-top:1px solid #eef1f5;flex-wrap:wrap">
+          <span style="font-size:12px;color:#6c757d"><span style="display:inline-block;width:30px;height:16px;border-radius:20px;background:#0d6efd;vertical-align:middle;position:relative"><span style="position:absolute;right:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff"></span></span> Email subscribers &amp; ATAS office</span>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <span style="padding:7px 14px;border:1px solid #198754;border-radius:7px;font-size:12.5px;color:#198754;font-weight:500;background:#fff">Comment &amp; resolve</span>
+            <span style="padding:7px 16px;border-radius:7px;font-size:12.5px;color:#fff;font-weight:500;background:#0d6efd">Comment</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- SIDE PANEL -->
+    <div style="width:290px;flex:none;font-size:12.5px">
+      <div style="border:1px solid #e6e2d6;border-radius:9px;background:#fff;overflow:hidden">
+        <div style="padding:12px 14px;border-bottom:1px solid #efeade">
+          <div style="display:flex;align-items:center;color:#8a94a3;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em">Status <i class="fas fa-pen" style="margin-left:auto;font-size:10px;color:#c3ccd6"></i></div>
+          <div style="margin-top:8px"><span style="display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:12.5px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></div>
+        </div>
+        <div style="padding:12px 14px;border-bottom:1px solid #efeade">
+          <div style="display:flex;align-items:center;color:#8a94a3;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em">Assignee <i class="fas fa-pen" style="margin-left:auto;font-size:10px;color:#c3ccd6"></i></div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span><span style="color:#343a40;font-weight:500">Matthew Brown</span></div>
+        </div>
+        <div style="padding:12px 14px;border-bottom:1px solid #efeade">
+          <div style="display:flex;align-items:center;color:#8a94a3;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em">Subscribers <i class="fas fa-plus" style="margin-left:auto;font-size:10px;color:#c3ccd6"></i></div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
+            <span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span>
+            <span style="width:26px;height:26px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">MB</span>
+            <span style="width:26px;height:26px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">JS</span>
+            <span style="color:#8a94a3;margin-left:2px">+2 · ATAS office</span>
+          </div>
+        </div>
+        <div style="padding:12px 14px;border-bottom:1px solid #efeade">
+          <div style="display:flex;align-items:center;color:#8a94a3;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em">Labels <i class="fas fa-pen" style="margin-left:auto;font-size:10px;color:#c3ccd6"></i></div>
+          <div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap"><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#cff4fc;color:#087990">Rollover</span></div>
+        </div>
+        <div style="padding:12px 14px;border-bottom:1px solid #efeade">
+          <div style="color:#8a94a3;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em">Context</div>
+          <div style="margin-top:8px;color:#495057;line-height:1.9">
+            <div><i class="fas fa-layer-group fa-fw" style="color:#adb5bd"></i> Class: <a href="#2a" style="font-weight:500">MPhys FYP 2025–26</a></div>
+            <div><i class="fas fa-sitemap fa-fw" style="color:#adb5bd"></i> Scope: <span style="color:#6c757d">{{ scopeLabel }}</span></div>
+            <div><i class="fas fa-calendar-alt fa-fw" style="color:#adb5bd"></i> Opened 14 Jul 2026</div>
+            <div><i class="far fa-clock fa-fw" style="color:#adb5bd"></i> Due: <span style="color:#6c757d">—</span></div>
+          </div>
+        </div>
+        <div style="padding:12px 14px">
+          <div style="color:#8a94a3;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em">Actions log</div>
+          <div style="margin-top:9px;color:#6c757d;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+            <div><span style="color:#adb5bd">17 Jul</span> · MB reassigned DS → MB</div>
+            <div><span style="color:#adb5bd">16 Jul</span> · DS → In progress, self-assigned</div>
+            <div><span style="color:#adb5bd">16 Jul</span> · Email logged from ATAS office</div>
+            <div><span style="color:#adb5bd">15 Jul</span> · MB commented</div>
+            <div><span style="color:#adb5bd">14 Jul</span> · DS added labels, opened</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 2b COMPOSE ============ -->
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>New ticket <span class="sub">— role-scoped “about” picker; auto-routes to the class convenor</span></div>
+<div class="screen" style="width:920px">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px"><span>Dashboards</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Faculty)</span></div>
+  </div>
+  <div style="background:#f4f2ec;border-bottom:1px solid rgba(0,0,0,.09);padding:10px 20px;font-size:13px;color:#6c757d"><span style="color:#0d6efd"><i class="fas fa-ticket-alt" style="font-size:12px"></i> Tickets</span><span style="color:#c9c4b6"> / </span><span style="font-weight:600;color:#212529">New ticket</span></div>
+  <div style="padding:22px;display:flex;gap:22px;align-items:flex-start">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:19px;font-weight:700;color:#1a1a1a;margin-bottom:16px">Open a new ticket</div>
+      <!-- about scoping -->
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">What is this ticket about?</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <span style="flex:1;border:2px solid #0d6efd;border-radius:8px;padding:11px 13px;background:#f3f8ff;font-size:13px"><i class="fas fa-user-graduate" style="color:#0d6efd"></i> <strong style="color:#0a58ca">A specific student</strong><div style="color:#6c757d;font-size:11.5px;margin-top:3px">Someone you supervise</div></span>
+        <span style="flex:1;border:1px solid #d7d2c4;border-radius:8px;padding:11px 13px;background:#fff;font-size:13px;color:#495057"><i class="fas fa-layer-group" style="color:#adb5bd"></i> <strong>General / whole class</strong><div style="color:#adb5bd;font-size:11.5px;margin-top:3px">Not tied to one student</div></span>
+      </div>
+      <!-- student picker open -->
+      <div style="border:1px solid #ced4da;border-radius:8px;background:#fff;margin-bottom:16px;overflow:hidden">
+        <div style="padding:9px 12px;border-bottom:1px solid #eef1f5;color:#495057;font-size:13px"><i class="fas fa-search" style="color:#adb5bd;font-size:12px"></i> <span style="color:#adb5bd">Search students you supervise…</span></div>
+        <div style="padding:6px 0">
+          <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.04em;padding:5px 12px">Students you supervise · MPhys FYP</div>
+          <div style="padding:7px 12px;background:#f3f8ff;display:flex;align-items:center;gap:9px;font-size:13px"><span style="width:24px;height:24px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">SF</span><div><div style="color:#212529;font-weight:600">Sophie Franks</div><div style="font-size:11px;color:#8a94a3">Submitter · repeat year · supervised by you</div></div><i class="fas fa-check" style="margin-left:auto;color:#0d6efd"></i></div>
+          <div style="padding:7px 12px;display:flex;align-items:center;gap:9px;font-size:13px"><span style="width:24px;height:24px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">TA</span><div><div style="color:#212529;font-weight:600">Tom Ashby</div><div style="font-size:11px;color:#8a94a3">Submitter · supervised by you</div></div></div>
+          <div style="padding:7px 12px;display:flex;align-items:center;gap:9px;font-size:13px"><span style="width:24px;height:24px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">NP</span><div><div style="color:#212529;font-weight:600">Nina Patel</div><div style="font-size:11px;color:#8a94a3">Submitter · supervised by you</div></div></div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Title</div>
+      <div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:10px 12px;font-size:13.5px;color:#212529;margin-bottom:14px">Extension request — illness during write-up</div>
+      <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Description</div>
+      <div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:11px 12px;font-size:13px;color:#adb5bd;min-height:74px;line-height:1.6;margin-bottom:14px">Sophie has provided a medical note covering the final two weeks. Requesting a two-week extension on the submission deadline…</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px"><div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Labels</div><div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:8px 10px;display:flex;gap:5px;flex-wrap:wrap;align-items:center"><span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span><span style="color:#adb5bd;font-size:12px">+ add</span></div></div>
+        <div style="flex:1;min-width:180px"><div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Due date</div><div style="border:1px solid #ced4da;border-radius:8px;background:#fff;padding:8px 10px;color:#adb5bd;font-size:13px"><i class="far fa-calendar"></i> Optional</div></div>
+      </div>
+    </div>
+    <!-- routing side -->
+    <div style="width:250px;flex:none;font-size:12.5px">
+      <div style="border:1px solid #dbe6fb;border-radius:9px;background:#f3f8ff;padding:13px 14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#0a58ca;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"><i class="fas fa-route"></i> Routing</div>
+        <div style="color:#334;line-height:1.6">This ticket will be routed to the convenor for <strong>MPhys FYP</strong> and appear on their dashboard:</div>
+        <div style="margin-top:9px;display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">DS</span><span style="color:#343a40;font-weight:500">D. Seery <span style="color:#8a94a3;font-weight:400">(convenor)</span></span></div>
+      </div>
+      <div style="border:1px solid #e6e2d6;border-radius:9px;background:#fff;padding:13px 14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#8a94a3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Subscribers</div>
+        <div style="display:flex;align-items:center;gap:6px;color:#6c757d"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">DS</span><span style="width:24px;height:24px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">You</span><span>You &amp; convenor auto-added</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="text-align:center;padding:9px;border-radius:8px;background:#0d6efd;color:#fff;font-weight:500;font-size:13px">Create ticket</span>
+        <span style="text-align:center;padding:9px;border-radius:8px;border:1px solid #ced4da;background:#fff;color:#495057;font-size:13px">Cancel</span>
+      </div>
+      
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 2c FACULTY/OFFICE DASHBOARD ============ -->
+<div class="dv-opt" id="2c">
+<div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Faculty / office home <span class="sub">— Inbox rail (Views + Labels) and Activity merged into one sidebar; personal = assigned or watched only</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px">
+      <span>My projects</span><span>Reports</span><span style="color:#fff">Dashboards</span>
+      <span style="position:relative;color:#fff"><i class="fas fa-bell"></i><span style="position:absolute;top:-7px;right:-9px;background:#dc3545;color:#fff;border-radius:20px;font-size:9px;font-weight:700;padding:1px 5px">3</span></span>
+      <span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Faculty)</span>
+    </div>
+  </div>
+  <div style="background:#f4f2ec;border-bottom:1px solid rgba(0,0,0,.09);padding:12px 20px;display:flex;align-items:center;gap:12px">
+    <i class="fas fa-ticket-alt" style="color:#0d6efd;font-size:15px"></i><span style="font-weight:700;color:#212529;font-size:16px">Your tickets</span>
+    <span style="color:#8a94a3;font-size:12.5px">Assigned to you or that you watch, across every class</span>
+    <span style="margin-left:auto;background:#0d6efd;color:#fff;padding:7px 15px;border-radius:7px;font-size:13px;font-weight:500"><i class="fas fa-plus"></i>&nbsp; New ticket</span>
+  </div>
+  <div style="display:flex;min-height:600px">
+    <div style="width:236px;flex:none;background:#f4f2ec;border-right:1px solid rgba(0,0,0,.08);padding:16px 12px">
+      <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.05em;padding:0 8px 6px">Views</div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;background:#e6edfb;color:#0a58ca;font-size:13.5px;font-weight:600"><i class="fas fa-inbox fa-fw" style="font-size:12px"></i> All open <span style="margin-left:auto;font-size:11px;background:#0d6efd;color:#fff;border-radius:20px;padding:1px 8px">4</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-user-check fa-fw" style="font-size:12px;color:#6c757d"></i> Assigned to me <span style="margin-left:auto;font-size:11px;background:#dc3545;color:#fff;border-radius:20px;padding:1px 8px">2</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-eye fa-fw" style="font-size:12px;color:#6c757d"></i> Watching <span style="margin-left:auto;font-size:11px;color:#adb5bd">9</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-bell fa-fw" style="font-size:12px;color:#dc3545"></i> Unread <span style="margin-left:auto;font-size:11px;background:#dc3545;color:#fff;border-radius:20px;padding:1px 8px">3</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-pen fa-fw" style="font-size:12px;color:#6c757d"></i> Created by me <span style="margin-left:auto;font-size:11px;color:#adb5bd">7</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-check-circle fa-fw" style="font-size:12px;color:#6c757d"></i> Closed <span style="margin-left:auto;font-size:11px;color:#adb5bd">14</span></div>
+      <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.05em;padding:16px 8px 6px">Labels</div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#b60205"></span> ATAS <span style="margin-left:auto;font-size:11px;color:#adb5bd">3</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#0a58ca"></span> Projects <span style="margin-left:auto;font-size:11px;color:#adb5bd">5</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#0f5132"></span> Students <span style="margin-left:auto;font-size:11px;color:#adb5bd">8</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#59359a"></span> Policy <span style="margin-left:auto;font-size:11px;color:#adb5bd">4</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#adb5bd;font-size:12.5px;margin-top:2px"><i class="fas fa-plus fa-fw" style="font-size:11px"></i> New label</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.05em;padding:16px 8px 8px">Activity <span style="margin-left:auto;font-size:9px;background:#dc3545;color:#fff;border-radius:20px;padding:1px 6px;letter-spacing:0">3 new</span></div>
+      <div style="display:flex;flex-direction:column;gap:0;padding:0 4px">
+        <div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #e7e2d4"><span style="width:7px;height:7px;border-radius:50%;background:#dc3545;margin-top:5px;flex:none"></span><div style="font-size:11.5px;line-height:1.45;color:#343a40"><strong>You were assigned</strong> <a href="#2a">#412</a> <div style="color:#adb5bd;font-size:10.5px">by D. Seery · 2h ago</div></div></div>
+        <div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #e7e2d4"><span style="width:7px;height:7px;border-radius:50%;background:#dc3545;margin-top:5px;flex:none"></span><div style="font-size:11.5px;line-height:1.45;color:#343a40"><strong>M. Brown</strong> commented on <a href="#2a">#412</a><div style="color:#adb5bd;font-size:10.5px">5h ago</div></div></div>
+        <div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #e7e2d4"><span style="width:7px;height:7px;border-radius:50%;background:#dc3545;margin-top:5px;flex:none"></span><div style="font-size:11.5px;line-height:1.45;color:#343a40"><i class="fas fa-envelope" style="color:#0f5132;font-size:10px"></i> <strong>Email logged</strong> on <a href="#2a">#412</a><div style="color:#adb5bd;font-size:10.5px">from ATAS office · yesterday</div></div></div>
+        <div style="display:flex;gap:8px;padding:8px 0"><span style="width:7px;height:7px;border-radius:50%;background:transparent;margin-top:5px;flex:none"></span><div style="font-size:11.5px;line-height:1.45;color:#6c757d">You opened <a href="#2b">#420</a><div style="color:#adb5bd;font-size:10.5px">5h ago</div></div></div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;background:#fff;padding:18px 20px">
+    <!-- what's new -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="border:1px solid #f2c9cf;border-radius:10px;background:#fdf2f3;padding:13px 15px">
+        <div style="font-size:12px;color:#b02a37;font-weight:600"><i class="fas fa-user-check"></i> Newly assigned to you</div>
+        <div style="font-size:28px;font-weight:700;color:#212529;margin:4px 0 2px">2</div>
+        <div style="font-size:11.5px;color:#a05860">since you last visited</div>
+      </div>
+      <div style="border:1px solid #f2c9cf;border-radius:10px;background:#fdf2f3;padding:13px 15px">
+        <div style="font-size:12px;color:#b02a37;font-weight:600"><i class="far fa-comment-dots"></i> New comments</div>
+        <div style="font-size:28px;font-weight:700;color:#212529;margin:4px 0 2px">5</div>
+        <div style="font-size:11.5px;color:#a05860">on tickets you watch</div>
+      </div>
+      <div style="border:1px solid #e6e2d6;border-radius:10px;background:#fff;padding:13px 15px">
+        <div style="font-size:12px;color:#6c757d;font-weight:600"><i class="far fa-clock"></i> Due this week</div>
+        <div style="font-size:28px;font-weight:700;color:#212529;margin:4px 0 2px">1</div>
+        <div style="font-size:11.5px;color:#adb5bd">Sophie Franks · 20 Aug</div>
+      </div>
+    </div>
+    <div style="border:1px solid #e6e2d6;border-radius:10px;background:#fff;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #efeade;background:#faf8f2;font-size:12.5px;color:#6c757d">
+          <div style="display:inline-flex;border:1px solid #ced4da;border-radius:20px;overflow:hidden;background:#fff;font-size:12px"><span style="padding:4px 12px;background:#0d6efd;color:#fff;font-weight:500">Assigned to me <span style="opacity:.8">2</span></span><span style="padding:4px 12px;color:#495057;border-left:1px solid #ced4da">Watching <span style="opacity:.7">9</span></span></div>
+          <span style="margin-left:auto">Sort: <strong style="color:#343a40">Recently updated</strong> <i class="fas fa-chevron-down" style="font-size:10px"></i></span>
+        </div>
+        <div style="padding:12px 16px;display:flex;gap:11px;align-items:flex-start;border-left:3px solid #dc3545;background:#fbfcff;border-bottom:1px solid #f0f0f0">
+          <span style="width:8px;height:8px;border-radius:50%;background:#dc3545;margin-top:6px;flex:none"></span>
+          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><a href="#2a" style="font-weight:700;color:#212529;font-size:14px;text-decoration:none">Add tick-box on lab projects to indicate not-ATAS suitable</a><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span></div><div style="font-size:12px;color:#adb5bd;margin-top:5px">#412 · MPhys FYP · assigned to you 2h ago · <span style="color:#dc3545;font-weight:600">2 new comments</span></div></div>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#fff3cd;color:#997404;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#997404"></span>In progress</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;gap:11px;align-items:flex-start;border-left:3px solid #dc3545;background:#fbfcff;border-bottom:1px solid #f0f0f0">
+          <span style="width:8px;height:8px;border-radius:50%;background:#dc3545;margin-top:6px;flex:none"></span>
+          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:#212529;font-size:14px">Marking spreadsheet formulae broken for MO role</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span></div><div style="font-size:12px;color:#adb5bd;margin-top:5px">#420 · BSc Physics · opened by you 5h ago</div></div>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#0a58ca"></span>Open</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;gap:11px;align-items:flex-start;border-bottom:1px solid #f0f0f0">
+          <span style="width:8px;height:8px;border-radius:50%;background:transparent;margin-top:6px;flex:none"></span>
+          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;color:#343a40;font-size:14px">Sophie Franks repeat-year project</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div><div style="font-size:12px;color:#adb5bd;margin-top:5px">#414 · MPhys FYP · watching · due 20 Aug 2026</div></div>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#0a58ca"></span>Open</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;gap:11px;align-items:flex-start">
+          <span style="width:8px;height:8px;border-radius:50%;background:transparent;margin-top:6px;flex:none"></span>
+          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;color:#343a40;font-size:14px">Create policy documents / marking guidance for staff</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span></div><div style="font-size:12px;color:#adb5bd;margin-top:5px">#405 · MPhys FYP · watching · updated 2d ago</div></div>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#fff3cd;color:#997404;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#997404"></span>In progress</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: “show the <strong>office</strong> variant of compose <a class="dv-oid" href="#2b">2b</a> with the wider student/class scope” · “add the convenor’s view of an incoming routed ticket on the ledger” · “design the email that goes to subscribers when a comment is posted” · “sketch the ticket data model that supports these modes”</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Ticket list — three directions</span></div>
+<p class="dv-tsub">The greenfield ticket system replaces freestanding/selector/submitter tasks. Same app shell (dark navbar, pill nav, breadcrumb bar) so it feels native; the “Tasks” tab becomes <strong>Tickets</strong>. Each direction shows the same 6 sample tickets with the new model: workflow status (Open&nbsp;→&nbsp;In&nbsp;progress&nbsp;→&nbsp;Resolved&nbsp;→&nbsp;Closed), an assignee + subscriber stack, GitHub-style coloured labels with filtering, and comment counts. Pick a direction and I’ll build the detail view + compose form to match.</p>
+<div class="dv-opts">
+
+<!-- ============ 1a LEDGER ============ -->
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Ledger <span class="sub">— upgraded table, closest to today’s DataTable</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px">
+      <span>My projects</span><span>Reports</span><span>Dashboards</span><span style="color:#fff">Convenor</span><span>Admin</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Faculty)</span>
+    </div>
+  </div>
+  <div style="padding:14px 20px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Overview</span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Projects <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">106</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Faculty <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">46/48</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Selectors <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">19</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Submitters <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">10</span></span>
+    <span style="padding:6px 12px;border-radius:6px;background:#0d6efd;color:#fff;font-size:14px;font-weight:500">Tickets <span style="background:rgba(255,255,255,.85);color:#0d6efd;border-radius:20px;padding:1px 7px;font-size:11px">4</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Journal <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">0</span></span>
+  </div>
+  <div style="background:#f4f2ec;border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.09);padding:9px 20px;display:flex;align-items:center;gap:10px;font-size:13px;color:#6c757d;margin-top:6px">
+    <span style="color:#6c757d">All classes</span><span style="color:#c9c4b6">/</span><span style="font-weight:600;color:#212529;font-size:14px">Final Year Project (MPhys)</span>
+    <span style="font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid #d7d2c4;background:#efece2;color:#6c757d">2025–2026</span>
+    <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:#d1e7dd;color:#0f5132;border:1px solid #badbcc">Selections open</span>
+  </div>
+  <div style="padding:20px">
+    <div style="border:1px solid #0d6efd;border-radius:8px;overflow:hidden;background:#fff">
+      <div style="background:#0d6efd;color:#fff;padding:12px 18px;font-size:16px;display:flex;align-items:center;justify-content:space-between">
+        <span>Tickets for <strong>Final Year Project (MPhys)</strong></span>
+        <span style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500"><i class="fas fa-plus"></i>&nbsp; New ticket</span>
+      </div>
+      <div style="padding:16px 18px">
+        <div style="background:#f8f9fa;border:1px solid #e9ecef;border-radius:8px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between">
+          <div style="display:inline-flex;border:1px solid #ced4da;border-radius:7px;overflow:hidden;font-size:13px">
+            <span style="padding:6px 13px;background:#0d6efd;color:#fff;font-weight:500">All <span style="opacity:.8">21</span></span>
+            <span style="padding:6px 13px;color:#0d6efd;border-left:1px solid #ced4da">Open <span style="opacity:.7">4</span></span>
+            <span style="padding:6px 13px;color:#495057;border-left:1px solid #ced4da">In progress <span style="opacity:.7">2</span></span>
+            <span style="padding:6px 13px;color:#495057;border-left:1px solid #ced4da">Resolved <span style="opacity:.7">9</span></span>
+            <span style="padding:6px 13px;color:#495057;border-left:1px solid #ced4da">Closed <span style="opacity:.7">6</span></span>
+          </div>
+          <div style="position:relative">
+            <i class="fas fa-search" style="position:absolute;left:11px;top:9px;color:#adb5bd;font-size:13px"></i>
+            <span style="display:inline-block;width:220px;padding:7px 12px 7px 32px;border:1px solid #ced4da;border-radius:7px;font-size:13px;color:#adb5bd;background:#fff">Search tickets…</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 2px 4px">
+          <span style="font-size:12px;color:#6c757d;font-weight:600;margin-right:2px">Labels</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#0d6efd;color:#fff"><i class="fas fa-tag" style="font-size:9px;opacity:.8"></i> ATAS ×</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cff4fc;color:#087990">Rollover</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span>
+          <span style="font-size:12px;color:#adb5bd;margin-left:2px"><i class="fas fa-sliders-h"></i> Manage</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px">
+          <thead>
+            <tr style="border-bottom:2px solid #dee2e6;text-align:left;color:#6c757d;font-size:11px;text-transform:uppercase;letter-spacing:.03em">
+              <th style="padding:8px 10px;font-weight:700">Ticket</th>
+              <th style="padding:8px 10px;font-weight:700;width:130px">Status</th>
+              <th style="padding:8px 10px;font-weight:700;width:90px">Assignee</th>
+              <th style="padding:8px 10px;font-weight:700;width:110px">Watchers</th>
+              <th style="padding:8px 10px;font-weight:700;width:120px">Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #eee;background:#fff8ee">
+              <td style="padding:12px 10px">
+                <div style="font-weight:700;color:#212529;font-size:14px">Add tick-box on lab projects to indicate not-ATAS suitable</div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cff4fc;color:#087990">Rollover</span></div>
+                <div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#412 · opened by D. Seery · <i class="far fa-comment"></i> 3</div>
+              </td>
+              <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></td>
+              <td style="padding:12px 10px"><span style="width:28px;height:28px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700" title="David Seery">DS</span></td>
+              <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:-8px;border:2px solid #fff">JS</span><span style="width:24px;height:24px;border-radius:50%;background:#20c997;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">MB</span><span style="font-size:11px;color:#adb5bd;margin-left:5px">+2</span></td>
+              <td style="padding:12px 10px;color:#adb5bd;font-size:12.5px">—</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:12px 10px">
+                <div style="font-weight:700;color:#212529;font-size:14px">Chinese universities 2+2 BSc — ATAS review</div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span></div>
+                <div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#418 · opened by School Office · <i class="far fa-comment"></i> 1</div>
+              </td>
+              <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#cfe2ff;color:#0a58ca"><span style="width:7px;height:7px;border-radius:50%;background:#0a58ca"></span>Open</span></td>
+              <td style="padding:12px 10px"><span style="width:28px;height:28px;border-radius:50%;background:#e9ecef;color:#adb5bd;display:inline-flex;align-items:center;justify-content:center;font-size:12px" title="Unassigned"><i class="fas fa-user"></i></span></td>
+              <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">DS</span><span style="font-size:11px;color:#adb5bd;margin-left:5px">+1</span></td>
+              <td style="padding:12px 10px;color:#b5480b;font-size:12.5px;font-weight:600">Overdue · 12 Jul</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:12px 10px">
+                <div style="font-weight:700;color:#212529;font-size:14px">Create policy documents / marking guidance for staff</div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2e3e5;color:#41464b">Staff</span></div>
+                <div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#405 · opened by D. Seery · <i class="far fa-comment"></i> 5</div>
+              </td>
+              <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#fff3cd;color:#997404"><span style="width:7px;height:7px;border-radius:50%;background:#997404"></span>In progress</span></td>
+              <td style="padding:12px 10px"><span style="width:28px;height:28px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700" title="Rachel Adams">RA</span></td>
+              <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:-8px;border:2px solid #fff">DS</span><span style="width:24px;height:24px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">RA</span></td>
+              <td style="padding:12px 10px;color:#495057;font-size:12.5px">02 Sep 2026</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:12px 10px">
+                <div style="font-weight:700;color:#212529;font-size:14px">Sophie Franks repeat-year project</div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#f8f9fa;color:#6c757d;border:1px solid #e9ecef"><i class="fas fa-user-graduate" style="font-size:9px"></i> Submitter</span></div>
+                <div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#414 · opened by J. Smith · <i class="far fa-comment"></i> 2</div>
+              </td>
+              <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#cfe2ff;color:#0a58ca"><span style="width:7px;height:7px;border-radius:50%;background:#0a58ca"></span>Open</span></td>
+              <td style="padding:12px 10px"><span style="width:28px;height:28px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700" title="Jane Smith">JS</span></td>
+              <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">JS</span></td>
+              <td style="padding:12px 10px;color:#495057;font-size:12.5px">20 Aug 2026</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee">
+              <td style="padding:12px 10px">
+                <div style="font-weight:700;color:#495057;font-size:14px">Add guidance to students on failure to observe length limits</div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div>
+                <div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#399 · opened by D. Seery · <i class="far fa-comment"></i> 4</div>
+              </td>
+              <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#d1e7dd;color:#0f5132"><i class="fas fa-check" style="font-size:9px"></i>Resolved</span></td>
+              <td style="padding:12px 10px"><span style="width:28px;height:28px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">DS</span></td>
+              <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">DS</span></td>
+              <td style="padding:12px 10px;color:#495057;font-size:12.5px">02 Sep 2024</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 10px">
+                <div style="font-weight:700;color:#495057;font-size:14px">Add guidance to students for literacy notifications</div>
+                <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap"><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div>
+                <div style="font-size:11.5px;color:#adb5bd;margin-top:6px">#388 · opened by D. Seery · <i class="far fa-comment"></i> 0</div>
+              </td>
+              <td style="padding:12px 10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#e2e3e5;color:#6c757d"><i class="fas fa-times" style="font-size:9px"></i>Closed</span></td>
+              <td style="padding:12px 10px"><span style="width:28px;height:28px;border-radius:50%;background:#e9ecef;color:#adb5bd;display:inline-flex;align-items:center;justify-content:center;font-size:12px"><i class="fas fa-user"></i></span></td>
+              <td style="padding:12px 10px"><span style="width:24px;height:24px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff">DS</span></td>
+              <td style="padding:12px 10px;color:#adb5bd;font-size:12.5px">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:12.5px;color:#6c757d">
+          <span>Showing 1 to 6 of 21 tickets</span>
+          <div style="display:flex;gap:4px"><span style="padding:5px 11px;border:1px solid #dee2e6;border-radius:6px;color:#adb5bd">Previous</span><span style="padding:5px 11px;border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:6px">1</span><span style="padding:5px 11px;border:1px solid #dee2e6;border-radius:6px;color:#0d6efd">2</span><span style="padding:5px 11px;border:1px solid #dee2e6;border-radius:6px;color:#0d6efd">Next</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 1b INBOX ============ -->
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Inbox <span class="sub">— personal + per-class, saved views rail, dense rows</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px">
+      <span>My projects</span><span>Reports</span><span style="color:#fff">Dashboards</span><span>Convenor</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Faculty)</span>
+    </div>
+  </div>
+  <div style="background:#f4f2ec;border-bottom:1px solid rgba(0,0,0,.09);padding:11px 20px;display:flex;align-items:center;gap:12px">
+    <i class="fas fa-ticket-alt" style="color:#0d6efd;font-size:15px"></i>
+    <span style="font-weight:700;color:#212529;font-size:16px">Tickets</span>
+    <div style="display:inline-flex;border:1px solid #ced4da;border-radius:20px;overflow:hidden;font-size:12.5px;margin-left:6px;background:#fff">
+      <span style="padding:5px 15px;background:#0d6efd;color:#fff;font-weight:500"><i class="fas fa-inbox" style="font-size:11px"></i> My inbox</span>
+      <span style="padding:5px 15px;color:#495057;border-left:1px solid #ced4da">Final Year Project (MPhys)</span>
+    </div>
+    <span style="margin-left:auto;background:#0d6efd;color:#fff;padding:7px 15px;border-radius:7px;font-size:13px;font-weight:500"><i class="fas fa-plus"></i>&nbsp; New ticket</span>
+  </div>
+  <div style="display:flex;min-height:560px">
+    <div style="width:230px;flex:none;background:#f4f2ec;border-right:1px solid rgba(0,0,0,.08);padding:16px 12px">
+      <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.05em;padding:0 8px 6px">Views</div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;background:#e6edfb;color:#0a58ca;font-size:13.5px;font-weight:600"><i class="fas fa-inbox fa-fw" style="font-size:12px"></i> All open <span style="margin-left:auto;font-size:11px;background:#0d6efd;color:#fff;border-radius:20px;padding:1px 8px">6</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-user-check fa-fw" style="font-size:12px;color:#6c757d"></i> Assigned to me <span style="margin-left:auto;font-size:11px;color:#adb5bd">2</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-eye fa-fw" style="font-size:12px;color:#6c757d"></i> Subscribed <span style="margin-left:auto;font-size:11px;color:#adb5bd">9</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-bell fa-fw" style="font-size:12px;color:#dc3545"></i> Unread <span style="margin-left:auto;font-size:11px;background:#dc3545;color:#fff;border-radius:20px;padding:1px 8px">3</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-pen fa-fw" style="font-size:12px;color:#6c757d"></i> Created by me <span style="margin-left:auto;font-size:11px;color:#adb5bd">7</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#343a40;font-size:13.5px"><i class="fas fa-check-circle fa-fw" style="font-size:12px;color:#6c757d"></i> Closed <span style="margin-left:auto;font-size:11px;color:#adb5bd">14</span></div>
+      <div style="font-size:10.5px;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:.05em;padding:16px 8px 6px">Labels</div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#b60205"></span> ATAS <span style="margin-left:auto;font-size:11px;color:#adb5bd">3</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#0a58ca"></span> Projects <span style="margin-left:auto;font-size:11px;color:#adb5bd">5</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#0f5132"></span> Students <span style="margin-left:auto;font-size:11px;color:#adb5bd">8</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#59359a"></span> Policy <span style="margin-left:auto;font-size:11px;color:#adb5bd">4</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#343a40;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:#087990"></span> Rollover <span style="margin-left:auto;font-size:11px;color:#adb5bd">2</span></div>
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:#adb5bd;font-size:12.5px;margin-top:2px"><i class="fas fa-plus fa-fw" style="font-size:11px"></i> New label</div>
+    </div>
+    <div style="flex:1;background:#fff">
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid #eee;font-size:13px;color:#6c757d">
+        <span style="font-weight:700;color:#212529;font-size:14px">All open</span>
+        <span style="color:#adb5bd">6 tickets across all your classes</span>
+        <span style="margin-left:auto">Sort: <span style="color:#212529;font-weight:600">Recently updated</span> <i class="fas fa-chevron-down" style="font-size:10px"></i></span>
+      </div>
+      <div style="border-bottom:1px solid #f0f0f0;padding:13px 18px;display:flex;gap:12px;align-items:flex-start;border-left:3px solid #dc3545;background:#fbfcff">
+        <span style="width:8px;height:8px;border-radius:50%;background:#dc3545;margin-top:6px;flex:none" title="Unread"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:#212529;font-size:14px">Add tick-box on lab projects to indicate not-ATAS suitable</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#cff4fc;color:#087990">Rollover</span></div>
+          <div style="font-size:12px;color:#adb5bd;margin-top:5px">#412 · MPhys FYP · updated 2h ago by M. Brown · <span style="color:#dc3545;font-weight:600">2 new comments</span></div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#fff3cd;color:#997404;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#997404"></span>In progress</span>
+        <span style="font-size:12px;color:#6c757d;flex:none"><i class="far fa-comment"></i> 3</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">DS</span>
+      </div>
+      <div style="border-bottom:1px solid #f0f0f0;padding:13px 18px;display:flex;gap:12px;align-items:flex-start;border-left:3px solid #dc3545;background:#fbfcff">
+        <span style="width:8px;height:8px;border-radius:50%;background:#dc3545;margin-top:6px;flex:none"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:#212529;font-size:14px">Chinese universities 2+2 BSc — ATAS review</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span></div>
+          <div style="font-size:12px;color:#adb5bd;margin-top:5px">#418 · MPhys FYP · opened 1d ago by School Office · <span style="color:#dc3545;font-weight:600">1 new comment</span></div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#0a58ca"></span>Open</span>
+        <span style="font-size:12px;color:#6c757d;flex:none"><i class="far fa-comment"></i> 1</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#e9ecef;color:#adb5bd;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none"><i class="fas fa-user"></i></span>
+      </div>
+      <div style="border-bottom:1px solid #f0f0f0;padding:13px 18px;display:flex;gap:12px;align-items:flex-start">
+        <span style="width:8px;height:8px;border-radius:50%;background:transparent;margin-top:6px;flex:none"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;color:#343a40;font-size:14px">Create policy documents / marking guidance for staff</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2e3e5;color:#41464b">Staff</span></div>
+          <div style="font-size:12px;color:#adb5bd;margin-top:5px">#405 · MPhys FYP · updated yesterday by R. Adams · due 02 Sep 2026</div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#fff3cd;color:#997404;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#997404"></span>In progress</span>
+        <span style="font-size:12px;color:#6c757d;flex:none"><i class="far fa-comment"></i> 5</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">RA</span>
+      </div>
+      <div style="border-bottom:1px solid #f0f0f0;padding:13px 18px;display:flex;gap:12px;align-items:flex-start">
+        <span style="width:8px;height:8px;border-radius:50%;background:transparent;margin-top:6px;flex:none"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;color:#343a40;font-size:14px">Sophie Franks repeat-year project</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#f0f0f0;color:#6c757d">Submitter</span></div>
+          <div style="font-size:12px;color:#adb5bd;margin-top:5px">#414 · MPhys FYP · updated 3d ago by J. Smith · due 20 Aug 2026</div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#0a58ca"></span>Open</span>
+        <span style="font-size:12px;color:#6c757d;flex:none"><i class="far fa-comment"></i> 2</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">JS</span>
+      </div>
+      <div style="border-bottom:1px solid #f0f0f0;padding:13px 18px;display:flex;gap:12px;align-items:flex-start">
+        <span style="width:8px;height:8px;border-radius:50%;background:transparent;margin-top:6px;flex:none"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;color:#343a40;font-size:14px">Marking spreadsheet formulae broken for MO role</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2e3e5;color:#41464b">Staff</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span></div>
+          <div style="font-size:12px;color:#adb5bd;margin-top:5px">#420 · BSc Physics · updated 5h ago by You</div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#0a58ca"></span>Open</span>
+        <span style="font-size:12px;color:#6c757d;flex:none"><i class="far fa-comment"></i> 0</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">DS</span>
+      </div>
+      <div style="padding:13px 18px;display:flex;gap:12px;align-items:flex-start">
+        <span style="width:8px;height:8px;border-radius:50%;background:transparent;margin-top:6px;flex:none"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;color:#343a40;font-size:14px">Update external examiner distribution list</span><span style="padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span></div>
+          <div style="font-size:12px;color:#adb5bd;margin-top:5px">#409 · MPhys FYP · updated 4d ago by R. Adams</div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;background:#cfe2ff;color:#0a58ca;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#0a58ca"></span>Open</span>
+        <span style="font-size:12px;color:#6c757d;flex:none"><i class="far fa-comment"></i> 6</span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none">RA</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 1c BOARD ============ -->
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Triage board <span class="sub">— Kanban by status, best for actively working a queue</span></div>
+<div class="screen">
+  <div style="height:52px;background:#212529;display:flex;align-items:center;padding:0 20px;gap:22px;color:rgba(255,255,255,.55);font-size:14px">
+    <span style="font-family:Roboto,sans-serif;font-weight:300;font-size:19px;color:#fff">MPS projects management</span>
+    <div style="margin-left:auto;display:flex;gap:20px;align-items:center;font-size:14px">
+      <span>My projects</span><span>Reports</span><span>Dashboards</span><span style="color:#fff">Convenor</span><span style="color:#fff"><i class="fas fa-user-circle"></i> ds283 (Faculty)</span>
+    </div>
+  </div>
+  <div style="padding:14px 20px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Overview</span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Faculty <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">46/48</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Selectors <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">19</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Submitters <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">10</span></span>
+    <span style="padding:6px 12px;border-radius:6px;background:#0d6efd;color:#fff;font-size:14px;font-weight:500">Tickets <span style="background:rgba(255,255,255,.85);color:#0d6efd;border-radius:20px;padding:1px 7px;font-size:11px">6</span></span>
+    <span style="padding:6px 12px;border-radius:6px;color:#0d6efd;font-size:14px;font-weight:500">Journal <span style="background:#6c757d;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px">0</span></span>
+  </div>
+  <div style="background:#f4f2ec;border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.09);padding:9px 20px;display:flex;align-items:center;gap:10px;font-size:13px;color:#6c757d;margin-top:6px">
+    <span style="color:#6c757d">All classes</span><span style="color:#c9c4b6">/</span><span style="font-weight:600;color:#212529;font-size:14px">Final Year Project (MPhys)</span>
+    <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:#d1e7dd;color:#0f5132;border:1px solid #badbcc">Selections open</span>
+  </div>
+  <div style="padding:16px 20px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-size:18px;font-weight:700;color:#212529">Ticket board</span>
+      <div style="display:inline-flex;border:1px solid #ced4da;border-radius:20px;overflow:hidden;font-size:12px;background:#fff;margin-left:4px"><span style="padding:4px 12px;color:#495057">Board</span><span style="padding:4px 12px;background:#0d6efd;color:#fff;font-weight:500">Status</span><span style="padding:4px 12px;color:#495057;border-left:1px solid #ced4da">Assignee</span></div>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#0d6efd;color:#fff">ATAS ×</span>
+        <span style="padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:#eee;color:#6c757d">+ Label</span>
+        <span style="padding:5px 12px;border:1px solid #ced4da;border-radius:7px;font-size:12.5px;color:#adb5bd;background:#fff"><i class="fas fa-search" style="font-size:11px"></i> Search</span>
+        <span style="background:#0d6efd;color:#fff;padding:6px 13px;border-radius:7px;font-size:12.5px;font-weight:500"><i class="fas fa-plus"></i> New</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start">
+      <!-- OPEN -->
+      <div style="background:#eef4ff;border:1px solid #d3e2ff;border-radius:10px;padding:10px">
+        <div style="display:flex;align-items:center;gap:7px;padding:2px 4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#0a58ca"></span><span style="font-weight:700;font-size:13px;color:#0a58ca">Open</span><span style="margin-left:auto;font-size:11px;color:#0a58ca;background:#d3e2ff;border-radius:20px;padding:1px 8px;font-weight:600">3</span></div>
+        <div style="background:#fff;border:1px solid #e6ecf5;border-radius:8px;padding:11px;margin-bottom:9px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="font-weight:600;font-size:13px;color:#212529;line-height:1.35">Chinese universities 2+2 BSc — ATAS review</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#ffe5d0;color:#b5480b">Urgent</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span style="color:#b5480b;font-weight:600"><i class="far fa-clock"></i> Overdue</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span><i class="far fa-comment"></i> 1</span><span style="width:22px;height:22px;border-radius:50%;background:#e9ecef;color:#adb5bd;display:inline-flex;align-items:center;justify-content:center;font-size:9px"><i class="fas fa-user"></i></span></span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #e6ecf5;border-radius:8px;padding:11px;margin-bottom:9px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="font-weight:600;font-size:13px;color:#212529;line-height:1.35">Sophie Franks repeat-year project</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span>20 Aug</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span><i class="far fa-comment"></i> 2</span><span style="width:22px;height:22px;border-radius:50%;background:#6f42c1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">JS</span></span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #e6ecf5;border-radius:8px;padding:11px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="font-weight:600;font-size:13px;color:#212529;line-height:1.35">Update external examiner distribution list</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span>—</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span><i class="far fa-comment"></i> 6</span><span style="width:22px;height:22px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">RA</span></span></div>
+        </div>
+        <div style="text-align:center;padding:8px 0 2px;font-size:12px;color:#7c9cd6;font-weight:500"><i class="fas fa-plus"></i> Add ticket</div>
+      </div>
+      <!-- IN PROGRESS -->
+      <div style="background:#fff9e6;border:1px solid #ffe8a8;border-radius:10px;padding:10px">
+        <div style="display:flex;align-items:center;gap:7px;padding:2px 4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#997404"></span><span style="font-weight:700;font-size:13px;color:#997404">In progress</span><span style="margin-left:auto;font-size:11px;color:#997404;background:#ffe8a8;border-radius:20px;padding:1px 8px;font-weight:600">2</span></div>
+        <div style="background:#fff;border:1px solid #f2e6c0;border-radius:8px;padding:11px;margin-bottom:9px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="font-weight:600;font-size:13px;color:#212529;line-height:1.35">Add tick-box on lab projects to indicate not-ATAS suitable</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#ffdce0;color:#b60205">ATAS</span><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#cfe2ff;color:#0a58ca">Projects</span><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#cff4fc;color:#087990">Rollover</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span>—</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span style="color:#dc3545;font-weight:600"><i class="fas fa-comment"></i> 3</span><span style="width:22px;height:22px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">DS</span></span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #f2e6c0;border-radius:8px;padding:11px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="font-weight:600;font-size:13px;color:#212529;line-height:1.35">Create policy documents / marking guidance for staff</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#e2e3e5;color:#41464b">Staff</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span>02 Sep 2026</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span><i class="far fa-comment"></i> 5</span><span style="width:22px;height:22px;border-radius:50%;background:#fd7e14;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">RA</span></span></div>
+        </div>
+      </div>
+      <!-- RESOLVED -->
+      <div style="background:#eaf6ef;border:1px solid #c3e6d1;border-radius:10px;padding:10px">
+        <div style="display:flex;align-items:center;gap:7px;padding:2px 4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#0f5132"></span><span style="font-weight:700;font-size:13px;color:#0f5132">Resolved</span><span style="margin-left:auto;font-size:11px;color:#0f5132;background:#c3e6d1;border-radius:20px;padding:1px 8px;font-weight:600">1</span></div>
+        <div style="background:#fff;border:1px solid #d5ecdf;border-radius:8px;padding:11px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="font-weight:600;font-size:13px;color:#212529;line-height:1.35">Add guidance to students on failure to observe length limits</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#e2d9f3;color:#59359a">Policy</span><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span><i class="fas fa-check" style="color:#0f5132"></i> resolved 3d</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span><i class="far fa-comment"></i> 4</span><span style="width:22px;height:22px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">DS</span></span></div>
+        </div>
+      </div>
+      <!-- CLOSED -->
+      <div style="background:#f1f2f3;border:1px solid #dcdfe2;border-radius:10px;padding:10px">
+        <div style="display:flex;align-items:center;gap:7px;padding:2px 4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#6c757d"></span><span style="font-weight:700;font-size:13px;color:#6c757d">Closed</span><span style="margin-left:auto;font-size:11px;color:#6c757d;background:#dcdfe2;border-radius:20px;padding:1px 8px;font-weight:600">1</span></div>
+        <div style="background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:11px;box-shadow:0 1px 2px rgba(0,0,0,.04);opacity:.82">
+          <div style="font-weight:600;font-size:13px;color:#495057;line-height:1.35;text-decoration:line-through;text-decoration-color:#ced4da">Add guidance to students for literacy notifications</div>
+          <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap"><span style="padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#d1e7dd;color:#0f5132">Students</span></div>
+          <div style="display:flex;align-items:center;margin-top:10px;font-size:11px;color:#adb5bd"><span><i class="fas fa-times"></i> closed</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:50%;background:#0d6efd;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">DS</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: “build the ticket detail view + compose form for <a class="dv-oid" href="#1b">1b</a>” · “combine the saved-views rail from <a class="dv-oid" href="#1b">1b</a> with the table in <a class="dv-oid" href="#1a">1a</a>” · “show the board <a class="dv-oid" href="#1c">1c</a> grouped by assignee instead of status” · “show the dashboard new-comment notification for a faculty user”</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scopeLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Project class&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Detail view (2a)&quot;}}">class Component extends DCLogic {
+  renderVals() {
+    return { scopeLabel: this.props.scopeLabel ?? "Project class" };
+  }
+}</script>
+</body>
+</html>

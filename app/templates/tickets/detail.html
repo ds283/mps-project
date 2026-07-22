@@ -53,7 +53,11 @@
         .tk-sub-search { padding:0 8px 8px; }
         .tk-sub-row { display:flex; align-items:center; gap:8px; }
         .tk-sub-avatar-wrap, .tk-sub-pill-wrap { position:relative; display:inline-flex; }
-        .tk-sub-remove { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--bs-danger); color:var(--bs-white); border:none; font-size:8px; display:inline-flex; align-items:center; justify-content:center; line-height:1; padding:0; }
+        .tk-sub-remove { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--bs-danger); color:var(--bs-white); border:none; font-size:8px; display:none; align-items:center; justify-content:center; line-height:1; padding:0; }
+        .tk-sub-avatar-wrap:hover .tk-sub-remove, .tk-sub-avatar-wrap:focus-within .tk-sub-remove,
+        .tk-sub-pill-wrap:hover .tk-sub-remove, .tk-sub-pill-wrap:focus-within .tk-sub-remove { display:inline-flex; }
+        .tk-context { display:flex; flex-direction:column; gap:6px; line-height:1.5; }
+        .tk-context-row { display:flex; align-items:baseline; gap:6px; }
         .tk-inline-form { display:inline; }
         .tk-card, .tk-email { box-shadow:0 1px 2px rgba(0,0,0,.04); }
         .tk-panel { box-shadow:0 1px 3px rgba(0,0,0,.06); }
@@ -95,12 +99,27 @@
                     {% for label in ticket.labels %}{{ label_pill(label) }}{% endfor %}
                 </div>
             </div>
-            <form method="POST" action="{{ url_for('tickets.unwatch' if watching else 'tickets.watch', ticket_id=ticket.id) }}" class="tk-inline-form">
-                {{ action_form.hidden_tag() }}
-                <button type="submit" class="btn btn-sm {{ 'btn-primary' if watching else 'btn-outline-secondary' }}">
-                    <i class="fas {{ 'fa-eye-slash' if watching else 'fa-eye' }}"></i> {{ 'Unwatch' if watching else 'Watch' }}
-                </button>
-            </form>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <form method="POST" action="{{ url_for('tickets.unwatch' if watching else 'tickets.watch', ticket_id=ticket.id) }}" class="tk-inline-form">
+                    {{ action_form.hidden_tag() }}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas {{ 'fa-eye' if watching else 'fa-eye-slash' }}"></i> {{ 'Watching' if watching else 'Watch' }}
+                    </button>
+                </form>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown" type="button" aria-label="More actions"><i class="fas fa-ellipsis-h"></i></button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <button type="button" class="dropdown-item tk-copy-link" data-url="{{ url_for('tickets.detail', ticket_id=ticket.id, _external=True) }}">
+                            <i class="fas fa-link fa-fw"></i> Copy link
+                        </button>
+                        {% if perms.comment %}
+                            <button type="button" class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#tk-log-email">
+                                <i class="fas fa-envelope fa-fw"></i> Log an email
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="tk-2col pb-4">
@@ -153,6 +172,11 @@
                                 {% elif item.kind == 'reassigned' %}
                                     reassigned {{ avatar(item.from_user, 16) }} <i class="fas fa-arrow-right" style="font-size:9px"></i> {{ avatar(item.to_user, 16) }}
                                     <span class="text-secondary">({{ item.to_user.name if item.to_user else 'a former user' }})</span>
+                                {% elif item.kind == 'label' %}
+                                    {{ 'added' if item.added else 'removed' }} {{ 'labels' if item.labels|length > 1 else 'label' }}
+                                    {% for label in item.labels %}
+                                        {% if label %}{{ label_pill(label) }}{% else %}<span class="text-secondary">{{ item.label_names[loop.index0] }}</span>{% endif %}
+                                    {% endfor %}
                                 {% else %}
                                     {{ item.text }}
                                 {% endif %}
@@ -385,11 +409,22 @@
                     {# Context #}
                     <div class="tk-panel-sec">
                         <div class="tk-panel-lbl">Context</div>
-                        <div class="mt-2">
+                        <div class="mt-2 tk-context">
                             {% for row in subjects %}
-                                <div class="d-flex gap-2 mb-1"><span class="text-secondary" style="width:70px; flex:none">{{ row.label }}</span><span class="fw-medium">{{ row.name }}</span></div>
+                                <div class="tk-context-row">
+                                    <i class="fas fa-{{ row.icon }} fa-fw text-secondary"></i>
+                                    <span class="text-secondary">{{ row.label }}:</span>
+                                    {% if row.url %}<a href="{{ row.url }}" class="fw-medium text-decoration-none">{{ row.name }}</a>{% else %}<span class="fw-medium">{{ row.name }}</span>{% endif %}
+                                </div>
                             {% else %}
-                                <span class="text-secondary">General ticket — no subjects</span>
+                                <div class="text-secondary mb-1">General ticket — no subjects</div>
+                            {% endfor %}
+                            {% for meta in context_meta %}
+                                <div class="tk-context-row">
+                                    <i class="fas fa-{{ meta.icon }} fa-fw text-secondary"></i>
+                                    <span class="text-secondary">{{ meta.label }}:</span>
+                                    <span class="fw-medium">{{ meta.value }}</span>
+                                </div>
                             {% endfor %}
                         </div>
                     </div>
@@ -428,5 +463,19 @@
         }
         tkWireSearch('.tk-assign-search', '.tk-assign-option');
         tkWireSearch('.tk-sub-search-input', '.tk-sub-option');
+
+        document.querySelectorAll('.tk-copy-link').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var url = btn.getAttribute('data-url') || window.location.href;
+                var done = function () {
+                    var original = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check fa-fw"></i> Copied';
+                    setTimeout(function () { btn.innerHTML = original; }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(done).catch(function () {});
+                }
+            });
+        });
     </script>
 {% endblock %}

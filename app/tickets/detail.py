@@ -110,10 +110,14 @@ def _describe_event(event: TicketEvent) -> dict:
         return {"icon": "user-slash", "text": "unassigned this ticket", "kind": "generic"}
 
     if kind == TicketEvent.LABEL_ADDED:
-        return {"icon": "tag", "text": f"added label {payload.get('name', '')}", "kind": "generic"}
+        label = Label.query.get(payload["label"]) if payload.get("label") else None
+        name = payload.get("name", "")
+        return {"icon": "tag", "text": f"added label {name}", "kind": "label", "added": True, "labels": [label], "label_names": [name]}
 
     if kind == TicketEvent.LABEL_REMOVED:
-        return {"icon": "tag", "text": f"removed label {payload.get('name', '')}", "kind": "generic"}
+        label = Label.query.get(payload["label"]) if payload.get("label") else None
+        name = payload.get("name", "")
+        return {"icon": "tag", "text": f"removed label {name}", "kind": "label", "added": False, "labels": [label], "label_names": [name]}
 
     if kind == TicketEvent.SUBSCRIBED:
         who = payload.get("email") or _uname(payload.get("user"))
@@ -150,13 +154,38 @@ def _build_timeline(ticket):
         items.append(entry)
 
     items.sort(key=lambda it: it["when"] or datetime.min)
-    return items
+
+    # coalesce consecutive label-add events by the same actor into a single "added labels" row so
+    # the timeline reads like the reference design (grouped, coloured chips) rather than one row
+    # per label.
+    merged = []
+    for it in items:
+        prev = merged[-1] if merged else None
+        if (
+            it.get("kind") == "label"
+            and it.get("added")
+            and prev is not None
+            and prev.get("kind") == "label"
+            and prev.get("added")
+            and prev["obj"].actor_id == it["obj"].actor_id
+        ):
+            prev["labels"] = prev.get("labels", []) + it.get("labels", [])
+            prev["label_names"] = prev.get("label_names", []) + it.get("label_names", [])
+            prev["when"] = it["when"]
+        else:
+            merged.append(it)
+    return merged
+
+
+# how many events to show in the side-panel actions log before it is truncated, to keep the rail
+# within bounds on long-lived tickets.
+_ACTIONS_LOG_LIMIT = 12
 
 
 def _actions_log(ticket):
-    """All events, newest first, for the side-panel actions log."""
+    """The most recent events, newest first, for the side-panel actions log (capped)."""
     log = []
-    for event in ticket.events.order_by(TicketEvent.created_at.desc()):
+    for event in ticket.events.order_by(TicketEvent.created_at.desc()).limit(_ACTIONS_LOG_LIMIT):
         entry = {"obj": event}
         entry.update(_describe_event(event))
         log.append(entry)
@@ -277,16 +306,44 @@ def _student_name(student):
 
 
 def _subjects_display(ticket):
-    """Resolve each subject to a display row {label, name} for the side-panel Context section."""
+    """Resolve each subject to a display row {label, name, icon, url?} for the Context section."""
+    faculty = getattr(current_user, "faculty_data", None)
+    convened = set()
+    if faculty is not None:
+        convened = {p.id for p in faculty.convenor_for} | {p.id for p in faculty.coconvenor_for}
+
     rows = []
     for subject in ticket.subjects:
         if subject.kind == TicketSubject.PROJECT_CLASS and subject.project_class is not None:
-            rows.append({"label": "Class", "name": subject.project_class.name})
+            pclass = subject.project_class
+            url = url_for("convenor.tickets_tab", id=pclass.id) if pclass.id in convened else None
+            rows.append({"label": "Class", "name": pclass.name, "icon": "layer-group", "url": url})
         elif subject.kind == TicketSubject.SUBMITTING_STUDENT and subject.submitting_student is not None:
-            rows.append({"label": "Submitter", "name": _student_name(subject.submitting_student)})
+            rows.append({"label": "Submitter", "name": _student_name(subject.submitting_student), "icon": "user"})
         elif subject.kind == TicketSubject.SELECTING_STUDENT and subject.selecting_student is not None:
-            rows.append({"label": "Selector", "name": _student_name(subject.selecting_student)})
+            rows.append({"label": "Selector", "name": _student_name(subject.selecting_student), "icon": "user-graduate"})
     return rows
+
+
+def _scope_label(ticket):
+    """A one-word scope descriptor for the Context section."""
+    kinds = {subject.kind for subject in ticket.subjects}
+    if TicketSubject.PROJECT_CLASS in kinds:
+        return "Project class"
+    if TicketSubject.SUBMITTING_STUDENT in kinds or TicketSubject.SELECTING_STUDENT in kinds:
+        return "Student"
+    return "General"
+
+
+def _context_meta(ticket):
+    """Icon-led Scope / Opened / Due rows for the Context section (matches reference screen 2a)."""
+    opened = ticket.creation_timestamp
+    due = ticket.due_date
+    return [
+        {"icon": "sitemap", "label": "Scope", "value": _scope_label(ticket)},
+        {"icon": "calendar-alt", "label": "Opened", "value": opened.strftime("%d %b %Y") if opened else "—"},
+        {"icon": "clock", "label": "Due", "value": due.strftime("%d %b %Y") if due else "—"},
+    ]
 
 
 def _available_labels(ticket):
@@ -341,6 +398,7 @@ def detail(ticket_id):
         actions_log=_actions_log(ticket),
         assign_sections=_build_assign_options(ticket),
         subjects=_subjects_display(ticket),
+        context_meta=_context_meta(ticket),
         subscribers=list(ticket.subscriptions),
         external_subscribers=list(ticket.external_subscribers),
         subscriber_sections=_build_subscriber_options(ticket),

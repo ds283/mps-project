@@ -192,6 +192,10 @@ class Ticket(db.Model, TicketWorkflowStatesMixin, EditingMetadataMixin):
     tenant_id = db.Column(db.Integer(), db.ForeignKey("tenants.id"), nullable=True, index=True)
     tenant = db.relationship("Tenant", foreign_keys=[tenant_id], backref=db.backref("tickets", lazy="dynamic"))
 
+    # provenance: the ConvenorTask id this ticket was migrated from (Phase 8 data migration), if any.
+    # Deliberately not a foreign key — the convenor_tasks tables are dropped at teardown.
+    source_task_id = db.Column(db.Integer(), nullable=True, index=True)
+
     # Activity recency uses EditingMetadataMixin.last_edit_timestamp (paired with last_edit_id):
     # the service layer bumps both on every event (see app/shared/tickets/events.py touch()), and
     # it drives the "Recently updated" sort. creation_timestamp records the original creation.

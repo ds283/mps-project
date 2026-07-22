@@ -19,11 +19,16 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 from flask_migrate import upgrade
-from sqlalchemy import func, text
+from sqlalchemy import func, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import with_polymorphic
 
 from app.database import db
 from app.models import (
+    ConvenorGenericTask,
+    ConvenorSelectorTask,
+    ConvenorSubmitterTask,
+    ConvenorTask,
     EnrollmentRecord,
     FacultyData,
     GradingRubric,
@@ -31,8 +36,11 @@ from app.models import (
     ProjectClassConfig,
     Role,
     SubmissionPeriodRecord,
+    Ticket,
+    TicketSubject,
     User,
 )
+from app.shared.tickets import create_ticket
 from app.models.scheduler import (
     CrontabSchedule,
     DatabaseSchedulerEntry,
@@ -440,6 +448,71 @@ def ensure_roles(app) -> None:
                 app.logger.exception("SQLAlchemyError in ensure_roles", exc_info=e)
         else:
             print("** ensure_roles: all required roles already present")
+
+
+def _ticket_subject_for_task(task):
+    """Map a ConvenorTask to a (kind, target) ticket-subject spec, or None for a General ticket."""
+    owner = task.parent
+    if owner is None:
+        return None
+    if isinstance(task, ConvenorSelectorTask):
+        return TicketSubject.SELECTING_STUDENT, owner
+    if isinstance(task, ConvenorSubmitterTask):
+        return TicketSubject.SUBMITTING_STUDENT, owner
+    if isinstance(task, ConvenorGenericTask):
+        pclass = getattr(owner, "project_class", None)
+        return (TicketSubject.PROJECT_CLASS, pclass) if pclass is not None else None
+    return None
+
+
+def ensure_ticket_migration(app) -> None:
+    """
+    Idempotently migrate the legacy ConvenorTask records to the ticket system (Phase 8). Each task
+    becomes a Ticket carrying a matching subject; complete/dropped tasks map to Closed, all others
+    to Open. Provenance is recorded in Ticket.source_task_id so re-runs skip already-migrated tasks;
+    once the convenor_tasks tables are dropped at teardown this becomes a no-op. Safe on every start.
+    """
+    with app.app_context():
+        inspector = inspect(db.engine)
+        if not inspector.has_table("convenor_tasks") or not inspector.has_table("tickets"):
+            return
+
+        migrated = {tid for (tid,) in db.session.query(Ticket.source_task_id).filter(Ticket.source_task_id.isnot(None)).all()}
+
+        task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+        pending = [task for task in db.session.query(task_types).all() if task.id not in migrated]
+        if not pending:
+            return
+
+        created = 0
+        for task in pending:
+            spec = _ticket_subject_for_task(task)
+            opener = User.query.get(task.creator_id) if task.creator_id is not None else None
+
+            ticket = create_ticket(
+                title=(task.description or "Migrated task").strip()[:255],
+                opener=opener,
+                description=task.notes,
+                subjects=[spec] if spec is not None else [],
+                due_date=task.due_date,
+                actor=opener,
+            )
+            ticket.source_task_id = task.id
+            if task.complete or task.dropped:
+                ticket.status = Ticket.CLOSED
+            if task.creation_timestamp is not None:
+                ticket.creation_timestamp = task.creation_timestamp
+
+            created += 1
+            if created % 200 == 0:
+                db.session.commit()
+
+        try:
+            db.session.commit()
+            print(f"** ensure_ticket_migration: migrated {created} ConvenorTask(s) to tickets")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in ensure_ticket_migration", exc_info=e)
 
 
 # ---------------------------------------------------------------------------

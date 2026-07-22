@@ -21,6 +21,7 @@ from initdb import (
     ensure_box_token_schedule,
     ensure_object_store_backup_schedule,
     ensure_roles,
+    ensure_ticket_migration,
     ensure_tombstone_prune_schedule,
     initial_populate_database,
     populate_CATS_limits,
@@ -75,6 +76,7 @@ with app.app_context():
         populate_CATS_limits(app, initdb_module)
 
     ensure_roles(app)
+    ensure_ticket_migration(app)
     reconcile_background_tasks(app)
     ensure_box_token_schedule(app)
     ensure_object_store_backup_schedule(app)

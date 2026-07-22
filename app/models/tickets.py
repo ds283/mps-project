@@ -14,7 +14,11 @@ import json
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy_utils import EncryptedType
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+
 from ..database import db
+from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin
 
@@ -170,11 +174,20 @@ class Ticket(db.Model, TicketWorkflowStatesMixin, EditingMetadataMixin):
     # unique ID for this record; surfaced in the UI as "#412"
     id = db.Column(db.Integer(), primary_key=True)
 
-    # ticket title (required)
-    title = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
+    # ticket title (required). Encrypted at rest (AesEngine) since it may name a student or carry
+    # sensitive detail; consequently it is not SQL-searchable/sortable in the ledger. Uses the same
+    # queryable-but-less-secure AesEngine as journal titles / exam numbers, keyed by SQLALCHEMY_AES_KEY.
+    title = db.Column(
+        EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), get_AES_key, AesEngine, "oneandzeroes"),
+        nullable=False,
+    )
 
-    # opening post of the thread (markdown)
-    description = db.Column(db.Text(collation="utf8_bin"))
+    # opening post of the thread (markdown). Encrypted at rest — free-form, potentially sensitive.
+    description = db.Column(
+        EncryptedType(db.Text(), get_AES_key, AesEngine, "oneandzeroes"),
+        default=None,
+        nullable=True,
+    )
 
     # lifecycle status
     status = db.Column(db.Integer(), default=TicketWorkflowStatesMixin.OPEN, nullable=False, index=True)
@@ -245,7 +258,12 @@ class TicketComment(db.Model):
     author_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
     author = db.relationship("User", foreign_keys=[author_id], uselist=False)
 
-    body = db.Column(db.Text(collation="utf8_bin"))
+    # thread body. Encrypted at rest — free-form, potentially sensitive student detail.
+    body = db.Column(
+        EncryptedType(db.Text(), get_AES_key, AesEngine, "oneandzeroes"),
+        default=None,
+        nullable=True,
+    )
 
     created_at = db.Column(db.DateTime(), default=datetime.now, index=True)
 

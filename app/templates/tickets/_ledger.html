@@ -27,6 +27,7 @@
         $(document).ready(function () {
             $('#{{ table_id }}').DataTable({
                 responsive: true, bAutoWidth: false, stateSave: false,
+                searching: false,  // title is encrypted; no SQL-searchable columns
                 dom: 'lftipr', serverSide: true, processing: true,
                 ajax: {
                     url: {{ url | tojson }},
@@ -35,7 +36,7 @@
                 },
                 columns: [
                     {% if bulk %}{ data: 'select', searchable: false, orderable: false },{% endif %}
-                    { data: 'ticket', searchable: true, orderable: true },
+                    { data: 'ticket', searchable: false, orderable: false },
                     { data: 'status', searchable: false, orderable: true },
                     { data: 'assignee', searchable: false, orderable: false },
                     { data: 'watchers', searchable: false, orderable: false },

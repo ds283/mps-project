@@ -87,11 +87,9 @@ def _build_templ(src: str) -> Template:
 def ledger_data(base_query):
     """Render the ledger from a permission-scoped base_query. Returns a DataTables JSON payload."""
     columns = {
-        "ticket": {
-            "search": Ticket.title,
-            "order": Ticket.title,
-            "search_collation": "utf8_general_ci",
-        },
+        # title is encrypted at rest, so it cannot be SQL-searched or sorted (LIKE/ORDER against
+        # ciphertext is meaningless); the ticket column is display-only here.
+        "ticket": {},
         "status": {"order": Ticket.status},
         "assignee": {},
         "watchers": {},

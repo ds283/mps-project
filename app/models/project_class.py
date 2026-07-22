@@ -1431,6 +1431,32 @@ class ProjectClassConfig(
         return tasks, num_tasks
 
     @property
+    def get_blocking_tickets(self):
+        """
+        Open (non-closed) tickets that name a selecting or submitting student belonging to this
+        config. Under the ticket system these hard-block rollover of the class to the next academic
+        year (the ticket equivalent of get_blocking_tasks' student-scoped guard).
+        """
+        from sqlalchemy import or_
+
+        from .live_projects import SelectingStudent, SubmittingStudent
+        from .tickets import Ticket, TicketSubject
+
+        return (
+            Ticket.query.filter(
+                Ticket.status != Ticket.CLOSED,
+                Ticket.subjects.any(
+                    or_(
+                        TicketSubject.submitting_student.has(SubmittingStudent.config_id == self.id),
+                        TicketSubject.selecting_student.has(SelectingStudent.config_id == self.id),
+                    )
+                ),
+            )
+            .order_by(Ticket.last_edit_timestamp.desc())
+            .all()
+        )
+
+    @property
     def _selection_open(self):
         return self.live and not self.selection_closed
 

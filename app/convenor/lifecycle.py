@@ -956,6 +956,18 @@ def _flash_blocking_tasks(operation: str, blocking):
         flashed_tasks += 1
 
 
+def _flash_blocking_tickets(operation: str, tickets):
+    max_to_flash = 5
+    for ticket in tickets[:max_to_flash]:
+        flash(
+            'Open ticket "{title}" (#{id}) is blocking {operation}'.format(title=ticket.title, id=ticket.id, operation=operation),
+            "warning",
+        )
+    remaining = len(tickets) - max_to_flash
+    if remaining > 0:
+        flash(f"…and {remaining} more open ticket(s) must be closed before {operation}.", "warning")
+
+
 @convenor.route("/confirm_go_live/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def confirm_go_live(id):
@@ -2272,6 +2284,11 @@ def confirm_rollover(id):
         _flash_blocking_tasks("roll-over to next academic year", blocking)
         return redirect(redirect_url())
 
+    blocking_tickets = config.get_blocking_tickets
+    if blocking_tickets:
+        _flash_blocking_tickets("roll-over to next academic year", blocking_tickets)
+        return redirect(redirect_url())
+
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
     action_url = url_for("convenor.rollover", id=id, url=request.referrer, markers=int(use_markers))
     message = (
@@ -2334,6 +2351,11 @@ def rollover(id):
     blocking, num_blocking = config.get_blocking_tasks
     if num_blocking > 0:
         _flash_blocking_tasks("roll-over to next academic year", blocking)
+        return redirect(url) if url is not None else home_dashboard()
+
+    blocking_tickets = config.get_blocking_tickets
+    if blocking_tickets:
+        _flash_blocking_tickets("roll-over to next academic year", blocking_tickets)
         return redirect(url) if url is not None else home_dashboard()
 
     # build task chains

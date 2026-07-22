@@ -55,6 +55,8 @@
                     const d = { q: params.term || '' };
                     if (tenantEl && tenantEl.value) { d.tenant_id = tenantEl.value; }
                     if (includePastEl && includePastEl.checked) { d.include_past = 1; }
+                    {% if origin %}d.origin = {{ origin|tojson|safe }};{% endif %}
+                    {% if pclass_id %}d.pclass = {{ pclass_id|tojson|safe }};{% endif %}
                     return d;
                 },
                 processResults: data => ({ results: data.results }),
@@ -127,7 +129,10 @@
 
         function refreshRouting() {
             const vals = $subjects.val() || [];
-            const qs = vals.map(v => 't=' + encodeURIComponent(v)).join('&');
+            const parts = vals.map(v => 't=' + encodeURIComponent(v));
+            {% if origin %}parts.push('origin=' + encodeURIComponent({{ origin|tojson|safe }}));{% endif %}
+            {% if pclass_id %}parts.push('pclass=' + encodeURIComponent({{ pclass_id|tojson|safe }}));{% endif %}
+            const qs = parts.join('&');
             fetch($SCRIPT_ROOT + '{{ url_for("tickets.compose_routing") }}' + (qs ? ('?' + qs) : ''))
                 .then(r => r.json()).then(renderRouting).catch(() => {});
         }

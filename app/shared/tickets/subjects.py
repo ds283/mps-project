@@ -64,8 +64,17 @@ def add_subject(ticket, kind: int, target, actor=None, reroute: bool = True) -> 
     return subject
 
 
-def remove_subject(ticket, subject: TicketSubject, actor=None) -> None:
-    """Detach a subject and re-derive scope. Never auto-unassigns; the current owner is kept."""
+def remove_subject(ticket, subject: TicketSubject, actor=None) -> bool:
+    """
+    Detach a subject and re-derive scope. Never auto-unassigns; the current owner is kept.
+
+    Refuses to remove a ticket's last remaining subject — a ticket must always keep at least one
+    scoping object — and returns False (no-op) in that case rather than raising, so callers can
+    flash a message. Returns True on success.
+    """
+    if ticket.subjects.count() <= 1:
+        return False
+
     payload = {
         "kind": subject.kind,
         "target": subject.submitting_student_id or subject.selecting_student_id or subject.project_class_id,
@@ -75,6 +84,7 @@ def remove_subject(ticket, subject: TicketSubject, actor=None) -> None:
 
     record_event(ticket, actor, TicketEvent.SUBJECT_REMOVED, payload)
     recompute_scope(ticket)
+    return True
 
 
 def create_ticket(

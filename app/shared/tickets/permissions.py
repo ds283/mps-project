@@ -76,6 +76,18 @@ def can_manage_subscribers(user, ticket) -> bool:
     return is_admin_or_root(user) or is_convenor_in_scope(user, ticket) or is_assignee(user, ticket)
 
 
+def can_edit_scope(user, ticket) -> bool:
+    """Add/remove scope subjects: admin/root, a convenor of any in-scope class, or an office user
+    in the ticket's tenant (a General ticket with no tenant is open to any office user)."""
+    if is_admin_or_root(user) or is_convenor_in_scope(user, ticket):
+        return True
+    if user is not None and user.has_role("office"):
+        if ticket.tenant_id is None:
+            return True
+        return user.tenants.filter_by(id=ticket.tenant_id).first() is not None
+    return False
+
+
 def can_manage_labels(user) -> bool:
     """Manage tenant label definitions: convenor (any class), or admin/root."""
     if is_admin_or_root(user):

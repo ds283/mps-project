@@ -75,6 +75,16 @@ class TicketExternalSubscriberForm(Form):
     submit = SubmitField("Add")
 
 
+class TicketSubjectAddForm(Form):
+    """Add a scope subject to an existing ticket (detail view). `token` is the opaque
+    "sub:<id>"/"sel:<id>"/"pc:<id>" value chosen from the select2 picker; re-validated server-side
+    against the acting user's entitlement, exactly as at compose time."""
+
+    token = StringField("Subject", validators=[DataRequired()])
+
+    submit = SubmitField("Add")
+
+
 class TicketComposeForm(Form):
     """
     New-ticket form (design screens 2b faculty / 3b office). The subject picker is a select2

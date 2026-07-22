@@ -26,18 +26,12 @@ from app.tickets import tickets
 
 from ..database import db
 from ..models import (
-    EnrollmentRecord,
     Label,
     ProjectClass,
     ProjectClassConfig,
-    SelectingStudent,
-    StudentData,
-    SubmissionRecord,
-    SubmissionRole,
     SubmittingStudent,
     Tenant,
     TicketSubject,
-    User,
 )
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.faculty_dashboard import get_faculty_dashboard_data
@@ -45,96 +39,24 @@ from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.tickets import (
     add_label,
+    authorized,
+    candidates_for,
     class_convenor_users,
     create_ticket,
+    faculty_classes,
+    faculty_supervisee_query,
     home_class,
+    is_office_like,
     primary_convenor_user,
+    resolve_convenor_pclass,
+    resolve_token,
+    student_name,
+    target_tenant_id,
+    user_tenant_ids,
 )
 from ..shared.workflow_logging import log_db_commit
-from ..shared.utils import get_current_year, redirect_url
+from ..shared.utils import redirect_url
 from .forms import TicketComposeForm
-
-_SUP_ROLES = (SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR)
-
-_PREFIX_BY_KIND = {
-    TicketSubject.SUBMITTING_STUDENT: "sub",
-    TicketSubject.SELECTING_STUDENT: "sel",
-    TicketSubject.PROJECT_CLASS: "pc",
-}
-_KIND_BY_PREFIX = {prefix: kind for kind, prefix in _PREFIX_BY_KIND.items()}
-_MODEL_BY_KIND = {
-    TicketSubject.SUBMITTING_STUDENT: SubmittingStudent,
-    TicketSubject.SELECTING_STUDENT: SelectingStudent,
-    TicketSubject.PROJECT_CLASS: ProjectClass,
-}
-
-_SEARCH_LIMIT = 20
-
-
-# ------------------------------------------------------------------------------------------------
-# role / scope helpers
-
-
-def _is_office_like(user) -> bool:
-    return user.has_role("office") or user.has_role("admin") or user.has_role("root")
-
-
-def _user_tenant_ids(user):
-    return [tenant.id for tenant in user.tenants]
-
-
-def _token(kind, obj_id) -> str:
-    return f"{_PREFIX_BY_KIND[kind]}:{obj_id}"
-
-
-def _resolve_token(token):
-    prefix, _, sid = token.partition(":")
-    kind = _KIND_BY_PREFIX.get(prefix)
-    if kind is None or not sid.isdigit():
-        return None
-    obj = _MODEL_BY_KIND[kind].query.get(int(sid))
-    if obj is None:
-        return None
-    return kind, obj
-
-
-def _student_user(student):
-    data = getattr(student, "student", None)
-    return getattr(data, "user", None)
-
-
-def _student_name(student):
-    user = _student_user(student)
-    return user.name if user is not None else "Student"
-
-
-def _target_tenant_id(kind, target):
-    if kind == TicketSubject.PROJECT_CLASS:
-        return target.tenant_id
-    hc = home_class(target)
-    return hc.tenant_id if hc is not None else None
-
-
-def _faculty_classes(faculty):
-    """Classes a faculty member supervises: convened + co-convened + enrolled-as-supervisor."""
-    classes = {}
-    for pclass in faculty.convenor_for:
-        classes[pclass.id] = pclass
-    for pclass in faculty.coconvenor_for:
-        classes[pclass.id] = pclass
-    for enrollment in faculty.enrollments:
-        if enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and enrollment.pclass is not None:
-            classes[enrollment.pclass.id] = enrollment.pclass
-    return classes
-
-
-def _faculty_supervisee_query(user):
-    return (
-        SubmittingStudent.query.join(SubmissionRecord, SubmissionRecord.owner_id == SubmittingStudent.id)
-        .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
-        .filter(SubmissionRole.user_id == user.id, SubmissionRole.role.in_(_SUP_ROLES))
-        .distinct()
-    )
 
 
 def _available_tenants(user):
@@ -144,16 +66,16 @@ def _available_tenants(user):
     supervise plus the home-class tenants of their supervisees. Returned sorted by name. A ticket
     is single-tenant, so this only drives a chooser that keeps the subject picker within one tenant.
     """
-    if _is_office_like(user):
+    if is_office_like(user):
         return user.tenants.order_by(Tenant.name.asc()).all()
 
     faculty = getattr(user, "faculty_data", None)
     if faculty is None:
         return []
 
-    tenant_ids = {pclass.tenant_id for pclass in _faculty_classes(faculty).values() if pclass.tenant_id is not None}
+    tenant_ids = {pclass.tenant_id for pclass in faculty_classes(faculty).values() if pclass.tenant_id is not None}
     sup_tenant_ids = (
-        _faculty_supervisee_query(user)
+        faculty_supervisee_query(user)
         .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
         .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
         .with_entities(ProjectClass.tenant_id)
@@ -165,148 +87,18 @@ def _available_tenants(user):
     return Tenant.query.filter(Tenant.id.in_(tenant_ids)).order_by(Tenant.name.asc()).all()
 
 
-def _authorized(user, kind, target) -> bool:
-    """Server-side authorisation: may this user attach this subject to a ticket?"""
-    if _is_office_like(user):
-        tenant_id = _target_tenant_id(kind, target)
-        return tenant_id is not None and tenant_id in set(_user_tenant_ids(user))
-
-    faculty = getattr(user, "faculty_data", None)
-    if faculty is None:
-        return False
-
-    if kind == TicketSubject.PROJECT_CLASS:
-        return target.id in _faculty_classes(faculty)
-    if kind == TicketSubject.SUBMITTING_STUDENT:
-        return _faculty_supervisee_query(user).filter(SubmittingStudent.id == target.id).first() is not None
-    # faculty cannot attach selecting students (their scope is supervisees + supervised classes)
-    return False
-
-
-# ------------------------------------------------------------------------------------------------
-# candidate search (select2 remote) helpers
-
-
-def _name_filter(query_term):
-    like = f"%{query_term}%"
-    return (User.first_name.ilike(like)) | (User.last_name.ilike(like))
-
-
-def _student_results(model, query_term, tenant_ids, label, include_past=False):
-    q = (
-        model.query.join(ProjectClassConfig, model.config_id == ProjectClassConfig.id)
-        .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
-        .join(StudentData, model.student_id == StudentData.id)
-        .join(User, StudentData.id == User.id)
-        .filter(ProjectClass.tenant_id.in_(tenant_ids))
-    )
-    if not include_past:
-        q = q.filter(ProjectClassConfig.year >= get_current_year())
-    if query_term:
-        q = q.filter(_name_filter(query_term))
-    kind = TicketSubject.SUBMITTING_STUDENT if model is SubmittingStudent else TicketSubject.SELECTING_STUDENT
-    role_label = "Submitter" if model is SubmittingStudent else "Selector"
-    rows = []
-    for student in q.limit(_SEARCH_LIMIT).all():
-        hc = home_class(student)
-        user = _student_user(student)
-        subtitle = f"{role_label} · {hc.name}" if hc is not None else role_label
-        rows.append(
-            {
-                "id": _token(kind, student.id),
-                "text": _student_name(student),
-                "initials": user.initials if user is not None else "?",
-                "subtitle": subtitle,
-            }
-        )
-    return {"text": label, "children": rows} if rows else None
-
-
-def _class_results(query_term, tenant_ids):
-    q = ProjectClass.query.filter(ProjectClass.tenant_id.in_(tenant_ids))
-    if query_term:
-        q = q.filter(ProjectClass.name.ilike(f"%{query_term}%"))
-    rows = [
-        {"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)", "kind": "class"}
-        for pclass in q.order_by(ProjectClass.name.asc()).limit(_SEARCH_LIMIT).all()
-    ]
-    return {"text": "Project classes", "children": rows} if rows else None
-
-
-def _faculty_candidates(user, query_term, tenant_id=None, include_past=False):
-    groups = []
-    faculty = user.faculty_data
-
-    classes = list(_faculty_classes(faculty).values())
-    if tenant_id is not None:
-        classes = [pclass for pclass in classes if pclass.tenant_id == tenant_id]
-    if query_term:
-        classes = [pclass for pclass in classes if query_term.lower() in (pclass.name or "").lower()]
-    class_rows = [
-        {"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)", "kind": "class"} for pclass in classes
-    ]
-    if class_rows:
-        groups.append({"text": "Your classes", "children": class_rows[:_SEARCH_LIMIT]})
-
-    sup_query = (
-        _faculty_supervisee_query(user).join(StudentData, SubmittingStudent.student_id == StudentData.id).join(User, StudentData.id == User.id)
-    )
-    if not include_past:
-        sup_query = sup_query.join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id).filter(
-            ProjectClassConfig.year >= get_current_year()
-        )
-    if query_term:
-        sup_query = sup_query.filter(_name_filter(query_term))
-    sup_rows = []
-    for student in sup_query.limit(_SEARCH_LIMIT).all():
-        hc = home_class(student)
-        if tenant_id is not None and (hc is None or hc.tenant_id != tenant_id):
-            continue
-        user = _student_user(student)
-        subtitle = f"Supervised by you · {hc.name}" if hc is not None else "Supervised by you"
-        sup_rows.append(
-            {
-                "id": _token(TicketSubject.SUBMITTING_STUDENT, student.id),
-                "text": _student_name(student),
-                "initials": user.initials if user is not None else "?",
-                "subtitle": subtitle,
-            }
-        )
-    if sup_rows:
-        groups.append({"text": "Your supervisees", "children": sup_rows})
-
-    return groups
-
-
-def _office_candidates(user, query_term, tenant_id=None, include_past=False):
-    tenant_ids = _user_tenant_ids(user)
-    if tenant_id is not None:
-        tenant_ids = [tenant_id] if tenant_id in tenant_ids else []
-    if not tenant_ids:
-        return []
-    groups = []
-    for section in (
-        _student_results(SubmittingStudent, query_term, tenant_ids, "Submitting students", include_past),
-        _student_results(SelectingStudent, query_term, tenant_ids, "Selecting students", include_past),
-        _class_results(query_term, tenant_ids),
-    ):
-        if section is not None:
-            groups.append(section)
-    return groups
-
-
 # ------------------------------------------------------------------------------------------------
 # routing preview
 
 
-def _routing_preview(user, tokens):
+def _routing_preview(user, tokens, convenor_pclass=None):
     classes = {}
     for token in tokens:
-        resolved = _resolve_token(token)
+        resolved = resolve_token(token)
         if resolved is None:
             continue
         kind, target = resolved
-        if not _authorized(user, kind, target):
+        if not authorized(user, kind, target, convenor_pclass=convenor_pclass):
             continue
         if kind == TicketSubject.PROJECT_CLASS:
             classes[target.id] = target
@@ -347,7 +139,7 @@ def _routing_preview(user, tokens):
 
 
 def _label_choices(user):
-    tenant_ids = _user_tenant_ids(user)
+    tenant_ids = user_tenant_ids(user)
     if not tenant_ids:
         return []
     return Label.query.filter(Label.tenant_id.in_(tenant_ids)).order_by(Label.name.asc()).all()
@@ -357,33 +149,23 @@ def _selected_subject_options(tokens):
     """Rebuild <option> label text for already-selected tokens (needed to re-render a select2)."""
     options = []
     for token in tokens:
-        resolved = _resolve_token(token)
+        resolved = resolve_token(token)
         if resolved is None:
             continue
         kind, target = resolved
         if kind == TicketSubject.PROJECT_CLASS:
             options.append((token, f"{target.name} (whole class)"))
         else:
-            options.append((token, _student_name(target)))
+            options.append((token, student_name(target)))
     return options
 
 
 def _origin_pclass_compose():
-    """Resolve the `pclass` query arg to a ProjectClass, but only if the current user
-    convenes/co-convenes it. Same entitlement check as `detail._origin_pclass`, minus the
-    ticket-scope test (compose has no ticket to scope against yet)."""
-    pclass_id = request.args.get("pclass", type=int)
-    if pclass_id is None:
+    """Resolve the `pclass` query arg to a ProjectClass the current user convenes/co-convenes, but
+    only when `origin=convenor` (matching `_compose_template`'s chrome gate)."""
+    if request.args.get("origin") != "convenor":
         return None
-
-    faculty = getattr(current_user, "faculty_data", None)
-    if faculty is None:
-        return None
-    convened = {p.id for p in faculty.convenor_for} | {p.id for p in faculty.coconvenor_for}
-    if pclass_id not in convened:
-        return None
-
-    return ProjectClass.query.get(pclass_id)
+    return resolve_convenor_pclass(current_user, request.args.get("pclass", type=int))
 
 
 def _compose_template():
@@ -432,6 +214,7 @@ def compose():
 
     origin = request.args.get("origin")
     pclass_id = request.args.get("pclass", type=int)
+    convenor_pclass = _origin_pclass_compose()
     template, nav_ctx = _compose_template()
     cancel_url = _cancel_url(origin, nav_ctx.get("pclass"))
 
@@ -440,7 +223,7 @@ def compose():
             template,
             **nav_ctx,
             form=form,
-            office_scope=_is_office_like(current_user),
+            office_scope=is_office_like(current_user),
             tenants=_available_tenants(current_user),
             origin=origin,
             pclass_id=pclass_id,
@@ -452,8 +235,8 @@ def compose():
 
         resolved = []
         for token in tokens:
-            item = _resolve_token(token)
-            if item is None or not _authorized(current_user, *item):
+            item = resolve_token(token)
+            if item is None or not authorized(current_user, *item, convenor_pclass=convenor_pclass):
                 flash("One of the selected subjects is invalid or outside your permitted scope.", "error")
                 form.subjects.choices = _selected_subject_options(tokens)
                 return _render()
@@ -461,7 +244,7 @@ def compose():
 
         # A ticket concerns exactly one tenant: reject a subject set that spans more than one
         # (the tenant selector prevents this in the UI; this is the server-side backstop).
-        tenant_ids = {tid for tid in (_target_tenant_id(kind, target) for kind, target in resolved) if tid is not None}
+        tenant_ids = {tid for tid in (target_tenant_id(kind, target) for kind, target in resolved) if tid is not None}
         if len(tenant_ids) > 1:
             flash(
                 "A ticket can only concern one tenant. The selected subjects belong to more than one; please split them into separate tickets.",
@@ -510,10 +293,14 @@ def compose_people():
     query_term = (request.args.get("q") or "").strip()
     tenant_id = request.args.get("tenant_id", type=int)
     include_past = bool(request.args.get("include_past", type=int))
-    if _is_office_like(current_user):
-        groups = _office_candidates(current_user, query_term, tenant_id, include_past)
-    else:
-        groups = _faculty_candidates(current_user, query_term, tenant_id, include_past)
+    groups = candidates_for(
+        current_user,
+        query_term,
+        origin=request.args.get("origin"),
+        pclass_id=request.args.get("pclass", type=int),
+        tenant_id=tenant_id,
+        include_past=include_past,
+    )
     return jsonify({"results": groups})
 
 
@@ -522,4 +309,5 @@ def compose_people():
 def compose_routing():
     """JSON live-preview of routing/auto-assign consequences for the selected subjects."""
     tokens = request.args.getlist("t")
-    return jsonify(_routing_preview(current_user, tokens))
+    convenor_pclass = _origin_pclass_compose()
+    return jsonify(_routing_preview(current_user, tokens, convenor_pclass=convenor_pclass))

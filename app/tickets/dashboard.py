@@ -39,11 +39,12 @@ from ..shared.tickets import (
     change_status,
     record_inbox_visit,
     remove_label,
+    resolve_token as _resolve_token,
+    student_name as _student_name,
     unassign,
 )
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
-from .compose import _resolve_token, _student_name
 from .detail import _describe_event
 
 # events already shown as rich cards elsewhere in the feed (comment/email rows), matching the

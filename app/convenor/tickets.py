@@ -24,12 +24,16 @@ from flask import abort, flash, jsonify, redirect, request
 from flask_security import roles_accepted
 
 from app.convenor import convenor
-from app.tickets.compose import _name_filter, _resolve_token, _SEARCH_LIMIT, _student_name, _token
 
 from ..models import Label, ProjectClass, ProjectClassConfig, SelectingStudent, StudentData, SubmittingStudent, Ticket, TicketSubject, User
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
+from ..shared.tickets import SEARCH_LIMIT as _SEARCH_LIMIT
+from ..shared.tickets import name_filter as _name_filter
+from ..shared.tickets import resolve_token as _resolve_token
+from ..shared.tickets import student_name as _student_name
+from ..shared.tickets import token_for as _token
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 

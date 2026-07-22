@@ -1,4 +1,8 @@
 {# ---- shared ticket-detail body, included by the per-surface wrapper templates ------------ #}
+{% if perms.edit_scope %}
+    {% from "select2.html" import import_select2 %}
+    {{ import_select2() }}
+{% endif %}
 {# ---- local helpers ---------------------------------------------------------------------- #}
 {% set STATUS_TONE = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'} %}
 
@@ -402,13 +406,36 @@
 
                 {# Context #}
                 <div class="tk-panel-sec">
-                    <div class="tk-panel-lbl">Context</div>
+                    <div class="tk-panel-lbl">
+                        Context
+                        {% if perms.edit_scope %}
+                            <div class="dropdown ms-auto">
+                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-plus"></i></button>
+                                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:280px">
+                                    <form method="POST" action="{{ url_for('tickets.subject_add', ticket_id=ticket.id) }}" id="tk-subject-add-form">
+                                        {{ subject_add_form.hidden_tag() }}
+                                        {{ subject_add_form.token(type="hidden", id="tk-subject-add-token") }}
+                                        <select id="tk-subject-add-select" style="width:100%"></select>
+                                        <div class="d-flex justify-content-end mt-2">
+                                            {{ subject_add_form.submit(class="btn btn-sm btn-primary", disabled=True, id="tk-subject-add-submit") }}
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
                     <div class="mt-2 tk-context">
                         {% for row in subjects %}
                             <div class="tk-context-row">
                                 <i class="fas fa-{{ row.icon }} fa-fw text-secondary"></i>
                                 <span class="text-secondary">{{ row.label }}:</span>
                                 {% if row.url %}<a href="{{ row.url }}" class="fw-medium text-decoration-none">{{ row.name }}</a>{% else %}<span class="fw-medium">{{ row.name }}</span>{% endif %}
+                                {% if perms.edit_scope and subjects|length > 1 %}
+                                    <form method="POST" action="{{ url_for('tickets.subject_remove', ticket_id=ticket.id, subject_id=row.id) }}" class="tk-inline-form ms-1">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-sm btn-link p-0 text-secondary" title="Remove from scope"><i class="fas fa-times" style="font-size:10px"></i></button>
+                                    </form>
+                                {% endif %}
                             </div>
                         {% else %}
                             <div class="text-secondary mb-1">General ticket — no subjects</div>
@@ -457,6 +484,52 @@
     }
     tkWireSearch('.tk-assign-search', '.tk-assign-option');
     tkWireSearch('.tk-sub-search-input', '.tk-sub-option');
+
+    {% if perms.edit_scope %}
+        (function () {
+            var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+            function escapeHtml(str) {
+                return $('<div>').text(str === null || str === undefined ? '' : str).html();
+            }
+
+            function formatResult(result) {
+                if (!result.id) { return result.text; }
+                if (result.kind === 'class') {
+                    return $('<span><i class="fas fa-layer-group fa-fw text-secondary me-1"></i>' + escapeHtml(result.text) + '</span>');
+                }
+                var subtitle = result.subtitle ? '<div class="text-secondary" style="font-size:11px">' + escapeHtml(result.subtitle) + '</div>' : '';
+                return $(
+                    '<div class="d-flex align-items-center gap-2 py-1">' +
+                        '<span class="tk-av" style="width:22px; height:22px; font-size:10px">' + escapeHtml(result.initials || '?') + '</span>' +
+                        '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
+                    '</div>'
+                );
+            }
+
+            var $select = $('#tk-subject-add-select');
+            $select.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Search students or classes…',
+                minimumInputLength: 0,
+                templateResult: formatResult,
+                ajax: {
+                    url: $SCRIPT_ROOT + '{{ url_for("tickets.subject_people", ticket_id=ticket.id) }}',
+                    dataType: 'json',
+                    delay: 200,
+                    data: params => ({ q: params.term || '' }),
+                    processResults: data => ({ results: data.results }),
+                    cache: true
+                }
+            });
+            $select.on('change', function () {
+                var val = $select.val();
+                $('#tk-subject-add-token').val(val || '');
+                $('#tk-subject-add-submit').prop('disabled', !val);
+            });
+        })();
+    {% endif %}
 
     document.querySelectorAll('.tk-copy-link').forEach(function (btn) {
         btn.addEventListener('click', function () {

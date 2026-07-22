@@ -16,7 +16,7 @@ is shared by all roles; per-ticket permission is enforced through the service-la
 
 from datetime import datetime
 
-from flask import abort, current_app, flash, redirect, request, url_for
+from flask import abort, current_app, flash, jsonify, redirect, request, url_for
 from flask_security import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -33,13 +33,17 @@ from ..shared.tickets import (
     add_comment,
     add_external_subscriber,
     add_label,
+    add_subject,
     assign,
+    authorized,
     can_assign,
     can_change_status,
     can_comment,
+    can_edit_scope,
     can_label,
     can_manage_subscribers,
     can_view,
+    candidates_for,
     change_status,
     convenors_in_scope,
     is_subscribed,
@@ -47,12 +51,14 @@ from ..shared.tickets import (
     mark_read,
     remove_external_subscriber,
     remove_label,
+    remove_subject,
+    resolve_token,
     subscribe,
     unassign,
     unsubscribe,
 )
 from ..shared.workflow_logging import log_db_commit
-from .forms import TicketCommentForm, TicketExternalSubscriberForm, TicketLogEmailForm
+from .forms import TicketCommentForm, TicketExternalSubscriberForm, TicketLogEmailForm, TicketSubjectAddForm
 
 # supervisor roles offered in the assign picker
 _SUPERVISOR_ROLES = (SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR)
@@ -320,11 +326,11 @@ def _subjects_display(ticket):
         if subject.kind == TicketSubject.PROJECT_CLASS and subject.project_class is not None:
             pclass = subject.project_class
             url = url_for("convenor.tickets_tab", id=pclass.id) if pclass.id in convened else None
-            rows.append({"label": "Class", "name": pclass.name, "icon": "layer-group", "url": url})
+            rows.append({"id": subject.id, "label": "Class", "name": pclass.name, "icon": "layer-group", "url": url})
         elif subject.kind == TicketSubject.SUBMITTING_STUDENT and subject.submitting_student is not None:
-            rows.append({"label": "Submitter", "name": _student_name(subject.submitting_student), "icon": "user"})
+            rows.append({"id": subject.id, "label": "Submitter", "name": _student_name(subject.submitting_student), "icon": "user"})
         elif subject.kind == TicketSubject.SELECTING_STUDENT and subject.selecting_student is not None:
-            rows.append({"label": "Selector", "name": _student_name(subject.selecting_student), "icon": "user-graduate"})
+            rows.append({"id": subject.id, "label": "Selector", "name": _student_name(subject.selecting_student), "icon": "user-graduate"})
     return rows
 
 
@@ -474,12 +480,14 @@ def detail(ticket_id):
         email_form=TicketLogEmailForm(),
         action_form=ConfirmActionForm(),
         external_form=TicketExternalSubscriberForm(),
+        subject_add_form=TicketSubjectAddForm(),
         perms={
             "comment": can_comment(current_user, ticket),
             "status": can_change_status(current_user, ticket),
             "assign": can_assign(current_user, ticket),
             "label": can_label(current_user, ticket),
             "subscribe": can_manage_subscribers(current_user, ticket),
+            "edit_scope": can_edit_scope(current_user, ticket),
         },
     )
 
@@ -802,5 +810,78 @@ def external_subscriber_remove(ticket_id, ext_id):
             ticket,
             "Could not remove the subscriber due to a database error.",
         )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/subject/people")
+@login_required
+def subject_people(ticket_id):
+    """select2 remote data source for the "add subject" picker on the detail view — the same
+    origin-scoped candidate engine as compose, keyed off the page's own origin/pclass context."""
+    ticket = _load_ticket(ticket_id)
+    if not can_edit_scope(current_user, ticket):
+        abort(403)
+
+    query_term = (request.args.get("q") or "").strip()
+    convenor_pclass = _origin_pclass(ticket)
+    origin = "convenor" if convenor_pclass is not None else request.args.get("origin")
+    groups = candidates_for(
+        current_user,
+        query_term,
+        origin=origin,
+        pclass_id=convenor_pclass.id if convenor_pclass is not None else None,
+    )
+    return jsonify({"results": groups})
+
+
+@tickets.route("/<int:ticket_id>/subject/add", methods=["POST"])
+@login_required
+def subject_add(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_edit_scope(current_user, ticket):
+        abort(403)
+
+    form = TicketSubjectAddForm()
+    if form.validate_on_submit():
+        convenor_pclass = _origin_pclass(ticket)
+        resolved = resolve_token(form.token.data)
+        if resolved is None or not authorized(current_user, *resolved, convenor_pclass=convenor_pclass):
+            flash("That subject is invalid or outside your permitted scope.", "error")
+        else:
+            kind, target = resolved
+            add_subject(ticket, kind, target, actor=current_user)
+            _commit_or_flash(
+                f"Added a subject to ticket #{ticket.id}",
+                ticket,
+                "Could not add the subject due to a database error.",
+            )
+    else:
+        flash("Could not add the subject — please choose one from the picker.", "error")
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/subject/remove/<int:subject_id>", methods=["POST"])
+@login_required
+def subject_remove(ticket_id, subject_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_edit_scope(current_user, ticket):
+        abort(403)
+
+    subject = TicketSubject.query.get(subject_id)
+    if subject is None or subject.ticket_id != ticket.id:
+        abort(404)
+
+    form = ConfirmActionForm()
+    if form.validate_on_submit():
+        if remove_subject(ticket, subject, actor=current_user):
+            _commit_or_flash(
+                f"Removed a subject from ticket #{ticket.id}",
+                ticket,
+                "Could not remove the subject due to a database error.",
+            )
+        else:
+            flash("A ticket must keep at least one scoping subject.", "error")
 
     return _back(ticket)

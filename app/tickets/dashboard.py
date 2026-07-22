@@ -109,7 +109,7 @@ def _user_labels(user):
 # AJAX ledger feed
 
 
-@tickets.route("/ledger_ajax")
+@tickets.route("/ledger_ajax", methods=["GET", "POST"])
 @login_required
 def ledger_ajax():
     mode = request.args.get("mode", "mine")

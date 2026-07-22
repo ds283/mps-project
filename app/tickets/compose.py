@@ -314,7 +314,7 @@ def compose():
             if item is None or not _authorized(current_user, *item):
                 flash("One of the selected subjects is invalid or outside your permitted scope.", "error")
                 form.subjects.choices = _selected_subject_options(tokens)
-                return render_template_context("tickets/compose.html", form=form, is_office=_is_office_like(current_user))
+                return render_template_context("tickets/compose.html", form=form, office_scope=_is_office_like(current_user))
             resolved.append(item)
 
         ticket = create_ticket(
@@ -347,7 +347,7 @@ def compose():
 
     # GET (or invalid submit that fell through) — echo any posted tokens back into the select
     form.subjects.choices = _selected_subject_options(form.subjects.data or [])
-    return render_template_context("tickets/compose.html", form=form, is_office=_is_office_like(current_user))
+    return render_template_context("tickets/compose.html", form=form, office_scope=_is_office_like(current_user))
 
 
 @tickets.route("/compose/people")

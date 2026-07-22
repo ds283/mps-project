@@ -50,6 +50,12 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   side-panel add-"+" only shows when `available_labels` is non-empty; that pool is filtered to
   `ticket.tenant_id`. The user's labels were created on tenant 1 ("Default") but the ticket/class
   are on tenant 2 ("Physics & Astronomy") → empty pool. Fix is the tenant-selector default, below.
+- ✅ **Reconciled with reference design (2a/4a)**. Subscriber management (add/remove internal users,
+  external emails, new `ticket_subscriber` "Management watchers" role, `can_manage_subscribers`);
+  assignee picker widened with search + "Suggested / Assign to me"; timeline renders coloured status
+  chips and reassignment mini-avatars at a larger text size. "Email subscribers didn't fire" is
+  resolved as not-a-bug (the only subscriber was the commenter, who is excluded) — now exercisable
+  since subscribers can be added. See `.prompts/ticket-system/detail-view-reconcile.md`.
 
 ### Convenor triage pane (3a)
 - ◻ **Empty-state.** Pane, view, and nav tab all exist and work (`app/convenor/tickets.py`,

@@ -36,7 +36,7 @@
         .tk-event { display:flex; align-items:flex-start; gap:9px; padding:11px 4px 11px 16px; font-size:13px; color:var(--bs-body-color); position:relative; }
         .tk-event .rail { position:absolute; left:11px; top:-4px; bottom:-4px; width:2px; background:var(--bs-border-color); }
         .tk-event .ico { width:24px; height:24px; border-radius:50%; background:var(--bs-secondary-bg); color:var(--bs-secondary-color); display:inline-flex; align-items:center; justify-content:center; font-size:10px; z-index:1; flex:none; }
-        .tk-panel { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); overflow:hidden; font-size:12.5px; }
+        .tk-panel { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); overflow:visible; font-size:12.5px; }
         .tk-panel-sec { padding:12px 14px; border-bottom:1px solid var(--bs-border-color); }
         .tk-panel-sec:last-child { border-bottom:none; }
         .tk-panel-lbl { display:flex; align-items:center; color:var(--bs-secondary-color); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
@@ -47,7 +47,9 @@
         .tk-composer textarea { border:none; width:100%; resize:vertical; min-height:64px; padding:12px 13px; font-size:13px; background:transparent; color:var(--bs-body-color); }
         .tk-composer textarea:focus { outline:none; }
         .tk-assign-row { display:flex; align-items:center; gap:10px; }
-        .tk-assign-suggested .dropdown-item { background:var(--bs-success-bg-subtle); }
+        .tk-assign-suggested .dropdown-item,
+        .tk-assign-suggested .dropdown-item:hover,
+        .tk-assign-suggested .dropdown-item:focus { background:var(--bs-success-bg-subtle); color:var(--bs-body-color); }
         .tk-sub-search { padding:0 8px 8px; }
         .tk-sub-row { display:flex; align-items:center; gap:8px; }
         .tk-sub-avatar-wrap, .tk-sub-pill-wrap { position:relative; display:inline-flex; }
@@ -248,14 +250,15 @@
                                             {% for row in section.rows %}
                                                 <form method="POST" action="{{ url_for('tickets.assign_to', ticket_id=ticket.id, user_id=row.user.id) }}" class="tk-assign-option {{ 'tk-assign-suggested' if section.suggested else '' }}" data-name="{{ row.user.name|lower }}">
                                                     {{ action_form.hidden_tag() }}
-                                                    <button type="submit" class="dropdown-item tk-assign-row {{ 'active' if ticket.assignee_id == row.user.id else '' }}" style="white-space:normal">
+                                                    {% set is_current = ticket.assignee_id == row.user.id %}
+                                                    <button type="submit" class="dropdown-item tk-assign-row {{ 'active' if is_current and not section.suggested else '' }}" style="white-space:normal">
                                                         {{ avatar(row.user, 24) }}
                                                         <span class="flex-grow-1 text-start">
                                                             <span class="d-block">{{ row.user.name }}</span>
                                                             {% if row.note %}<span class="d-block" style="font-size:11px; color:var(--bs-success-text-emphasis)">{{ row.note }}</span>{% endif %}
                                                         </span>
                                                         {% if row.pill %}<span class="tk-pill" style="font-size:10px; padding:2px 8px; background:var(--bs-secondary-bg); color:var(--bs-secondary-color)">{{ row.pill }}</span>{% endif %}
-                                                        {% if ticket.assignee_id == row.user.id %}<i class="fas fa-check text-primary"></i>{% endif %}
+                                                        {% if is_current and not section.suggested %}<i class="fas fa-check text-primary"></i>{% endif %}
                                                     </button>
                                                 </form>
                                             {% endfor %}

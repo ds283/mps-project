@@ -99,6 +99,12 @@
             <a class="nav-link {% if pane == 'tickets' %}active{% endif %}"
                href="{{ url_for('convenor.tickets_tab', id=pclass.id) }}">
                 Tickets
+                {% set ticket_open = convenor_data.get('ticket_open_count', 0) %}
+                {% set ticket_triage = convenor_data.get('ticket_triage_count', 0) %}
+                <span class="badge {% if pane == 'tickets' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ ticket_open }}</span>
+                {% if ticket_triage > 0 %}
+                    <span class="badge bg-danger rounded-pill" title="{{ ticket_triage }} need triage">{{ ticket_triage }}</span>
+                {% endif %}
             </a>
         </li>
         <li class="nav-item">

@@ -36,6 +36,7 @@ from ...models import (
     SubmissionPeriodRecord,
     SubmittingStudent,
     Tenant,
+    Ticket,
     User,
     WorkflowMixin,
 )
@@ -178,6 +179,15 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     )
     journal_unread = journal_unread_count(current_user, config_student_ids)
 
+    # ticket counts for this class: open (non-closed) tickets in scope, and the needs-triage
+    # subset (unassigned tickets whose scope spans more than one class)
+    open_ticket_query = Ticket.query.filter(
+        Ticket.status != Ticket.CLOSED,
+        Ticket.scope_classes.any(ProjectClass.id == pclass.id),
+    )
+    ticket_open_count = get_count(open_ticket_query)
+    ticket_triage_count = sum(1 for ticket in open_ticket_query.filter(Ticket.assignee_id.is_(None)).all() if ticket.scope_classes.count() > 1)
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -202,6 +212,8 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "missing_canvas_count": missing_canvas_count,
         "marking_urgent_count": marking_urgent_count,
         "journal_unread": journal_unread,
+        "ticket_open_count": ticket_open_count,
+        "ticket_triage_count": ticket_triage_count,
     }
 
 

@@ -46,16 +46,20 @@
                 <div class="mb-3">
                     <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-1">
                         <div class="tk-lbl mb-0">{{ form.subjects.label.text }}</div>
-                        <div class="form-check form-switch m-0">
-                            <input type="checkbox" class="form-check-input" id="tk-include-past">
-                            <label class="form-check-label" for="tk-include-past" style="font-size:11.5px; color:var(--bs-secondary-color)">Show past students</label>
-                        </div>
+                        {% if scope_kind != 'convenor' %}
+                            <div class="form-check form-switch m-0">
+                                <input type="checkbox" class="form-check-input" id="tk-include-past">
+                                <label class="form-check-label" for="tk-include-past" style="font-size:11.5px; color:var(--bs-secondary-color)">Show past students</label>
+                            </div>
+                        {% endif %}
                     </div>
                     <div class="form-text mb-1">
-                        {% if office_scope %}
-                            You may attach <strong>any</strong> submitting or selecting student, or whole project classes, in your tenants.
-                        {% else %}
+                        {% if scope_kind == 'convenor' %}
+                            You may attach <strong>any student</strong> currently in this class, or the whole class.
+                        {% elif scope_kind == 'faculty' %}
                             You may attach your <strong>supervisees</strong> or the <strong>classes you supervise</strong>.
+                        {% else %}
+                            You may attach <strong>any</strong> submitting or selecting student, or whole project classes, in your tenants.
                         {% endif %}
                     </div>
                     {{ form.subjects(class="form-select", multiple="multiple", id="tk-subjects") }}
@@ -79,7 +83,10 @@
                     </div>
                     <div class="col-md-6">
                         <div class="tk-lbl">{{ form.due_date.label.text }}</div>
-                        {{ form.due_date(class="form-control", placeholder="dd/mm/yyyy") }}
+                        <div class="input-group{% if form.due_date.errors %} is-invalid{% endif %} date" id="tk-due-date-picker" data-target-input="nearest">
+                            {{ form.due_date(class="form-control datetimepicker-input", placeholder="dd/mm/yyyy", **{"data-bs-target": "#tk-due-date-picker"}) }}
+                            <div class="input-group-text" data-target="#tk-due-date-picker" data-bs-toggle="datetimepicker"><span class="fas fa-calendar"></span></div>
+                        </div>
                         {% for err in form.due_date.errors %}<div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
                     </div>
                 </div>

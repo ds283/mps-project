@@ -50,6 +50,7 @@ from ..shared.tickets import (
     primary_convenor_user,
     resolve_convenor_pclass,
     resolve_token,
+    scope_kind_for,
     student_name,
     target_tenant_id,
     user_tenant_ids,
@@ -62,29 +63,31 @@ from .forms import TicketComposeForm
 def _available_tenants(user):
     """Distinct tenants the acting user could compose a ticket against, for the tenant selector.
 
-    Office/admin/root → the user's subscribed tenants. Faculty → the tenants of the classes they
-    supervise plus the home-class tenants of their supervisees. Returned sorted by name. A ticket
-    is single-tenant, so this only drives a chooser that keeps the subject picker within one tenant.
+    Mirrors `scope_kind_for`'s priority: a user with `faculty_data` gets the tenants of the classes
+    they supervise plus the home-class tenants of their supervisees, regardless of any
+    office/admin/root roles also held; office/admin/root's subscribed tenants are the fallback only
+    for users with no `faculty_data` at all. Returned sorted by name. A ticket is single-tenant, so
+    this only drives a chooser that keeps the subject picker within one tenant.
     """
+    faculty = getattr(user, "faculty_data", None)
+    if faculty is not None:
+        tenant_ids = {pclass.tenant_id for pclass in faculty_classes(faculty).values() if pclass.tenant_id is not None}
+        sup_tenant_ids = (
+            faculty_supervisee_query(user)
+            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
+            .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
+            .with_entities(ProjectClass.tenant_id)
+            .distinct()
+        )
+        tenant_ids.update(tid for (tid,) in sup_tenant_ids if tid is not None)
+        if not tenant_ids:
+            return []
+        return Tenant.query.filter(Tenant.id.in_(tenant_ids)).order_by(Tenant.name.asc()).all()
+
     if is_office_like(user):
         return user.tenants.order_by(Tenant.name.asc()).all()
 
-    faculty = getattr(user, "faculty_data", None)
-    if faculty is None:
-        return []
-
-    tenant_ids = {pclass.tenant_id for pclass in faculty_classes(faculty).values() if pclass.tenant_id is not None}
-    sup_tenant_ids = (
-        faculty_supervisee_query(user)
-        .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
-        .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
-        .with_entities(ProjectClass.tenant_id)
-        .distinct()
-    )
-    tenant_ids.update(tid for (tid,) in sup_tenant_ids if tid is not None)
-    if not tenant_ids:
-        return []
-    return Tenant.query.filter(Tenant.id.in_(tenant_ids)).order_by(Tenant.name.asc()).all()
+    return []
 
 
 # ------------------------------------------------------------------------------------------------
@@ -215,6 +218,7 @@ def compose():
     origin = request.args.get("origin")
     pclass_id = request.args.get("pclass", type=int)
     convenor_pclass = _origin_pclass_compose()
+    scope_kind = scope_kind_for(current_user, origin=origin, pclass_id=pclass_id)
     template, nav_ctx = _compose_template()
     cancel_url = _cancel_url(origin, nav_ctx.get("pclass"))
 
@@ -223,7 +227,9 @@ def compose():
             template,
             **nav_ctx,
             form=form,
-            office_scope=is_office_like(current_user),
+            labels=labels,
+            label_styles={label.id: (label.make_CSS_style() or "") for label in labels},
+            scope_kind=scope_kind,
             tenants=_available_tenants(current_user),
             origin=origin,
             pclass_id=pclass_id,

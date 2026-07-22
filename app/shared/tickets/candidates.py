@@ -401,15 +401,27 @@ def office_candidates(user, query_term, tenant_id=None, include_past=False):
     return groups
 
 
+def scope_kind_for(user, *, origin=None, pclass_id=None):
+    """Which of the three scope cases a request resolves to.
+
+    Convenor context (explicit `origin` + an entitled `pclass`) takes priority; otherwise a user
+    who has `faculty_data` always gets faculty scoping, regardless of any office/admin/root roles
+    also held; office scoping is the fallback only for users with no `faculty_data` at all. This is
+    the single source of truth for the dispatch below and for any UI (hint text, toggle
+    visibility) that needs to know which case is in effect without re-deriving it.
+    """
+    if origin == "convenor" and resolve_convenor_pclass(user, pclass_id) is not None:
+        return "convenor"
+    if getattr(user, "faculty_data", None) is not None:
+        return "faculty"
+    return "office"
+
+
 def candidates_for(user, query_term, *, origin=None, pclass_id=None, tenant_id=None, include_past=False):
-    """Top-level candidate dispatch: convenor-ledger context (when entitled) takes precedence,
-    then office-like roles, then plain faculty scope."""
-    if origin == "convenor":
-        pclass = resolve_convenor_pclass(user, pclass_id)
-        if pclass is not None:
-            return convenor_candidates(pclass, query_term)
-
-    if is_office_like(user):
-        return office_candidates(user, query_term, tenant_id, include_past)
-
-    return faculty_candidates(user, query_term, tenant_id, include_past)
+    """Top-level candidate dispatch; see `scope_kind_for` for the precedence rules."""
+    kind = scope_kind_for(user, origin=origin, pclass_id=pclass_id)
+    if kind == "convenor":
+        return convenor_candidates(resolve_convenor_pclass(user, pclass_id), query_term)
+    if kind == "faculty":
+        return faculty_candidates(user, query_term, tenant_id, include_past)
+    return office_candidates(user, query_term, tenant_id, include_past)

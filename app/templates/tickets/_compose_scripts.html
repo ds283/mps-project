@@ -1,5 +1,7 @@
 {% from "select2.html" import import_select2 %}
+{% from "datepicker.html" import import_datepicker %}
 {{ import_select2() }}
+{{ import_datepicker() }}
 <script>
     $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
@@ -77,14 +79,32 @@
             });
         }
 
+        const LABEL_STYLES = {{ label_styles | tojson }};
+
+        function formatLabel(result) {
+            if (!result.id) { return result.text; }
+            const style = LABEL_STYLES[result.id] || '';
+            return $('<span class="tk-label" style="' + style + '">' + escapeHtml(result.text) + '</span>');
+        }
+
         $('#tk-labels').select2({
             theme: 'bootstrap-5',
             selectionCssClass: 'select2-small',
             dropdownCssClass: 'select2-small',
             width: '100%',
             multiple: true,
-            placeholder: 'Add labels…'
+            placeholder: 'Add labels…',
+            templateResult: formatLabel,
+            templateSelection: formatLabel
         });
+
+        $('#tk-due-date-picker').datetimepicker({
+            format: 'DD/MM/YYYY',
+            allowInputToggle: true
+        });
+        {% if form.due_date.data %}
+            $('#tk-due-date-picker').datetimepicker('date', moment('{{ form.due_date.data.strftime("%d/%m/%Y") }}', 'DD/MM/YYYY'));
+        {% endif %}
 
         function avatarChip(initials, name, size) {
             return '<span class="tk-av" style="width:' + size + 'px; height:' + size + 'px; font-size:' + Math.round(size * 0.42) + 'px" title="' +

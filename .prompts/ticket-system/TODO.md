@@ -56,6 +56,15 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   chips and reassignment mini-avatars at a larger text size. "Email subscribers didn't fire" is
   resolved as not-a-bug (the only subscriber was the commenter, who is excluded) — now exercisable
   since subscribers can be added. See `.prompts/ticket-system/detail-view-reconcile.md`.
+- ✅ **Second-pass colour + context reconciliation** (commit `e5a59651`). Screenshot compare vs
+  reference #412 closed the remaining colour/structure gaps: Context is now icon-led with a Class
+  link plus **Scope / Opened / Due** rows (surfaces the model's previously-unused `due_date`);
+  timeline label events render the actual coloured label chips, grouping consecutive same-actor
+  adds into one row; header gained an outline **Watching/Watch** button + a `…` overflow menu
+  (Copy link, Log an email); subscriber remove-`×` reveals on hover for a clean avatar row.
+  Actions log kept its verbose format but **capped at 12 events** (`_ACTIONS_LOG_LIMIT`) to bound
+  rail height. Deliberately **not** done: compact "date · initials" actions-log reformat and the
+  reply-box formatting toolbar (user opted out); solid label-pill style left as-is.
 
 ### Convenor triage pane (3a)
 - ◻ **Empty-state.** Pane, view, and nav tab all exist and work (`app/convenor/tickets.py`,

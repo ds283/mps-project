@@ -1,0 +1,11 @@
+{# Ticket-detail wrapper for the faculty surface: inherits the faculty dashboard nav pills.
+   The route supplies pane='tickets' plus the faculty dashboard-data keys. #}
+{% extends "faculty/dashboard/nav.html" %}
+
+{% block title %}
+    Ticket #{{ ticket.id }}
+{% endblock %}
+
+{% block bodyblock %}
+    {% include "tickets/_detail_body.html" %}
+{% endblock %}

@@ -38,7 +38,7 @@
     </style>
 {% endmacro %}
 
-{% macro inbox_body(endpoint) %}
+{% macro inbox_body(endpoint, origin=none) %}
     <div class="d-flex align-items-center gap-2 mt-2 mb-3">
         <h4 class="m-0"><i class="fas fa-ticket-alt text-primary"></i> My tickets</h4>
         <a href="{{ url_for('tickets.compose') }}" class="btn btn-primary btn-sm ms-auto"><i class="fas fa-plus"></i> New ticket</a>
@@ -107,13 +107,13 @@
                         <div>
                             {% if item.kind == 'comment' %}
                                 <strong>{{ item.obj.author.name if item.obj.author else 'Someone' }}</strong> commented on
-                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path) }}">#{{ item.ticket_id }}</a>
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path, origin=origin) }}">#{{ item.ticket_id }}</a>
                             {% elif item.kind == 'email' %}
                                 <i class="fas fa-envelope text-success"></i> <strong>Email logged</strong> on
-                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path) }}">#{{ item.ticket_id }}</a>
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path, origin=origin) }}">#{{ item.ticket_id }}</a>
                             {% else %}
                                 <strong>{{ item.obj.actor.name if item.obj.actor else 'Someone' }}</strong> {{ item.text }} on
-                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path) }}">#{{ item.ticket_id }}</a>
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id, url=request.full_path, origin=origin) }}">#{{ item.ticket_id }}</a>
                             {% endif %}
                             <div class="when">{{ item.when.strftime('%d %b, %H:%M') if item.when }}</div>
                         </div>

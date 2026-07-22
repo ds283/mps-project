@@ -1,0 +1,12 @@
+{# Ticket-detail wrapper for the convenor surface: inherits the convenor pclass chrome
+   (breadcrumb, lifecycle chip, metrics, dashboard pills). The route supplies pane='tickets',
+   pclass, config, convenor_data. #}
+{% extends "convenor/dashboard/pclass_base.html" %}
+
+{% block title %}
+    Ticket #{{ ticket.id }}
+{% endblock %}
+
+{% block bodyblock %}
+    {% include "tickets/_detail_body.html" %}
+{% endblock %}

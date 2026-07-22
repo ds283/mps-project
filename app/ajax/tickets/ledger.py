@@ -39,7 +39,7 @@ _ticket = """
 {% set tone = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'}.get(t.status, 'secondary') %}
 {% set status_label = {0: 'Open', 1: 'In progress', 2: 'Resolved', 3: 'Closed'}.get(t.status, 'Unknown') %}
 <div class="d-flex align-items-center gap-2 flex-wrap">
-    <a class="fw-semibold text-decoration-none" href="{{ url_for('tickets.detail', ticket_id=t.id, url=return_url) }}">{{ t.title }}</a>
+    <a class="fw-semibold text-decoration-none" href="{{ url_for('tickets.detail', ticket_id=t.id, url=return_url, origin=origin, pclass=pclass_id) }}">{{ t.title }}</a>
     <span class="tk-pill" style="background:var(--bs-{{ tone }}-bg-subtle); color:var(--bs-{{ tone }}-text-emphasis); padding:2px 9px; font-size:11px">
         <span class="tk-dot" style="background:var(--bs-{{ tone }}-text-emphasis)"></span>{{ status_label }}
     </span>
@@ -130,13 +130,16 @@ def _watchers_for(t):
     return users[:_WATCHERS_SHOWN], max(0, len(users) - _WATCHERS_SHOWN)
 
 
-def ledger_data(base_query, return_url=None):
+def ledger_data(base_query, return_url=None, origin=None, pclass_id=None):
     """Render the ledger from a permission-scoped base_query. Returns a DataTables JSON payload.
 
     `return_url` is the originating page's URL (inbox or convenor ledger); it is threaded onto each
     row's ticket-detail link as the canonical `url` return param (see
     `.claude/rules/return-link-url-text.md`) so the detail-view breadcrumb returns the user to the
-    surface they came from."""
+    surface they came from.
+
+    `origin` ("convenor"/"faculty") and `pclass_id` identify which surface the row was opened from,
+    so the detail view can render the matching dashboard chrome (see app/tickets/detail.py)."""
     columns = {
         "ticket": {"search": lambda t: t.title},
         "assignee": {"order": lambda t: t.assignee.name if t.assignee else None},
@@ -161,7 +164,15 @@ def ledger_data(base_query, return_url=None):
                 rendered.append(
                     {
                         "select": render_template(select_templ, t=t),
-                        "ticket": render_template(ticket_templ, t=t, watchers=watchers, watchers_extra=watchers_extra, return_url=return_url),
+                        "ticket": render_template(
+                            ticket_templ,
+                            t=t,
+                            watchers=watchers,
+                            watchers_extra=watchers_extra,
+                            return_url=return_url,
+                            origin=origin,
+                            pclass_id=pclass_id,
+                        ),
                         "assignee": render_template(assignee_templ, t=t),
                         "scope": render_template(scope_templ, t=t, kind_colours=_KIND_COLOURS),
                         "due": render_template(due_templ, t=t, now=now, open_states=open_states),

@@ -5,11 +5,11 @@
 
 {% block title %}Faculty dashboard — My tickets{% endblock %}
 
-{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', view=view, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject, url=request.full_path) %}
+{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', origin='faculty', view=view, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject, url=request.full_path) %}
 
 {% block pane_content %}
     {{ inbox_styles() }}
-    {{ inbox_body('faculty.dashboard_tickets') }}
+    {{ inbox_body('faculty.dashboard_tickets', origin='faculty') }}
 {% endblock %}
 
 {% block scripts %}

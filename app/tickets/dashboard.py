@@ -197,12 +197,16 @@ def _user_labels(user):
 def ledger_ajax():
     mode = request.args.get("mode", "mine")
     if mode == "convenor":
-        base_query = _convenor_base_query(current_user, request.args.get("class_id", type=int))
+        class_id = request.args.get("class_id", type=int)
+        base_query = _convenor_base_query(current_user, class_id)
+        origin, pclass_id = "convenor", class_id
     else:
         base_query = _mine_base_query(current_user, request.args.get("view", "all_open"))
+        # personal inbox threads no origin; the faculty inbox pane sets origin=faculty on its feed URL
+        origin, pclass_id = request.args.get("origin"), None
 
     base_query = _apply_common_filters(base_query, request.args).order_by(Ticket.last_edit_timestamp.desc())
-    return ajax.tickets.ledger_data(base_query, return_url=request.args.get("url"))
+    return ajax.tickets.ledger_data(base_query, return_url=request.args.get("url"), origin=origin, pclass_id=pclass_id)
 
 
 # ------------------------------------------------------------------------------------------------

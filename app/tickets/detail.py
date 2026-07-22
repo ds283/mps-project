@@ -23,8 +23,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.tickets import tickets
 
 from ..database import db
-from ..models import Label, Role, SubmissionRole, Ticket, TicketEvent, TicketExternalSubscriber, TicketSubject, User
+from ..models import Label, ProjectClass, Role, SubmissionRole, Ticket, TicketEvent, TicketExternalSubscriber, TicketSubject, User
+from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
+from ..shared.context.faculty_dashboard import get_faculty_dashboard_data
 from ..shared.context.global_context import render_template_context
+from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.tickets import (
     add_comment,
@@ -383,6 +386,55 @@ def _breadcrumb(ticket, return_url=None):
     return {"home_url": home_url, "classes": classes}
 
 
+def _origin_pclass(ticket):
+    """Resolve the `pclass` query arg to a ProjectClass, but only if it is in this ticket's scope
+    AND the current user convenes/co-convenes it. This is the entitlement guard for the convenor
+    chrome — an untrusted `pclass` for a class the user does not convene returns None."""
+    pclass_id = request.args.get("pclass", type=int)
+    if pclass_id is None:
+        return None
+
+    faculty = getattr(current_user, "faculty_data", None)
+    if faculty is None:
+        return None
+    convened = {p.id for p in faculty.convenor_for} | {p.id for p in faculty.coconvenor_for}
+    if pclass_id not in convened:
+        return None
+
+    if not any(pclass.id == pclass_id for pclass in ticket.scope_classes):
+        return None
+
+    return ProjectClass.query.get(pclass_id)
+
+
+def _detail_template(ticket):
+    """Pick the per-surface wrapper template + its nav context from the `origin` the inbound link
+    carried. Falls back to the bare tickets/detail.html chrome when the origin is absent or the
+    current user is not entitled to the requested chrome. Office is deferred until an office nav
+    base exists."""
+    origin = request.args.get("origin")
+
+    if origin == "convenor":
+        pclass = _origin_pclass(ticket)
+        if pclass is not None:
+            config = pclass.most_recent_config
+            if config is not None:
+                return "tickets/convenor_detail.html", {
+                    "pane": "tickets",
+                    "pclass": pclass,
+                    "config": config,
+                    "convenor_data": get_convenor_dashboard_data(pclass, config),
+                }
+
+    elif origin == "faculty" and current_user.has_role("faculty"):
+        nav_ctx = {"pane": "tickets", **get_faculty_dashboard_data(current_user)}
+        if current_user.has_role("root"):
+            nav_ctx["root_dash_data"] = get_root_dashboard_data()
+        return "faculty/dashboard/faculty_detail.html", nav_ctx
+
+    return "tickets/detail.html", {}
+
+
 # ------------------------------------------------------------------------------------------------
 # views
 
@@ -401,8 +453,10 @@ def detail(ticket_id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
 
+    template, nav_ctx = _detail_template(ticket)
     return render_template_context(
-        "tickets/detail.html",
+        template,
+        **nav_ctx,
         ticket=ticket,
         breadcrumb=_breadcrumb(ticket, request.args.get("url")),
         timeline=_build_timeline(ticket),

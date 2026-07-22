@@ -1,0 +1,474 @@
+{# ---- shared ticket-detail body, included by the per-surface wrapper templates ------------ #}
+{# ---- local helpers ---------------------------------------------------------------------- #}
+{% set STATUS_TONE = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'} %}
+
+{% macro avatar(user, size=26) %}
+    <span class="tk-av" style="width:{{ size }}px; height:{{ size }}px; font-size:{{ (size * 0.42) | round(0, 'floor') | int }}px; background:{{ user.avatar_colour if user else 'var(--bs-secondary)' }}">{{ user.initials if user else '?' }}</span>
+{% endmacro %}
+
+{% macro status_pill(status) %}
+    {% set tone = STATUS_TONE.get(status, 'secondary') %}
+    <span class="tk-pill" style="background:var(--bs-{{ tone }}-bg-subtle); color:var(--bs-{{ tone }}-text-emphasis)">
+        <span class="tk-dot" style="background:var(--bs-{{ tone }}-text-emphasis)"></span>{{ ticket._labels.get(status, 'Unknown') }}
+    </span>
+{% endmacro %}
+
+{% macro label_pill(label) %}
+    <span class="tk-label" style="{{ label.make_CSS_style() }}">{{ label.name }}</span>
+{% endmacro %}
+
+<style>
+    .tk-crumb { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--bs-secondary-color); padding:10px 0; }
+    .tk-crumb .sep { color:var(--bs-border-color); }
+    .tk-card { border:1px solid var(--bs-border-color); border-radius:9px; overflow:hidden; background:var(--bs-body-bg); }
+    .tk-card-head { padding:8px 14px; border-bottom:1px solid var(--bs-border-color); font-size:12.5px; display:flex; align-items:center; gap:8px; }
+    .tk-card-head.op { background:var(--bs-primary-bg-subtle); }
+    .tk-card-head.cm { background:var(--bs-tertiary-bg); }
+    .tk-card-body { padding:14px; font-size:13.5px; line-height:1.6; color:var(--bs-body-color); }
+    .tk-email { border:1px solid var(--bs-success-border-subtle); border-radius:9px; overflow:hidden; background:var(--bs-success-bg-subtle); }
+    .tk-email-head { background:var(--bs-success-bg-subtle); border-bottom:1px solid var(--bs-success-border-subtle); color:var(--bs-success-text-emphasis); padding:8px 14px; font-size:12px; display:flex; align-items:center; gap:8px; }
+    .tk-event { display:flex; align-items:flex-start; gap:9px; padding:11px 4px 11px 16px; font-size:13px; color:var(--bs-body-color); position:relative; }
+    .tk-event .rail { position:absolute; left:11px; top:-4px; bottom:-4px; width:2px; background:var(--bs-border-color); }
+    .tk-event .ico { width:24px; height:24px; border-radius:50%; background:var(--bs-secondary-bg); color:var(--bs-secondary-color); display:inline-flex; align-items:center; justify-content:center; font-size:10px; z-index:1; flex:none; }
+    .tk-panel { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); overflow:visible; font-size:12.5px; }
+    .tk-panel-sec { padding:12px 14px; border-bottom:1px solid var(--bs-border-color); }
+    .tk-panel-sec:last-child { border-bottom:none; }
+    .tk-panel-lbl { display:flex; align-items:center; color:var(--bs-secondary-color); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+    .tk-composer { border:1px solid var(--bs-primary-border-subtle); border-radius:9px; background:var(--bs-body-bg); margin-top:14px; }
+    .tk-composer-head, .tk-composer-foot { padding:9px 13px; font-size:12px; color:var(--bs-secondary-color); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .tk-composer-head { border-bottom:1px solid var(--bs-border-color); }
+    .tk-composer-foot { border-top:1px solid var(--bs-border-color); }
+    .tk-composer textarea { border:none; width:100%; resize:vertical; min-height:64px; padding:12px 13px; font-size:13px; background:transparent; color:var(--bs-body-color); }
+    .tk-composer textarea:focus { outline:none; }
+    .tk-assign-row { display:flex; align-items:center; gap:10px; }
+    .tk-assign-suggested .dropdown-item,
+    .tk-assign-suggested .dropdown-item:hover,
+    .tk-assign-suggested .dropdown-item:focus { background:var(--bs-success-bg-subtle); color:var(--bs-body-color); }
+    .tk-sub-search { padding:0 8px 8px; }
+    .tk-sub-row { display:flex; align-items:center; gap:8px; }
+    .tk-sub-avatar-wrap, .tk-sub-pill-wrap { position:relative; display:inline-flex; }
+    .tk-sub-remove { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--bs-danger); color:var(--bs-white); border:none; font-size:8px; display:none; align-items:center; justify-content:center; line-height:1; padding:0; }
+    .tk-sub-avatar-wrap:hover .tk-sub-remove, .tk-sub-avatar-wrap:focus-within .tk-sub-remove,
+    .tk-sub-pill-wrap:hover .tk-sub-remove, .tk-sub-pill-wrap:focus-within .tk-sub-remove { display:inline-flex; }
+    .tk-context { display:flex; flex-direction:column; gap:6px; line-height:1.5; }
+    .tk-context-row { display:flex; align-items:baseline; gap:6px; }
+    .tk-inline-form { display:inline; }
+    .tk-card, .tk-email { box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .tk-panel { box-shadow:0 1px 3px rgba(0,0,0,.06); }
+    .tk-composer { box-shadow:0 1px 3px rgba(13,110,253,.06); }
+    /* robust two-column layout: stacked on small screens, side-by-side from lg up.
+       avoids Bootstrap w-100/w-lg-auto !important fighting the flex basis. */
+    .tk-2col { display:flex; flex-direction:column; gap:1.5rem; align-items:stretch; }
+    .tk-2col > .tk-main { min-width:0; }
+    @media (min-width:992px) {
+        .tk-2col { flex-direction:row; align-items:flex-start; }
+        .tk-2col > .tk-main { flex:1 1 0; }
+        .tk-2col > .tk-side { flex:0 0 var(--tk-side, 290px); }
+    }
+</style>
+
+<div class="container-fluid">
+    {# breadcrumb #}
+    <div class="tk-crumb">
+        <a href="{{ breadcrumb.home_url }}" class="text-decoration-none"><i class="fas fa-ticket-alt"></i> Tickets</a>
+        {% for crumb in breadcrumb.classes %}
+            <span class="sep">/</span>
+            {% if crumb.url %}<a href="{{ crumb.url }}" class="text-decoration-none">{{ crumb.name }}</a>{% else %}<span>{{ crumb.name }}</span>{% endif %}
+        {% endfor %}
+        <span class="sep">/</span><strong class="text-body">#{{ ticket.id }}</strong>
+    </div>
+
+    {# header #}
+    <div class="d-flex align-items-start gap-3 mb-2">
+        <div class="flex-grow-1" style="min-width:0">
+            <div style="font-size:20px; font-weight:700; line-height:1.3">{{ ticket.title }}</div>
+            <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                {{ status_pill(ticket.status) }}
+                <span style="font-size:12.5px; color:var(--bs-secondary-color)">
+                    <strong class="text-body">{{ ticket.created_by.name if ticket.created_by else 'Someone' }}</strong>
+                    opened this ticket
+                    {% if ticket.creation_timestamp %}· {{ ticket.creation_timestamp.strftime('%d %b %Y') }}{% endif %}
+                    · <i class="far fa-comment"></i> {{ ticket.comments.count() }} comments
+                </span>
+                {% for label in ticket.labels %}{{ label_pill(label) }}{% endfor %}
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <form method="POST" action="{{ url_for('tickets.unwatch' if watching else 'tickets.watch', ticket_id=ticket.id) }}" class="tk-inline-form">
+                {{ action_form.hidden_tag() }}
+                <button type="submit" class="btn btn-sm {{ 'btn-danger' if watching else 'btn-success' }}">
+                    <i class="fas {{ 'fa-eye-slash' if watching else 'fa-eye' }}"></i> {{ 'Unwatch' if watching else 'Watch' }}
+                </button>
+            </form>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown" type="button" aria-label="More actions"><i class="fas fa-ellipsis-h"></i></button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <button type="button" class="dropdown-item tk-copy-link" data-url="{{ url_for('tickets.detail', ticket_id=ticket.id, _external=True) }}">
+                        <i class="fas fa-link fa-fw"></i> Copy link
+                    </button>
+                    {% if perms.comment %}
+                        <button type="button" class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#tk-log-email">
+                            <i class="fas fa-envelope fa-fw"></i> Log an email
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tk-2col pb-4">
+        {# ================= THREAD ================= #}
+        <div class="tk-main">
+            {# original post #}
+            <div class="tk-card">
+                <div class="tk-card-head op">
+                    {{ avatar(ticket.created_by, 24) }}
+                    <strong>{{ ticket.created_by.name if ticket.created_by else 'Someone' }}</strong>
+                    <span class="text-secondary">· {{ ticket.creation_timestamp.strftime('%d %b %Y, %H:%M') if ticket.creation_timestamp else '' }}</span>
+                    <span class="ms-auto text-secondary">Opened ticket</span>
+                </div>
+                <div class="tk-card-body">{{ ticket.description or '' }}</div>
+            </div>
+
+            {# timeline #}
+            {% for item in timeline %}
+                {% if item.type == 'comment' %}
+                    <div class="tk-card mt-2">
+                        <div class="tk-card-head cm">
+                            {{ avatar(item.obj.author, 24) }}
+                            <strong>{{ item.obj.author.name if item.obj.author else 'Someone' }}</strong>
+                            <span class="text-secondary">· {{ item.when.strftime('%d %b %Y, %H:%M') if item.when else '' }}</span>
+                        </div>
+                        <div class="tk-card-body">{{ item.obj.body or '' }}</div>
+                    </div>
+                {% elif item.type == 'email' %}
+                    <div class="mt-2">
+                        <div class="tk-email">
+                            <div class="tk-email-head">
+                                <i class="fas fa-envelope"></i><strong>Email logged</strong>
+                                <span>{% if item.obj.from_addr %}from {{ item.obj.from_addr }}{% endif %} · {{ item.when.strftime('%d %b %Y, %H:%M') if item.when else '' }}</span>
+                                <span class="ms-auto">{{ item.obj._labels.get(item.obj.direction, '') }}</span>
+                            </div>
+                            <div class="tk-card-body">
+                                {% if item.obj.subject %}<div style="font-size:11.5px; color:var(--bs-success-text-emphasis); margin-bottom:6px">Subject: {{ item.obj.subject }}</div>{% endif %}
+                                {{ item.obj.body or '' }}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="tk-event">
+                        <span class="rail"></span>
+                        <span class="ico"><i class="fas fa-{{ item.icon }}"></i></span>
+                        <span class="d-flex align-items-center flex-wrap gap-1">
+                            <strong class="text-body">{{ item.obj.actor.name if item.obj.actor else 'Someone' }}</strong>
+                            {% if item.kind == 'status_changed' %}
+                                changed status from {{ status_pill(item.from_status) }} to {{ status_pill(item.to_status) }}
+                            {% elif item.kind == 'reassigned' %}
+                                reassigned {{ avatar(item.from_user, 16) }} <i class="fas fa-arrow-right" style="font-size:9px"></i> {{ avatar(item.to_user, 16) }}
+                                <span class="text-secondary">({{ item.to_user.name if item.to_user else 'a former user' }})</span>
+                            {% elif item.kind == 'label' %}
+                                {{ 'added' if item.added else 'removed' }} {{ 'labels' if item.labels|length > 1 else 'label' }}
+                                {% for label in item.labels %}
+                                    {% if label %}{{ label_pill(label) }}{% else %}<span class="text-secondary">{{ item.label_names[loop.index0] }}</span>{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {{ item.text }}
+                            {% endif %}
+                            <span class="text-secondary">· {{ item.when.strftime('%d %b') if item.when else '' }}</span>
+                        </span>
+                    </div>
+                {% endif %}
+            {% endfor %}
+
+            {# reply composer #}
+            {% if perms.comment %}
+                <form method="POST" action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}" class="tk-composer">
+                    {{ comment_form.hidden_tag() }}
+                    <div class="tk-composer-head">
+                        {{ avatar(current_user, 24) }}
+                        <span>Reply as <strong class="text-body">{{ current_user.name }}</strong></span>
+                    </div>
+                    {{ comment_form.body(placeholder="Leave a comment…") }}
+                    <div class="tk-composer-foot">
+                        <div class="form-check form-switch m-0">
+                            {{ comment_form.notify(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ comment_form.notify.id }}" style="font-size:12px">Email subscribers</label>
+                        </div>
+                        <div class="ms-auto d-flex gap-2">
+                            {% if perms.status %}
+                                {{ comment_form.submit_resolve(class="btn btn-sm btn-outline-success") }}
+                            {% endif %}
+                            {{ comment_form.submit(class="btn btn-sm btn-primary") }}
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+
+            {# log email #}
+            {% if perms.comment %}
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#tk-log-email">
+                        <i class="fas fa-envelope"></i> Log an email against this ticket
+                    </button>
+                    <div class="collapse mt-2" id="tk-log-email">
+                        <form method="POST" action="{{ url_for('tickets.log_email_action', ticket_id=ticket.id) }}" class="tk-card p-3">
+                            {{ email_form.hidden_tag() }}
+                            <div class="row g-2">
+                                <div class="col-md-3">{{ email_form.direction.label(class="form-label small") }}{{ email_form.direction(class="form-select form-select-sm") }}</div>
+                                <div class="col-md-4">{{ email_form.from_addr.label(class="form-label small") }}{{ email_form.from_addr(class="form-control form-control-sm") }}</div>
+                                <div class="col-md-5">{{ email_form.to_addrs.label(class="form-label small") }}{{ email_form.to_addrs(class="form-control form-control-sm") }}</div>
+                                <div class="col-12">{{ email_form.subject.label(class="form-label small") }}{{ email_form.subject(class="form-control form-control-sm") }}</div>
+                                <div class="col-12">{{ email_form.body.label(class="form-label small") }}{{ email_form.body(class="form-control form-control-sm", rows=3) }}</div>
+                            </div>
+                            <div class="mt-2 text-end">{{ email_form.submit(class="btn btn-sm btn-primary") }}</div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ================= SIDE PANEL ================= #}
+        <div class="tk-side" style="--tk-side:290px">
+            <div class="tk-panel">
+                {# Status #}
+                <div class="tk-panel-sec">
+                    <div class="tk-panel-lbl">Status</div>
+                    <div class="mt-2 d-flex align-items-center">
+                        {{ status_pill(ticket.status) }}
+                        {% if perms.status %}
+                            <div class="dropdown ms-auto">
+                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-pen"></i></button>
+                                <div class="dropdown-menu dropdown-menu-end">
+                                    {% for value, label in all_statuses %}
+                                        <form method="POST" action="{{ url_for('tickets.set_status', ticket_id=ticket.id, status=value) }}">
+                                            {{ action_form.hidden_tag() }}
+                                            <button type="submit" class="dropdown-item {{ 'active' if value == ticket.status else '' }}">{{ label }}</button>
+                                        </form>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Assignee + assign picker (4a) #}
+                <div class="tk-panel-sec">
+                    <div class="tk-panel-lbl">
+                        Assignee
+                        {% if perms.assign %}
+                            <div class="dropdown ms-auto">
+                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-pen"></i></button>
+                                <div class="dropdown-menu dropdown-menu-end tk-assign-menu" style="min-width:340px; max-width:min(460px, calc(100vw - 2rem)); max-height:420px; overflow:auto">
+                                    <div class="px-2 pb-2">
+                                        <input type="text" class="form-control form-control-sm tk-assign-search" placeholder="Search people…" autocomplete="off">
+                                    </div>
+                                    <h6 class="dropdown-header"><i class="fas fa-shield-alt"></i> Acting as convenor / admin</h6>
+                                    {% for section in assign_sections %}
+                                        <h6 class="dropdown-header">{{ section.title }}</h6>
+                                        {% for row in section.rows %}
+                                            <form method="POST" action="{{ url_for('tickets.assign_to', ticket_id=ticket.id, user_id=row.user.id) }}" class="tk-assign-option {{ 'tk-assign-suggested' if section.suggested else '' }}" data-name="{{ row.user.name|lower }}">
+                                                {{ action_form.hidden_tag() }}
+                                                {% set is_current = ticket.assignee_id == row.user.id %}
+                                                <button type="submit" class="dropdown-item tk-assign-row {{ 'active' if is_current and not section.suggested else '' }}" style="white-space:normal">
+                                                    {{ avatar(row.user, 24) }}
+                                                    <span class="flex-grow-1 text-start">
+                                                        <span class="d-block">{{ row.user.name }}</span>
+                                                        {% if row.note %}<span class="d-block" style="font-size:11px; color:var(--bs-success-text-emphasis)">{{ row.note }}</span>{% endif %}
+                                                    </span>
+                                                    {% if row.pill %}<span class="tk-pill" style="font-size:10px; padding:2px 8px; background:var(--bs-secondary-bg); color:var(--bs-secondary-color)">{{ row.pill }}</span>{% endif %}
+                                                    {% if is_current and not section.suggested %}<i class="fas fa-check text-primary"></i>{% endif %}
+                                                </button>
+                                            </form>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    <div class="dropdown-divider"></div>
+                                    <form method="POST" action="{{ url_for('tickets.unassign_ticket', ticket_id=ticket.id) }}">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="dropdown-item text-danger"><i class="fas fa-user-slash"></i> Unassign <span class="text-secondary small">— stays on convenor dashboards</span></button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2 tk-assign-row">
+                        {% if ticket.assignee %}
+                            {{ avatar(ticket.assignee, 26) }}<span class="fw-medium">{{ ticket.assignee.name }}</span>
+                        {% else %}
+                            <span class="text-secondary"><i class="fas fa-user-slash"></i> Unassigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Subscribers #}
+                <div class="tk-panel-sec">
+                    <div class="tk-panel-lbl">
+                        Subscribers
+                        {% if perms.subscribe %}
+                            <div class="dropdown ms-auto">
+                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-plus"></i></button>
+                                <div class="dropdown-menu dropdown-menu-end tk-sub-menu" style="min-width:280px; max-height:420px; overflow:auto">
+                                    <div class="tk-sub-search">
+                                        <input type="text" class="form-control form-control-sm tk-sub-search-input" placeholder="Search people…" autocomplete="off">
+                                    </div>
+                                    {% for section in subscriber_sections %}
+                                        <h6 class="dropdown-header">{{ section.title }}</h6>
+                                        {% for row in section.rows %}
+                                            <form method="POST" action="{{ url_for('tickets.subscriber_add', ticket_id=ticket.id, user_id=row.user.id) }}" class="tk-sub-option" data-name="{{ row.user.name|lower }}">
+                                                {{ action_form.hidden_tag() }}
+                                                <button type="submit" class="dropdown-item tk-assign-row">
+                                                    {{ avatar(row.user, 22) }}
+                                                    <span class="flex-grow-1 text-start">{{ row.user.name }}</span>
+                                                </button>
+                                            </form>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="dropdown-item-text text-secondary small">No one else to add</span>
+                                    {% endfor %}
+                                    <div class="dropdown-divider"></div>
+                                    <form method="POST" action="{{ url_for('tickets.external_subscriber_add', ticket_id=ticket.id) }}" class="px-3 py-2">
+                                        {{ external_form.hidden_tag() }}
+                                        <label class="form-label small mb-1">External email</label>
+                                        <div class="d-flex gap-1">
+                                            {{ external_form.email(class="form-control form-control-sm", placeholder="name@example.com") }}
+                                            {{ external_form.submit(class="btn btn-sm btn-outline-primary") }}
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                        {% for sub in subscribers %}
+                            <span class="tk-sub-avatar-wrap">
+                                {{ avatar(sub.user, 26) }}
+                                {% if perms.subscribe %}
+                                    <form method="POST" action="{{ url_for('tickets.subscriber_remove', ticket_id=ticket.id, user_id=sub.user_id) }}" class="tk-inline-form">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="tk-sub-remove" title="Remove subscriber"><i class="fas fa-times"></i></button>
+                                    </form>
+                                {% endif %}
+                            </span>
+                        {% else %}
+                            {% if not external_subscribers %}<span class="text-secondary">No subscribers</span>{% endif %}
+                        {% endfor %}
+                        {% for ext in external_subscribers %}
+                            <span class="tk-sub-pill-wrap">
+                                <span class="tk-pill" style="background:var(--bs-secondary-bg); color:var(--bs-secondary-color)"><i class="fas fa-at"></i> {{ ext.email }}</span>
+                                {% if perms.subscribe %}
+                                    <form method="POST" action="{{ url_for('tickets.external_subscriber_remove', ticket_id=ticket.id, ext_id=ext.id) }}" class="tk-inline-form">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="tk-sub-remove" title="Remove subscriber"><i class="fas fa-times"></i></button>
+                                    </form>
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# Labels #}
+                <div class="tk-panel-sec">
+                    <div class="tk-panel-lbl">
+                        Labels
+                        {% if perms.label and available_labels %}
+                            <div class="dropdown ms-auto">
+                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-plus"></i></button>
+                                <div class="dropdown-menu dropdown-menu-end">
+                                    {% for label in available_labels %}
+                                        <form method="POST" action="{{ url_for('tickets.label_add', ticket_id=ticket.id, label_id=label.id) }}">
+                                            {{ action_form.hidden_tag() }}
+                                            <button type="submit" class="dropdown-item">{{ label_pill(label) }}</button>
+                                        </form>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2 d-flex align-items-center gap-1 flex-wrap">
+                        {% for label in ticket.labels %}
+                            <span class="d-inline-flex align-items-center gap-1">
+                                {{ label_pill(label) }}
+                                {% if perms.label %}
+                                    <form method="POST" action="{{ url_for('tickets.label_remove', ticket_id=ticket.id, label_id=label.id) }}" class="tk-inline-form">
+                                        {{ action_form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-sm btn-link p-0 text-secondary" title="Remove label"><i class="fas fa-times" style="font-size:10px"></i></button>
+                                    </form>
+                                {% endif %}
+                            </span>
+                        {% else %}
+                            <span class="text-secondary">No labels</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# Context #}
+                <div class="tk-panel-sec">
+                    <div class="tk-panel-lbl">Context</div>
+                    <div class="mt-2 tk-context">
+                        {% for row in subjects %}
+                            <div class="tk-context-row">
+                                <i class="fas fa-{{ row.icon }} fa-fw text-secondary"></i>
+                                <span class="text-secondary">{{ row.label }}:</span>
+                                {% if row.url %}<a href="{{ row.url }}" class="fw-medium text-decoration-none">{{ row.name }}</a>{% else %}<span class="fw-medium">{{ row.name }}</span>{% endif %}
+                            </div>
+                        {% else %}
+                            <div class="text-secondary mb-1">General ticket — no subjects</div>
+                        {% endfor %}
+                        {% for meta in context_meta %}
+                            <div class="tk-context-row">
+                                <i class="fas fa-{{ meta.icon }} fa-fw text-secondary"></i>
+                                <span class="text-secondary">{{ meta.label }}:</span>
+                                <span class="fw-medium">{{ meta.value }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# Actions log #}
+                <div class="tk-panel-sec">
+                    <div class="tk-panel-lbl">Actions log</div>
+                    <div class="mt-2">
+                        {% for entry in actions_log %}
+                            <div class="d-flex gap-2 mb-2" style="font-size:11.5px">
+                                <i class="fas fa-{{ entry.icon }} text-secondary mt-1" style="width:14px; flex:none"></i>
+                                <span><strong class="text-body">{{ entry.obj.actor.name if entry.obj.actor else 'Someone' }}</strong> {{ entry.text }}
+                                    <span class="text-secondary d-block">{{ entry.obj.created_at.strftime('%d %b %Y, %H:%M') if entry.obj.created_at else '' }}</span>
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function tkWireSearch(inputSelector, optionSelector) {
+        var input = document.querySelector(inputSelector);
+        if (!input) return;
+        input.addEventListener('click', function (evt) { evt.stopPropagation(); });
+        input.addEventListener('input', function () {
+            var term = input.value.trim().toLowerCase();
+            document.querySelectorAll(optionSelector).forEach(function (row) {
+                var name = row.getAttribute('data-name') || '';
+                row.style.display = (term === '' || name.indexOf(term) !== -1) ? '' : 'none';
+            });
+        });
+    }
+    tkWireSearch('.tk-assign-search', '.tk-assign-option');
+    tkWireSearch('.tk-sub-search-input', '.tk-sub-option');
+
+    document.querySelectorAll('.tk-copy-link').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var url = btn.getAttribute('data-url') || window.location.href;
+            var done = function () {
+                var original = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check fa-fw"></i> Copied';
+                setTimeout(function () { btn.innerHTML = original; }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(function () {});
+            }
+        });
+    });
+</script>

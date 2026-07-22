@@ -5,7 +5,7 @@
 
 {% block title %}Faculty dashboard — My tickets{% endblock %}
 
-{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', view=view, status=selected_status, label_id=selected_label) %}
+{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', view=view, label_id=selected_label) %}
 
 {% block pane_content %}
     {{ inbox_styles() }}

@@ -35,6 +35,7 @@ from .permissions import (
     is_assignee,
     is_convenor_in_scope,
 )
+from .read_state import is_unread, mark_read, record_inbox_visit
 from .routing import apply_auto_assign
 from .scope import (
     class_convenor_users,
@@ -71,9 +72,12 @@ __all__ = [
     "is_assignee",
     "is_convenor_in_scope",
     "is_subscribed",
+    "is_unread",
     "log_email",
+    "mark_read",
     "primary_convenor_user",
     "record_event",
+    "record_inbox_visit",
     "recompute_scope",
     "remove_label",
     "remove_subject",

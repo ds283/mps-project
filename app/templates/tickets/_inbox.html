@@ -7,28 +7,30 @@
 
 {% macro inbox_styles() %}
     <style>
-        .tk-pill-btn { display:inline-block; border-radius:20px; font-size:12px; padding:3px 11px; text-decoration:none;
-            background:var(--bs-body-bg); border:1px solid var(--bs-border-color); color:var(--bs-body-color); }
-        .tk-pill-btn:hover { border-color:var(--bs-secondary-color); }
-        .tk-pill-btn.active { background:var(--bs-primary); color:#fff; border-color:var(--bs-primary); }
         .tk-tile { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
         .tk-tile .num { font-size:26px; font-weight:700; line-height:1; }
         .tk-tile .cap { font-size:11.5px; color:var(--bs-secondary-color); text-transform:uppercase; letter-spacing:.03em; margin-top:6px; }
-        .tk-rail-lbl { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; text-decoration:none; color:var(--bs-body-color); font-size:13px; }
-        .tk-rail-lbl:hover { background:var(--bs-tertiary-bg); }
-        .tk-rail-lbl.active { background:var(--bs-primary-bg-subtle); }
+        .tk-tile .sub { font-size:11.5px; color:var(--bs-secondary-color); margin-top:2px; }
+        .tk-rail-item { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:6px; text-decoration:none; color:var(--bs-body-color); font-size:13.5px; }
+        .tk-rail-item:hover { background:var(--bs-tertiary-bg); }
+        .tk-rail-item.active { background:var(--bs-primary-bg-subtle); color:var(--bs-primary-text-emphasis); font-weight:600; }
+        .tk-rail-item .tk-rail-count { margin-left:auto; font-size:11px; color:var(--bs-secondary-color); }
+        .tk-rail-item.active .tk-rail-count { background:var(--bs-primary); color:#fff; border-radius:20px; padding:1px 8px; }
+        .tk-rail-heading { font-size:10.5px; font-weight:700; color:var(--bs-secondary-color); text-transform:uppercase; letter-spacing:.05em; padding:16px 8px 6px; }
+        .tk-rail-heading:first-child { padding-top:0; }
+        .tk-activity-item { display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--bs-border-color); font-size:11.5px; line-height:1.45; }
+        .tk-activity-item:last-child { border-bottom:none; }
+        .tk-activity-dot { width:7px; height:7px; border-radius:50%; margin-top:5px; flex:none; background:transparent; }
+        .tk-activity-dot.is-new { background:var(--bs-danger); }
+        .tk-activity-item .when { color:var(--bs-secondary-color); font-size:10.5px; }
         .tk-2col { display:flex; flex-direction:column; gap:1.5rem; align-items:stretch; }
         .tk-2col > .tk-main { min-width:0; }
         @media (min-width:992px) {
             .tk-2col { flex-direction:row; align-items:flex-start; }
             .tk-2col > .tk-main { flex:1 1 0; }
-            .tk-2col > .tk-side { flex:0 0 var(--tk-side, 210px); }
+            .tk-2col > .tk-side { flex:0 0 var(--tk-side, 230px); }
         }
     </style>
-{% endmacro %}
-
-{% macro _pill(label, href, active) %}
-    <a href="{{ href }}" class="tk-pill-btn {{ 'active' if active else '' }}">{{ label }}</a>
 {% endmacro %}
 
 {% macro inbox_body(endpoint) %}
@@ -39,38 +41,78 @@
 
     {# metric tiles #}
     <div class="row g-3 mb-3">
-        <div class="col-6 col-md-4"><div class="tk-tile"><div class="num">{{ metrics.assigned }}</div><div class="cap">Assigned to me · open</div></div></div>
-        <div class="col-6 col-md-4"><div class="tk-tile"><div class="num">{{ metrics.watching }}</div><div class="cap">Watching</div></div></div>
-        <div class="col-6 col-md-4"><div class="tk-tile"><div class="num {{ 'text-danger' if metrics.overdue else '' }}">{{ metrics.overdue }}</div><div class="cap">Overdue</div></div></div>
+        <div class="col-6 col-md-4">
+            <div class="tk-tile">
+                <div class="num {{ 'text-danger' if metrics.newly_assigned else '' }}">{{ metrics.newly_assigned }}</div>
+                <div class="cap">Newly assigned to you</div>
+                <div class="sub">since you last visited</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="tk-tile">
+                <div class="num {{ 'text-danger' if metrics.new_comments else '' }}">{{ metrics.new_comments }}</div>
+                <div class="cap">New comments</div>
+                <div class="sub">on tickets you watch</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="tk-tile">
+                <div class="num">{{ metrics.due_count }}</div>
+                <div class="cap">Due this week</div>
+                {% if metrics.due_nearest %}
+                    <div class="sub">{{ metrics.due_nearest.title }} · {{ metrics.due_nearest.due_date.strftime('%d %b') }}</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <div class="tk-2col">
-        {# rail: views + status + labels #}
-        <div class="tk-side" style="--tk-side:210px">
-            <div class="fw-semibold small text-uppercase text-secondary mb-2">Views</div>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                {{ _pill('All', url_for(endpoint, view='all', status=selected_status, label_id=selected_label), view == 'all') }}
-                {{ _pill('Assigned to me', url_for(endpoint, view='assigned', status=selected_status, label_id=selected_label), view == 'assigned') }}
-                {{ _pill('Watching', url_for(endpoint, view='watching', status=selected_status, label_id=selected_label), view == 'watching') }}
-            </div>
-
-            <div class="fw-semibold small text-uppercase text-secondary mb-2">Status</div>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                {{ _pill('Any', url_for(endpoint, view=view, label_id=selected_label), selected_status is none) }}
-                {% for value, label in all_statuses %}
-                    {{ _pill(label, url_for(endpoint, view=view, status=value, label_id=selected_label), selected_status == value) }}
-                {% endfor %}
-            </div>
+        {# rail: views + labels + activity #}
+        <div class="tk-side" style="--tk-side:230px">
+            <div class="tk-rail-heading">Views</div>
+            {% for key, label, icon in views %}
+                <a class="tk-rail-item {{ 'active' if view == key else '' }}" href="{{ url_for(endpoint, view=key, label_id=selected_label) }}">
+                    <i class="fas fa-{{ icon }} fa-fw" style="font-size:12px"></i> {{ label }}
+                    <span class="tk-rail-count">{{ view_counts[key] }}</span>
+                </a>
+            {% endfor %}
 
             {% if labels %}
-                <div class="d-flex align-items-center mb-2">
-                    <span class="fw-semibold small text-uppercase text-secondary">Labels</span>
-                </div>
-                <a class="tk-rail-lbl {{ 'active' if selected_label is none else '' }}" href="{{ url_for(endpoint, view=view, status=selected_status) }}"><i class="fas fa-layer-group text-secondary"></i> All labels</a>
+                <div class="tk-rail-heading">Labels</div>
+                <a class="tk-rail-item {{ 'active' if selected_label is none else '' }}" href="{{ url_for(endpoint, view=view) }}">
+                    <i class="fas fa-layer-group fa-fw" style="font-size:12px"></i> All labels
+                </a>
                 {% for label in labels %}
-                    <a class="tk-rail-lbl {{ 'active' if selected_label == label.id else '' }}" href="{{ url_for(endpoint, view=view, status=selected_status, label_id=label.id) }}">
-                        <span class="badge rounded-pill" style="{{ label.make_CSS_style() }}">{{ label.name }}</span>
+                    <a class="tk-rail-item {{ 'active' if selected_label == label.id else '' }}" href="{{ url_for(endpoint, view=view, label_id=label.id) }}">
+                        <span style="width:10px;height:10px;border-radius:50%;{{ label.make_CSS_style() }}"></span> {{ label.name }}
+                        <span class="tk-rail-count">{{ label.inbox_count }}</span>
                     </a>
+                {% endfor %}
+            {% endif %}
+
+            {% if activity %}
+                <div class="tk-rail-heading d-flex align-items-center">
+                    Activity
+                    {% set new_count = activity | selectattr('is_new') | list | length %}
+                    {% if new_count %}<span class="ms-auto" style="font-size:9px;background:var(--bs-danger);color:#fff;border-radius:20px;padding:1px 6px">{{ new_count }} new</span>{% endif %}
+                </div>
+                {% for item in activity %}
+                    <div class="tk-activity-item">
+                        <span class="tk-activity-dot {{ 'is-new' if item.is_new else '' }}"></span>
+                        <div>
+                            {% if item.kind == 'comment' %}
+                                <strong>{{ item.obj.author.name if item.obj.author else 'Someone' }}</strong> commented on
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id) }}">#{{ item.ticket_id }}</a>
+                            {% elif item.kind == 'email' %}
+                                <i class="fas fa-envelope text-success"></i> <strong>Email logged</strong> on
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id) }}">#{{ item.ticket_id }}</a>
+                            {% else %}
+                                <strong>{{ item.obj.actor.name if item.obj.actor else 'Someone' }}</strong> {{ item.text }} on
+                                <a href="{{ url_for('tickets.detail', ticket_id=item.ticket_id) }}">#{{ item.ticket_id }}</a>
+                            {% endif %}
+                            <div class="when">{{ item.when.strftime('%d %b, %H:%M') if item.when }}</div>
+                        </div>
+                    </div>
                 {% endfor %}
             {% endif %}
         </div>

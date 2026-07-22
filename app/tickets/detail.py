@@ -39,6 +39,7 @@ from ..shared.tickets import (
     convenors_in_scope,
     is_subscribed,
     log_email,
+    mark_read,
     remove_label,
     subscribe,
     unassign,
@@ -247,6 +248,13 @@ def detail(ticket_id):
     ticket = _load_ticket(ticket_id)
     if not can_view(current_user, ticket):
         abort(403)
+
+    mark_read(ticket, current_user)
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
 
     return render_template_context(
         "tickets/detail.html",

@@ -16,18 +16,18 @@ it renders inside the shared per-class dashboard chrome. The ledger endpoint alw
 permission-scoped base query built here; scope is never taken from the client.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import abort, current_app, flash, redirect, request, url_for
 from flask_security import current_user, login_required
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 from app.tickets import tickets
 
 from ..database import db
-from ..models import Label, ProjectClass, Ticket, TicketSubscription
+from ..models import Label, ProjectClass, Ticket, TicketComment, TicketEmail, TicketEvent, TicketReadState, TicketSubscription
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.tickets import (
@@ -37,11 +37,27 @@ from ..shared.tickets import (
     can_change_status,
     can_label,
     change_status,
+    record_inbox_visit,
     remove_label,
     unassign,
 )
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
+from .detail import _describe_event
+
+# events already shown as rich cards elsewhere in the feed (comment/email rows), matching the
+# ticket-detail timeline's own hidden set (app/tickets/detail.py:_TIMELINE_HIDDEN)
+_FEED_HIDDEN_EVENTS = {TicketEvent.OPENED, TicketEvent.COMMENT_ADDED, TicketEvent.EMAIL_LOGGED}
+
+# rail views for the personal inbox (2c): (key, label, icon)
+INBOX_VIEWS = [
+    ("all_open", "All open", "inbox"),
+    ("assigned", "Assigned to me", "user-check"),
+    ("watching", "Watching", "eye"),
+    ("unread", "Unread", "bell"),
+    ("created", "Created by me", "pen"),
+    ("closed", "Closed", "check-circle"),
+]
 
 
 # ------------------------------------------------------------------------------------------------
@@ -64,15 +80,40 @@ def _convened_class_ids(user):
     return ids
 
 
+def _watched_condition(user):
+    return Ticket.subscriptions.any(TicketSubscription.user_id == user.id)
+
+
+def _my_universe_condition(user):
+    """Every ticket that belongs in the user's personal inbox: assigned, watched, or opened by them."""
+    return or_(Ticket.assignee_id == user.id, Ticket.creator_id == user.id, _watched_condition(user))
+
+
+def _unread_condition(user):
+    """A ticket is unread if edited since the caller's read marker (or never read) — except for
+    the ticket's own creator, who never sees their own ticket as unread. See
+    app.shared.tickets.read_state.is_unread(), which this mirrors in SQL for bulk filtering."""
+    read_and_current = Ticket.read_states.any(and_(TicketReadState.user_id == user.id, TicketReadState.last_read_at >= Ticket.last_edit_timestamp))
+    return and_(
+        Ticket.last_edit_timestamp.isnot(None),
+        or_(Ticket.creator_id.is_(None), Ticket.creator_id != user.id),
+        ~read_and_current,
+    )
+
+
 def _mine_base_query(user, view: str):
-    assigned = Ticket.assignee_id == user.id
-    watched = Ticket.subscriptions.any(TicketSubscription.user_id == user.id)
     if view == "assigned":
-        condition = assigned
+        condition = Ticket.assignee_id == user.id
     elif view == "watching":
-        condition = watched
-    else:
-        condition = or_(assigned, watched)
+        condition = _watched_condition(user)
+    elif view == "unread":
+        condition = and_(_my_universe_condition(user), _unread_condition(user))
+    elif view == "created":
+        condition = Ticket.creator_id == user.id
+    elif view == "closed":
+        condition = and_(_my_universe_condition(user), Ticket.status == Ticket.CLOSED)
+    else:  # "all_open"
+        condition = and_(_my_universe_condition(user), Ticket.status.in_(Ticket.OPEN_STATES))
     return Ticket.query.filter(condition)
 
 
@@ -99,10 +140,16 @@ def _apply_common_filters(query, args):
 
 
 def _user_labels(user):
+    """Labels visible to `user`, each annotated with `.inbox_count` — the number of tickets in the
+    user's own inbox universe (assigned/watched/created) carrying that label."""
     tenant_ids = [tenant.id for tenant in user.tenants]
     if not tenant_ids:
         return []
-    return Label.query.filter(Label.tenant_id.in_(tenant_ids)).order_by(Label.name.asc()).all()
+    labels = Label.query.filter(Label.tenant_id.in_(tenant_ids)).order_by(Label.name.asc()).all()
+    universe = _my_universe_condition(user)
+    for label in labels:
+        label.inbox_count = Ticket.query.filter(universe, Ticket.labels.any(Label.id == label.id)).count()
+    return labels
 
 
 # ------------------------------------------------------------------------------------------------
@@ -116,7 +163,7 @@ def ledger_ajax():
     if mode == "convenor":
         base_query = _convenor_base_query(current_user, request.args.get("class_id", type=int))
     else:
-        base_query = _mine_base_query(current_user, request.args.get("view", "all"))
+        base_query = _mine_base_query(current_user, request.args.get("view", "all_open"))
 
     base_query = _apply_common_filters(base_query, request.args).order_by(Ticket.last_edit_timestamp.desc())
     return ajax.tickets.ledger_data(base_query)
@@ -126,31 +173,115 @@ def ledger_ajax():
 # faculty / office inbox (2c)
 
 
+def _newly_assigned_count(user, since):
+    """Tickets currently assigned to `user` where the assignment happened after `since`."""
+    if since is None:
+        return 0
+    ticket_ids = set()
+    for event in TicketEvent.query.filter(TicketEvent.kind == TicketEvent.ASSIGNED, TicketEvent.created_at > since):
+        payload = event.payload or {}
+        if payload.get("to") == user.id:
+            ticket_ids.add(event.ticket_id)
+    if not ticket_ids:
+        return 0
+    return Ticket.query.filter(Ticket.id.in_(ticket_ids), Ticket.assignee_id == user.id).count()
+
+
+def _new_comment_count(user, since):
+    """Comments posted (by someone else) since `since` on tickets `user` watches."""
+    if since is None:
+        return 0
+    return TicketComment.query.filter(
+        TicketComment.ticket.has(_watched_condition(user)),
+        TicketComment.created_at > since,
+        TicketComment.author_id != user.id,
+    ).count()
+
+
+def _due_this_week(user):
+    now = datetime.now()
+    week_end = now + timedelta(days=7)
+    query = Ticket.query.filter(
+        _my_universe_condition(user),
+        Ticket.status.in_(Ticket.OPEN_STATES),
+        Ticket.due_date.isnot(None),
+        Ticket.due_date >= now,
+        Ticket.due_date <= week_end,
+    ).order_by(Ticket.due_date.asc())
+    return query.count(), query.first()
+
+
+def _activity_feed(user, since, limit=10):
+    """Recent events/comments/emails on tickets in `user`'s inbox universe, newest first, each
+    flagged `is_new` if it postdates the caller's previous inbox visit."""
+    universe = _my_universe_condition(user)
+    ticket_ids = [tid for (tid,) in db.session.query(Ticket.id).filter(universe).all()]
+    if not ticket_ids:
+        return []
+
+    fetch_limit = limit * 3
+    items = []
+    for event in (
+        TicketEvent.query.filter(TicketEvent.ticket_id.in_(ticket_ids), ~TicketEvent.kind.in_(_FEED_HIDDEN_EVENTS))
+        .order_by(TicketEvent.created_at.desc())
+        .limit(fetch_limit)
+    ):
+        entry = {"kind": "event", "ticket_id": event.ticket_id, "when": event.created_at, "obj": event}
+        entry.update(_describe_event(event))
+        items.append(entry)
+    for comment in TicketComment.query.filter(TicketComment.ticket_id.in_(ticket_ids)).order_by(TicketComment.created_at.desc()).limit(fetch_limit):
+        items.append({"kind": "comment", "ticket_id": comment.ticket_id, "when": comment.created_at, "obj": comment})
+    for email in TicketEmail.query.filter(TicketEmail.ticket_id.in_(ticket_ids)).order_by(TicketEmail.logged_at.desc()).limit(fetch_limit):
+        items.append({"kind": "email", "ticket_id": email.ticket_id, "when": email.logged_at, "obj": email})
+
+    items.sort(key=lambda it: it["when"] or datetime.min, reverse=True)
+    items = items[:limit]
+
+    tickets_by_id = {t.id: t for t in Ticket.query.filter(Ticket.id.in_({it["ticket_id"] for it in items})).all()}
+    for item in items:
+        item["ticket"] = tickets_by_id.get(item["ticket_id"])
+        item["is_new"] = since is not None and item["when"] is not None and item["when"] > since
+    return items
+
+
 def build_inbox_context(user, args) -> dict:
     """
     Assemble the personal-inbox (design 2c) context for `user` from a request args mapping. Shared
     by the standalone tickets.inbox page and the faculty dashboard "My tickets" pane so both surfaces
     stay in lock-step. The ledger data itself is served separately by ledger_ajax (mode=mine).
-    """
-    view = args.get("view", "all")
-    if view not in ("all", "assigned", "watching"):
-        view = "all"
 
-    assigned_open = Ticket.query.filter(Ticket.assignee_id == user.id, Ticket.status.in_(Ticket.OPEN_STATES)).count()
-    watching = Ticket.query.filter(Ticket.subscriptions.any(TicketSubscription.user_id == user.id)).count()
-    overdue = Ticket.query.filter(
-        Ticket.assignee_id == user.id,
-        Ticket.status.in_(Ticket.OPEN_STATES),
-        Ticket.due_date.isnot(None),
-        Ticket.due_date < datetime.now(),
-    ).count()
+    Records this call as the user's inbox visit (updating TicketInboxVisit), using the *previous*
+    visit timestamp as the "since you last visited" cutoff for this render's metrics/Activity feed.
+    """
+    view = args.get("view", "all_open")
+    view_keys = {key for key, _, _ in INBOX_VIEWS}
+    if view not in view_keys:
+        view = "all_open"
+
+    previous_visit = record_inbox_visit(user)
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
+
+    view_counts = {key: _mine_base_query(user, key).count() for key, _, _ in INBOX_VIEWS}
+
+    due_count, nearest_due = _due_this_week(user)
 
     return {
         "view": view,
+        "views": INBOX_VIEWS,
+        "view_counts": view_counts,
         "labels": _user_labels(user),
         "selected_label": args.get("label_id", type=int),
-        "selected_status": args.get("status", type=int),
-        "metrics": {"assigned": assigned_open, "watching": watching, "overdue": overdue},
+        "metrics": {
+            "newly_assigned": _newly_assigned_count(user, previous_visit),
+            "new_comments": _new_comment_count(user, previous_visit),
+            "due_count": due_count,
+            "due_nearest": nearest_due,
+        },
+        "activity": _activity_feed(user, previous_visit),
         "all_statuses": [(value, label) for value, label in Ticket._labels.items()],
     }
 

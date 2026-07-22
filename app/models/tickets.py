@@ -396,6 +396,43 @@ class TicketSubscription(db.Model, TicketSubscriptionReasonMixin):
     __table_args__ = (db.UniqueConstraint("ticket_id", "user_id", name="uq_ticket_subscription_user"),)
 
 
+class TicketReadState(db.Model):
+    """
+    Per-(user, ticket) "last read" marker, upserted whenever a user opens a ticket's detail view.
+    Absence of a row means "never read". Drives the Unread rail view, unread dots, and the
+    "new comments on tickets you watch" tile. A ticket is never unread for its own creator — see
+    app.shared.tickets.read_state.is_unread().
+    """
+
+    __tablename__ = "ticket_read_states"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    ticket_id = db.Column(db.Integer(), db.ForeignKey("tickets.id"), nullable=False, index=True)
+    ticket = db.relationship("Ticket", foreign_keys=[ticket_id], backref=db.backref("read_states", lazy="dynamic"))
+
+    user_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=False, index=True)
+    user = db.relationship("User", foreign_keys=[user_id], uselist=False)
+
+    last_read_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
+
+    __table_args__ = (db.UniqueConstraint("ticket_id", "user_id", name="uq_ticket_read_state_user"),)
+
+
+class TicketInboxVisit(db.Model):
+    """
+    Tracks when a user last loaded their personal ticket inbox (design screen 2c), to compute the
+    "since you last visited" metric tiles and the Activity feed's "N new" badge.
+    """
+
+    __tablename__ = "ticket_inbox_visits"
+
+    user_id = db.Column(db.Integer(), db.ForeignKey("users.id"), primary_key=True)
+    user = db.relationship("User", foreign_keys=[user_id], uselist=False)
+
+    last_visited_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
+
+
 class TicketExternalSubscriber(db.Model):
     """
     An external email address (e.g. the ATAS office) subscribed to a ticket's email thread without

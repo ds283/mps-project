@@ -29,6 +29,7 @@ from ..models import (
     Label,
     ProjectClass,
     ProjectClassConfig,
+    SelectingStudent,
     SubmittingStudent,
     Tenant,
     TicketSubject,
@@ -44,7 +45,8 @@ from ..shared.tickets import (
     class_convenor_users,
     create_ticket,
     faculty_classes,
-    faculty_supervisee_query,
+    faculty_related_student_query,
+    faculty_selectee_query,
     home_class,
     is_office_like,
     primary_convenor_user,
@@ -64,22 +66,31 @@ def _available_tenants(user):
     """Distinct tenants the acting user could compose a ticket against, for the tenant selector.
 
     Mirrors `scope_kind_for`'s priority: a user with `faculty_data` gets the tenants of the classes
-    they supervise plus the home-class tenants of their supervisees, regardless of any
-    office/admin/root roles also held; office/admin/root's subscribed tenants are the fallback only
-    for users with no `faculty_data` at all. Returned sorted by name. A ticket is single-tenant, so
-    this only drives a chooser that keeps the subject picker within one tenant.
+    they supervise plus the home-class tenants of every student the picker could surface for them
+    (supervisor/marker/moderator/assessor roles, plus selectees), regardless of any office/admin/
+    root roles also held; office/admin/root's subscribed tenants are the fallback only for users
+    with no `faculty_data` at all. Returned sorted by name. A ticket is single-tenant, so this only
+    drives a chooser that keeps the subject picker within one tenant.
     """
     faculty = getattr(user, "faculty_data", None)
     if faculty is not None:
         tenant_ids = {pclass.tenant_id for pclass in faculty_classes(faculty).values() if pclass.tenant_id is not None}
-        sup_tenant_ids = (
-            faculty_supervisee_query(user)
+        sub_tenant_ids = (
+            faculty_related_student_query(user)
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
             .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
             .with_entities(ProjectClass.tenant_id)
             .distinct()
         )
-        tenant_ids.update(tid for (tid,) in sup_tenant_ids if tid is not None)
+        tenant_ids.update(tid for (tid,) in sub_tenant_ids if tid is not None)
+        sel_tenant_ids = (
+            faculty_selectee_query(user)
+            .join(ProjectClassConfig, SelectingStudent.config_id == ProjectClassConfig.id)
+            .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
+            .with_entities(ProjectClass.tenant_id)
+            .distinct()
+        )
+        tenant_ids.update(tid for (tid,) in sel_tenant_ids if tid is not None)
         if not tenant_ids:
             return []
         return Tenant.query.filter(Tenant.id.in_(tenant_ids)).order_by(Tenant.name.asc()).all()
@@ -125,7 +136,7 @@ def _routing_preview(user, tokens, convenor_pclass=None):
     for pclass in class_list:
         for u in class_convenor_users(pclass):
             seen_convenors[u.id] = u
-    convenors = [{"name": u.name, "initials": u.initials} for u in sorted(seen_convenors.values(), key=lambda u: u.name)]
+    convenors = [{"name": u.name, "initials": u.initials, "colour": u.avatar_colour} for u in sorted(seen_convenors.values(), key=lambda u: u.name)]
 
     return {
         "count": count,

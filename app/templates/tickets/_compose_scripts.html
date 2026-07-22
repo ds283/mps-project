@@ -16,9 +16,19 @@
                 return $('<span><i class="fas fa-layer-group fa-fw text-secondary me-1"></i>' + escapeHtml(result.text) + '</span>');
             }
             var subtitle = result.subtitle ? '<div class="text-secondary" style="font-size:11px">' + escapeHtml(result.subtitle) + '</div>' : '';
+            if (result.kind === 'anon') {
+                // marker/moderator candidates: exam number only, no avatar, to preserve blind-marking anonymity
+                return $(
+                    '<div class="d-flex align-items-center gap-2 py-1">' +
+                        '<i class="fas fa-user-secret text-secondary" style="width:22px; text-align:center"></i>' +
+                        '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
+                    '</div>'
+                );
+            }
+            var colourStyle = result.colour ? ' background-color:' + result.colour + ';' : '';
             return $(
                 '<div class="d-flex align-items-center gap-2 py-1">' +
-                    '<span class="tk-av" style="width:22px; height:22px; font-size:10px">' + escapeHtml(result.initials || '?') + '</span>' +
+                    '<span class="tk-av" style="width:22px; height:22px; font-size:10px;' + colourStyle + '">' + escapeHtml(result.initials || '?') + '</span>' +
                     '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
                 '</div>'
             );
@@ -29,8 +39,12 @@
             if (result.kind === 'class') {
                 return $('<span><i class="fas fa-layer-group fa-fw"></i> ' + escapeHtml(result.text) + '</span>');
             }
+            if (result.kind === 'anon') {
+                return $('<span><i class="fas fa-user-secret"></i> ' + escapeHtml(result.text) + '</span>');
+            }
+            var colourStyle = result.colour ? ' background-color:' + result.colour + ';' : '';
             return $(
-                '<span><span class="tk-av" style="width:16px; height:16px; font-size:8px; vertical-align:-3px">' +
+                '<span><span class="tk-av" style="width:16px; height:16px; font-size:8px; vertical-align:-3px;' + colourStyle + '">' +
                     escapeHtml(result.initials || '?') + '</span> ' + escapeHtml(result.text) + '</span>'
             );
         }
@@ -106,8 +120,9 @@
             $('#tk-due-date-picker').datetimepicker('date', moment('{{ form.due_date.data.strftime("%d/%m/%Y") }}', 'DD/MM/YYYY'));
         {% endif %}
 
-        function avatarChip(initials, name, size) {
-            return '<span class="tk-av" style="width:' + size + 'px; height:' + size + 'px; font-size:' + Math.round(size * 0.42) + 'px" title="' +
+        function avatarChip(initials, name, size, colour) {
+            const colourStyle = colour ? ' background-color:' + colour + ';' : '';
+            return '<span class="tk-av" style="width:' + size + 'px; height:' + size + 'px; font-size:' + Math.round(size * 0.42) + 'px;' + colourStyle + '" title="' +
                 escapeHtml(name) + '">' + escapeHtml(initials) + '</span>';
         }
 
@@ -119,6 +134,7 @@
                 const span = document.createElement('span');
                 span.className = 'tk-av tk-sub-conv';
                 span.style.width = '24px'; span.style.height = '24px'; span.style.fontSize = '10px';
+                if (c.colour) { span.style.backgroundColor = c.colour; }
                 span.title = c.name;
                 span.textContent = c.initials;
                 subBox.appendChild(span);
@@ -133,7 +149,7 @@
                 return;
             }
             const conv = (d.convenors || []).map(c =>
-                '<div class="d-flex align-items-center gap-2 mt-1">' + avatarChip(c.initials, c.name, 20) + '<span>' + escapeHtml(c.name) + '</span></div>'
+                '<div class="d-flex align-items-center gap-2 mt-1">' + avatarChip(c.initials, c.name, 20, c.colour) + '<span>' + escapeHtml(c.name) + '</span></div>'
             ).join('');
             if (d.multi) {
                 box.innerHTML = '<div class="tk-route"><div class="hd"><i class="fas fa-route"></i> Routing · ' + d.count + ' classes in scope</div>' +

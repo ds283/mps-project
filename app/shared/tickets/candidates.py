@@ -18,8 +18,12 @@ Three origin cases:
   SelectingStudent anchored on that class's current ProjectClassConfig, plus the class itself.
   Only available when the acting user actually convenes/co-convenes the class.
 - faculty: reached via a faculty member's personal inbox. Scope is the classes they actively
-  supervise/mark/moderate (active + published only), their non-retired supervisees (any
-  SubmissionRole), and their non-retired selectees (via a ConfirmRequest onto an owned LiveProject).
+  supervise/mark/moderate (active + published only); their non-retired supervisees (supervisor /
+  responsible supervisor role), assessees (presentation assessor role) and selectees (via a
+  ConfirmRequest onto an owned LiveProject) are shown by name; their non-retired markees/moderatees
+  (marker / moderator role) are shown by exam number only, with no avatar and no name-based search,
+  to preserve blind-marking anonymity. Exam board / external examiner roles are deliberately
+  excluded from scope entirely.
 - office (office/admin/root): any non-retired submitting/selecting student, or whole class, in an
   active + published ProjectClassConfig/ProjectClass within the user's current-cycle tenants.
 """
@@ -129,14 +133,55 @@ def faculty_classes(faculty):
     return classes
 
 
-def faculty_supervisee_query(user):
-    """Non-retired SubmittingStudents for which the user holds any SubmissionRole."""
+_SUPERVISOR_ROLES = (SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR)
+
+# ticket-relevant roles for entitlement purposes; exam board / external examiner are deliberately
+# excluded from ticket scope entirely (per spec), not merely displayed differently.
+_FACULTY_STUDENT_ROLES = _SUPERVISOR_ROLES + (
+    SubmissionRole.ROLE_MARKER,
+    SubmissionRole.ROLE_MODERATOR,
+    SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+)
+
+
+def _faculty_role_query(user, roles):
     return (
         SubmittingStudent.query.join(SubmissionRecord, SubmissionRecord.owner_id == SubmittingStudent.id)
         .join(SubmissionRole, SubmissionRole.submission_id == SubmissionRecord.id)
-        .filter(SubmissionRole.user_id == user.id, SubmittingStudent.retired.is_(False))
+        .filter(SubmissionRole.user_id == user.id, SubmissionRole.role.in_(roles), SubmittingStudent.retired.is_(False))
         .distinct()
     )
+
+
+def faculty_supervisee_query(user):
+    """Non-retired SubmittingStudents for which the user holds a supervisor (or responsible
+    supervisor) role."""
+    return _faculty_role_query(user, _SUPERVISOR_ROLES)
+
+
+def faculty_marker_query(user):
+    """Non-retired SubmittingStudents for which the user holds a marker role. Displayed by exam
+    number only (see `_anonymised_role_rows`) to preserve blind-marking anonymity."""
+    return _faculty_role_query(user, (SubmissionRole.ROLE_MARKER,))
+
+
+def faculty_moderator_query(user):
+    """Non-retired SubmittingStudents for which the user holds a moderator role. Displayed by exam
+    number only (see `_anonymised_role_rows`) to preserve blind-marking anonymity."""
+    return _faculty_role_query(user, (SubmissionRole.ROLE_MODERATOR,))
+
+
+def faculty_assessor_query(user):
+    """Non-retired SubmittingStudents for which the user holds a presentation assessor role."""
+    return _faculty_role_query(user, (SubmissionRole.ROLE_PRESENTATION_ASSESSOR,))
+
+
+def faculty_related_student_query(user):
+    """Non-retired SubmittingStudents for which the user holds any of the four ticket-relevant
+    roles (supervisor, responsible supervisor, marker, moderator, presentation assessor) — used
+    for the entitlement check, since a picker candidate offered under any of those roles must also
+    be accepted at submit time. Exam board / external examiner roles are deliberately excluded."""
+    return _faculty_role_query(user, _FACULTY_STUDENT_ROLES)
 
 
 def faculty_selectee_query(user):
@@ -191,7 +236,7 @@ def authorized(user, kind, target, convenor_pclass=None) -> bool:
     if kind == TicketSubject.PROJECT_CLASS:
         return target.id in faculty_classes(faculty)
     if kind == TicketSubject.SUBMITTING_STUDENT:
-        return faculty_supervisee_query(user).filter(SubmittingStudent.id == target.id).first() is not None
+        return faculty_related_student_query(user).filter(SubmittingStudent.id == target.id).first() is not None
     if kind == TicketSubject.SELECTING_STUDENT:
         return faculty_selectee_query(user).filter(SelectingStudent.id == target.id).first() is not None
     return False
@@ -245,6 +290,7 @@ def _student_results(model, query_term, tenant_ids, label, include_past=False):
                 "id": token_for(kind, student.id),
                 "text": student_name(student),
                 "initials": user.initials if user is not None else "?",
+                "colour": user.avatar_colour if user is not None else None,
                 "subtitle": subtitle,
             }
         )
@@ -282,6 +328,7 @@ def convenor_candidates(pclass, query_term):
                 "id": token_for(TicketSubject.SUBMITTING_STUDENT, student.id),
                 "text": student_name(student),
                 "initials": user.initials if user is not None else "?",
+                "colour": user.avatar_colour if user is not None else None,
                 "subtitle": "Submitter",
             }
         )
@@ -299,6 +346,7 @@ def convenor_candidates(pclass, query_term):
                 "id": token_for(TicketSubject.SELECTING_STUDENT, student.id),
                 "text": student_name(student),
                 "initials": user.initials if user is not None else "?",
+                "colour": user.avatar_colour if user is not None else None,
                 "subtitle": "Selector",
             }
         )
@@ -316,6 +364,68 @@ def convenor_candidates(pclass, query_term):
     return groups
 
 
+def _named_role_rows(query, model, kind, query_term, tenant_id, include_past, subtitle_label):
+    """Build named (avatar + name) candidate rows for a SubmittingStudent/SelectingStudent query
+    already filtered to a specific faculty role. Matches by name."""
+    q = query.join(StudentData, model.student_id == StudentData.id).join(User, StudentData.id == User.id)
+    if not include_past:
+        q = q.join(ProjectClassConfig, model.config_id == ProjectClassConfig.id).filter(ProjectClassConfig.year >= get_current_year())
+    if query_term:
+        q = q.filter(name_filter(query_term))
+    rows = []
+    for student in q.limit(SEARCH_LIMIT).all():
+        hc = home_class(student)
+        if tenant_id is not None and (hc is None or hc.tenant_id != tenant_id):
+            continue
+        user_ = _student_user(student)
+        subtitle = f"{subtitle_label} · {hc.name}" if hc is not None else subtitle_label
+        rows.append(
+            {
+                "id": token_for(kind, student.id),
+                "text": student_name(student),
+                "initials": user_.initials if user_ is not None else "?",
+                "colour": user_.avatar_colour if user_ is not None else None,
+                "subtitle": subtitle,
+            }
+        )
+    return rows
+
+
+def _anonymised_role_rows(query, query_term, tenant_id, include_past, subtitle_label):
+    """Build exam-number-only candidate rows (no name, no avatar) for a SubmittingStudent query
+    already filtered to a specific faculty role (marker/moderator), to preserve blind-marking
+    anonymity. `exam_number` is an encrypted column, so it can't be filtered in SQL — matches
+    against `query_term` are done in Python, against the exam number only, never the student's
+    name."""
+    q = query
+    if not include_past:
+        q = q.join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id).filter(ProjectClassConfig.year >= get_current_year())
+    rows = []
+    for student in q.order_by(SubmittingStudent.id).limit(500).all():
+        hc = home_class(student)
+        if tenant_id is not None and (hc is None or hc.tenant_id != tenant_id):
+            continue
+        data = getattr(student, "student", None)
+        exam_number = getattr(data, "exam_number", None)
+        if exam_number is None:
+            continue
+        exam_str = str(exam_number)
+        if query_term and query_term not in exam_str:
+            continue
+        subtitle = f"{subtitle_label} · {hc.name}" if hc is not None else subtitle_label
+        rows.append(
+            {
+                "id": token_for(TicketSubject.SUBMITTING_STUDENT, student.id),
+                "text": f"#{exam_number}",
+                "kind": "anon",
+                "subtitle": subtitle,
+            }
+        )
+        if len(rows) >= SEARCH_LIMIT:
+            break
+    return rows
+
+
 def faculty_candidates(user, query_term, tenant_id=None, include_past=False):
     groups = []
     faculty = user.faculty_data
@@ -331,53 +441,29 @@ def faculty_candidates(user, query_term, tenant_id=None, include_past=False):
     if class_rows:
         groups.append({"text": "Your classes", "children": class_rows[:SEARCH_LIMIT]})
 
-    sup_query = faculty_supervisee_query(user).join(StudentData, SubmittingStudent.student_id == StudentData.id).join(User, StudentData.id == User.id)
-    if not include_past:
-        sup_query = sup_query.join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id).filter(
-            ProjectClassConfig.year >= get_current_year()
-        )
-    if query_term:
-        sup_query = sup_query.filter(name_filter(query_term))
-    sup_rows = []
-    for student in sup_query.limit(SEARCH_LIMIT).all():
-        hc = home_class(student)
-        if tenant_id is not None and (hc is None or hc.tenant_id != tenant_id):
-            continue
-        user_ = _student_user(student)
-        subtitle = f"Supervised by you · {hc.name}" if hc is not None else "Supervised by you"
-        sup_rows.append(
-            {
-                "id": token_for(TicketSubject.SUBMITTING_STUDENT, student.id),
-                "text": student_name(student),
-                "initials": user_.initials if user_ is not None else "?",
-                "subtitle": subtitle,
-            }
-        )
+    sup_rows = _named_role_rows(
+        faculty_supervisee_query(user), SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, query_term, tenant_id, include_past, "Supervised by you"
+    )
     if sup_rows:
         groups.append({"text": "Your supervisees", "children": sup_rows})
 
-    sel_query = faculty_selectee_query(user).join(StudentData, SelectingStudent.student_id == StudentData.id).join(User, StudentData.id == User.id)
-    if not include_past:
-        sel_query = sel_query.join(ProjectClassConfig, SelectingStudent.config_id == ProjectClassConfig.id).filter(
-            ProjectClassConfig.year >= get_current_year()
-        )
-    if query_term:
-        sel_query = sel_query.filter(name_filter(query_term))
-    sel_rows = []
-    for student in sel_query.limit(SEARCH_LIMIT).all():
-        hc = home_class(student)
-        if tenant_id is not None and (hc is None or hc.tenant_id != tenant_id):
-            continue
-        user_ = _student_user(student)
-        subtitle = f"Selecting under you · {hc.name}" if hc is not None else "Selecting under you"
-        sel_rows.append(
-            {
-                "id": token_for(TicketSubject.SELECTING_STUDENT, student.id),
-                "text": student_name(student),
-                "initials": user_.initials if user_ is not None else "?",
-                "subtitle": subtitle,
-            }
-        )
+    assessor_rows = _named_role_rows(
+        faculty_assessor_query(user), SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, query_term, tenant_id, include_past, "You assess"
+    )
+    if assessor_rows:
+        groups.append({"text": "Students you assess", "children": assessor_rows})
+
+    marker_rows = _anonymised_role_rows(faculty_marker_query(user), query_term, tenant_id, include_past, "You mark")
+    if marker_rows:
+        groups.append({"text": "Students you mark", "children": marker_rows})
+
+    moderator_rows = _anonymised_role_rows(faculty_moderator_query(user), query_term, tenant_id, include_past, "You moderate")
+    if moderator_rows:
+        groups.append({"text": "Students you moderate", "children": moderator_rows})
+
+    sel_rows = _named_role_rows(
+        faculty_selectee_query(user), SelectingStudent, TicketSubject.SELECTING_STUDENT, query_term, tenant_id, include_past, "Selecting under you"
+    )
     if sel_rows:
         groups.append({"text": "Your selectees", "children": sel_rows})
 

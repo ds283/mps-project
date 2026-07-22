@@ -499,9 +499,19 @@
                     return $('<span><i class="fas fa-layer-group fa-fw text-secondary me-1"></i>' + escapeHtml(result.text) + '</span>');
                 }
                 var subtitle = result.subtitle ? '<div class="text-secondary" style="font-size:11px">' + escapeHtml(result.subtitle) + '</div>' : '';
+                if (result.kind === 'anon') {
+                    // marker/moderator candidates: exam number only, no avatar, to preserve blind-marking anonymity
+                    return $(
+                        '<div class="d-flex align-items-center gap-2 py-1">' +
+                            '<i class="fas fa-user-secret text-secondary" style="width:22px; text-align:center"></i>' +
+                            '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
+                        '</div>'
+                    );
+                }
+                var colourStyle = result.colour ? ' background-color:' + result.colour + ';' : '';
                 return $(
                     '<div class="d-flex align-items-center gap-2 py-1">' +
-                        '<span class="tk-av" style="width:22px; height:22px; font-size:10px">' + escapeHtml(result.initials || '?') + '</span>' +
+                        '<span class="tk-av" style="width:22px; height:22px; font-size:10px;' + colourStyle + '">' + escapeHtml(result.initials || '?') + '</span>' +
                         '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
                     '</div>'
                 );

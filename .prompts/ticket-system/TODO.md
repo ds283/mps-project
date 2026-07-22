@@ -25,18 +25,31 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 ## Polish / fix backlog (agreed sequencing: fix + polish, THEN teardown)
 
 ### Labels
-- ✅ **Manage-labels page: full-width layout + free colour picker.** (this session, uncommitted)
-  Replaced 440px card with two-column card layout; backend accepts any `#rrggbb` hex
-  (`_resolve_colour` in `app/tickets/labels.py`); bootstrap-colorpicker + palette presets in
-  `app/templates/tickets/labels.html`.
-- ◻ **Labels entry-point discoverability.** The only ways into `tickets.labels_manage` are the
-  inbox rail "Manage" link — which sits inside `{% if labels %}` (`_inbox.html:65`), so it's
-  **hidden when zero labels exist** (chicken-and-egg on a fresh tenant) — and the convenor
-  per-class pane button. Add an always-visible entry point (show "Manage" even with an empty
-  label list, and/or a nav item). Gate: `can_manage_labels` (convenor / admin / root).
-- ❌ **Inline label creation from the compose "labels" box.** Intentionally NOT supported —
-  typing shows "No labels found" rather than minting a label, which stops ordinary users
-  polluting the label pool. (Confirmed keep-as-is.)
+- ✅ **Manage-labels page: full-width layout + free colour picker.** (uncommitted)
+  Two-column card layout; backend accepts any `#rrggbb` hex (`_resolve_colour`).
+- ✅ **Colour picker UX** (uncommitted): fixed palette swatches + a final "custom" (rainbow)
+  swatch that reveals the free picker; picker hidden while a palette swatch is selected. No more
+  inconsistent swatch-vs-colour state.
+- ✅ **Return link from manage-labels page** (uncommitted): `?return_to=` (validated local path)
+  threaded through create/edit/delete; "Back" link in the header. Convenor "Manage labels" also
+  passes `tenant_id=pclass.tenant_id` so it opens on the *class's* tenant.
+- ◻ **Manage-labels layout — GitHub-style (optional).** User can live with the two-column card
+  layout but noted GitHub's pattern (full-width label list + create/edit in a **modal dialog**) is
+  closer to existing app patterns. Offered as a follow-up redesign; the colour-control macro is
+  reusable inside a modal.
+- ◻ **Labels entry-point discoverability.** Only entry points are the inbox rail "Manage" link
+  (inside `{% if labels %}` in `_inbox.html`, so hidden when zero labels exist) and the convenor
+  per-class pane. Add an always-visible entry point (+ maybe a nav item).
+- ❌ **Inline label creation from compose box.** Intentionally NOT supported (no pool pollution).
+
+### Ticket detail (2a)
+- ✅ **Breadcrumb "Tickets" link** (uncommitted): was linking to itself; now `_breadcrumb()` in
+  `detail.py` points it to the convenor ledger for an in-scope class the user convenes (each class
+  crumb links too), else the personal inbox.
+- ⚠ **"No way to add labels" = a TENANT-DATA issue, not a code bug** (see Tenant section). The
+  side-panel add-"+" only shows when `available_labels` is non-empty; that pool is filtered to
+  `ticket.tenant_id`. The user's labels were created on tenant 1 ("Default") but the ticket/class
+  are on tenant 2 ("Physics & Astronomy") → empty pool. Fix is the tenant-selector default, below.
 
 ### Convenor triage pane (3a)
 - ◻ **Empty-state.** Pane, view, and nav tab all exist and work (`app/convenor/tickets.py`,
@@ -51,17 +64,19 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   exporting `reference/Ticket System.dc.html` (+ `support.js`) — see `reference/README.md`. Do a
   side-by-side before/after. This is the main genuine polish item.
 
-### Tenant scoping (design question — item 4)
+### Tenant scoping (design question — item 4) — PRIORITY, causing real breakage
+- ◻ **Manage-labels tenant default is wrong for root/admin.** `_resolve_tenant(None)` picks the
+  lowest tenant id = tenant 1 "Default", which has **no project classes**. Root created labels
+  there, so they never appear on real (tenant-2) tickets. Fix: default to a tenant that actually
+  has classes (or the user's "primary"), and/or make the selector state obvious. Partial mitigation
+  already shipped: opening "Manage labels" from a convenor class ledger now pre-selects that
+  class's tenant (`tenant_id=pclass.tenant_id`).
 - ◻ **Single-tenant-per-ticket enforcement + scope-selector polish (compose).** `Ticket.tenant_id`
-  is already a single scalar FK (`app/models/tickets.py:205`), so the model already assumes one
-  tenant per ticket; it just isn't enforced at compose and the scope selector doesn't filter by
-  tenant. Plan: reject subject sets spanning >1 tenant server-side; set `Ticket.tenant_id` from
-  that tenant. Convenor compose → tenant implied by class. Faculty inbox compose → if the faculty
-  member spans >1 tenant, add a tenant selector that filters the subject picker (server-side check
-  as backstop). **Do this together with the scope-selector polish**, not piecemeal.
-- ◻ **(minor) Manage-labels tenant dropdown**: keep it (needed for multi-tenant convenor/admin;
-  already auto-hides for single-tenant users). Later refinement: pre-select the tenant when
-  "Manage labels" is opened from a convenor class pane (pass `tenant_id`).
+  is already a single scalar FK, so the model already assumes one tenant per ticket; not enforced
+  at compose and the scope selector doesn't filter by tenant. Plan: reject subject sets spanning
+  >1 tenant server-side; set `Ticket.tenant_id` from that tenant. Convenor compose → tenant implied
+  by class. Faculty inbox compose spanning >1 tenant → tenant selector filtering the subject picker
+  (server-side check as backstop). Do together with the scope-selector polish.
 
 ---
 
@@ -72,7 +87,9 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 4. Compose scope-selector polish + single-tenant enforcement.
 5. **Phase 8 teardown** (last).
 
-## Uncommitted work right now
-- Labels page full-width + colour picker (backend `app/tickets/labels.py`, form docstring
-  `app/tickets/forms.py`, template `app/templates/tickets/labels.html`). Being tested by the user;
-  commit once verified.
+## Uncommitted work right now (verify, then commit)
+- Labels page: full-width layout, colour picker (palette + custom swatch), free hex backend, return
+  link (`app/tickets/labels.py`, `app/tickets/forms.py`, `app/templates/tickets/labels.html`).
+- Return-link entry points pass `return_to` (`convenor/dashboard/tickets.html`,
+  `tickets/_inbox.html`); convenor link also pre-selects the class tenant.
+- Ticket-detail breadcrumb fix (`app/tickets/detail.py` `_breadcrumb`, `templates/tickets/detail.html`).

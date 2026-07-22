@@ -69,9 +69,10 @@
     <div class="container-fluid">
         {# breadcrumb #}
         <div class="tk-crumb">
-            <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}" class="text-decoration-none"><i class="fas fa-ticket-alt"></i> Tickets</a>
-            {% for pclass in ticket.scope_classes %}
-                <span class="sep">/</span><span>{{ pclass.name }}</span>
+            <a href="{{ breadcrumb.home_url }}" class="text-decoration-none"><i class="fas fa-ticket-alt"></i> Tickets</a>
+            {% for crumb in breadcrumb.classes %}
+                <span class="sep">/</span>
+                {% if crumb.url %}<a href="{{ crumb.url }}" class="text-decoration-none">{{ crumb.name }}</a>{% else %}<span>{{ crumb.name }}</span>{% endif %}
             {% endfor %}
             <span class="sep">/</span><strong class="text-body">#{{ ticket.id }}</strong>
         </div>

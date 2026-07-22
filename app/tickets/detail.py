@@ -218,6 +218,25 @@ def _available_labels(ticket):
     return [label for label in Label.query.filter_by(tenant_id=ticket.tenant_id).order_by(Label.name.asc()).all() if label.id not in applied]
 
 
+def _breadcrumb(ticket):
+    """Breadcrumb data for the detail header. The 'Tickets' root links to a convenor ledger for an
+    in-scope class the user convenes (also used for each class crumb), else the personal inbox."""
+    faculty = getattr(current_user, "faculty_data", None)
+    convened = set()
+    if faculty is not None:
+        convened = {p.id for p in faculty.convenor_for} | {p.id for p in faculty.coconvenor_for}
+
+    classes = []
+    home_url = None
+    for pclass in ticket.scope_classes:
+        url = url_for("convenor.tickets_tab", id=pclass.id) if pclass.id in convened else None
+        classes.append({"name": pclass.name, "url": url})
+        if home_url is None and url is not None:
+            home_url = url
+
+    return {"home_url": home_url or url_for("tickets.inbox"), "classes": classes}
+
+
 # ------------------------------------------------------------------------------------------------
 # views
 
@@ -232,6 +251,7 @@ def detail(ticket_id):
     return render_template_context(
         "tickets/detail.html",
         ticket=ticket,
+        breadcrumb=_breadcrumb(ticket),
         timeline=_build_timeline(ticket),
         actions_log=_actions_log(ticket),
         assign_sections=_build_assign_options(ticket),

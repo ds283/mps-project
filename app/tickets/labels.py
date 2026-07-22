@@ -15,6 +15,8 @@ and admin/root (watchers and other users see labels read-only); the acting user 
 the tenant (admin/root may manage any).
 """
 
+import re
+
 from flask import abort, current_app, flash, redirect, request, url_for
 from flask_security import current_user, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError
@@ -29,7 +31,9 @@ from ..shared.tickets import can_manage_labels
 from ..shared.workflow_logging import log_db_commit
 from .forms import LabelForm
 
-# the fixed 9-colour label palette (design 4b/5a). These are label data, not UI theme colours.
+# the 9-colour label palette (design 4b/5a). These are convenience presets, not the only allowed
+# values — the editor also offers a free colour picker (any #rrggbb hex). Label data, not UI theme
+# colours.
 LABEL_PALETTE = [
     "#0a58ca",
     "#b60205",
@@ -41,6 +45,13 @@ LABEL_PALETTE = [
     "#d63384",
     "#41464b",
 ]
+
+# a full 6-digit hex colour, e.g. "#0a58ca"
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _valid_hex(value) -> bool:
+    return bool(value) and _HEX_RE.match(value.strip()) is not None
 
 
 def _manageable_tenants(user):
@@ -70,10 +81,19 @@ def _next_unused_colour(tenant_id):
     return LABEL_PALETTE[0]
 
 
-def _clamp_colour(requested, tenant_id):
-    if requested in LABEL_PALETTE:
-        return requested
-    return _next_unused_colour(tenant_id)
+def _resolve_colour(requested, tenant_id, fallback=None):
+    """Accept any valid #rrggbb hex (palette preset or free-picked); otherwise fall back to the
+    supplied value, or the next unused palette colour when creating."""
+    if _valid_hex(requested):
+        return requested.strip().lower()
+    return fallback if fallback is not None else _next_unused_colour(tenant_id)
+
+
+def _safe_return(url):
+    """Accept only a local, same-site path as a return target; otherwise fall back to the inbox."""
+    if url and url.startswith("/") and not url.startswith("//"):
+        return url
+    return url_for("tickets.inbox")
 
 
 @tickets.route("/labels")
@@ -91,13 +111,15 @@ def labels_manage():
         tenants=_manageable_tenants(current_user),
         labels=labels,
         palette=LABEL_PALETTE,
+        default_colour=_next_unused_colour(tenant.id),
+        return_to=_safe_return(request.args.get("return_to")),
         form=LabelForm(),
         action_form=ConfirmActionForm(),
     )
 
 
-def _back(tenant_id):
-    return redirect(url_for("tickets.labels_manage", tenant_id=tenant_id))
+def _back(tenant_id, return_to=None):
+    return redirect(url_for("tickets.labels_manage", tenant_id=tenant_id, return_to=return_to))
 
 
 @tickets.route("/labels/create", methods=["POST"])
@@ -107,21 +129,22 @@ def label_create():
         abort(403)
 
     tenant = _resolve_tenant(current_user, request.form.get("tenant_id", type=int))
+    return_to = _safe_return(request.form.get("return_to"))
     form = LabelForm()
     if form.validate_on_submit():
         name = form.name.data.strip()
         if Label.query.filter_by(tenant_id=tenant.id, name=name).first() is not None:
             flash(f"A label named '{name}' already exists in this tenant.", "error")
-            return _back(tenant.id)
+            return _back(tenant.id, return_to)
 
-        colour = form.colour.data if form.colour.data in LABEL_PALETTE else _next_unused_colour(tenant.id)
+        colour = _resolve_colour(form.colour.data, tenant.id)
         label = Label(tenant_id=tenant.id, name=name, colour=colour)
         db.session.add(label)
         _commit_or_flash(f"Created ticket label '{name}'", "Could not create the label due to a database error.")
     else:
         flash("The label could not be created — a name is required.", "error")
 
-    return _back(tenant.id)
+    return _back(tenant.id, return_to)
 
 
 @tickets.route("/labels/<int:label_id>/edit", methods=["POST"])
@@ -134,6 +157,7 @@ def label_edit(label_id):
     if label is None:
         abort(404)
     tenant = _resolve_tenant(current_user, label.tenant_id)
+    return_to = _safe_return(request.form.get("return_to"))
 
     form = LabelForm()
     if form.validate_on_submit():
@@ -141,15 +165,15 @@ def label_edit(label_id):
         clash = Label.query.filter(Label.tenant_id == tenant.id, Label.name == name, Label.id != label.id).first()
         if clash is not None:
             flash(f"A label named '{name}' already exists in this tenant.", "error")
-            return _back(tenant.id)
+            return _back(tenant.id, return_to)
 
         label.name = name
-        label.colour = _clamp_colour(form.colour.data, tenant.id)
+        label.colour = _resolve_colour(form.colour.data, tenant.id, fallback=label.colour)
         _commit_or_flash(f"Updated ticket label '{name}'", "Could not update the label due to a database error.")
     else:
         flash("The label could not be updated — a name is required.", "error")
 
-    return _back(tenant.id)
+    return _back(tenant.id, return_to)
 
 
 @tickets.route("/labels/<int:label_id>/delete", methods=["POST"])
@@ -162,6 +186,7 @@ def label_delete(label_id):
     if label is None:
         abort(404)
     tenant = _resolve_tenant(current_user, label.tenant_id)
+    return_to = _safe_return(request.form.get("return_to"))
 
     form = ConfirmActionForm()
     if form.validate_on_submit():
@@ -169,7 +194,7 @@ def label_delete(label_id):
         db.session.delete(label)
         _commit_or_flash(f"Deleted ticket label '{name}'", "Could not delete the label due to a database error.")
 
-    return _back(tenant.id)
+    return _back(tenant.id, return_to)
 
 
 def _commit_or_flash(summary, failure_message):

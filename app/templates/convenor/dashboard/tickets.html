@@ -23,7 +23,7 @@
     <div class="container-fluid mt-3">
         <div class="d-flex align-items-center gap-2 mb-3">
             <h5 class="m-0">Tickets for {{ pclass.name }}</h5>
-            <a href="{{ url_for('tickets.labels_manage') }}" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fas fa-tags"></i> Manage labels</a>
+            <a href="{{ url_for('tickets.labels_manage', tenant_id=pclass.tenant_id, return_to=request.full_path) }}" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fas fa-tags"></i> Manage labels</a>
             <a href="{{ url_for('tickets.compose') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New ticket</a>
         </div>
 

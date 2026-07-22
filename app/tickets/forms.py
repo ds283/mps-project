@@ -56,9 +56,9 @@ class TicketLogEmailForm(Form):
 
 class LabelForm(Form):
     """
-    Create / edit a tenant-scoped label (design screens 4b / 5a). `colour` is a hidden field set by
-    clicking a palette swatch; when blank on create the view auto-assigns the next unused palette
-    colour. The view clamps any submitted colour to the fixed palette.
+    Create / edit a tenant-scoped label (design screens 4b / 5a). `colour` is set by the colour
+    picker or by clicking a palette preset swatch; when blank on create the view auto-assigns the
+    next unused palette colour. The view accepts any valid #rrggbb hex.
     """
 
     name = StringField("Name", validators=[DataRequired(), Length(max=255)])

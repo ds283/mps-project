@@ -10,12 +10,9 @@
                 <tr>
                     {% if bulk %}<th style="width:34px"><input type="checkbox" class="form-check-input tk-check-all" aria-label="Select all"></th>{% endif %}
                     <th>Ticket</th>
-                    <th style="width:130px">Status</th>
-                    <th style="width:160px">Assignee</th>
-                    <th style="width:90px">Watchers</th>
-                    <th style="width:120px">Scope</th>
-                    <th style="width:110px">Due</th>
-                    <th style="width:140px">Updated</th>
+                    <th style="width:180px">Assignee</th>
+                    <th style="width:160px">Scope</th>
+                    <th style="width:120px">Due</th>
                 </tr>
             </thead>
         </table>
@@ -27,7 +24,7 @@
         $(document).ready(function () {
             $('#{{ table_id }}').DataTable({
                 responsive: true, bAutoWidth: false, stateSave: false,
-                searching: false,  // title is encrypted; no SQL-searchable columns
+                searching: true,
                 dom: 'lftipr', serverSide: true, processing: true,
                 ajax: {
                     url: {{ url | tojson }},
@@ -36,15 +33,12 @@
                 },
                 columns: [
                     {% if bulk %}{ data: 'select', searchable: false, orderable: false },{% endif %}
-                    { data: 'ticket', searchable: false, orderable: false },
-                    { data: 'status', searchable: false, orderable: true },
-                    { data: 'assignee', searchable: false, orderable: false },
-                    { data: 'watchers', searchable: false, orderable: false },
+                    { data: 'ticket', searchable: true, orderable: false },
+                    { data: 'assignee', searchable: false, orderable: true },
                     { data: 'scope', searchable: false, orderable: false },
-                    { data: 'due', searchable: false, orderable: true },
-                    { data: 'updated', searchable: false, orderable: true }
+                    { data: 'due', searchable: false, orderable: true }
                 ],
-                order: [[{{ 7 if bulk else 6 }}, 'desc']]
+                order: []  // preserve the server's default (most-recently-updated) order until the user picks a column
             });
         });
     </script>

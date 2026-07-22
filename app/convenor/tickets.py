@@ -20,17 +20,66 @@ faculty "My tickets" menu item — never through this class-scoped view.
 
 from datetime import datetime
 
-from flask import flash, redirect, request
+from flask import abort, flash, jsonify, redirect, request
 from flask_security import roles_accepted
 
 from app.convenor import convenor
+from app.tickets.compose import _name_filter, _resolve_token, _SEARCH_LIMIT, _student_name, _token
 
-from ..models import Label, ProjectClass, Ticket
+from ..models import Label, ProjectClass, ProjectClassConfig, SelectingStudent, StudentData, SubmittingStudent, Ticket, TicketSubject, User
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
+
+
+def _class_scope_candidates(pclass, query_term):
+    """Select2 remote data for the ledger's scope-filter picker (screen 3a): any
+    submitter/selector/whole-class option within this one class, across all years — unlike
+    tickets.compose_people, which is scoped to the *acting* user's own supervisees and is the
+    wrong candidate set for "filter this class's ledger by any student in it"."""
+
+    def _results(model, kind, label):
+        q = (
+            model.query.join(ProjectClassConfig, model.config_id == ProjectClassConfig.id)
+            .join(StudentData, model.student_id == StudentData.id)
+            .join(User, StudentData.id == User.id)
+            .filter(ProjectClassConfig.pclass_id == pclass.id)
+        )
+        if query_term:
+            q = q.filter(_name_filter(query_term))
+        rows = [{"id": _token(kind, student.id), "text": _student_name(student)} for student in q.limit(_SEARCH_LIMIT).all()]
+        return {"text": label, "children": rows} if rows else None
+
+    groups = []
+    for section in (
+        _results(SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, "Submitting students"),
+        _results(SelectingStudent, TicketSubject.SELECTING_STUDENT, "Selecting students"),
+    ):
+        if section is not None:
+            groups.append(section)
+
+    if not query_term or query_term.lower() in pclass.name.lower():
+        groups.append(
+            {"text": "Project class", "children": [{"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)"}]}
+        )
+
+    return groups
+
+
+def _subject_label(token):
+    """Human-readable label for an already-selected scope-filter token, so the select2 picker can
+    re-render its current selection without an extra round-trip."""
+    if not token:
+        return None
+    resolved = _resolve_token(token)
+    if resolved is None:
+        return None
+    kind, target = resolved
+    if kind == TicketSubject.PROJECT_CLASS:
+        return f"{target.name} (whole class)"
+    return _student_name(target)
 
 
 def _triage_meta(ticket):
@@ -81,5 +130,21 @@ def tickets_tab(id):
         all_statuses=[(value, label) for value, label in Ticket._labels.items()],
         selected_status=request.args.get("status", type=int),
         selected_label=request.args.get("label_id", type=int),
+        selected_subject_kind=request.args.get("subject_kind"),
+        selected_subject=request.args.get("subject"),
+        selected_subject_label=_subject_label(request.args.get("subject")),
         action_form=ConfirmActionForm(),
     )
+
+
+@convenor.route("/tickets_tab/<int:id>/scope_candidates")
+@roles_accepted("faculty", "admin", "root")
+def tickets_scope_candidates(id):
+    """select2 remote data: submitter/selector/whole-class candidates for the ledger's scope
+    filter, scoped to this one class (see _class_scope_candidates)."""
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+    if not validate_is_convenor(pclass, message=False):
+        abort(403)
+
+    query_term = (request.args.get("q") or "").strip()
+    return jsonify({"results": _class_scope_candidates(pclass, query_term)})

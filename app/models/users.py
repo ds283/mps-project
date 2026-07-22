@@ -29,6 +29,19 @@ from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH
 from .model_mixins import ColouredLabelMixin
 
+# palette used to hash a deterministic avatar colour per user (User.avatar_colour); mirrors
+# app/tickets/labels.py:LABEL_PALETTE's hues for a consistent visual language across the app.
+_AVATAR_PALETTE = (
+    "#0a58ca",
+    "#b60205",
+    "#997404",
+    "#0f5132",
+    "#59359a",
+    "#087990",
+    "#b5480b",
+    "#d63384",
+)
+
 
 class Role(db.Model, RoleMixin, ColouredLabelMixin):
     """
@@ -263,6 +276,19 @@ class User(db.Model, UserMixin):
         if len(tokens) == 1:
             return first
         return first + tokens[-1][0].upper()
+
+    @property
+    def avatar_colour(self) -> str:
+        """
+        Deterministic avatar background colour, hashed from initials so the same person always
+        renders in the same colour (and different people sharing a screen tend to stand apart).
+        Shares its hues with the ticket-label palette (app/tickets/labels.py:LABEL_PALETTE) for a
+        consistent visual language, duplicated here rather than imported to keep the models layer
+        free of blueprint-level dependencies.
+        """
+        initials = self.initials
+        index = sum(ord(c) for c in initials) % len(_AVATAR_PALETTE)
+        return _AVATAR_PALETTE[index]
 
     @property
     def name_and_username(self) -> str:

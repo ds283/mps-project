@@ -1,13 +1,13 @@
 {% extends "base_app.html" %}
 {% from "datatables.html" import import_datatables %}
 {% from "tickets/_ledger.html" import ledger_script %}
-{% from "tickets/_inbox.html" import inbox_styles, inbox_body with context %}
+{% from "tickets/_inbox.html" import inbox_styles, inbox_body, inbox_scripts with context %}
 
 {% block title %}
     My tickets
 {% endblock %}
 
-{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', view=view, label_id=selected_label) %}
+{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', view=view, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject) %}
 
 {% block bodyblock %}
     {{ inbox_styles() }}
@@ -20,4 +20,5 @@
     {{ super() }}
     {{ import_datatables() }}
     {{ ledger_script('inbox-ledger', LEDGER_URL) }}
+    {{ inbox_scripts() }}
 {% endblock %}

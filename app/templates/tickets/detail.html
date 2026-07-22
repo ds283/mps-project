@@ -5,10 +5,10 @@
 {% endblock %}
 
 {# ---- local helpers ---------------------------------------------------------------------- #}
-{% set STATUS_TONE = {0: 'primary', 1: 'warning', 2: 'success', 3: 'secondary'} %}
+{% set STATUS_TONE = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'} %}
 
 {% macro avatar(user, size=26) %}
-    <span class="tk-av" style="width:{{ size }}px; height:{{ size }}px; font-size:{{ (size * 0.42) | round(0, 'floor') | int }}px">{{ user.initials if user else '?' }}</span>
+    <span class="tk-av" style="width:{{ size }}px; height:{{ size }}px; font-size:{{ (size * 0.42) | round(0, 'floor') | int }}px; background:{{ user.avatar_colour if user else 'var(--bs-secondary)' }}">{{ user.initials if user else '?' }}</span>
 {% endmacro %}
 
 {% macro status_pill(status) %}
@@ -24,10 +24,6 @@
 
 {% block bodyblock %}
     <style>
-        .tk-av { border-radius:50%; background:var(--bs-primary); color:var(--bs-white); display:inline-flex; align-items:center; justify-content:center; font-weight:700; flex:none; }
-        .tk-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:12.5px; font-weight:600; }
-        .tk-dot { width:7px; height:7px; border-radius:50%; }
-        .tk-label { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
         .tk-crumb { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--bs-secondary-color); padding:10px 0; }
         .tk-crumb .sep { color:var(--bs-border-color); }
         .tk-card { border:1px solid var(--bs-border-color); border-radius:9px; overflow:hidden; background:var(--bs-body-bg); }

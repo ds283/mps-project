@@ -4,9 +4,14 @@
    so the macros can read the per-request inbox context (view, labels, metrics, role flags). #}
 
 {% from "tickets/_ledger.html" import ledger_table %}
+{% from "select2.html" import import_select2 %}
 
 {% macro inbox_styles() %}
     <style>
+        .tk-pill-btn { display:inline-block; border-radius:20px; font-size:12px; padding:3px 11px; text-decoration:none;
+            background:var(--bs-body-bg); border:1px solid var(--bs-border-color); color:var(--bs-body-color); }
+        .tk-pill-btn:hover { border-color:var(--bs-secondary-color); }
+        .tk-pill-btn.active { background:var(--bs-primary); color:#fff; border-color:var(--bs-primary); }
         .tk-tile { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
         .tk-tile .num { font-size:26px; font-weight:700; line-height:1; }
         .tk-tile .cap { font-size:11.5px; color:var(--bs-secondary-color); text-transform:uppercase; letter-spacing:.03em; margin-top:6px; }
@@ -71,7 +76,7 @@
         <div class="tk-side" style="--tk-side:230px">
             <div class="tk-rail-heading">Views</div>
             {% for key, label, icon in views %}
-                <a class="tk-rail-item {{ 'active' if view == key else '' }}" href="{{ url_for(endpoint, view=key, label_id=selected_label) }}">
+                <a class="tk-rail-item {{ 'active' if view == key else '' }}" href="{{ url_for(endpoint, view=key, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject) }}">
                     <i class="fas fa-{{ icon }} fa-fw" style="font-size:12px"></i> {{ label }}
                     <span class="tk-rail-count">{{ view_counts[key] }}</span>
                 </a>
@@ -79,11 +84,11 @@
 
             {% if labels %}
                 <div class="tk-rail-heading">Labels</div>
-                <a class="tk-rail-item {{ 'active' if selected_label is none else '' }}" href="{{ url_for(endpoint, view=view) }}">
+                <a class="tk-rail-item {{ 'active' if selected_label is none else '' }}" href="{{ url_for(endpoint, view=view, subject_kind=selected_subject_kind, subject=selected_subject) }}">
                     <i class="fas fa-layer-group fa-fw" style="font-size:12px"></i> All labels
                 </a>
                 {% for label in labels %}
-                    <a class="tk-rail-item {{ 'active' if selected_label == label.id else '' }}" href="{{ url_for(endpoint, view=view, label_id=label.id) }}">
+                    <a class="tk-rail-item {{ 'active' if selected_label == label.id else '' }}" href="{{ url_for(endpoint, view=view, label_id=label.id, subject_kind=selected_subject_kind, subject=selected_subject) }}">
                         <span style="width:10px;height:10px;border-radius:50%;{{ label.make_CSS_style() }}"></span> {{ label.name }}
                         <span class="tk-rail-count">{{ label.inbox_count }}</span>
                     </a>
@@ -119,7 +124,56 @@
 
         {# ledger #}
         <div class="tk-main">
+            {# subject-kind + specific student/class scope filter #}
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <a class="tk-pill-btn {{ 'active' if selected_subject_kind is none else '' }}" href="{{ url_for(endpoint, view=view, label_id=selected_label, subject=selected_subject) }}">All</a>
+                <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'class' else '' }}" href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='class', subject=selected_subject) }}">Whole class</a>
+                <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'submitter' else '' }}" href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='submitter', subject=selected_subject) }}">Submitters</a>
+                <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'selector' else '' }}" href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='selector', subject=selected_subject) }}">Selectors</a>
+                <div style="width:220px">
+                    <select id="tk-scope-subject" style="width:100%">
+                        {% if selected_subject and selected_subject_label %}
+                            <option value="{{ selected_subject }}" selected>{{ selected_subject_label }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+
             {{ ledger_table('inbox-ledger') }}
         </div>
     </div>
+{% endmacro %}
+
+{% macro inbox_scripts() %}
+    {{ import_select2() }}
+    <script>
+        $(document).ready(function () {
+            $('#tk-scope-subject').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2-small',
+                dropdownCssClass: 'select2-small',
+                width: '100%',
+                dropdownAutoWidth: true,
+                placeholder: 'Filter to student or class…',
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: {{ url_for('tickets.compose_people') | tojson }},
+                    dataType: 'json',
+                    delay: 200,
+                    data: params => ({ q: params.term || '' }),
+                    processResults: data => ({ results: data.results }),
+                    cache: true
+                }
+            }).on('select2:select', function (e) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('subject', e.params.data.id);
+                window.location.href = url.toString();
+            }).on('select2:clear', function () {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('subject');
+                window.location.href = url.toString();
+            });
+        });
+    </script>
 {% endmacro %}

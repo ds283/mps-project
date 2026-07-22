@@ -27,7 +27,7 @@ import app.ajax as ajax
 from app.tickets import tickets
 
 from ..database import db
-from ..models import Label, ProjectClass, Ticket, TicketComment, TicketEmail, TicketEvent, TicketReadState, TicketSubscription
+from ..models import Label, ProjectClass, Ticket, TicketComment, TicketEmail, TicketEvent, TicketReadState, TicketSubject, TicketSubscription
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.tickets import (
@@ -43,6 +43,7 @@ from ..shared.tickets import (
 )
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
+from .compose import _resolve_token, _student_name
 from .detail import _describe_event
 
 # events already shown as rich cards elsewhere in the feed (comment/email rows), matching the
@@ -136,7 +137,42 @@ def _apply_common_filters(query, args):
     label_id = args.get("label_id", type=int)
     if label_id is not None:
         query = query.filter(Ticket.labels.any(Label.id == label_id))
+
+    kind = args.get("subject_kind")
+    if kind == "submitter":
+        query = query.filter(Ticket.subjects.any(TicketSubject.kind == TicketSubject.SUBMITTING_STUDENT))
+    elif kind == "selector":
+        query = query.filter(Ticket.subjects.any(TicketSubject.kind == TicketSubject.SELECTING_STUDENT))
+    elif kind == "class":
+        query = query.filter(or_(Ticket.subjects.any(TicketSubject.kind == TicketSubject.PROJECT_CLASS), ~Ticket.subjects.any()))
+
+    token = args.get("subject")
+    if token:
+        resolved = _resolve_token(token)
+        if resolved is not None:
+            rkind, target = resolved
+            if rkind == TicketSubject.SUBMITTING_STUDENT:
+                query = query.filter(Ticket.subjects.any(submitting_student_id=target.id))
+            elif rkind == TicketSubject.SELECTING_STUDENT:
+                query = query.filter(Ticket.subjects.any(selecting_student_id=target.id))
+            elif rkind == TicketSubject.PROJECT_CLASS:
+                query = query.filter(Ticket.scope_classes.any(ProjectClass.id == target.id))
+
     return query
+
+
+def _subject_label(token):
+    """Human-readable label for an already-selected scope-filter token, so the select2 picker can
+    re-render its current selection without an extra round-trip."""
+    if not token:
+        return None
+    resolved = _resolve_token(token)
+    if resolved is None:
+        return None
+    kind, target = resolved
+    if kind == TicketSubject.PROJECT_CLASS:
+        return f"{target.name} (whole class)"
+    return _student_name(target)
 
 
 def _user_labels(user):
@@ -275,6 +311,9 @@ def build_inbox_context(user, args) -> dict:
         "view_counts": view_counts,
         "labels": _user_labels(user),
         "selected_label": args.get("label_id", type=int),
+        "selected_subject_kind": args.get("subject_kind"),
+        "selected_subject": args.get("subject"),
+        "selected_subject_label": _subject_label(args.get("subject")),
         "metrics": {
             "newly_assigned": _newly_assigned_count(user, previous_visit),
             "new_comments": _new_comment_count(user, previous_visit),

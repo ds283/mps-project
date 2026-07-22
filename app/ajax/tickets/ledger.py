@@ -12,13 +12,22 @@
 Server-side DataTables endpoint for the ticket ledger (design screen 1a), reused by the convenor
 dashboard (3a) and the faculty/office inbox (2c). The caller passes a fully permission-scoped
 base_query; this module only adds sorting/searching/pagination and row rendering.
+
+Uses ServerSideInMemoryHandler rather than ServerSideSQLHandler: Ticket.title/description are
+EncryptedType (AesEngine, fixed IV — deterministic but not LIKE-searchable at the SQL level), so a
+free-text search has to run against the decrypted value in Python. This mirrors the existing
+project pattern for searching encrypted/computed fields — see
+app/convenor/marking_feedback.py:_faculty_workload's "search"/"order" callables. Ticket volumes
+(low hundreds/thousands) make this a non-issue performance-wise.
 """
+
+from datetime import datetime
 
 from flask import current_app, render_template, request
 from jinja2 import Environment, Template
 
 from ...models import Ticket
-from ...tools import ServerSideSQLHandler
+from ...tools import ServerSideInMemoryHandler
 
 # language=jinja2
 _select = """
@@ -27,27 +36,35 @@ _select = """
 
 # language=jinja2
 _ticket = """
-<div class="fw-bold"><a class="text-decoration-none" href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a></div>
+{% set tone = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'}.get(t.status, 'secondary') %}
+{% set status_label = {0: 'Open', 1: 'In progress', 2: 'Resolved', 3: 'Closed'}.get(t.status, 'Unknown') %}
+<div class="d-flex align-items-center gap-2 flex-wrap">
+    <a class="fw-semibold text-decoration-none" href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a>
+    <span class="tk-pill" style="background:var(--bs-{{ tone }}-bg-subtle); color:var(--bs-{{ tone }}-text-emphasis); padding:2px 9px; font-size:11px">
+        <span class="tk-dot" style="background:var(--bs-{{ tone }}-text-emphasis)"></span>{{ status_label }}
+    </span>
+</div>
 {% if t.labels.count() > 0 %}
     <div class="d-flex gap-1 flex-wrap mt-1">
-        {% for l in t.labels %}<span class="badge rounded-pill" style="{{ l.make_CSS_style() }}">{{ l.name }}</span>{% endfor %}
+        {% for l in t.labels %}<span class="tk-label" style="{{ l.make_CSS_style() }}">{{ l.name }}</span>{% endfor %}
     </div>
 {% endif %}
 <div class="small text-muted mt-1">#{{ t.id }} · opened by {{ t.created_by.name if t.created_by else 'someone' }} · <i class="far fa-comment"></i> {{ t.comments.count() }}</div>
-"""
-
-# language=jinja2
-_status = """
-{% set tone = {0: 'primary', 1: 'warning', 2: 'success', 3: 'secondary'}.get(t.status, 'secondary') %}
-{% set label = {0: 'Open', 1: 'In progress', 2: 'Resolved', 3: 'Closed'}.get(t.status, 'Unknown') %}
-<span class="badge rounded-pill" style="background:var(--bs-{{ tone }}-bg-subtle); color:var(--bs-{{ tone }}-text-emphasis)">{{ label }}</span>
+{% if watchers %}
+    <div class="d-flex align-items-center mt-1" style="margin-left:-4px">
+        {% for user in watchers %}
+            <span class="tk-av" style="width:26px;height:26px;font-size:11px;margin-left:4px;border:2px solid var(--bs-body-bg);background:{{ user.avatar_colour }}" title="{{ user.name }}">{{ user.initials }}</span>
+        {% endfor %}
+        {% if watchers_extra %}<span class="small text-muted ms-1">+{{ watchers_extra }}</span>{% endif %}
+    </div>
+{% endif %}
 """
 
 # language=jinja2
 _assignee = """
 {% if t.assignee %}
     <span class="d-inline-flex align-items-center gap-2">
-        <span style="width:26px;height:26px;border-radius:50%;background:var(--bs-primary);color:var(--bs-white);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">{{ t.assignee.initials }}</span>
+        <span class="tk-av" style="width:32px;height:32px;font-size:12px;background:{{ t.assignee.avatar_colour }}">{{ t.assignee.initials }}</span>
         <span>{{ t.assignee.name }}</span>
     </span>
 {% else %}
@@ -56,26 +73,39 @@ _assignee = """
 """
 
 # language=jinja2
-_watchers = """
-<span class="text-muted"><i class="fas fa-eye"></i> {{ t.subscriptions.count() }}</span>
-"""
-
-# language=jinja2
 _scope = """
-{% set n = t.scope_classes.count() %}
-{% if n == 0 %}<span class="text-muted">General</span>
-{% elif n == 1 %}<span class="text-muted">{{ t.scope_classes.first().name }}</span>
-{% else %}<span class="text-muted">{{ n }} classes</span>{% endif %}
+{% set subjects = t.subjects.all() %}
+{% if subjects | length == 0 %}
+    <span class="text-muted">General</span>
+{% elif subjects | length == 1 %}
+    {% set s = subjects[0] %}
+    {% if s.kind == 0 and s.submitting_student %}
+        <div class="text-muted">{{ s.submitting_student.student.user.name if s.submitting_student.student and s.submitting_student.student.user else 'Student' }}</div>
+        <span class="tk-label" style="background:{{ kind_colours[0] }};color:#fff">Submitter</span>
+    {% elif s.kind == 1 and s.selecting_student %}
+        <div class="text-muted">{{ s.selecting_student.student.user.name if s.selecting_student.student and s.selecting_student.student.user else 'Student' }}</div>
+        <span class="tk-label" style="background:{{ kind_colours[1] }};color:#fff">Selector</span>
+    {% elif s.kind == 2 and s.project_class %}<span class="text-muted">{{ s.project_class.name }}</span>
+    {% else %}<span class="text-muted">General</span>
+    {% endif %}
+{% else %}
+    {% set n = t.scope_classes.count() %}
+    {% if n <= 1 %}<span class="text-muted">{{ subjects | length }} subjects</span>
+    {% else %}<span class="text-muted">{{ n }} classes</span>{% endif %}
+{% endif %}
 """
 
 # language=jinja2
 _due = """
-{% if t.due_date %}{{ t.due_date.strftime('%d %b %Y') }}{% else %}<span class="text-muted">—</span>{% endif %}
-"""
-
-# language=jinja2
-_updated = """
-{% if t.last_edit_timestamp %}<span class="text-muted">{{ t.last_edit_timestamp.strftime('%d %b %Y, %H:%M') }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+{% if t.due_date %}
+    {% set overdue = t.due_date < now and t.status in open_states %}
+    {% if overdue %}
+        <div class="text-danger">Overdue</div>
+        <div class="text-danger">{{ t.due_date.strftime('%d %b %Y') }}</div>
+    {% else %}
+        <span>{{ t.due_date.strftime('%d %b %Y') }}</span>
+    {% endif %}
+{% else %}<span class="text-muted">—</span>{% endif %}
 """
 
 
@@ -84,43 +114,54 @@ def _build_templ(src: str) -> Template:
     return env.from_string(src)
 
 
+_WATCHERS_SHOWN = 3
+
+# subject-kind chip colours for the Scope cell (0 = submitter, 1 = selector), reusing hues from the
+# ticket-label palette (app/tickets/labels.py:LABEL_PALETTE) rather than the workflow-status tones,
+# so "what kind of subject" reads as visually distinct from "what state is it in".
+_KIND_COLOURS = {0: "#087990", 1: "#59359a"}
+
+
+def _watchers_for(t):
+    """Watchers to show in the Ticket cell's avatar stack, excluding the assignee — they're
+    already shown in their own column, so repeating them here (which happens whenever the sole
+    watcher is the auto-subscribed assignee) added a redundant, near-empty row."""
+    users = [sub.user for sub in t.subscriptions if sub.user is not None and sub.user_id != t.assignee_id]
+    return users[:_WATCHERS_SHOWN], max(0, len(users) - _WATCHERS_SHOWN)
+
+
 def ledger_data(base_query):
     """Render the ledger from a permission-scoped base_query. Returns a DataTables JSON payload."""
     columns = {
-        # title is encrypted at rest, so it cannot be SQL-searched or sorted (LIKE/ORDER against
-        # ciphertext is meaningless); the ticket column is display-only here.
-        "ticket": {},
-        "status": {"order": Ticket.status},
-        "assignee": {},
-        "watchers": {},
+        "ticket": {"search": lambda t: t.title},
+        "assignee": {"order": lambda t: t.assignee.name if t.assignee else None},
         "scope": {},
-        "due": {"order": Ticket.due_date},
-        "updated": {"order": Ticket.last_edit_timestamp},
+        "due": {"order": lambda t: t.due_date},
     }
 
-    with ServerSideSQLHandler(request, base_query, columns) as handler:
+    with ServerSideInMemoryHandler(request, base_query, columns) as handler:
         select_templ = _build_templ(_select)
         ticket_templ = _build_templ(_ticket)
-        status_templ = _build_templ(_status)
         assignee_templ = _build_templ(_assignee)
-        watchers_templ = _build_templ(_watchers)
         scope_templ = _build_templ(_scope)
         due_templ = _build_templ(_due)
-        updated_templ = _build_templ(_updated)
+
+        now = datetime.now()
+        open_states = Ticket.OPEN_STATES
 
         def row_formatter(rows):
-            return [
-                {
-                    "select": render_template(select_templ, t=t),
-                    "ticket": render_template(ticket_templ, t=t),
-                    "status": render_template(status_templ, t=t),
-                    "assignee": render_template(assignee_templ, t=t),
-                    "watchers": render_template(watchers_templ, t=t),
-                    "scope": render_template(scope_templ, t=t),
-                    "due": render_template(due_templ, t=t),
-                    "updated": render_template(updated_templ, t=t),
-                }
-                for t in rows
-            ]
+            rendered = []
+            for t in rows:
+                watchers, watchers_extra = _watchers_for(t)
+                rendered.append(
+                    {
+                        "select": render_template(select_templ, t=t),
+                        "ticket": render_template(ticket_templ, t=t, watchers=watchers, watchers_extra=watchers_extra),
+                        "assignee": render_template(assignee_templ, t=t),
+                        "scope": render_template(scope_templ, t=t, kind_colours=_KIND_COLOURS),
+                        "due": render_template(due_templ, t=t, now=now, open_states=open_states),
+                    }
+                )
+            return rendered
 
         return handler.build_payload(row_formatter)

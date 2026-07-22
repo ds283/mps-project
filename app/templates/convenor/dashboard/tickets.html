@@ -1,7 +1,8 @@
 {% extends "convenor/dashboard/pclass_base.html" %}
 {% from "tickets/_ledger.html" import ledger_table, ledger_script, bulk_bar, bulk_script %}
+{% from "select2.html" import import_select2 %}
 
-{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='convenor', class_id=pclass.id, status=selected_status, label_id=selected_label) %}
+{% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='convenor', class_id=pclass.id, status=selected_status, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject) %}
 
 {% macro pill(label, href, active) %}
     <a href="{{ href }}" class="tk-pill-btn {{ 'active' if active else '' }}">{{ label }}</a>
@@ -62,10 +63,25 @@
 
         {# status filter + ledger #}
         <div class="d-flex flex-wrap gap-2 mb-2">
-            {{ pill('Any status', url_for('convenor.tickets_tab', id=pclass.id, label_id=selected_label), selected_status is none) }}
+            {{ pill('Any status', url_for('convenor.tickets_tab', id=pclass.id, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject), selected_status is none) }}
             {% for value, label in all_statuses %}
-                {{ pill(label, url_for('convenor.tickets_tab', id=pclass.id, status=value, label_id=selected_label), selected_status == value) }}
+                {{ pill(label, url_for('convenor.tickets_tab', id=pclass.id, status=value, label_id=selected_label, subject_kind=selected_subject_kind, subject=selected_subject), selected_status == value) }}
             {% endfor %}
+        </div>
+
+        {# subject-kind + specific student/class scope filter #}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            {{ pill('All', url_for('convenor.tickets_tab', id=pclass.id, status=selected_status, label_id=selected_label, subject=selected_subject), selected_subject_kind is none) }}
+            {{ pill('Whole class', url_for('convenor.tickets_tab', id=pclass.id, status=selected_status, label_id=selected_label, subject_kind='class', subject=selected_subject), selected_subject_kind == 'class') }}
+            {{ pill('Submitters', url_for('convenor.tickets_tab', id=pclass.id, status=selected_status, label_id=selected_label, subject_kind='submitter', subject=selected_subject), selected_subject_kind == 'submitter') }}
+            {{ pill('Selectors', url_for('convenor.tickets_tab', id=pclass.id, status=selected_status, label_id=selected_label, subject_kind='selector', subject=selected_subject), selected_subject_kind == 'selector') }}
+            <div style="width:220px">
+                <select id="tk-scope-subject" style="width:100%">
+                    {% if selected_subject and selected_subject_label %}
+                        <option value="{{ selected_subject }}" selected>{{ selected_subject_label }}</option>
+                    {% endif %}
+                </select>
+            </div>
         </div>
 
         {{ bulk_bar(url_for('tickets.bulk'), action_form, labels, all_statuses) }}
@@ -75,6 +91,37 @@
 
 {% block scripts %}
     {{ super() }}
+    {{ import_select2() }}
     {{ ledger_script('convenor-ledger', LEDGER_URL, bulk=True) }}
     {{ bulk_script('convenor-ledger') }}
+    <script>
+        $(document).ready(function () {
+            $('#tk-scope-subject').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2-small',
+                dropdownCssClass: 'select2-small',
+                width: '100%',
+                dropdownAutoWidth: true,
+                placeholder: 'Filter to student or class…',
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: {{ url_for('convenor.tickets_scope_candidates', id=pclass.id) | tojson }},
+                    dataType: 'json',
+                    delay: 200,
+                    data: params => ({ q: params.term || '' }),
+                    processResults: data => ({ results: data.results }),
+                    cache: true
+                }
+            }).on('select2:select', function (e) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('subject', e.params.data.id);
+                window.location.href = url.toString();
+            }).on('select2:clear', function () {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('subject');
+                window.location.href = url.toString();
+            });
+        });
+    </script>
 {% endblock %}

@@ -1143,3 +1143,20 @@ a.lp-chip {
     vertical-align: middle;
     padding: 0.6rem 0.75rem;
 }
+
+/* Ticket system: shared avatar/pill/label primitives (detail view, ledger rows, inbox rail) */
+.tk-av { border-radius:50%; background:var(--bs-primary); color:var(--bs-white); display:inline-flex; align-items:center; justify-content:center; font-weight:700; flex:none; }
+.tk-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:12.5px; font-weight:600; }
+.tk-dot { width:7px; height:7px; border-radius:50%; }
+.tk-label { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+
+/* select2 "small" variant (CLAUDE.md: selectionCssClass/dropdownCssClass="select2-small" for all
+   QuerySelectField/QueryMultipleSelectField pickers). The trigger (selectionCssClass, landing on
+   .select2-selection) is left at the theme's normal size for readability; only the results
+   dropdown (dropdownCssClass, landing on .select2-dropdown — rendered out-of-flow near <body>,
+   not inside the trigger, hence its own rule root) is compacted, since that's where a long
+   results list benefits from higher density. */
+.select2-dropdown.select2-small { min-width:260px; }
+.select2-dropdown.select2-small .select2-search__field { font-size:13px !important; padding:4px 8px !important; }
+.select2-dropdown.select2-small .select2-results__option { font-size:13px !important; padding:6px 10px !important; }
+.select2-dropdown.select2-small .select2-results__group { font-size:11px !important; font-weight:600 !important; text-transform:uppercase; letter-spacing:.03em; padding:6px 10px 3px !important; color:var(--bs-secondary-color); }

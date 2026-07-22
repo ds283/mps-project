@@ -66,6 +66,23 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   rail height. Deliberately **not** done: compact "date · initials" actions-log reformat and the
   reply-box formatting toolbar (user opted out); solid label-pill style left as-is.
 
+### Compose / "New ticket" view (2b/3b) — reconcile with reference
+- 🔧 **Full plan written: `compose-reconcile.md`** (agreed with user 2026-07-22; implement in a
+  fresh context). Reconciles the compose screen against the Claude Design reference. Two firm
+  defects + full visual polish:
+  1. **Surface-correct chrome.** Compose extends `base_app.html` (top navbar only). Mirror the
+     detail view's `_detail_template()` (`app/tickets/detail.py:410`): thread `origin`(+`pclass`)
+     to pick convenor / faculty wrappers, office → bare fallback. New wrappers +
+     `_compose_body.html` / `_compose_scripts.html` split.
+  2. **Hide past-cycle students.** Faculty supervisee + office candidate queries return retired
+     prior-cycle `SubmittingStudent`/`SelectingStudent`; filter listing paths by
+     `ProjectClassConfig.year >= get_current_year()` with a "Show past students" toggle. Do **not**
+     filter `_authorized()` (attached retired subjects must still validate).
+  3. **Full visual reconciliation:** avatar+subtitle picker rows (`user.initials`), subscriber
+     avatar chips, routing-card avatars/info tone, Cancel button, linked "Tickets" breadcrumb.
+  - Decisions: keep the unified select2 picker (reject the reference two-mode segmented control);
+    keep select2 for labels. Full detail + verification steps in `compose-reconcile.md`.
+
 ### Convenor triage pane (3a)
 - ◻ **Empty-state.** Pane, view, and nav tab all exist and work (`app/convenor/tickets.py`,
   `templates/convenor/dashboard/tickets.html`, `nav.html:99`). It renders only when there are

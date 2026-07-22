@@ -1,0 +1,138 @@
+{% from "select2.html" import import_select2 %}
+{{ import_select2() }}
+<script>
+    $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+    $(document).ready(function () {
+        function escapeHtml(str) {
+            return $('<div>').text(str === null || str === undefined ? '' : str).html();
+        }
+
+        function formatResult(result) {
+            if (!result.id) { return result.text; }
+            if (result.kind === 'class') {
+                return $('<span><i class="fas fa-layer-group fa-fw text-secondary me-1"></i>' + escapeHtml(result.text) + '</span>');
+            }
+            var subtitle = result.subtitle ? '<div class="text-secondary" style="font-size:11px">' + escapeHtml(result.subtitle) + '</div>' : '';
+            return $(
+                '<div class="d-flex align-items-center gap-2 py-1">' +
+                    '<span class="tk-av" style="width:22px; height:22px; font-size:10px">' + escapeHtml(result.initials || '?') + '</span>' +
+                    '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
+                '</div>'
+            );
+        }
+
+        function formatSelection(result) {
+            if (!result.id) { return result.text; }
+            if (result.kind === 'class') {
+                return $('<span><i class="fas fa-layer-group fa-fw"></i> ' + escapeHtml(result.text) + '</span>');
+            }
+            return $(
+                '<span><span class="tk-av" style="width:16px; height:16px; font-size:8px; vertical-align:-3px">' +
+                    escapeHtml(result.initials || '?') + '</span> ' + escapeHtml(result.text) + '</span>'
+            );
+        }
+
+        const $subjects = $('#tk-subjects');
+        const tenantEl = document.getElementById('tk-tenant');
+        const includePastEl = document.getElementById('tk-include-past');
+
+        $subjects.select2({
+            theme: 'bootstrap-5',
+            selectionCssClass: 'select2-small',
+            dropdownCssClass: 'select2-small',
+            width: '100%',
+            multiple: true,
+            placeholder: 'Search students or classes…',
+            minimumInputLength: 0,
+            templateResult: formatResult,
+            templateSelection: formatSelection,
+            ajax: {
+                url: $SCRIPT_ROOT + '{{ url_for("tickets.compose_people") }}',
+                dataType: 'json',
+                delay: 200,
+                data: params => {
+                    const d = { q: params.term || '' };
+                    if (tenantEl && tenantEl.value) { d.tenant_id = tenantEl.value; }
+                    if (includePastEl && includePastEl.checked) { d.include_past = 1; }
+                    return d;
+                },
+                processResults: data => ({ results: data.results }),
+                cache: true
+            }
+        });
+
+        // Switching tenant / the "show past students" toggle re-scopes the picker; drop any picks
+        // from before the change since they may no longer be valid candidates.
+        if (tenantEl) {
+            tenantEl.addEventListener('change', function () {
+                $subjects.val(null).trigger('change');
+            });
+        }
+        if (includePastEl) {
+            includePastEl.addEventListener('change', function () {
+                $subjects.val(null).trigger('change');
+            });
+        }
+
+        $('#tk-labels').select2({
+            theme: 'bootstrap-5',
+            selectionCssClass: 'select2-small',
+            dropdownCssClass: 'select2-small',
+            width: '100%',
+            multiple: true,
+            placeholder: 'Add labels…'
+        });
+
+        function avatarChip(initials, name, size) {
+            return '<span class="tk-av" style="width:' + size + 'px; height:' + size + 'px; font-size:' + Math.round(size * 0.42) + 'px" title="' +
+                escapeHtml(name) + '">' + escapeHtml(initials) + '</span>';
+        }
+
+        function renderSubAvatars(convenors) {
+            const subBox = document.getElementById('tk-sub-avatars');
+            if (!subBox) return;
+            subBox.querySelectorAll('.tk-sub-conv').forEach(el => el.remove());
+            (convenors || []).forEach(c => {
+                const span = document.createElement('span');
+                span.className = 'tk-av tk-sub-conv';
+                span.style.width = '24px'; span.style.height = '24px'; span.style.fontSize = '10px';
+                span.title = c.name;
+                span.textContent = c.initials;
+                subBox.appendChild(span);
+            });
+        }
+
+        function renderRouting(d) {
+            const box = document.getElementById('tk-routing');
+            if (!d || d.count === 0) {
+                box.innerHTML = '<div class="tk-hint"><i class="fas fa-lightbulb"></i> Select at least one subject to see how this ticket will be routed.</div>';
+                renderSubAvatars([]);
+                return;
+            }
+            const conv = (d.convenors || []).map(c =>
+                '<div class="d-flex align-items-center gap-2 mt-1">' + avatarChip(c.initials, c.name, 20) + '<span>' + escapeHtml(c.name) + '</span></div>'
+            ).join('');
+            if (d.multi) {
+                box.innerHTML = '<div class="tk-route"><div class="hd"><i class="fas fa-route"></i> Routing · ' + d.count + ' classes in scope</div>' +
+                    '<div><strong>No auto-assignee.</strong> In scope for more than one class; it will not be auto-assigned. Surfaces on every in-scope convenor’s triage board.</div>' +
+                    '<div class="mt-2">' + conv + '</div></div>';
+            } else {
+                box.innerHTML = '<div class="tk-route single"><div class="hd"><i class="fas fa-route"></i> Routing · 1 class in scope</div>' +
+                    '<div><strong>Auto-assigns</strong> to ' + escapeHtml(d.assignee || 'the class convenor') + '.</div>' +
+                    '<div class="mt-2">' + conv + '</div></div>';
+            }
+            renderSubAvatars(d.convenors || []);
+        }
+
+        function refreshRouting() {
+            const vals = $subjects.val() || [];
+            const qs = vals.map(v => 't=' + encodeURIComponent(v)).join('&');
+            fetch($SCRIPT_ROOT + '{{ url_for("tickets.compose_routing") }}' + (qs ? ('?' + qs) : ''))
+                .then(r => r.json()).then(renderRouting).catch(() => {});
+        }
+
+        $subjects.on('change', refreshRouting);
+        refreshRouting();
+    });
+</script>

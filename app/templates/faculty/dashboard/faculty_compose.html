@@ -1,5 +1,6 @@
-{# Personal-inbox / fallback new-ticket wrapper: bare app chrome (no dashboard pills). #}
-{% extends "base_app.html" %}
+{# New-ticket wrapper for the faculty surface: inherits the faculty dashboard nav pills.
+   The route supplies pane='tickets' plus the faculty dashboard-data keys. #}
+{% extends "faculty/dashboard/nav.html" %}
 
 {% block title %}
     New ticket

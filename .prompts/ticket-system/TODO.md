@@ -67,21 +67,26 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   reply-box formatting toolbar (user opted out); solid label-pill style left as-is.
 
 ### Compose / "New ticket" view (2b/3b) — reconcile with reference
-- 🔧 **Full plan written: `compose-reconcile.md`** (agreed with user 2026-07-22; implement in a
-  fresh context). Reconciles the compose screen against the Claude Design reference. Two firm
-  defects + full visual polish:
-  1. **Surface-correct chrome.** Compose extends `base_app.html` (top navbar only). Mirror the
-     detail view's `_detail_template()` (`app/tickets/detail.py:410`): thread `origin`(+`pclass`)
-     to pick convenor / faculty wrappers, office → bare fallback. New wrappers +
-     `_compose_body.html` / `_compose_scripts.html` split.
-  2. **Hide past-cycle students.** Faculty supervisee + office candidate queries return retired
-     prior-cycle `SubmittingStudent`/`SelectingStudent`; filter listing paths by
-     `ProjectClassConfig.year >= get_current_year()` with a "Show past students" toggle. Do **not**
-     filter `_authorized()` (attached retired subjects must still validate).
-  3. **Full visual reconciliation:** avatar+subtitle picker rows (`user.initials`), subscriber
-     avatar chips, routing-card avatars/info tone, Cancel button, linked "Tickets" breadcrumb.
-  - Decisions: keep the unified select2 picker (reject the reference two-mode segmented control);
-    keep select2 for labels. Full detail + verification steps in `compose-reconcile.md`.
+- ✅ **Compose view reconciliation** (per `compose-reconcile.md`; commit `ticket-system: reconcile
+  compose view chrome + scope filter`). Delivered:
+  1. **Surface-correct chrome.** `_compose_template()` / `_origin_pclass_compose()` in
+     `app/tickets/compose.py` mirror `detail._detail_template()`; new `convenor_compose.html` +
+     `faculty/dashboard/faculty_compose.html` wrappers + `_compose_body.html` /
+     `_compose_scripts.html` split, threaded via `origin`/`pclass` through GET → POST → the
+     detail redirect so chrome persists. Entry points (`convenor/dashboard/tickets.html`,
+     `tickets/_inbox.html`) thread `origin`.
+  2. **Hide past-cycle students.** `_student_results` / `_faculty_candidates` filter on
+     `ProjectClassConfig.year >= get_current_year()` unless `include_past` is set; a "Show past
+     students" checkbox in the picker toggles it via `compose_people`. `_authorized()` left
+     unfiltered.
+  3. **Full visual reconciliation:** avatar+subtitle picker rows (`user.initials`) via select2
+     `templateResult`/`templateSelection`, subscriber avatar chips (current user + in-scope
+     convenors, live-updated from `compose_routing`), Cancel button, linked "Tickets" breadcrumb.
+  - Verified via a Flask test-client run against the dev stack: all three chrome variants render
+    (200, surface-correct nav markers present), `compose_people` avatar/subtitle rows and
+    `include_past` filtering confirmed against real data, and a full POST round-trip (convenor
+    origin) lands on the detail view with the same origin/pclass chrome. Test ticket cleaned up
+    after verification.
 
 ### Convenor triage pane (3a)
 - ◻ **Empty-state.** Pane, view, and nav tab all exist and work (`app/convenor/tickets.py`,

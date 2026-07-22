@@ -60,18 +60,7 @@
 
         <div class="d-flex align-items-center gap-2 mb-3">
             <h3 class="m-0"><i class="fas fa-tags text-primary"></i> Ticket labels</h3>
-            {% if tenants | length > 1 %}
-                <div class="dropdown ms-2">
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown" type="button">{{ tenant.name }} <i class="fas fa-chevron-down"></i></button>
-                    <div class="dropdown-menu">
-                        {% for t in tenants %}
-                            <a class="dropdown-item {{ 'active' if t.id == tenant.id else '' }}" href="{{ url_for('tickets.labels_manage', tenant_id=t.id, url=url) }}">{{ t.name }}</a>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% else %}
-                <span class="text-secondary">· {{ tenant.name }}</span>
-            {% endif %}
+            <span class="text-secondary">· {{ tenant.name }}</span>
             <button class="btn btn-primary btn-sm ms-auto" type="button" data-bs-toggle="modal" data-bs-target="#tk-create-modal">
                 <i class="fas fa-plus fa-fw"></i> New label
             </button>

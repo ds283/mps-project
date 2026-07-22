@@ -114,7 +114,6 @@ def labels_manage():
     return render_template_context(
         "tickets/labels.html",
         tenant=tenant,
-        tenants=_manageable_tenants(current_user),
         labels=labels,
         palette=LABEL_PALETTE,
         default_colour=_next_unused_colour(tenant.id),

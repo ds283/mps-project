@@ -78,6 +78,14 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
   user's candidate scope spans >1 tenant; `compose_people` + `_office_candidates`/`_faculty_candidates`
   take an optional `tenant_id` filter; changing the selector clears stale picks and re-scopes the
   select2 picker. `derive_tenant_id` left as-is (now only ever fed one tenant).
+- ✅ **Manage-labels page: removed the in-page tenant-switcher dropdown.** The labels page is
+  reached only from a convenor class ledger, which already fixes the tenant
+  (`tenant_id=pclass.tenant_id`) — so a switcher just reintroduced a "pick/guess a tenant" surface
+  that duplicated what the entry point already resolved. Removed the `tenants|length > 1` dropdown
+  branch in `labels.html` and the now-unused `tenants=_manageable_tenants(...)` context var in
+  `labels.py` (`_manageable_tenants` is still used internally by `_resolve_tenant`). Note this is a
+  local simplification for this one screen, not a system-wide single-tenant assumption — the
+  `Tenant` model and admin tenant CRUD (`app/tenants/`) still fully support multiple tenants.
 
 ---
 

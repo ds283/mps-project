@@ -1,19 +1,15 @@
-{% extends "base_app.html" %}
+{% extends "faculty/dashboard/dashboard_base.html" %}
 {% from "datatables.html" import import_datatables %}
 {% from "tickets/_ledger.html" import ledger_script %}
 {% from "tickets/_inbox.html" import inbox_styles, inbox_body with context %}
 
-{% block title %}
-    My tickets
-{% endblock %}
+{% block title %}Faculty dashboard — My tickets{% endblock %}
 
 {% set LEDGER_URL = url_for('tickets.ledger_ajax', mode='mine', view=view, status=selected_status, label_id=selected_label) %}
 
-{% block bodyblock %}
+{% block pane_content %}
     {{ inbox_styles() }}
-    <div class="container-fluid">
-        {{ inbox_body('tickets.inbox') }}
-    </div>
+    {{ inbox_body('faculty.dashboard_tickets') }}
 {% endblock %}
 
 {% block scripts %}

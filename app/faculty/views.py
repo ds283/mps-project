@@ -1947,6 +1947,21 @@ def dashboard_enrolments():
     )
 
 
+@faculty.route("/dashboard/tickets")
+@roles_required("faculty")
+def dashboard_tickets():
+    from ..tickets.dashboard import build_inbox_context
+
+    data = get_faculty_dashboard_data(current_user)
+
+    return render_template_context(
+        "faculty/dashboard/panes/tickets.html",
+        **data,
+        **build_inbox_context(current_user, request.args),
+        pane="tickets",
+    )
+
+
 @faculty.route("/dashboard/enrolment/<int:cid>")
 @roles_required("faculty")
 def dashboard_enrolment(cid):

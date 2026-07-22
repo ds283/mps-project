@@ -74,6 +74,13 @@
                 {% endif %}
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'tickets' %}active{% endif %}"
+               href="{{ url_for('faculty.dashboard_tickets') }}">
+                <i class="fas fa-ticket-alt fa-fw"></i>
+                My tickets
+            </a>
+        </li>
         {% if enrolments and num_enrolments > 0 %}
             {%- set ns = namespace(alert_count=0) -%}
             {%- for item in enrolments -%}

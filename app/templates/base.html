@@ -305,12 +305,6 @@
                                 </a>
                             </div>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.blueprint == 'tickets' %}active{% endif %}"
-                               href="{{ url_for('tickets.inbox') }}">
-                                My tickets
-                            </a>
-                        </li>
                         {# add student version of 'my projects' if user is a student #}
                     {% elif is_student %}
                         <li class="nav-item dropdown">

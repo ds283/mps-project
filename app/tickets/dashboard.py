@@ -126,31 +126,39 @@ def ledger_ajax():
 # faculty / office inbox (2c)
 
 
-@tickets.route("/inbox")
-@login_required
-def inbox():
-    view = request.args.get("view", "all")
+def build_inbox_context(user, args) -> dict:
+    """
+    Assemble the personal-inbox (design 2c) context for `user` from a request args mapping. Shared
+    by the standalone tickets.inbox page and the faculty dashboard "My tickets" pane so both surfaces
+    stay in lock-step. The ledger data itself is served separately by ledger_ajax (mode=mine).
+    """
+    view = args.get("view", "all")
     if view not in ("all", "assigned", "watching"):
         view = "all"
 
-    assigned_open = Ticket.query.filter(Ticket.assignee_id == current_user.id, Ticket.status.in_(Ticket.OPEN_STATES)).count()
-    watching = Ticket.query.filter(Ticket.subscriptions.any(TicketSubscription.user_id == current_user.id)).count()
+    assigned_open = Ticket.query.filter(Ticket.assignee_id == user.id, Ticket.status.in_(Ticket.OPEN_STATES)).count()
+    watching = Ticket.query.filter(Ticket.subscriptions.any(TicketSubscription.user_id == user.id)).count()
     overdue = Ticket.query.filter(
-        Ticket.assignee_id == current_user.id,
+        Ticket.assignee_id == user.id,
         Ticket.status.in_(Ticket.OPEN_STATES),
         Ticket.due_date.isnot(None),
         Ticket.due_date < datetime.now(),
     ).count()
 
-    return render_template_context(
-        "tickets/inbox.html",
-        view=view,
-        labels=_user_labels(current_user),
-        selected_label=request.args.get("label_id", type=int),
-        selected_status=request.args.get("status", type=int),
-        metrics={"assigned": assigned_open, "watching": watching, "overdue": overdue},
-        all_statuses=[(value, label) for value, label in Ticket._labels.items()],
-    )
+    return {
+        "view": view,
+        "labels": _user_labels(user),
+        "selected_label": args.get("label_id", type=int),
+        "selected_status": args.get("status", type=int),
+        "metrics": {"assigned": assigned_open, "watching": watching, "overdue": overdue},
+        "all_statuses": [(value, label) for value, label in Ticket._labels.items()],
+    }
+
+
+@tickets.route("/inbox")
+@login_required
+def inbox():
+    return render_template_context("tickets/inbox.html", **build_inbox_context(current_user, request.args))
 
 
 # ------------------------------------------------------------------------------------------------

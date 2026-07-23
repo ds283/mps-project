@@ -4,7 +4,34 @@
   (admin.faculty_reassign_ajax) and submitted via AJAX (admin.faculty_reassign_assign). See
   .prompts/matching-workspace/PLAN.md.
 #}
+{% from "swatch.html" import small_swatch %}
 {% from "admin/matching_workspace/_macros.html" import capacity_bar %}
+
+{% set surname = drawer.faculty.user.last_name %}
+
+<style>
+    /* project titles in the per-project capacity and currently-assigned lists are clamped so that
+       long titles cannot push the capacity figures out of view; full title in the title attribute */
+    .mwfr-proj {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mwfr-proj-1 {
+        -webkit-line-clamp: 1;
+    }
+</style>
+
+{% macro project_label(project, clamp_one=false) %}
+    {% set pclass = project.config.project_class %}
+    <span class="d-flex flex-shrink-0">{{ small_swatch(pclass.make_CSS_style()) }}</span>
+    <span class="text-body-secondary small text-nowrap">{{ pclass.abbreviation }}</span>
+    <span class="mwfr-proj{% if clamp_one %} mwfr-proj-1{% endif %}" title="{{ project.name }}">{{ project.name }}</span>
+{% endmacro %}
 
 {% macro pool_card(entry, dot_colour) %}
     <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2 mb-2">
@@ -13,7 +40,7 @@
             <div class="small">
                 <div class="fw-semibold">{{ entry.student.user.name }}</div>
                 <div class="text-body-secondary">Ranked #{{ entry.best_rank }} &middot; {{ entry.best_project.name }}</div>
-                <div class="text-body-secondary">
+                <div style="color: var(--bs-tertiary-color);">
                     {% if entry.current_project %}
                         Currently: {{ entry.current_project.name }}{% if entry.current_rank %} (#{{ entry.current_rank }}){% endif %}
                     {% else %}
@@ -22,18 +49,35 @@
                 </div>
             </div>
         </div>
-        <button type="button" class="btn btn-sm btn-primary text-nowrap mw-fac-assign-btn"
+        {# assignment that breaches the supervising limit or an enforced capacity is permitted, but
+           the button states the consequence rather than looking like an unremarkable action #}
+        <button type="button" class="btn btn-sm text-nowrap mw-fac-assign-btn {% if entry.warn %}btn-outline-warning{% else %}btn-primary{% endif %}"
+                {% if entry.warn_reason %}title="{{ entry.warn_reason }}"{% endif %}
                 data-selector-id="{{ entry.selector.id }}" data-project-id="{{ entry.best_project.id }}">
-            Assign &rarr;
+            {% if entry.warn %}<i class="fas fa-exclamation-triangle me-1"></i>{% endif %}Assign &rarr;
         </button>
     </div>
+{% endmacro %}
+
+{% macro pool_group(title, items, dot_colour) %}
+    {% if items %}
+        <div class="mb-3">
+            <div class="small fw-semibold mb-2 d-flex align-items-center gap-2">
+                <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background: {{ dot_colour }};"></span>
+                {{ title }}
+            </div>
+            {% for entry in items %}
+                {{ pool_card(entry, dot_colour) }}
+            {% endfor %}
+        </div>
+    {% endif %}
 {% endmacro %}
 
 {% set pool_total = drawer.assignable_pool.top_choice_elsewhere|length + drawer.assignable_pool.would_prefer|length + drawer.assignable_pool.interested|length %}
 {% set currently_assigned = [] %}
 {% for p in drawer.projects %}
-    {% for student in p.assigned_students %}
-        {% set _ = currently_assigned.append({"student": student, "project": p.project}) %}
+    {% for item in p.assigned %}
+        {% set _ = currently_assigned.append({"student": item.student, "record_id": item.record_id, "project": p.project}) %}
     {% endfor %}
 {% endfor %}
 
@@ -55,27 +99,37 @@
     {% endif %}
 
     <div class="row">
-        <div class="col-md-5">
+        <div class="col-md-5 border-end">
             <h6>Capacity gauges</h6>
-            {{ capacity_bar('Supervising CATS', drawer.workload.cats_supervising, drawer.workload.cats_supervising_limit) }}
-            {{ capacity_bar('Marking CATS', drawer.workload.cats_marking, drawer.workload.cats_marking_limit) }}
+            {{ capacity_bar('Supervising', drawer.workload.cats_supervising, drawer.workload.cats_supervising_limit,
+                            binding_note='At supervising CATS limit — no further supervisees can be added.') }}
+            {{ capacity_bar('Marking', drawer.workload.cats_marking, drawer.workload.cats_marking_limit,
+                            binding_note='At marking CATS limit — no further marking can be allocated.') }}
 
             <h6 class="mt-3">Per-project capacity</h6>
             {% for p in drawer.projects %}
+                {% set enforced = p.enforce_capacity and p.capacity is not none %}
                 <div class="mb-2">
-                    <div class="d-flex justify-content-between small">
-                        <span class="text-body-secondary">{{ p.project.name }}</span>
-                        <span class="fw-semibold">{{ p.assigned_count }}{% if p.enforce_capacity and p.capacity is not none %} / {{ p.capacity }}{% endif %}</span>
+                    <div class="d-flex justify-content-between align-items-start gap-2 small">
+                        <div class="d-flex align-items-start gap-2" style="min-width: 0;">{{ project_label(p.project) }}</div>
+                        <span class="fw-semibold text-nowrap">{{ p.assigned_count }}{% if enforced %} / {{ p.capacity }}{% endif %}</span>
                     </div>
-                    {% if p.enforce_capacity and p.capacity %}
+                    {% if enforced and p.capacity %}
                         {% set pct = [(p.assigned_count / p.capacity * 100), 100]|min %}
                         <div class="progress" style="height: 7px; background: var(--bs-secondary-bg);">
                             <div class="progress-bar" role="progressbar" style="width: {{ pct }}%; background:
                                 {% if p.assigned_count > p.capacity %}var(--bs-danger){% elif p.assigned_count == p.capacity %}var(--bs-warning){% else %}var(--bs-success){% endif %};"></div>
                         </div>
-                        <div class="small text-body-secondary">{% if p.assigned_count >= p.capacity %}at capacity &mdash; enforced{% else %}enforced{% endif %}</div>
+                    {% endif %}
+                    {# four-state enforcement note, matching the OVER/FULL tri-state used by the faculty drawer #}
+                    {% if not enforced %}
+                        <div class="small" style="color: var(--bs-tertiary-color);">no capacity enforcement</div>
+                    {% elif p.assigned_count > p.capacity %}
+                        <div class="small" style="color: var(--bs-danger-text-emphasis);">over capacity &mdash; enforced</div>
+                    {% elif p.assigned_count == p.capacity %}
+                        <div class="small" style="color: var(--bs-warning-text-emphasis);">at capacity &mdash; enforced</div>
                     {% else %}
-                        <div class="small text-body-secondary">no capacity enforcement</div>
+                        <div class="small text-body-secondary">capacity enforced</div>
                     {% endif %}
                 </div>
             {% endfor %}
@@ -84,8 +138,11 @@
             {% for item in currently_assigned %}
                 <div class="card mb-1">
                     <div class="card-body py-2 px-3 small">
-                        <div class="fw-semibold">{{ item.student.user.name }}</div>
-                        <div class="text-body-secondary">{{ item.project.name }}</div>
+                        <div class="fw-semibold">
+                            <a class="text-decoration-none mw-open-student" href="#" data-rec-id="{{ item.record_id }}"
+                               data-student-name="{{ item.student.user.name }}">{{ item.student.user.name }}</a>
+                        </div>
+                        <div class="d-flex align-items-start gap-2 text-body-secondary" style="min-width: 0;">{{ project_label(item.project, clamp_one=true) }}</div>
                     </div>
                 </div>
             {% else %}
@@ -95,17 +152,14 @@
 
         <div class="col-md-7">
             <h6>Assignable pool ({{ pool_total }})</h6>
-            <p class="small text-body-secondary">Students who could move here, ranked by strength of preference.</p>
+            <p class="small text-body-secondary">Students who could move here, ranked by strength of preference. Colour shows why.</p>
 
-            {% for entry in drawer.assignable_pool.top_choice_elsewhere %}
-                {{ pool_card(entry, "var(--bs-success)") }}
-            {% endfor %}
-            {% for entry in drawer.assignable_pool.would_prefer %}
-                {{ pool_card(entry, "var(--bs-primary)") }}
-            {% endfor %}
-            {% for entry in drawer.assignable_pool.interested %}
-                {{ pool_card(entry, "var(--bs-secondary)") }}
-            {% endfor %}
+            {{ pool_group("Ranked a " ~ surname ~ " project #1 but allocated elsewhere",
+                          drawer.assignable_pool.top_choice_elsewhere, "var(--bs-success)") }}
+            {{ pool_group("Would prefer a " ~ surname ~ " project to their current allocation",
+                          drawer.assignable_pool.would_prefer, "var(--bs-primary)") }}
+            {{ pool_group("Next-highest interested (would take a freed place)",
+                          drawer.assignable_pool.interested, "var(--bs-secondary)") }}
 
             {% if pool_total == 0 %}
                 <div class="text-body-secondary small">No candidates found who ranked one of this staff member's projects.</div>

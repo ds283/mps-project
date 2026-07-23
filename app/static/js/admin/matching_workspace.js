@@ -601,10 +601,47 @@
             .then(function (html) {
                 contentEl.innerHTML = html;
                 bindAssignButtons(contentEl, attemptId, facId);
+                bindReassignStudentLinks(contentEl);
             })
             .catch(function () {
                 contentEl.innerHTML = '<div class="modal-body text-danger small">Could not load the reassignment workspace.</div>';
             });
+    }
+
+    // Currently-assigned students in the reassignment workspace cross-link to the student inspector,
+    // mirroring the faculty drawer's allocated-student chips. A modal and an offcanvas cannot be
+    // shown together, so the workspace is dismissed first; if the faculty drawer is still open
+    // behind it, that drawer becomes the "Back" target for the student drawer we open.
+    function bindReassignStudentLinks(scope) {
+        scope.querySelectorAll(".mw-open-student").forEach(function (link) {
+            link.addEventListener("click", function (e) {
+                e.preventDefault();
+
+                var recId = link.getAttribute("data-rec-id");
+                if (!recId) {
+                    return;
+                }
+
+                var target = {kind: "student", id: recId, name: link.getAttribute("data-student-name") || ""};
+                var facultyEl = document.getElementById(DRAWER_KINDS.faculty.elId);
+                var fromKind = facultyEl && facultyEl.classList.contains("show") ? "faculty" : null;
+
+                var modalEl = document.getElementById("matchFacultyReassignModal");
+                var modalInstance = modalEl && bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance && modalEl.classList.contains("show")) {
+                    modalEl.addEventListener(
+                        "hidden.bs.modal",
+                        function () {
+                            navigateToDrawer(target, fromKind, fromKind !== null);
+                        },
+                        {once: true}
+                    );
+                    modalInstance.hide();
+                } else {
+                    navigateToDrawer(target, fromKind, fromKind !== null);
+                }
+            });
+        });
     }
 
     var reassignModalEl = document.getElementById("matchFacultyReassignModal");

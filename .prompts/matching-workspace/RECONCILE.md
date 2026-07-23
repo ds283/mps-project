@@ -158,7 +158,50 @@ For each surface, compare against its screenshot + the matching README section +
   `navigateToDrawer` in `matching_workspace.js`): it is labelled with the drawer it returns to,
   renders only while the stack is non-empty, and the stack is cleared both when a drawer is opened
   from the page (rather than from another drawer) and when one is dismissed outright.
-- **Screen 5 Faculty reassignment** — _not started_
+- **Screen 5 Faculty reassignment** — ✅ done. Eight divergences fixed; four items kept as-is.
+  **Fixed (reference wins):** (A) the per-project capacity list had **no project-class swatch**, so
+  the same generic project offered across several classes rendered as indistinguishable duplicate
+  rows ("Sports Analytics (generic)" twice, "Choose your own project…" twice) — now
+  `small_swatch(make_CSS_style())` + `project_class.abbreviation`, as the Screen 4 drawer already
+  does; (B) the title/count row wrapped ("1 /" then "5") — title clamped via `.mwfr-proj`
+  (2 lines, 1 in the assigned list, full title in `title=`), count `text-nowrap`; (C) the
+  enforcement note was a flat grey "enforced" for every project — now four-state
+  (`over capacity — enforced` danger / `at capacity — enforced` warning / `capacity enforced`
+  secondary / `no capacity enforcement` dim), which keeps the reference's colour ramp *and* stays
+  consistent with the drawer's OVER/FULL tri-state badge (the reference collapses over- and
+  at-capacity into one red); (G) no visual separation between the two columns — `border-end` on
+  the left column.
+  **Fixed (implementation defect):** (D) `capacity_bar` was called without `binding_note`, so the
+  fallback `label|lower` mangled the acronym into "At marking cats limit"; the modal now passes the
+  same two strings as the drawer, and uses the drawer's "Supervising"/"Marking" labels (the unit
+  already rides on the value).
+  **Fixed (both designs were weak):** (E) all three tone groups rendered the identical
+  `Ranked #N · project` line, so the green/blue/grey dots were unexplained — now grouped under the
+  drawer's three `pool_list` captions with a dot key, and the "Colour shows why." sentence restored.
+  The implementation's line is *kept* over the reference's: it names the project the student would
+  be moved onto, which the reference never states even though Assign commits to a specific project.
+  Current-allocation line demoted to `--bs-tertiary-color` to restore the reference's two-level
+  hierarchy. (F) the Assign button had no over-limit affordance (the reference computes
+  `warn`/`warnReason` but its `assignStyle` is a constant — the warn style is dead code, only a
+  `title` tooltip survives): `faculty_assignable_pool` now annotates every entry with
+  `warn`/`warn_reason` (supervising CATS at/over limit, and/or the target project at/over its
+  enforced capacity, computed once rather than per entry), and the button renders
+  `btn-outline-warning` + triangle + tooltip. The click is still allowed — overassignment is
+  deliberately permitted here, mirroring the role editor.
+  (H) Currently-assigned students were inert text; they now cross-link to the student inspector via
+  `mw-open-student` (using the `record_id` already on `p.assigned`). Because a modal and an
+  offcanvas cannot both be shown, the new `bindReassignStudentLinks` dismisses the workspace first,
+  then hands off to `navigateToDrawer`; if the faculty drawer is still open behind the modal it is
+  pushed as the "Back" target, otherwise nothing is pushed (guarded on `.show`, so a stale
+  `data-fac-id` on a hidden drawer cannot fake an origin).
+  **Kept (implementation wins):** the reference's cyan "pending" badge — a prototype artifact of
+  client-side state; assignment here persists immediately and repaints, so a pending state would be
+  a lie; the over-limit banner's extra "Overassignment is allowed here…" sentence (the reference
+  only says this in its README); the 5/7 column ratio (the reference is 50/50, but the pool column
+  carries far more content); the banner firing on the supervising limit only, matching the reference
+  — the marking-limit case is still surfaced by the red gauge note.
+  **Noted, not actioned:** the workspace is one-way — students can be assigned in but never removed.
+  Neither design has a remove control; this is a scope decision rather than a divergence.
 - **Screen 6 Changes tab** — _not started_
 - **Screen 7 Matches dashboard** — _not started_
 - **Screen 8 Comments panel** — _not started_

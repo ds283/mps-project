@@ -523,8 +523,14 @@ def faculty_assignable_pool(attempt: MatchingAttempt, fac: FacultyData) -> dict:
       F's projects than for their current allocation.
     - `interested`: ranked one of F's projects (at any rank), currently allocated elsewhere, and
       not already covered by the two lists above. Ordered by rank ascending.
+
+    Each entry also carries `warn` / `warn_reason`, stating whether moving this selector onto
+    `best_project` would breach the supervising CATS limit or that project's enforced capacity.
+    Such a move is *permitted* (mirroring the role editor); the warning surfaces the consequence
+    rather than blocking it.
     """
-    fac_project_ids = {p.id for p in _faculty_project_ids_query(attempt, fac).all()}
+    fac_projects = _faculty_project_ids_query(attempt, fac).all()
+    fac_project_ids = {p.id for p in fac_projects}
 
     empty = {"top_choice_elsewhere": [], "would_prefer": [], "interested": []}
     if not fac_project_ids:
@@ -581,6 +587,33 @@ def faculty_assignable_pool(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     top_choice_elsewhere.sort(key=lambda e: e["student"].user.last_name or "")
     would_prefer.sort(key=lambda e: e["best_rank"])
     interested.sort(key=lambda e: e["best_rank"])
+
+    # annotate each candidate with the consequence of assigning them onto best_project; the
+    # supervising-limit and per-project capacity states are computed once, not per entry
+    sup_info = attempt.is_supervisor_overassigned(fac)
+    sup_limit = sup_info["CATS_limit"]
+    sup_total = sup_info["CATS_total"]
+    sup_binding = sup_limit is not None and sup_total >= sup_limit
+
+    full_projects = {}
+    for project in fac_projects:
+        if project.enforce_capacity and project.capacity is not None:
+            count = attempt.number_project_assignments(project)
+            if count >= project.capacity:
+                full_projects[project.id] = (count, project.capacity)
+
+    for entry in top_choice_elsewhere + would_prefer + interested:
+        reasons = []
+        if sup_binding:
+            reasons.append(f"This will exceed the supervising CATS limit ({sup_total}/{sup_limit}).")
+
+        cap = full_projects.get(entry["best_project"].id)
+        if cap is not None:
+            count, capacity = cap
+            reasons.append(f'"{entry["best_project"].name}" is already at its enforced capacity ({count}/{capacity}).')
+
+        entry["warn"] = len(reasons) > 0
+        entry["warn_reason"] = " ".join(reasons) if reasons else None
 
     return {
         "top_choice_elsewhere": top_choice_elsewhere,

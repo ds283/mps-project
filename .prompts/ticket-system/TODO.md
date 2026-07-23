@@ -11,16 +11,33 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 ## Build phases
 - ✅ Phases 1–7 (models, service layer, detail view, compose, dashboards, labels+bulk, notifications)
 - ✅ Phase 8a — rollover hard-block on open student-scoped tickets
-- ✅ Phase 8b — convenor `status.html` CTA counts ticket data
+- ⚠ **Phase 8b — corrected retrospectively.** The original entry here claimed the convenor
+  `status.html` CTA counts had been swapped to ticket data. That was inaccurate: commit `b3e13213`
+  was explicitly additive (its own message says so) — it added a parallel "Tickets" tab/counts
+  but left the old "Tasks" tab, "Upcoming tasks" card, and per-student task badges on the
+  selectors/submitters pages fully wired to `ConvenorTask`, deliberately deferred until the ticket
+  system was proven. That cutover is what actually happened in the three rewire commits below.
 - ✅ Phase 8c — data migration `ConvenorTask` → `Ticket`
-- ◻ **Phase 8 teardown (LAST)** — remove `ConvenorTask`, `ConvenorSelectorTask`,
-  `ConvenorSubmitterTask`, `ConvenorGenericTask` + their routes / ajax / templates:
-  - `app/convenor/student_tasks.py`, task views in `app/convenor/projects.py`
-  - `app/ajax/convenor/student_tasks.py`, `app/ajax/convenor/todo_list.py`
-  - class defs in `app/models/utilities.py`
-  - **Precondition met** (migration + status swap + rollover guard done & verified). Do this
-    after the polish backlog below, so the old UI stays available as a reference/fallback while
-    the new system's gaps are closed. Watch for stale imports of `ConvenorTask` when deleting.
+- ✅ **Rewire to tickets** (2026-07-23): closed the gap left by 8b before teardown.
+  - Go-Live (`confirm_go_live`/`perform_go_live`) got the ticket-based blocking guard
+    (`get_blocking_tickets`/`_flash_blocking_tickets`) that rollover already had.
+  - `status.html`'s CTA panel now reads `get_convenor_open_tickets` (open tickets in class scope)
+    instead of `ConvenorTask`; links into the ticket detail view / Tickets tab.
+  - `SelectingStudent`/`SubmittingStudent` gained `number_open_tickets`; the "N tasks" badges on
+    the selectors page, `submitters_v2.html`, and the legacy `submitters.html` ajax formatter
+    (`app/ajax/convenor/submitters.py`, reachable behind the `SUBMITTERS_V2` flag) all read it now.
+  - Decision (confirmed with user): the `ConvenorGenericTask.rollover=True` recurring-task
+    carry-forward feature has no ticket equivalent and was **dropped**, not ported.
+- ✅ **Phase 8 teardown (LAST)** — removed `ConvenorTask`, `ConvenorSelectorTask`,
+  `ConvenorSubmitterTask`, `ConvenorGenericTask`, `ConvenorTasksMixinFactory`, and the orphaned
+  `RepeatIntervalsMixin`; their routes (`app/convenor/student_tasks.py` — `inject_liveproject`,
+  an unrelated route in that file, was relocated into `projects.py` rather than deleted),
+  forms, ajax row formatters, and templates; the `ensure_ticket_migration` bootstrap in
+  `initdb.py`/`serve.py`; and finally the four `convenor_task*` DB tables (migration
+  `b4e7a1d9c3f2`, applied — all 138 legacy rows were already present in `tickets` via
+  `source_task_id` before the tables were dropped). Verified against a rebuilt dev image at each
+  step (status/selectors/submitters pages + ajax endpoints, Go-Live/rollover guards, old routes
+  now correctly `BuildError`, migration applied cleanly).
 
 ## Polish / fix backlog (agreed sequencing: fix + polish, THEN teardown)
 
@@ -131,14 +148,9 @@ Legend: ✅ done · 🔧 in progress · ◻ outstanding · ❌ deliberately not 
 2. Inbox reconciliation vs reference 2c (export the `.dc.html` first).
 3. Convenor triage empty-state (small; fold in during dashboard work).
 4. ✅ Compose scope-selector polish + single-tenant enforcement — done.
-5. **Phase 8 teardown** (last).
+5. ✅ **Phase 8 teardown** — done, including the rewire it depended on. See "Build phases" above.
 
-## Uncommitted work right now (verify, then commit)
-- Labels page: full-width layout, colour picker (palette + custom swatch), free hex backend, return
-  link (`app/tickets/labels.py`, `app/tickets/forms.py`, `app/templates/tickets/labels.html`).
-- Return-link entry points pass `return_to` (`convenor/dashboard/tickets.html`,
-  `tickets/_inbox.html`); convenor link also pre-selects the class tenant.
-- Ticket-detail breadcrumb fix (`app/tickets/detail.py` `_breadcrumb`, `templates/tickets/detail.html`).
-- Tenant scoping: remove tenantless inbox "Manage" link (`tickets/_inbox.html`); `_resolve_tenant`
-  aborts instead of guessing (`app/tickets/labels.py`); compose single-tenant backstop + tenant
-  selector (`app/tickets/compose.py`, `templates/tickets/compose.html`).
+## What's left
+Only the two ◻ items above: convenor triage empty-state (3a), and inbox chrome reconciliation
+(2c, blocked on exporting the `.dc.html` reference). `ConvenorTask` is fully gone — no remaining
+build-phase or teardown work.

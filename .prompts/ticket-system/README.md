@@ -12,12 +12,12 @@ references survive context clears and travel with the code.
 | `TODO.md` | **Live task board — the source of truth for what's left.** Update as items land. |
 | `reference/` | Claude Design spec + notification email (mirrored). See `reference/README.md`. |
 
-## Current status (2026-07-22)
+## Current status (2026-07-23)
 
-Phases 1–7 complete; Phase 8 sub-parts 8a/8b/8c (rollover guard, `status.html` swap, data
-migration) done. Remaining: a small polish/fix backlog (labels entry-point, inbox reconciliation,
-triage empty-state, compose scope/tenant), then the **Phase 8 teardown** of `ConvenorTask` (last).
-Full detail in `TODO.md`.
+All 8 phases complete, including the final **Phase 8 teardown** of `ConvenorTask` (models, routes,
+forms, ajax, templates, and the DB tables are all gone). Remaining work is a small polish backlog:
+inbox chrome reconciliation (2c, blocked on exporting the `.dc.html` reference) and the convenor
+triage empty-state (3a). Full detail in `TODO.md`.
 
 ## Conventions
 

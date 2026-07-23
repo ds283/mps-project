@@ -1,10 +1,11 @@
 # Ticket System — implementation plan
 
-> **Status (2026-07-22):** Phases 1–7 complete and committed. Phase 8 in progress:
-> 8a (rollover hard-block), 8b (dashboard counts), 8c (data migration) done; the final
-> **teardown** of `ConvenorTask` is the only remaining step of the plan. A polish/fix backlog
-> accumulated during review — see **`TODO.md`** for the live task board. This file is the
-> canonical design/plan and is preserved verbatim below.
+> **Status (2026-07-23):** All 8 phases complete and committed, including the final `ConvenorTask`
+> teardown. Note the 8b entry below ("dashboard CTA counts ticket data") describes what was
+> *intended*, not what shipped at the time — that commit was deliberately additive and the actual
+> cutover happened just before teardown; see `TODO.md` for the corrected account. A small
+> polish backlog remains (inbox chrome, triage empty-state) — see **`TODO.md`** for the live task
+> board. This file is the canonical design/plan and is preserved verbatim below.
 >
 > Original approved plan file: `~/.claude/plans/i-have-logged-in-shiny-pnueli.md` (now mirrored
 > here so it is version-controlled and survives context clears).
@@ -164,18 +165,27 @@ asserting scope + assignee + subscriber outcomes (stands in for absent unit test
   (`app/tasks/services.py:149 send_email_list` / `EmailTemplate.apply_`). Outbound + manual-log
   only — **no inbound path** (spec decision 4).
 
-### Phase 8 — Migration, rollover hard-block, `status.html` swap, teardown (LAST)  ◻ in progress
+### Phase 8 — Migration, rollover hard-block, `status.html` swap, teardown (LAST)  ✅ done
 - **8a ✅ (55cb8875)** Rollover guard (hard-block): so `confirm_rollover`/`rollover` block on
   open in-scope student-scoped tickets, reading `TicketClassScope`. Same `_flash_blocking_tasks` UX.
-- **8b ✅ (b3e13213)** `status.html` CTA swap: convenor dashboard aggregation
-  (`get_convenor_dashboard_data`; `todo_count`, `get_convenor_action_items`, `get_convenor_todo_data`)
-  now counts **ticket** data (open + needs-triage per class).
+- **8b ⚠ (b3e13213), corrected retrospectively.** The commit added `ticket_open_count`/
+  `ticket_triage_count` to `get_convenor_dashboard_data` and a parallel "Tickets" tab — genuinely
+  additive, as its own commit message says, *not* a swap. `todo_count`/`get_convenor_todo_data`
+  and the "Tasks" tab kept running on `ConvenorTask` until the rewire below.
 - **8c ✅ (2cec6532)** Data migration `ConvenorTask`→`Ticket` (+ subjects): selector/submitter
   tasks → student subjects; generic → `project_class` subject (or General). Carry status/owner/dates.
-- **◻ Teardown (remaining):** once migrated + status swapped + verified, remove `ConvenorTask`,
-  `ConvenorSelectorTask`, `ConvenorSubmitterTask`, `ConvenorGenericTask`, their routes
-  (`app/convenor/student_tasks.py`, task views in `app/convenor/projects.py`), ajax
-  (`app/ajax/convenor/student_tasks.py`, `todo_list.py`), and templates.
+- **✅ Rewire to tickets** (2026-07-23, 3 commits): the actual CTA/status-html cutover 8b's
+  message described. Go-Live gained `get_blocking_tickets`; `status.html`'s CTA panel switched to
+  `get_convenor_open_tickets`; `SelectingStudent`/`SubmittingStudent.number_open_tickets` replaced
+  `number_available_tasks` on the selectors/submitters badges (including the legacy
+  `submitters.html` ajax path). `ConvenorGenericTask.rollover=True` carry-forward dropped (no
+  ticket equivalent, confirmed with user) rather than ported.
+- **✅ Teardown** (2026-07-23, 4 commits): removed `ConvenorTask`, `ConvenorSelectorTask`,
+  `ConvenorSubmitterTask`, `ConvenorGenericTask`, `ConvenorTasksMixinFactory`, the orphaned
+  `RepeatIntervalsMixin`; routes (`app/convenor/student_tasks.py` deleted — `inject_liveproject`,
+  an unrelated route living in that file, relocated into `projects.py`), forms, ajax
+  (`app/ajax/convenor/student_tasks.py`, `todo_list.py`), templates, the `ensure_ticket_migration`
+  bootstrap, and finally the four `convenor_task*` DB tables (migration `b4e7a1d9c3f2`).
 
 ---
 

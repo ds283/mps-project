@@ -31,6 +31,7 @@ from .sqlalchemy import get_count
 from ..database import db
 from ..models import (
     EmailLog,
+    EnrollmentRecord,
     FacultyData,
     LiveProject,
     MatchingAttempt,
@@ -155,6 +156,32 @@ def _worst_severity(constraints: List[dict]) -> Optional[str]:
     if "warning" in severities:
         return "warning"
     return None
+
+
+#: Short pill labels for each binding-constraint category, used by the Faculty-tab workload cell.
+#: The order here is the order in which the pills are rendered.
+_BINDING_LABELS = [
+    ("supervision_cats", "Supervising limit binding"),
+    ("marking_cats", "Marking limit binding"),
+    ("capacity", "Capacity binding"),
+]
+
+
+def binding_pills(constraints: List[dict]) -> List[dict]:
+    """
+    Collapse a constraint list (from `binding_constraints`) into at most one pill per category,
+    each carrying a specific label and the worst severity seen for that category.
+    """
+    pills: List[dict] = []
+
+    for category, label in _BINDING_LABELS:
+        members = [c for c in constraints if c["category"] == category]
+        if len(members) == 0:
+            continue
+
+        pills.append({"category": category, "label": label, "severity": _worst_severity(members)})
+
+    return pills
 
 
 def _group_records_by_pclass(records: List[MatchingRecord]) -> Dict[int, List[dict]]:
@@ -312,7 +339,16 @@ def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     marking loads grouped by project class, workload CATS, and a binding-constraint severity pill.
     """
     offered_projects = _faculty_project_ids_query(attempt, fac).all()
+
+    # seed with every project class in this attempt for which `fac` holds a supervisor enrolment, so
+    # that "enrolled but offering nothing" surfaces as an explicit "offered 0" line instead of
+    # silently vanishing from the row
     offered_by_pclass: Dict[int, int] = defaultdict(int)
+    for config in attempt.config_members:
+        enrollment = fac.get_enrollment_record(config.pclass_id)
+        if enrollment is not None and enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+            offered_by_pclass[config.pclass_id] = 0
+
     for project in offered_projects:
         offered_by_pclass[project.config.pclass_id] += 1
 
@@ -337,6 +373,7 @@ def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
             "cats_total": sup_info["CATS_total"] + mark_info["CATS_total"],
         },
         "binding_severity": _worst_severity(constraints),
+        "binding_pills": binding_pills(constraints),
         "constraints": constraints,
     }
 

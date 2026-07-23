@@ -94,7 +94,29 @@ For each surface, compare against its screenshot + the matching README section +
   the ≥1-responsible constraint). Added "(from assessor pool)" caption to the Markers label to
   match the reference. select2 init already uses `select2-small` for
   `selectionCssClass`/`dropdownCssClass` (verified — no change needed).
-- **Screen 3 Faculty view** — _not started_
+- **Screen 3 Faculty view** — ✅ done. Nine divergences reviewed; five reference-wins fixes applied,
+  three implementation-wins kept, one accepted as unimplementable.
+  **Fixed:** (1) the workload cell's generic "N binding constraints" pill replaced by *named* pills —
+  "Supervising limit binding" / "Marking limit binding" / "Capacity binding" — via the new
+  `binding_pills()` service helper, which collapses `binding_constraints()` to at most one pill per
+  category at that category's worst severity (severity colouring retained, which the reference lacks);
+  (2) `table-bordered` dropped from the faculty table, matching the de-bordered Screen 1 student
+  table; (3) project titles in the Supervising/Marking cells clamped to one line (`.mwfp-proj`,
+  full title in `title=`) — untruncated titles were inflating rows to ~3 lines and halving density;
+  (4) `offered_by_pclass` now seeded from the faculty member's `SUPERVISOR_ENROLLED` enrolments in
+  the attempt's classes, so "enrolled but offering nothing" shows as an explicit `offered 0` line
+  instead of vanishing; (7) faculty name link bumped to 15.5px as the row anchor; (9) card header
+  reworded to "Faculty view of project matching".
+  **Kept (better than reference):** project-class group labels use `abbreviation` not the full
+  uppercase class name (the swatch already disambiguates, and the full name eats a 30%-width
+  column); "None" placeholders for empty Supervising/Marking cells (reference leaves them blank);
+  DataTables search/pager chrome (per the Screen 1 decision).
+  **Accepted divergence:** the reference's per-faculty comments (💬) button is *not* implementable —
+  `MatchingReviewComment` is scoped global-or-`matching_record` (PLAN decision 1) with no faculty
+  scope, and adding one would fork the comments model for a single button.
+  **Also removed:** the single-row filter well's "Hide filters" collapse toggle — the rule in
+  `.claude/rules/template-ui-patterns.md` only asks for a collapsible panel above two filter rows,
+  and the reference has none here.
 - **Screen 4 Faculty drawer** — _not started_
 - **Screen 5 Faculty reassignment** — _not started_
 - **Screen 6 Changes tab** — _not started_

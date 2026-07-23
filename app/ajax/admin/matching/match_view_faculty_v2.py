@@ -18,7 +18,8 @@ from ....models import MatchingAttempt
 # language=jinja2
 _name = """
 <div>
-    <a class="text-decoration-none fw-semibold" role="button" data-bs-toggle="offcanvas" data-bs-target="#matchFacultyDrawer"
+    <a class="text-decoration-none fw-semibold" role="button" style="font-size: 15.5px;" data-bs-toggle="offcanvas"
+       data-bs-target="#matchFacultyDrawer"
        data-fac-id="{{ row.faculty.id }}" data-fac-name="{{ row.faculty.user.name }}">{{ row.faculty.user.name }}</a>
 </div>
 <div class="d-flex flex-column gap-1 mt-1">
@@ -74,7 +75,8 @@ _supervising = """
                                        data-bs-toggle="tooltip" title="Programme prefs not met"></i>
                                 {% endif %}
                             {% endif %}
-                            <div class="small text-body-secondary">{{ item.project.name if item.project else '' }}</div>
+                            <div class="small text-body-secondary mwfp-proj"
+                                 title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</div>
                         </div>
                     </div>
                 {% endfor %}
@@ -103,7 +105,8 @@ _marking = """
                 {% for item in items %}
                     <div class="small mt-1">
                         <div>{{ item.student.user.name }}</div>
-                        <div class="text-body-secondary">{{ item.project.name if item.project else '' }}</div>
+                        <div class="text-body-secondary mwfp-proj"
+                             title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</div>
                     </div>
                 {% endfor %}
             </div>
@@ -127,12 +130,16 @@ _workload = """
 <div class="small mt-1">
     <span style="color: var(--bs-primary);">Total <strong>{{ row.workload.cats_total }}</strong></span>
 </div>
-{% if row.binding_severity %}
-    <span class="badge rounded-pill small mt-1 d-inline-block" style="
-        background: {% if row.binding_severity == 'danger' %}var(--bs-danger-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
-        color: {% if row.binding_severity == 'danger' %}var(--bs-danger-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
-        <i class="fas fa-balance-scale me-1"></i>{{ row.constraints|length }} binding constraint{{ 's' if row.constraints|length != 1 else '' }}
-    </span>
+{% if row.binding_pills %}
+    <div class="d-flex flex-column align-items-start gap-1 mt-2">
+        {% for pill in row.binding_pills %}
+            <span class="badge rounded-pill small" style="
+                background: {% if pill.severity == 'danger' %}var(--bs-danger-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
+                color: {% if pill.severity == 'danger' %}var(--bs-danger-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
+                <i class="fas fa-balance-scale me-1"></i>{{ pill.label }}
+            </span>
+        {% endfor %}
+    </div>
 {% endif %}
 """
 

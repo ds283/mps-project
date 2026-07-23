@@ -2456,10 +2456,19 @@ def match_role_editor_ajax(rec_id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    form = EditMatchRolesFormFactory(record)()
-    form.project.data = record.project
-    form.supervisors.data = FacultyData.query.filter(FacultyData.id.in_(record.supervisor_role_ids)).all()
-    form.markers.data = FacultyData.query.filter(FacultyData.id.in_(record.marker_role_ids)).all()
+    # optional project override: the modal JS reloads this fragment with ?project_id= when the
+    # user changes the project selection, so the scoped supervisor/marker choice lists track
+    # the currently selected project rather than the stored assignment
+    scope_project = None
+    project_flag, project_value = is_integer(request.args.get("project_id", default=None))
+    if project_flag:
+        scope_project = db.session.get(LiveProject, project_value)
+
+    form = EditMatchRolesFormFactory(record, scope_project=scope_project)()
+    form.project.data = scope_project if scope_project is not None else record.project
+    form.responsible_supervisors.data = sorted(record.responsible_supervisor_role_ids)
+    form.supervisors.data = sorted(record.supervisor_only_role_ids)
+    form.markers.data = sorted(record.marker_role_ids)
 
     return render_template_context(
         "admin/matching_workspace/_role_editor_modal.html",
@@ -2499,14 +2508,23 @@ def edit_match_roles(rec_id):
             409,
         )
 
-    form = EditMatchRolesFormFactory(record)()
+    # scope the supervisor/marker choice lists by the *submitted* project, so selections made
+    # against a reloaded (project-changed) fragment validate against the same choice lists
+    # they were rendered from
+    scope_project = None
+    project_flag, project_value = is_integer(request.form.get("project", default=None))
+    if project_flag:
+        scope_project = db.session.get(LiveProject, project_value)
+
+    form = EditMatchRolesFormFactory(record, scope_project=scope_project)()
 
     if not form.validate_on_submit():
         return jsonify(success=False, errors=form.errors), 400
 
     new_project: LiveProject = form.project.data
-    new_supervisor_ids = {fd.id for fd in form.supervisors.data}
-    new_marker_ids = {fd.id for fd in form.markers.data}
+    new_responsible_ids = set(form.responsible_supervisors.data)
+    new_supervisor_ids = set(form.supervisors.data) - new_responsible_ids
+    new_marker_ids = set(form.markers.data)
 
     record.project_id = new_project.id
     record.rank = record.selector.project_rank(new_project.id)
@@ -2514,19 +2532,28 @@ def edit_match_roles(rec_id):
     record.parent_id = None
     record.priority = None
 
+    # reconcile existing roles: retype supervisor-family roles in place when a person moves
+    # between the responsible/plain lists, and remove anyone no longer assigned
     for item in list(record.roles):
         item: MatchingRole
-        if item.role in (MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR) and item.user_id not in new_supervisor_ids:
-            record.roles.remove(item)
+        if item.role in (MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR):
+            if item.user_id in new_responsible_ids:
+                item.role = MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR
+            elif item.user_id in new_supervisor_ids:
+                item.role = MatchingRole.ROLE_SUPERVISOR
+            else:
+                record.roles.remove(item)
         elif item.role == MatchingRole.ROLE_MARKER and item.user_id not in new_marker_ids:
             record.roles.remove(item)
     db.session.flush()
 
-    existing_supervisor_ids = {
-        item.user_id for item in record.roles if item.role in (MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
-    }
-    for fd_id in new_supervisor_ids - existing_supervisor_ids:
+    existing_responsible_ids = {item.user_id for item in record.roles if item.role == MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR}
+    for fd_id in new_responsible_ids - existing_responsible_ids:
         record.roles.add(MatchingRole(role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd_id))
+
+    existing_supervisor_ids = {item.user_id for item in record.roles if item.role == MatchingRole.ROLE_SUPERVISOR}
+    for fd_id in new_supervisor_ids - existing_supervisor_ids:
+        record.roles.add(MatchingRole(role=MatchingRole.ROLE_SUPERVISOR, user_id=fd_id))
 
     existing_marker_ids = {item.user_id for item in record.roles if item.role == MatchingRole.ROLE_MARKER}
     for fd_id in new_marker_ids - existing_marker_ids:

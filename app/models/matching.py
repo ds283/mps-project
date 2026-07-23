@@ -1413,6 +1413,8 @@ class MatchingRecord(db.Model):
                 MatchingRole.ROLE_SUPERVISOR,
                 MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
             ],
+            "responsible_supervisor": [MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR],
+            "supervisor_only": [MatchingRole.ROLE_SUPERVISOR],
             "marker": [MatchingRole.ROLE_MARKER],
         }
 
@@ -1460,6 +1462,23 @@ class MatchingRecord(db.Model):
         :return:
         """
         return self.get_role_ids("supervisor")
+
+    @property
+    def responsible_supervisor_role_ids(self) -> Set[int]:
+        """
+        Convenience function for get_role_ids() with role='responsible_supervisor'
+        :return:
+        """
+        return self.get_role_ids("responsible_supervisor")
+
+    @property
+    def supervisor_only_role_ids(self) -> Set[int]:
+        """
+        Convenience function for get_role_ids() with role='supervisor_only' (plain
+        ROLE_SUPERVISOR roles, excluding responsible supervisors)
+        :return:
+        """
+        return self.get_role_ids("supervisor_only")
 
     @property
     def marker_roles(self) -> List:

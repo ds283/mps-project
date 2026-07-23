@@ -18,19 +18,35 @@
             {{ form.project.label(class="form-label fw-semibold") }}
             {{ form.project(class="form-select select2" + (" is-invalid" if form.project.errors else "")) }}
             <div class="form-text text-body-secondary">
-                Changing the project does not refresh the marker list below &mdash; reopen this editor after
-                saving if you need to update markers for the new project.
+                Changing the project refreshes the supervisor and marker choices below to match the
+                newly selected project.
             </div>
             {% for error in form.project.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </div>
         <div class="mb-3">
+            {{ form.responsible_supervisors.label(class="form-label fw-semibold") }}
+            {{ form.responsible_supervisors(class="form-select select2" + (" is-invalid" if form.responsible_supervisors.errors else ""), multiple="multiple") }}
+            <div class="form-text text-body-secondary">
+                At least one responsible supervisor is required. Choices outside the preferred group
+                are allowed, but will be flagged by the validation pass.
+            </div>
+            {% for error in form.responsible_supervisors.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
             {{ form.supervisors.label(class="form-label fw-semibold") }}
             {{ form.supervisors(class="form-select select2" + (" is-invalid" if form.supervisors.errors else ""), multiple="multiple") }}
+            <div class="form-text text-body-secondary">
+                Optional additional supervisors, alongside the responsible supervisor(s).
+            </div>
             {% for error in form.supervisors.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </div>
         <div class="mb-3">
             {{ form.markers.label(class="form-label fw-semibold") }}
             {{ form.markers(class="form-select select2" + (" is-invalid" if form.markers.errors else ""), multiple="multiple") }}
+            <div class="form-text text-body-secondary">
+                Markers are normally drawn from the project's assessor pool. Choices outside the pool
+                are allowed, but will be flagged by the validation pass.
+            </div>
             {% for error in form.markers.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </div>
     </div>

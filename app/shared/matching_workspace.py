@@ -182,7 +182,8 @@ def student_row(attempt: MatchingAttempt, record: MatchingRecord, comment_count:
         },
         "modified": _record_is_modified(record),
         "programme_pref": project.satisfies_preferences(selector) if project is not None else None,
-        "supervisors": record.supervisor_role_records,
+        # both ROLE_RESPONSIBLE_SUPERVISOR and ROLE_SUPERVISOR roles, responsible first
+        "supervisors": sorted(record.supervisor_role_records, key=lambda r: 0 if r.role == MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR else 1),
         "markers": record.marker_roles,
         "rank": rank,
         "rank_band": _rank_band(rank),

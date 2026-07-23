@@ -43,6 +43,8 @@ from ..models import (
     BackupConfiguration,
     DegreeProgramme,
     DegreeType,
+    EnrollmentRecord,
+    FacultyData,
     LiveProject,
     PresentationAssessment,
     ProjectClass,
@@ -1823,14 +1825,52 @@ class EditSupervisorRolesForm(Form):
     submit = SubmitField("Save changes")
 
 
-def EditMatchRolesFormFactory(record):
+def _grouped_faculty_choices(groups):
+    """
+    Build a WTForms dict-shaped choices structure (rendered as <optgroup> headings by
+    SelectMultipleField and select2) from an ordered list of (heading, [FacultyData, ...])
+    pairs. Faculty appearing in an earlier group are dropped from later groups, and empty
+    groups are omitted entirely.
+    """
+    seen = set()
+    choices = {}
+    for heading, members in groups:
+        entries = []
+        for fac in members:
+            if fac is None or fac.id in seen:
+                continue
+            seen.add(fac.id)
+            entries.append((fac.id, fac.user.name))
+        if entries:
+            choices[heading] = entries
+    return choices
+
+
+def EditMatchRolesFormFactory(record, scope_project=None):
     """
     Unified role editor for a single MatchingRecord: assigned project (drawn from the
     selector's ranked selections, plus the current/original project so an already-unranked
-    assignment still shows up), supervisor set, and marker set (drawn from the assigned
-    project's assessor pool). Overassignment is allowed here; it surfaces downstream as a
-    validation warning rather than being blocked at this layer.
+    assignment still shows up), responsible supervisor set, optional plain supervisor set,
+    and marker set.
+
+    `scope_project` is the LiveProject used to scope the supervisor/marker choice lists
+    (preferred pools + enrolled fallbacks). It defaults to the record's currently assigned
+    project, but callers can override it so the choice lists can be rebuilt when the user
+    changes the project selection in the editor (the modal fragment is reloaded with a
+    `project_id` override).
+
+    Choice lists are tiered: a preferred group (project owner, or the project's supervisor
+    pool when `use_supervisor_pool` is set; the assessor pool for markers), then a fallback
+    group of faculty enrolled for the record's project class who are in scope for the owning
+    MatchingAttempt. Fallback choices are permitted here but flagged downstream by the
+    attempt's validation pass. Currently-assigned faculty who fall outside both tiers are
+    force-included in a trailing group so an existing assignment always re-validates.
+    Overassignment is likewise allowed here; it surfaces downstream as a validation warning
+    rather than being blocked at this layer.
     """
+    attempt = record.matching_attempt
+    pclass_id = record.selector.config.pclass_id
+
     selections = record.selector.ordered_selections.all()
     rank_by_project_id = {selection.liveproject_id: selection.rank for selection in selections}
 
@@ -1848,10 +1888,65 @@ def EditMatchRolesFormFactory(record):
             return "#{rank}  {name}".format(rank=rank, name=proj.name)
         return proj.name
 
-    def GetAssessorPool():
-        if record.project is None:
-            return []
-        return record.project.assessor_list_query
+    if scope_project is None:
+        scope_project = record.project
+
+    def _enrolled_in_scope(pool, enrolment_filter):
+        """
+        Faculty in the attempt's participant pool (attempt.supervisors / attempt.markers)
+        who hold a matching active enrolment for the record's project class.
+        """
+        return (
+            pool.join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
+            .filter(EnrollmentRecord.pclass_id == pclass_id, enrolment_filter)
+            .join(User, User.id == FacultyData.id)
+            .filter(User.active)
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
+
+    enrolled_supervisors = _enrolled_in_scope(attempt.supervisors, EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+    enrolled_markers = _enrolled_in_scope(attempt.markers, EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+
+    def _current_holders(role_ids):
+        return FacultyData.query.filter(FacultyData.id.in_(role_ids)).all() if role_ids else []
+
+    OUT_OF_SCOPE = "Currently assigned (out of scope)"
+    FALLBACK_SUPERVISORS = "Other enrolled supervisors (flagged by validation)"
+
+    # responsible supervisors: preferred tier is the project owner, unless the project draws
+    # from a supervisor pool — in that case the owner is usually an administrator, so the
+    # pool becomes the preferred tier and the owner is reachable only via the fallback tier
+    if scope_project is None:
+        responsible_preferred = ("Project owner", [])
+    elif scope_project.use_supervisor_pool:
+        responsible_preferred = ("Supervisor pool", scope_project.supervisor_list_query.all())
+    else:
+        responsible_preferred = ("Project owner", [scope_project.owner])
+
+    responsible_choices = _grouped_faculty_choices(
+        [
+            responsible_preferred,
+            (FALLBACK_SUPERVISORS, enrolled_supervisors),
+            (OUT_OF_SCOPE, _current_holders(record.responsible_supervisor_role_ids)),
+        ]
+    )
+
+    supervisor_choices = _grouped_faculty_choices(
+        [
+            ("Enrolled supervisors", enrolled_supervisors),
+            (OUT_OF_SCOPE, _current_holders(record.supervisor_only_role_ids)),
+        ]
+    )
+
+    marker_preferred = scope_project.assessor_list_query.all() if scope_project is not None else []
+    marker_choices = _grouped_faculty_choices(
+        [
+            ("Assessor pool", marker_preferred),
+            ("Other enrolled markers (flagged by validation)", enrolled_markers),
+            (OUT_OF_SCOPE, _current_holders(record.marker_role_ids)),
+        ]
+    )
 
     class EditMatchRolesForm(Form):
         project = QuerySelectField(
@@ -1861,16 +1956,37 @@ def EditMatchRolesFormFactory(record):
             allow_blank=False,
         )
 
-        supervisors = QuerySelectMultipleField("Supervisors", query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
+        responsible_supervisors = SelectMultipleField(
+            "Responsible supervisors",
+            choices=responsible_choices,
+            coerce=int,
+            validators=[DataRequired(message="Assign at least one responsible supervisor.")],
+        )
 
-        markers = QuerySelectMultipleField(
-            "Markers (from assessor pool)",
-            query_factory=GetAssessorPool,
-            get_label=BuildActiveFacultyName,
+        supervisors = SelectMultipleField(
+            "Supervisors",
+            choices=supervisor_choices,
+            coerce=int,
+            validators=[Optional()],
+        )
+
+        markers = SelectMultipleField(
+            "Markers",
+            choices=marker_choices,
+            coerce=int,
             validators=[Optional()],
         )
 
         submit = SubmitField("Save changes")
+
+        def validate_supervisors(self, field):
+            overlap = set(field.data or []) & set(self.responsible_supervisors.data or [])
+            if overlap:
+                names = [fac.user.name for fac in FacultyData.query.filter(FacultyData.id.in_(overlap)).all()]
+                raise ValidationError(
+                    "{names} cannot hold both a responsible supervisor and a supervisor role. "
+                    "A responsible supervisor already covers ordinary supervision.".format(names=", ".join(sorted(names)))
+                )
 
     return EditMatchRolesForm
 

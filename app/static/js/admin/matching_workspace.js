@@ -200,7 +200,49 @@
         });
     }
 
-    function loadRoleEditor(recId) {
+    var ROLE_EDITOR_MULTISELECTS = ["responsible_supervisors", "supervisors", "markers"];
+
+    function collectRoleEditorSelections(scope) {
+        var selections = {};
+        ROLE_EDITOR_MULTISELECTS.forEach(function (name) {
+            var sel = scope.querySelector('select[name="' + name + '"]');
+            if (sel) {
+                selections[name] = Array.prototype.map.call(sel.selectedOptions, function (opt) {
+                    return opt.value;
+                });
+            }
+        });
+        return selections;
+    }
+
+    function restoreRoleEditorSelections(scope, selections) {
+        if (!selections || typeof $ === "undefined") {
+            return;
+        }
+        ROLE_EDITOR_MULTISELECTS.forEach(function (name) {
+            var sel = scope.querySelector('select[name="' + name + '"]');
+            if (sel && selections[name]) {
+                // val() silently drops values with no matching option, so selections that are
+                // out of scope for the newly selected project fall away naturally
+                $(sel).val(selections[name]).trigger("change");
+            }
+        });
+    }
+
+    function bindRoleEditorProjectChange(scope, recId) {
+        var projSelect = scope.querySelector('select[name="project"]');
+        if (!projSelect || typeof $ === "undefined") {
+            return;
+        }
+        // reload the fragment when the project changes, so the scoped supervisor/marker
+        // choice lists track the selected project; preserve in-progress selections where
+        // they remain available
+        $(projSelect).on("change", function () {
+            loadRoleEditor(recId, projSelect.value, collectRoleEditorSelections(scope));
+        });
+    }
+
+    function loadRoleEditor(recId, projectId, preservedSelections) {
         var contentEl = document.getElementById("matchRoleEditorModalContent");
         if (!contentEl) {
             return;
@@ -208,7 +250,12 @@
 
         contentEl.innerHTML = '<div class="modal-body text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
 
-        fetch(scriptRoot() + "/admin/match_role_editor_ajax/" + recId + "?" + returnParams().toString(), {credentials: "same-origin"})
+        var params = returnParams();
+        if (projectId) {
+            params.set("project_id", projectId);
+        }
+
+        fetch(scriptRoot() + "/admin/match_role_editor_ajax/" + recId + "?" + params.toString(), {credentials: "same-origin"})
             .then(function (response) {
                 if (!response.ok) {
                     throw new Error("Failed to load role editor");
@@ -218,7 +265,9 @@
             .then(function (html) {
                 contentEl.innerHTML = html;
                 initSelect2(contentEl);
+                restoreRoleEditorSelections(contentEl, preservedSelections);
                 bindRoleEditorForm(contentEl, recId);
+                bindRoleEditorProjectChange(contentEl, recId);
             })
             .catch(function () {
                 contentEl.innerHTML = '<div class="modal-body text-danger small">Could not load the role editor.</div>';

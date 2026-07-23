@@ -58,9 +58,141 @@
         }
     }
 
+    // ── Drawer navigation chain ─────────────────────────────────────────────
+    //
+    // Cross-links open one inspector from another (an allocated-student chip in the faculty drawer
+    // opens the student drawer, say). Bootstrap supports only one open offcanvas, so each hop hides
+    // the current drawer before showing the next; this stack records the hops so the "Back" control
+    // in the header can rewind them. Opening a drawer from the page itself resets the stack, so
+    // "Back" renders only when the drawer was reached as part of a chain.
+
+    var DRAWER_KINDS = {
+        student: {
+            elId: "matchStudentDrawer",
+            backId: "matchStudentDrawerBack",
+            subtitleId: "matchStudentDrawerSubtitle",
+            idAttr: "data-rec-id",
+            load: function (id, name) {
+                loadDrawer(id, null, name);
+            },
+        },
+        faculty: {
+            elId: "matchFacultyDrawer",
+            backId: "matchFacultyDrawerBack",
+            subtitleId: "matchFacultyDrawerSubtitle",
+            idAttr: "data-fac-id",
+            load: function (id, name) {
+                loadFacultyDrawer(id, null, name);
+            },
+        },
+    };
+
+    var drawerChain = [];
+    var drawerChainNavigating = false;
+
+    function captureDrawerState(kind) {
+        var spec = DRAWER_KINDS[kind];
+        var el = spec && document.getElementById(spec.elId);
+        var id = el && el.getAttribute(spec.idAttr);
+        if (!id) {
+            return null;
+        }
+        var subtitleEl = document.getElementById(spec.subtitleId);
+        return {kind: kind, id: id, name: subtitleEl ? subtitleEl.textContent : ""};
+    }
+
+    // Show the "Back" control for whichever drawer is on screen, labelled with the drawer we would
+    // return to; hide it in every drawer when the chain is empty.
+    function syncDrawerBackControls() {
+        var previous = drawerChain.length ? drawerChain[drawerChain.length - 1] : null;
+
+        Object.keys(DRAWER_KINDS).forEach(function (kind) {
+            var backEl = document.getElementById(DRAWER_KINDS[kind].backId);
+            if (!backEl) {
+                return;
+            }
+            var labelEl = backEl.querySelector(".mw-drawer-back-label");
+            if (previous) {
+                if (labelEl) {
+                    labelEl.textContent = previous.name || "Back";
+                }
+                backEl.setAttribute("title", "Back to " + (previous.name || "the previous inspector"));
+                backEl.classList.remove("d-none");
+            } else {
+                backEl.classList.add("d-none");
+            }
+        });
+    }
+
+    function resetDrawerChain() {
+        drawerChain = [];
+        syncDrawerBackControls();
+    }
+
+    // Swap the drawer currently on screen (fromKind) for `target` = {kind, id, name}. When `push`
+    // is set the outgoing drawer is recorded so that "Back" returns to it.
+    function navigateToDrawer(target, fromKind, push) {
+        var spec = DRAWER_KINDS[target.kind];
+        var targetEl = spec && document.getElementById(spec.elId);
+        if (!targetEl) {
+            return;
+        }
+
+        if (push && fromKind) {
+            var origin = captureDrawerState(fromKind);
+            if (origin) {
+                drawerChain.push(origin);
+            }
+        }
+
+        var show = function () {
+            drawerChainNavigating = false;
+            spec.load(target.id, target.name);
+            syncDrawerBackControls();
+            bootstrap.Offcanvas.getOrCreateInstance(targetEl).show();
+        };
+
+        var fromSpec = fromKind && DRAWER_KINDS[fromKind];
+        var fromEl = fromSpec && document.getElementById(fromSpec.elId);
+        var fromInstance = fromEl && bootstrap.Offcanvas.getInstance(fromEl);
+        if (fromInstance && fromEl.classList.contains("show")) {
+            drawerChainNavigating = true;
+            fromEl.addEventListener("hidden.bs.offcanvas", show, {once: true});
+            fromInstance.hide();
+        } else {
+            show();
+        }
+    }
+
+    Object.keys(DRAWER_KINDS).forEach(function (kind) {
+        var spec = DRAWER_KINDS[kind];
+        var drawerEl = document.getElementById(spec.elId);
+        var backEl = document.getElementById(spec.backId);
+
+        if (backEl) {
+            backEl.addEventListener("click", function () {
+                var previous = drawerChain.pop();
+                if (previous) {
+                    navigateToDrawer(previous, kind, false);
+                }
+            });
+        }
+
+        // Dismissing a drawer outright ends the chain; a hide that is part of a hop does not.
+        // The persistent listener registered here runs before the one-shot handler installed by
+        // navigateToDrawer, so drawerChainNavigating is still set when a hop is in flight.
+        if (drawerEl) {
+            drawerEl.addEventListener("hidden.bs.offcanvas", function () {
+                if (!drawerChainNavigating) {
+                    resetDrawerChain();
+                }
+            });
+        }
+    });
+
     // ── Student drawer ──────────────────────────────────────────────────────
 
-    function loadDrawer(recId, triggerEl) {
+    function loadDrawer(recId, triggerEl, name) {
         var drawerEl = document.getElementById("matchStudentDrawer");
         var bodyEl = document.getElementById("matchStudentDrawerBody");
         var subtitleEl = document.getElementById("matchStudentDrawerSubtitle");
@@ -69,8 +201,9 @@
         }
 
         drawerEl.setAttribute("data-rec-id", recId);
-        if (subtitleEl) {
-            subtitleEl.textContent = (triggerEl && triggerEl.getAttribute("data-student-name")) || "";
+        var studentName = name || (triggerEl && triggerEl.getAttribute("data-student-name")) || "";
+        if (subtitleEl && studentName) {
+            subtitleEl.textContent = studentName;
         }
         bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
 
@@ -157,6 +290,8 @@
             var trigger = event.relatedTarget;
             var recId = trigger && trigger.getAttribute("data-rec-id");
             if (recId) {
+                // Opened from the page rather than from another drawer: this is the root of a chain.
+                resetDrawerChain();
                 loadDrawer(recId, trigger);
             }
         });
@@ -334,7 +469,7 @@
         }
     }
 
-    function loadFacultyDrawer(facId, triggerEl) {
+    function loadFacultyDrawer(facId, triggerEl, name) {
         var drawerEl = document.getElementById("matchFacultyDrawer");
         var bodyEl = document.getElementById("matchFacultyDrawerBody");
         var subtitleEl = document.getElementById("matchFacultyDrawerSubtitle");
@@ -345,8 +480,9 @@
         var attemptId = drawerEl.getAttribute("data-attempt-id");
 
         drawerEl.setAttribute("data-fac-id", facId);
-        if (subtitleEl) {
-            subtitleEl.textContent = (triggerEl && triggerEl.getAttribute("data-fac-name")) || "";
+        var facName = name || (triggerEl && triggerEl.getAttribute("data-fac-name")) || "";
+        if (subtitleEl && facName) {
+            subtitleEl.textContent = facName;
         }
         bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
 
@@ -362,7 +498,7 @@
             })
             .then(function (html) {
                 bodyEl.innerHTML = html;
-                bindOpenStudentLinks(bodyEl, drawerEl);
+                bindOpenStudentLinks(bodyEl, "faculty");
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load faculty inspector.</div>';
@@ -370,14 +506,9 @@
     }
 
     // Allocated-student chips and candidate names in the faculty drawer cross-link to the student
-    // inspector. Bootstrap does not support two open offcanvases, so hide this one first and open
-    // the student drawer only once it has finished animating out.
-    function bindOpenStudentLinks(scope, facultyDrawerEl) {
-        var studentDrawerEl = document.getElementById("matchStudentDrawer");
-        if (!studentDrawerEl) {
-            return;
-        }
-
+    // inspector; the hop is handed to navigateToDrawer so the student drawer gains a "Back" control
+    // returning to the faculty drawer we came from.
+    function bindOpenStudentLinks(scope, sourceKind) {
         scope.querySelectorAll(".mw-open-student").forEach(function (link) {
             link.addEventListener("click", function (e) {
                 e.preventDefault();
@@ -387,18 +518,7 @@
                     return;
                 }
 
-                var openStudent = function () {
-                    loadDrawer(recId, link);
-                    bootstrap.Offcanvas.getOrCreateInstance(studentDrawerEl).show();
-                };
-
-                var facultyInstance = bootstrap.Offcanvas.getInstance(facultyDrawerEl);
-                if (facultyInstance) {
-                    facultyDrawerEl.addEventListener("hidden.bs.offcanvas", openStudent, {once: true});
-                    facultyInstance.hide();
-                } else {
-                    openStudent();
-                }
+                navigateToDrawer({kind: "student", id: recId, name: link.getAttribute("data-student-name") || ""}, sourceKind, true);
             });
         });
     }
@@ -409,6 +529,7 @@
             var trigger = event.relatedTarget;
             var facId = trigger && trigger.getAttribute("data-fac-id");
             if (facId) {
+                resetDrawerChain();
                 loadFacultyDrawer(facId, trigger);
             }
         });

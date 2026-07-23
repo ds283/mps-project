@@ -153,7 +153,11 @@ For each surface, compare against its screenshot + the matching README section +
   hide-then-show on a one-shot `hidden.bs.offcanvas`, mirroring the student drawer's comments-panel
   handoff. `faculty_assignable_pool` entries and the per-project `assigned` list now carry
   `record_id`; `assigned_students` was left in place because `_faculty_reassign_modal.html` consumes
-  the same dict.
+  the same dict. Because a chained open replaces the drawer that launched it, both drawer headers
+  gained a ghost "Back" control driven by a shared navigation stack (`DRAWER_KINDS` /
+  `navigateToDrawer` in `matching_workspace.js`): it is labelled with the drawer it returns to,
+  renders only while the stack is non-empty, and the stack is cleared both when a drawer is opened
+  from the page (rather than from another drawer) and when one is dismissed outright.
 - **Screen 5 Faculty reassignment** — _not started_
 - **Screen 6 Changes tab** — _not started_
 - **Screen 7 Matches dashboard** — _not started_

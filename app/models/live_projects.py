@@ -35,7 +35,6 @@ from .faculty import FacultyData
 from .matching import (
     MatchingRecord,
     _delete_MatchingRecord_cache,
-    _MatchingRecord_is_valid,
 )
 from .model_mixins import (
     AlternativesPriorityMixin,
@@ -752,7 +751,7 @@ def _LiveProject_assessors_append_handler(target, value, initiator):
             _ScheduleAttempt_is_valid,
             _ScheduleSlot_is_valid,
         )
-        from .utilities import _MatchingAttempt_is_valid
+        from .matching_validation import _MatchingAttempt_is_valid, _MatchingRecord_is_valid
 
         match_records = db.session.query(MatchingRecord).filter_by(project_id=target.id)
         for record in match_records:
@@ -775,7 +774,7 @@ def _LiveProject_assessors_remove_handler(target, value, initiator):
             _ScheduleAttempt_is_valid,
             _ScheduleSlot_is_valid,
         )
-        from .utilities import _MatchingAttempt_is_valid
+        from .matching_validation import _MatchingAttempt_is_valid, _MatchingRecord_is_valid
 
         match_records = db.session.query(MatchingRecord).filter_by(project_id=target.id)
         for record in match_records:

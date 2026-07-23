@@ -25,7 +25,7 @@ from .associations import (
     faculty_batch_to_tenants,
 )
 from .defaults import DEFAULT_STRING_LENGTH
-from .matching import MatchingAttempt, MatchingRecord, MatchingRole, _MatchingRecord_is_valid
+from .matching import MatchingAttempt, MatchingRecord, MatchingRole
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin, _get_current_year
 from .projects import (
     _Project_is_offerable,
@@ -829,7 +829,7 @@ def _FacultyData_delete_cache(faculty_id):
         _ScheduleAttempt_is_valid,
         _ScheduleSlot_is_valid,
     )
-    from .utilities import _MatchingAttempt_is_valid
+    from .matching_validation import _MatchingAttempt_is_valid, _MatchingRecord_is_valid
 
     year = _get_current_year()
 
@@ -1279,7 +1279,7 @@ def _delete_EnrollmentRecord_cache(faculty_id):
         _ScheduleAttempt_is_valid,
         _ScheduleSlot_is_valid,
     )
-    from .utilities import _MatchingAttempt_is_valid
+    from .matching_validation import _MatchingAttempt_is_valid, _MatchingRecord_is_valid
 
     cache.delete_memoized(_Project_is_offerable)
     cache.delete_memoized(_Project_num_assessors)

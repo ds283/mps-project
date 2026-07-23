@@ -1875,6 +1875,62 @@ def EditMatchRolesFormFactory(record):
     return EditMatchRolesForm
 
 
+def MatchCommentFormFactory(attempt):
+    """
+    Composer for the review-comments panel. `scope` selects whether the new top-level comment is
+    global (whole match) or scoped to one student's assignment; `matching_record` is only
+    meaningful (and required) when scope == 'assignment'.
+    """
+
+    def GetAssignmentRecords():
+        records = attempt.records.all()
+
+        def sort_key(record):
+            if record.selector is not None and record.selector.student is not None:
+                user = record.selector.student.user
+                return user.last_name, user.first_name
+            return "", ""
+
+        return sorted(records, key=sort_key)
+
+    def BuildRecordLabel(record):
+        if record.selector is not None and record.selector.student is not None:
+            return record.selector.student.user.name
+        return "Selector #{id}".format(id=record.selector_id)
+
+    class MatchCommentForm(Form):
+        scope = SelectField(
+            "Scope",
+            choices=[("global", "Whole match"), ("assignment", "Specific student")],
+            default="global",
+        )
+
+        matching_record = QuerySelectField(
+            "Student",
+            query_factory=GetAssignmentRecords,
+            get_label=BuildRecordLabel,
+            allow_blank=True,
+            blank_text="Select a student…",
+        )
+
+        body = TextAreaField("Comment", validators=[DataRequired()])
+
+        submit = SubmitField("Post comment")
+
+        @staticmethod
+        def validate_matching_record(form, field):
+            if form.scope.data == "assignment" and field.data is None:
+                raise ValidationError("Select a student for an assignment-scoped comment.")
+
+    return MatchCommentForm
+
+
+class MatchCommentReplyForm(Form):
+    body = TextAreaField("Reply", validators=[DataRequired()])
+
+    submit = SubmitField("Reply")
+
+
 def PresentationAssessmentMixinFactory(assessment: PresentationAssessment, query_factory):
     class PresentationAssessmentMixin:
         name = StringField(

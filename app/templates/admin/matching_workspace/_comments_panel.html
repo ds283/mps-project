@@ -1,0 +1,112 @@
+{#
+  Body fragment for the shared review-comments offcanvas (#matchCommentsPanel in workspace.html),
+  populated by AJAX (admin.match_comments_ajax). See .prompts/matching-workspace/PLAN.md,
+  Phase 6.
+#}
+
+{% macro comment_thread(thread) %}
+    {% set c = thread.comment %}
+    <div class="card mb-3 {% if c.resolved %}border-success{% else %}border-secondary{% endif %}">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="tk-av" style="width: 22px; height: 22px; font-size: 10px; background: {{ c.owner.avatar_colour if c.owner else 'var(--bs-secondary)' }};">{{ c.owner.initials if c.owner else '?' }}</span>
+                <span class="small fw-semibold">{{ c.owner.name if c.owner else 'Unknown' }}</span>
+                <span class="small text-body-secondary">{{ c.creation_timestamp.strftime("%d %b %Y %H:%M") if c.creation_timestamp }}</span>
+            </div>
+            {% if c.resolved %}
+                <span class="badge rounded-pill" style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);">Resolved</span>
+            {% endif %}
+        </div>
+        <div class="card-body py-2">
+            <div class="small mb-2" style="white-space: pre-wrap;">{{ c.body }}</div>
+
+            {% for reply in thread.replies %}
+                {% set r = reply.comment %}
+                <div class="border-start ps-2 ms-2 mb-2" style="border-color: var(--bs-border-color) !important;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="tk-av" style="width: 18px; height: 18px; font-size: 9px; background: {{ r.owner.avatar_colour if r.owner else 'var(--bs-secondary)' }};">{{ r.owner.initials if r.owner else '?' }}</span>
+                        <span class="small fw-semibold">{{ r.owner.name if r.owner else 'Unknown' }}</span>
+                        <span class="small text-body-secondary">{{ r.creation_timestamp.strftime("%d %b %Y %H:%M") if r.creation_timestamp }}</span>
+                    </div>
+                    <div class="small" style="white-space: pre-wrap;">{{ r.body }}</div>
+                </div>
+            {% endfor %}
+
+            <div class="d-flex gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary mw-comment-reply-toggle" data-comment-id="{{ c.id }}">
+                    <i class="fas fa-reply me-1"></i>Reply
+                </button>
+                <button type="button" class="btn btn-sm {% if c.resolved %}btn-outline-secondary{% else %}btn-outline-success{% endif %} mw-comment-resolve-btn"
+                        data-comment-id="{{ c.id }}">
+                    {% if c.resolved %}Reopen{% else %}Resolve{% endif %}
+                </button>
+            </div>
+
+            <div class="mw-comment-reply-box d-none mt-2" data-comment-id="{{ c.id }}">
+                <textarea class="form-control form-control-sm mw-comment-reply-body" rows="2" placeholder="Write a reply&hellip;"></textarea>
+                <button type="button" class="btn btn-sm btn-primary mt-1 mw-comment-reply-submit" data-comment-id="{{ c.id }}">
+                    Post reply
+                </button>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+<form id="matchCommentsCsrfForm" class="d-none">{{ resolve_form.hidden_tag() }}</form>
+
+<ul class="nav nav-tabs mb-3" id="matchCommentsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="mwGlobalTabBtn" data-bs-toggle="tab" data-bs-target="#mwGlobalTab"
+                type="button" role="tab">
+            Global
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="mwAssignmentTabBtn" data-bs-toggle="tab" data-bs-target="#mwAssignmentTab"
+                type="button" role="tab">
+            By assignment
+            {% if data.assignments %}
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary">{{ data.assignments|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="mwGlobalTab" role="tabpanel">
+        {% for thread in data.global_threads %}
+            {{ comment_thread(thread) }}
+        {% else %}
+            <div class="text-body-secondary small mb-3">No whole-match comments yet.</div>
+        {% endfor %}
+
+        <form id="mwGlobalComposerForm">
+            {{ comment_form.hidden_tag() }}
+            <input type="hidden" name="scope" value="global">
+            <textarea name="body" id="mwGlobalComposerBody" class="form-control form-control-sm" rows="2"
+                      placeholder="Add a whole-match comment&hellip;" required></textarea>
+            <button type="submit" class="btn btn-sm btn-primary mt-2">Post comment</button>
+        </form>
+    </div>
+
+    <div class="tab-pane fade" id="mwAssignmentTab" role="tabpanel">
+        {% for entry in data.assignments %}
+            <h6 class="small text-body-secondary text-uppercase mt-2">{{ entry.student_name }}</h6>
+            {% for thread in entry.threads %}
+                {{ comment_thread(thread) }}
+            {% endfor %}
+        {% else %}
+            <div class="text-body-secondary small mb-3">No per-assignment comments yet.</div>
+        {% endfor %}
+
+        <form id="mwAssignmentComposerForm">
+            <input type="hidden" name="csrf_token" value="{{ comment_form.csrf_token._value() }}">
+            <input type="hidden" name="scope" value="assignment">
+            {{ comment_form.matching_record.label(class="form-label small fw-semibold") }}
+            {{ comment_form.matching_record(id="mwAssignmentComposerStudent", class="form-select form-select-sm select2") }}
+            <textarea name="body" id="mwAssignmentComposerBody" class="form-control form-control-sm mt-2" rows="2"
+                      placeholder="Add a comment on this student's assignment&hellip;" required></textarea>
+            <button type="submit" class="btn btn-sm btn-primary mt-2">Post comment</button>
+        </form>
+    </div>
+</div>

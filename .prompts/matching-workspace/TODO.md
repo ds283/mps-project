@@ -4,7 +4,7 @@ Living checklist for the Matching Workspace redesign. See `PLAN.md` (same direct
 plan and rationale. Tick items as they complete; one commit per phase
 (`matching-workspace: <imperative summary>`).
 
-**Status:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5 complete. Phase 6 not started.
+**Status:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, and Phase 6 complete. Phase 7 not started.
 
 ---
 
@@ -66,12 +66,20 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 6 — Review comments
-- [ ] `MatchingReviewComment` model (+ relationships, `scope_label`, cascades)
-- [ ] Hand-written Alembic migration (verify chain tip + new id; utf8_bin; up/down)
-- [ ] `match_comments_ajax` + `_comments_panel.html`
-- [ ] `POST post_match_comment` / `reply_match_comment` / `resolve_match_comment` (WTForms + CSRF + log_db_commit)
-- [ ] Unresolved-count badge on Review-comments button
-- [ ] Commit
+- [x] `MatchingReviewComment` model (+ relationships, `scope_label`, cascades — DB-level
+      `ondelete="CASCADE"` on the attempt/record/parent FKs, ORM `delete-orphan` on the
+      self-referential parent/replies thread)
+- [x] Hand-written Alembic migration (chain tip `b4e7a1d9c3f2` verified; new id `e7f8a9b0c1d2`;
+      `body` stored as `LargeBinary` to match the `EncryptedType`/`AesEngine` at-rest encoding used
+      by `TicketComment.body`; up/down)
+- [x] `match_comments_ajax` + `_comments_panel.html` (Global / By-assignment tabs, threaded list,
+      composer; service-layer `comments_data()`/`unresolved_comment_count()` in
+      `app/shared/matching_workspace.py`)
+- [x] `POST post_match_comment` / `reply_match_comment` / `resolve_match_comment` (WTForms +
+      CSRF + `log_db_commit`; `MatchCommentFormFactory`/`MatchCommentReplyForm` in `app/admin/forms.py`)
+- [x] Unresolved-count badge on Review-comments button (server-rendered at page load, same as the
+      Changes-tab badge)
+- [x] Commit
 
 ## Phase 7 — Consolidation & polish
 - [ ] Colour-token compliance pass (Bootstrap/`common.css` tokens; no raw hex; swatches via model)

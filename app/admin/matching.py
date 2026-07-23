@@ -44,6 +44,7 @@ from ..models import (
     LiveProject,
     MatchingAttempt,
     MatchingRecord,
+    MatchingReviewComment,
     MatchingRole,
     ProjectClass,
     ProjectClassConfig,
@@ -81,6 +82,8 @@ from .forms import (
     CompareMatchFormFactory,
     EditMatchRolesFormFactory,
     EditSupervisorRolesForm,
+    MatchCommentFormFactory,
+    MatchCommentReplyForm,
     NewMatchFormFactory,
     RenameMatchFormFactory,
     SelectMatchingYearFormFactory,
@@ -2321,6 +2324,7 @@ def matching_workspace(id):
         hint_filter=hint_filter,
         changes=changes,
         changes_badge=len(changes["rows"]),
+        unresolved_comments=workspace_service.unresolved_comment_count(record),
         text=text,
         url=url,
     )
@@ -2702,6 +2706,131 @@ def faculty_reassign_assign(attempt_id, fac_id, selector_id, project_id):
         return jsonify(success=False, message=message or "Could not reassign this student."), 400
 
     return jsonify(success=True)
+
+
+@admin.route("/match_comments_ajax/<int:attempt_id>")
+@roles_accepted("faculty", "admin", "root")
+def match_comments_ajax(attempt_id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify({}), 403
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+
+    data = workspace_service.comments_data(attempt)
+
+    return render_template_context(
+        "admin/matching_workspace/_comments_panel.html",
+        attempt=attempt,
+        data=data,
+        comment_form=MatchCommentFormFactory(attempt)(),
+        reply_form=MatchCommentReplyForm(),
+        resolve_form=ConfirmActionForm(),
+        text=text,
+        url=url,
+    )
+
+
+@admin.route("/post_match_comment/<int:attempt_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def post_match_comment(attempt_id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to comment on this matching attempt."), 403
+
+    form = MatchCommentFormFactory(attempt)()
+    if not form.validate_on_submit():
+        return jsonify(success=False, errors=form.errors), 400
+
+    record = form.matching_record.data if form.scope.data == "assignment" else None
+
+    comment = MatchingReviewComment(
+        matching_attempt_id=attempt.id,
+        matching_record_id=record.id if record is not None else None,
+        owner_id=current_user.id,
+        body=form.body.data,
+        creation_timestamp=datetime.now(),
+    )
+    db.session.add(comment)
+
+    try:
+        log_db_commit("Post matching review comment", user=current_user)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify(success=False, message="Could not post this comment because a database error was encountered."), 500
+
+    return jsonify(success=True)
+
+
+@admin.route("/reply_match_comment/<int:comment_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def reply_match_comment(comment_id):
+    parent: MatchingReviewComment = MatchingReviewComment.query.get_or_404(comment_id)
+    attempt: MatchingAttempt = parent.matching_attempt
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to comment on this matching attempt."), 403
+
+    if parent.parent_id is not None:
+        return jsonify(success=False, message="Replies can only be one level deep."), 400
+
+    form = MatchCommentReplyForm()
+    if not form.validate_on_submit():
+        return jsonify(success=False, errors=form.errors), 400
+
+    reply = MatchingReviewComment(
+        matching_attempt_id=attempt.id,
+        matching_record_id=parent.matching_record_id,
+        parent_id=parent.id,
+        owner_id=current_user.id,
+        body=form.body.data,
+        creation_timestamp=datetime.now(),
+    )
+    db.session.add(reply)
+
+    try:
+        log_db_commit("Reply to matching review comment", user=current_user)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify(success=False, message="Could not post this reply because a database error was encountered."), 500
+
+    return jsonify(success=True)
+
+
+@admin.route("/resolve_match_comment/<int:comment_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def resolve_match_comment(comment_id):
+    comment: MatchingReviewComment = MatchingReviewComment.query.get_or_404(comment_id)
+    attempt: MatchingAttempt = comment.matching_attempt
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to update this comment."), 403
+
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return jsonify(success=False, message="Could not validate this request; please reload the page and try again."), 400
+
+    comment.resolved = not comment.resolved
+    if comment.resolved:
+        comment.resolved_by_id = current_user.id
+        comment.resolved_timestamp = datetime.now()
+    else:
+        comment.resolved_by_id = None
+        comment.resolved_timestamp = None
+
+    try:
+        log_db_commit("Toggle resolved state of matching review comment", user=current_user)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify(success=False, message="Could not update this comment because a database error was encountered."), 500
+
+    return jsonify(success=True, resolved=comment.resolved)
 
 
 @admin.route("/delete_match_record/<int:attempt_id>/<int:selector_id>")

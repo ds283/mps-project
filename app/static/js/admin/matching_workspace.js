@@ -350,4 +350,190 @@
             }
         });
     }
+
+    // ── Review comments panel ───────────────────────────────────────────────
+
+    function initCommentsSelect2(scope, panelEl) {
+        if (typeof $ === "undefined" || !$.fn.select2) {
+            return;
+        }
+        $(scope)
+            .find("select.select2")
+            .select2({
+                selectionCssClass: "select2-small",
+                dropdownCssClass: "select2-small",
+                dropdownParent: $(panelEl),
+                width: "100%",
+            });
+    }
+
+    function csrfFormData(extra) {
+        var csrfForm = document.getElementById("matchCommentsCsrfForm");
+        var data = new FormData(csrfForm);
+        if (extra) {
+            Object.keys(extra).forEach(function (key) {
+                data.append(key, extra[key]);
+            });
+        }
+        return data;
+    }
+
+    function bindCommentThreadActions(scope, attemptId) {
+        scope.querySelectorAll(".mw-comment-reply-toggle").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var commentId = btn.getAttribute("data-comment-id");
+                var box = scope.querySelector('.mw-comment-reply-box[data-comment-id="' + commentId + '"]');
+                if (box) {
+                    box.classList.toggle("d-none");
+                }
+            });
+        });
+
+        scope.querySelectorAll(".mw-comment-reply-submit").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var commentId = btn.getAttribute("data-comment-id");
+                var box = scope.querySelector('.mw-comment-reply-box[data-comment-id="' + commentId + '"]');
+                var textarea = box ? box.querySelector(".mw-comment-reply-body") : null;
+                var body = textarea ? textarea.value.trim() : "";
+                if (!body) {
+                    return;
+                }
+
+                btn.disabled = true;
+
+                fetch(scriptRoot() + "/admin/reply_match_comment/" + commentId, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    body: csrfFormData({body: body}),
+                })
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        if (data.success) {
+                            loadCommentsPanel(attemptId);
+                        } else {
+                            showToast(data.message || "Could not post this reply.", "error");
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(function () {
+                        showToast("Could not post this reply due to a network error.", "error");
+                        btn.disabled = false;
+                    });
+            });
+        });
+
+        scope.querySelectorAll(".mw-comment-resolve-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var commentId = btn.getAttribute("data-comment-id");
+                btn.disabled = true;
+
+                fetch(scriptRoot() + "/admin/resolve_match_comment/" + commentId, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    body: csrfFormData(),
+                })
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        if (data.success) {
+                            loadCommentsPanel(attemptId);
+                        } else {
+                            showToast(data.message || "Could not update this comment.", "error");
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(function () {
+                        showToast("Could not update this comment due to a network error.", "error");
+                        btn.disabled = false;
+                    });
+            });
+        });
+    }
+
+    function bindCommentComposer(formEl, attemptId) {
+        if (!formEl) {
+            return;
+        }
+
+        formEl.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            var submitBtn = formEl.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+
+            fetch(scriptRoot() + "/admin/post_match_comment/" + attemptId, {
+                method: "POST",
+                credentials: "same-origin",
+                body: new FormData(formEl),
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (data.success) {
+                        loadCommentsPanel(attemptId);
+                    } else {
+                        var messages = [];
+                        Object.keys(data.errors || {}).forEach(function (field) {
+                            (data.errors[field] || []).forEach(function (message) {
+                                messages.push(message);
+                            });
+                        });
+                        showToast(messages.length ? messages.join(" ") : data.message || "Could not post this comment.", "error");
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                        }
+                    }
+                })
+                .catch(function () {
+                    showToast("Could not post this comment due to a network error.", "error");
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
+                });
+        });
+    }
+
+    function loadCommentsPanel(attemptId) {
+        var panelEl = document.getElementById("matchCommentsPanel");
+        var bodyEl = document.getElementById("matchCommentsPanelBody");
+        if (!panelEl || !bodyEl) {
+            return;
+        }
+
+        bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
+
+        fetch(scriptRoot() + "/admin/match_comments_ajax/" + attemptId + "?" + returnParams().toString(), {credentials: "same-origin"})
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Failed to load review comments");
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                bodyEl.innerHTML = html;
+                initCommentsSelect2(bodyEl, panelEl);
+                bindCommentThreadActions(bodyEl, attemptId);
+                bindCommentComposer(document.getElementById("mwGlobalComposerForm"), attemptId);
+                bindCommentComposer(document.getElementById("mwAssignmentComposerForm"), attemptId);
+            })
+            .catch(function () {
+                bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load review comments.</div>';
+            });
+    }
+
+    var commentsPanelEl = document.getElementById("matchCommentsPanel");
+    if (commentsPanelEl) {
+        commentsPanelEl.addEventListener("show.bs.offcanvas", function () {
+            var attemptId = commentsPanelEl.getAttribute("data-attempt-id");
+            if (attemptId) {
+                loadCommentsPanel(attemptId);
+            }
+        });
+    }
 })();

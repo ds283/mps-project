@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime
 from typing import List, Optional, Set
 
 from flask import current_app
@@ -15,6 +16,8 @@ from sqlalchemy import and_, or_, orm
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import validates
+from sqlalchemy_utils import EncryptedType
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
 from ..cache import cache
 from ..database import db
@@ -30,6 +33,7 @@ from .associations import (
     project_matching_table,
     supervisors_matching_table,
 )
+from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import (
     EditingMetadataMixin,
@@ -1612,3 +1616,70 @@ def _MatchingRecord_roles_remove_handler(target, value, initiator):
 
     with db.session.no_autoflush:
         _delete_MatchingRecord_cache(target.id, target.matching_id)
+
+
+class MatchingReviewComment(db.Model):
+    """
+    A review comment posted against a MatchingAttempt during convenor/root review, before
+    publishing. Scoped either to the whole match (matching_record_id is None) or to one
+    student's assignment (matching_record_id set). Threaded one level via parent_id, and
+    independently resolvable. Body follows the TicketComment pattern: encrypted at rest, since
+    it may contain free-form, potentially sensitive student detail.
+    """
+
+    __tablename__ = "matching_review_comments"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    matching_attempt_id = db.Column(db.Integer(), db.ForeignKey("matching_attempts.id", ondelete="CASCADE"), nullable=False, index=True)
+    matching_attempt = db.relationship(
+        "MatchingAttempt",
+        foreign_keys=[matching_attempt_id],
+        uselist=False,
+        backref=db.backref("review_comments", lazy="dynamic"),
+    )
+
+    # NULL = whole-match scope; set = scoped to one student's assignment
+    matching_record_id = db.Column(db.Integer(), db.ForeignKey("matching_records.id", ondelete="CASCADE"), nullable=True, index=True)
+    matching_record = db.relationship(
+        "MatchingRecord",
+        foreign_keys=[matching_record_id],
+        uselist=False,
+        backref=db.backref("review_comments", lazy="dynamic"),
+    )
+
+    # NULL = top-level comment; set = one-level reply to another MatchingReviewComment
+    parent_id = db.Column(db.Integer(), db.ForeignKey("matching_review_comments.id", ondelete="CASCADE"), nullable=True, index=True)
+    parent = db.relationship(
+        "MatchingReviewComment",
+        remote_side=[id],
+        backref=db.backref("replies", lazy="dynamic", cascade="all, delete-orphan"),
+    )
+
+    owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    owner = db.relationship("User", foreign_keys=[owner_id], uselist=False)
+
+    # comment body, encrypted at rest
+    body = db.Column(EncryptedType(db.Text(), get_AES_key, AesEngine, "oneandzeroes"), nullable=True, default=None)
+
+    resolved = db.Column(db.Boolean(), nullable=False, default=False)
+    resolved_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    resolved_by = db.relationship("User", foreign_keys=[resolved_by_id], uselist=False)
+    resolved_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    creation_timestamp = db.Column(db.DateTime(), default=datetime.now, index=True)
+    last_edit_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    @property
+    def scope_label(self):
+        """
+        Human-readable description of this comment's scope, for panel headers/chips.
+        """
+        if self.matching_record_id is None:
+            return "whole match"
+
+        record: MatchingRecord = self.matching_record
+        if record is not None and record.selector is not None and record.selector.student is not None:
+            return record.selector.student.user.name
+
+        return "this assignment"

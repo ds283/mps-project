@@ -33,6 +33,7 @@ from ..models import (
     LiveProject,
     MatchingAttempt,
     MatchingRecord,
+    MatchingReviewComment,
     MatchingRole,
     SelectionRecord,
     Ticket,
@@ -560,3 +561,73 @@ def dashboard_statistics(attempt: MatchingAttempt) -> dict:
         "score": attempt.score,
         "current_score": attempt.current_score,
     }
+
+
+# ############################
+# REVIEW COMMENTS
+# ############################
+
+
+def _student_name(record: Optional[MatchingRecord]) -> str:
+    if record is not None and record.selector is not None and record.selector.student is not None:
+        return record.selector.student.user.name
+    return "Unknown student"
+
+
+def _comment_thread(comment: MatchingReviewComment, replies_by_parent: Dict[int, List[MatchingReviewComment]]) -> dict:
+    return {
+        "comment": comment,
+        "replies": [_comment_thread(reply, replies_by_parent) for reply in replies_by_parent.get(comment.id, [])],
+    }
+
+
+def comments_data(attempt: MatchingAttempt) -> dict:
+    """
+    Assemble the review-comments panel content for one attempt: a Global thread (whole-match
+    scope, matching_record_id is None) and a set of By-assignment threads, one per commented-on
+    MatchingRecord, sorted by student name. Each thread is a top-level comment nested with its
+    one level of replies.
+    """
+    comments: List[MatchingReviewComment] = attempt.review_comments.order_by(MatchingReviewComment.creation_timestamp.asc()).all()
+
+    replies_by_parent: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
+    top_level: List[MatchingReviewComment] = []
+    for comment in comments:
+        if comment.parent_id is None:
+            top_level.append(comment)
+        else:
+            replies_by_parent[comment.parent_id].append(comment)
+
+    global_threads = [_comment_thread(c, replies_by_parent) for c in top_level if c.matching_record_id is None]
+
+    assignment_top_level: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
+    for comment in top_level:
+        if comment.matching_record_id is not None:
+            assignment_top_level[comment.matching_record_id].append(comment)
+
+    assignments = []
+    for record_id, record_comments in assignment_top_level.items():
+        record = record_comments[0].matching_record
+        assignments.append(
+            {
+                "record": record,
+                "student_name": _student_name(record),
+                "threads": [_comment_thread(c, replies_by_parent) for c in record_comments],
+            }
+        )
+    assignments.sort(key=lambda entry: entry["student_name"])
+
+    return {
+        "global_threads": global_threads,
+        "assignments": assignments,
+        "total_count": len(comments),
+        "unresolved_count": sum(1 for c in top_level if not c.resolved),
+    }
+
+
+def unresolved_comment_count(attempt: MatchingAttempt) -> int:
+    """
+    Cheap count of unresolved top-level review-comment threads, for the workspace shell's
+    Review-comments button badge. Does not build the full nested thread structure.
+    """
+    return attempt.review_comments.filter_by(parent_id=None, resolved=False).count()

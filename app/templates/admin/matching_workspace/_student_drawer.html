@@ -67,6 +67,38 @@
     </div>
 </div>
 
+<div class="card mb-3 border-secondary">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Comments</span>
+        {% if drawer.comments.count %}
+            <span class="badge bg-secondary-subtle text-secondary">{{ drawer.comments.count }}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if drawer.comments.latest %}
+            {% set c = drawer.comments.latest.comment %}
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="tk-av" style="width: 20px; height: 20px; font-size: 9px; background: {{ c.owner.avatar_colour if c.owner else 'var(--bs-secondary)' }};">{{ c.owner.initials if c.owner else '?' }}</span>
+                <span class="small fw-semibold">{{ c.owner.name if c.owner else 'Unknown' }}</span>
+                <span class="small text-body-secondary">{{ c.creation_timestamp.strftime("%d %b %Y %H:%M") if c.creation_timestamp }}</span>
+                {% if drawer.comments.unresolved_count %}
+                    <span class="badge rounded-pill small" style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
+                        {{ drawer.comments.unresolved_count }} unresolved
+                    </span>
+                {% endif %}
+            </div>
+            <div class="small" style="white-space: pre-wrap;">{{ c.body|truncate(160) }}</div>
+        {% else %}
+            <div class="text-body-secondary small">No comments yet on this assignment.</div>
+        {% endif %}
+        <a class="btn btn-sm btn-outline-secondary w-100 mt-3 mw-drawer-open-comments" role="button"
+           data-rec-id="{{ record.id }}" {% if not drawer.comments.count %}data-comment-focus="1"{% endif %}>
+            <i class="fas fa-comment-dots me-1"></i>
+            {% if drawer.comments.count %}View full conversation&hellip;{% else %}Add a comment&hellip;{% endif %}
+        </a>
+    </div>
+</div>
+
 {% if drawer.ranked_selections %}
     <div class="card mb-3 border-secondary">
         <div class="card-header">Ranked selection</div>

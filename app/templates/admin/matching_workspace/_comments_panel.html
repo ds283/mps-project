@@ -64,7 +64,7 @@
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="mwAssignmentTabBtn" data-bs-toggle="tab" data-bs-target="#mwAssignmentTab"
                 type="button" role="tab">
-            By assignment
+            By student
             {% if data.assignments %}
                 <span class="badge rounded-pill bg-secondary-subtle text-secondary">{{ data.assignments|length }}</span>
             {% endif %}
@@ -96,7 +96,7 @@
                 {{ comment_thread(thread) }}
             {% endfor %}
         {% else %}
-            <div class="text-body-secondary small mb-3">No per-assignment comments yet.</div>
+            <div class="text-body-secondary small mb-3">No per-student comments yet.</div>
         {% endfor %}
 
         <form id="mwAssignmentComposerForm">

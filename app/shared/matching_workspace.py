@@ -24,9 +24,10 @@ from collections import defaultdict
 from typing import Dict, FrozenSet, List, Optional, Tuple
 
 from flask_security import current_user
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from .sqlalchemy import get_count
+from ..database import db
 from ..models import (
     EmailLog,
     FacultyData,
@@ -151,7 +152,7 @@ def _group_records_by_pclass(records: List[MatchingRecord]) -> Dict[int, List[di
 # ############################
 
 
-def student_row(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
+def student_row(attempt: MatchingAttempt, record: MatchingRecord, comment_count: int = 0) -> dict:
     """
     Assemble the view dict for a single Student-tab row.
     """
@@ -188,6 +189,7 @@ def student_row(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
         "score": record.current_score,
         "journal": journal,
         "open_tickets": open_tickets,
+        "comment_count": comment_count,
     }
 
 
@@ -238,6 +240,7 @@ def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
         "journal": journal,
         "open_tickets": open_tickets,
         "recent_emails": recent_emails,
+        "comments": student_comment_summary(record),
     }
 
 
@@ -630,3 +633,45 @@ def unresolved_comment_count(attempt: MatchingAttempt) -> int:
     Review-comments button badge. Does not build the full nested thread structure.
     """
     return attempt.review_comments.filter_by(parent_id=None, resolved=False).count()
+
+
+def comment_counts_by_record(attempt: MatchingAttempt) -> Dict[int, int]:
+    """
+    Cheap batch count of review comments (including replies), grouped by MatchingRecord, for the
+    Student-tab comment-shortcut badge. One query per AJAX page load, not one per row.
+    """
+    rows = (
+        db.session.query(MatchingReviewComment.matching_record_id, func.count(MatchingReviewComment.id))
+        .filter(
+            MatchingReviewComment.matching_attempt_id == attempt.id,
+            MatchingReviewComment.matching_record_id.isnot(None),
+        )
+        .group_by(MatchingReviewComment.matching_record_id)
+        .all()
+    )
+    return {record_id: count for record_id, count in rows}
+
+
+def student_comment_summary(record: MatchingRecord) -> dict:
+    """
+    Assemble a summary of review-comment threads scoped to one student's assignment, for a
+    preview in the Student inspector drawer. Full thread detail lives in the Review comments
+    panel; this is just enough to decide whether it's worth opening.
+    """
+    comments: List[MatchingReviewComment] = record.review_comments.order_by(MatchingReviewComment.creation_timestamp.asc()).all()
+
+    replies_by_parent: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
+    top_level: List[MatchingReviewComment] = []
+    for comment in comments:
+        if comment.parent_id is None:
+            top_level.append(comment)
+        else:
+            replies_by_parent[comment.parent_id].append(comment)
+
+    threads = [_comment_thread(c, replies_by_parent) for c in top_level]
+
+    return {
+        "count": len(comments),
+        "unresolved_count": sum(1 for c in top_level if not c.resolved),
+        "latest": threads[-1] if threads else None,
+    }

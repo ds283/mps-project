@@ -2417,7 +2417,8 @@ def match_student_view_v2_ajax(id):
     ) as handler:
 
         def row_formatter(records: List[MatchingRecord]):
-            rows = [workspace_service.student_row(attempt, rec) for rec in records]
+            comment_counts = workspace_service.comment_counts_by_record(attempt)
+            rows = [workspace_service.student_row(attempt, rec, comment_count=comment_counts.get(rec.id, 0)) for rec in records]
             return ajax.admin.student_view_v2_data(rows, attempt.id, text=text, url=url)
 
         return handler.build_payload(row_formatter)

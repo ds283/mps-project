@@ -27,11 +27,26 @@ _student = """
        data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}">
         Show details <i class="fas fa-chevron-right"></i>
     </a>
-    <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
-       data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
-       title="Add a comment on {{ row.user.name }}'s assignment">
-        <i class="fas fa-comment-dots"></i>
-    </a>
+    <span class="d-inline-flex align-items-center gap-1">
+        {% if row.comment_count %}
+            <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+               data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+               title="View comments on {{ row.user.name }}'s assignment">
+                <i class="fas fa-comment-dots"></i> {{ row.comment_count }}
+            </a>
+        {% else %}
+            <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+               data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+               title="No comments yet on {{ row.user.name }}'s assignment">
+                <i class="far fa-comment"></i>
+            </a>
+        {% endif %}
+        <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+           data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+           data-comment-focus="1" title="Add a comment on {{ row.user.name }}'s assignment">
+            <i class="fas fa-plus"></i>
+        </a>
+    </span>
     {% if row.journal.visible %}
         <span class="badge rounded-pill border text-body-secondary small">
             <i class="fas fa-book me-1"></i>{{ row.journal.visible }}

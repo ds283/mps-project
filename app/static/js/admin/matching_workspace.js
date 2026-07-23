@@ -83,6 +83,27 @@
             })
             .then(function (html) {
                 bodyEl.innerHTML = html;
+
+                var commentsLink = bodyEl.querySelector(".mw-drawer-open-comments");
+                if (commentsLink) {
+                    commentsLink.addEventListener("click", function () {
+                        var targetRecId = commentsLink.getAttribute("data-rec-id");
+                        var focusBody = commentsLink.getAttribute("data-comment-focus") === "1";
+                        var drawerInstance = bootstrap.Offcanvas.getInstance(drawerEl);
+                        if (drawerInstance) {
+                            drawerEl.addEventListener(
+                                "hidden.bs.offcanvas",
+                                function () {
+                                    openCommentsPanelForRecord(targetRecId, focusBody);
+                                },
+                                {once: true}
+                            );
+                            drawerInstance.hide();
+                        } else {
+                            openCommentsPanelForRecord(targetRecId, focusBody);
+                        }
+                    });
+                }
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load student inspector.</div>';
@@ -501,7 +522,7 @@
         });
     }
 
-    function focusAssignmentComposer(scope, recId) {
+    function selectAssignmentComposer(scope, recId, focusBody) {
         var tabBtn = document.getElementById("mwAssignmentTabBtn");
         if (tabBtn) {
             if (typeof bootstrap !== "undefined" && bootstrap.Tab) {
@@ -521,15 +542,17 @@
             }
         }
 
-        var body = scope.querySelector("#mwAssignmentComposerBody");
-        if (body) {
-            window.setTimeout(function () {
-                body.focus();
-            }, 150);
+        if (focusBody) {
+            var body = scope.querySelector("#mwAssignmentComposerBody");
+            if (body) {
+                window.setTimeout(function () {
+                    body.focus();
+                }, 150);
+            }
         }
     }
 
-    function loadCommentsPanel(attemptId, focusRecId) {
+    function loadCommentsPanel(attemptId, focusRecId, focusBody) {
         var panelEl = document.getElementById("matchCommentsPanel");
         var bodyEl = document.getElementById("matchCommentsPanelBody");
         if (!panelEl || !bodyEl) {
@@ -553,7 +576,7 @@
                 bindCommentComposer(document.getElementById("mwAssignmentComposerForm"), attemptId);
 
                 if (focusRecId) {
-                    focusAssignmentComposer(bodyEl, focusRecId);
+                    selectAssignmentComposer(bodyEl, focusRecId, focusBody);
                 }
             })
             .catch(function () {
@@ -561,14 +584,32 @@
             });
     }
 
+    // Opens the comments panel scoped to one student's assignment from outside the panel itself
+    // (e.g. the "View full conversation" link in the student drawer). Bootstrap's offcanvas
+    // show() takes no relatedTarget, so the target record is stashed on the panel element and
+    // picked up by the show.bs.offcanvas listener below.
+    function openCommentsPanelForRecord(recId, focusBody) {
+        var commentsPanelEl = document.getElementById("matchCommentsPanel");
+        if (!commentsPanelEl) {
+            return;
+        }
+        commentsPanelEl.setAttribute("data-pending-rec-id", recId);
+        commentsPanelEl.setAttribute("data-pending-focus", focusBody ? "1" : "0");
+        bootstrap.Offcanvas.getOrCreateInstance(commentsPanelEl).show();
+    }
+    window.matchWorkspaceOpenComments = openCommentsPanelForRecord;
+
     var commentsPanelEl = document.getElementById("matchCommentsPanel");
     if (commentsPanelEl) {
         commentsPanelEl.addEventListener("show.bs.offcanvas", function (event) {
             var attemptId = commentsPanelEl.getAttribute("data-attempt-id");
             var trigger = event.relatedTarget;
-            var recId = trigger ? trigger.getAttribute("data-rec-id") : null;
+            var recId = trigger ? trigger.getAttribute("data-rec-id") : commentsPanelEl.getAttribute("data-pending-rec-id");
+            var focusBody = trigger ? trigger.getAttribute("data-comment-focus") === "1" : commentsPanelEl.getAttribute("data-pending-focus") === "1";
+            commentsPanelEl.removeAttribute("data-pending-rec-id");
+            commentsPanelEl.removeAttribute("data-pending-focus");
             if (attemptId) {
-                loadCommentsPanel(attemptId, recId);
+                loadCommentsPanel(attemptId, recId, focusBody);
             }
         });
     }

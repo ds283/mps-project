@@ -1,0 +1,70 @@
+{#
+  Matching Workspace — top-level Matches list (decision 5 in .prompts/matching-workspace/PLAN.md).
+  Privilege-scoped: root/admin see all attempts for a year; a convenor (pclass_id present) sees
+  config.published_matches for their project class. Replaces admin/matching/manage.html and
+  convenor/matching/audit.html.
+#}
+{% extends "base_app.html" %}
+
+{% from "macros.html" import on_click_selector_field %}
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}
+    Automatic matching
+{% endblock %}
+
+{% block pillblock %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <a class="text-decoration-none small" href="{{ url }}">
+                <i class="fas fa-angle-double-left me-1"></i>Return to {{ text|capitalize_first }}
+            </a>
+            <h5 class="mb-0">
+                Automatic matching
+                {% if not is_root_view %}<span class="text-body-secondary">&mdash; {{ pclass.name }}</span>{% endif %}
+            </h5>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            {% if is_root_view and is_root %}
+                <a class="btn btn-sm btn-primary" href="{{ url_for('admin.create_match', year=year) }}">
+                    <i class="fas fa-plus me-1"></i>Create match
+                </a>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="mdash-compute-all-btn">
+                <i class="fas fa-sync-alt me-1"></i>Compute all statistics
+            </button>
+        </div>
+    </div>
+    {% if is_root_view and form is not none %}
+        <form action="{{ url_for('admin.matching_dashboard') }}" method="GET" name="selector_form" class="mt-2" style="max-width: 260px;">
+            <span class="form-text"><strong>Select academic year</strong></span>
+            {{ on_click_selector_field(form.selector) }}
+        </form>
+    {% endif %}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="mt-3">
+        {% call icon_block("bolt") %}
+            <strong>Fast first load, no cache.</strong> The expensive summary statistics for each match
+            (programme-preference/hint status, rank &amp; CATS ranges, validation errors and warnings) are
+            computed on demand, per card, when you press &ldquo;Compute summary statistics&rdquo; &mdash;
+            never cached, so there is nothing to invalidate after an edit.
+        {% endcall %}
+    </div>
+
+    <div id="mdash-cards" class="mt-3">
+        <div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+        MDASH_YEAR = {{ year|tojson|safe }};
+        MDASH_PCLASS_ID = {{ (pclass.id if pclass is not none else none)|tojson|safe }};
+    </script>
+    <script src="{{ url_for('static', filename='js/admin/matching_dashboard.js') }}"></script>
+{% endblock %}

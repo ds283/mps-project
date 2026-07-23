@@ -34,6 +34,7 @@ from .matching.match_view_faculty_v2 import faculty_view_v2_data
 from .matching.match_view_student import student_view_data
 from .matching.match_view_student_v2 import student_view_v2_data
 from .matching.matches import matches_data
+from .matching.matches_v2 import matches_dashboard_data
 
 from .presentations.assessor_availability import (
     assessor_session_availability_data,

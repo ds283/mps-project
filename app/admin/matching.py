@@ -17,6 +17,7 @@ from bokeh.embed import components
 from bokeh.plotting import figure
 from celery import chain
 from flask import (
+    abort,
     current_app,
     flash,
     jsonify,
@@ -67,6 +68,7 @@ from ..shared.utils import (
     redirect_url,
 )
 from ..shared.validators import (
+    validate_is_convenor,
     validate_match_inspector,
 )
 from ..shared.workflow_logging import log_db_commit
@@ -88,61 +90,11 @@ from .forms import (
 @admin.route("/manage_matching", methods=["GET", "POST"])
 @roles_required("root")
 def manage_matching():
-    """
-    Create the 'manage matching' dashboard view
-    :return:
-    """
-    current_year = get_current_year()
-    requested_year_arg = request.args.get("year", None)
-    flag, requested_year = is_integer(requested_year_arg)
-
-    allowed_years, data = _compute_allowed_matching_years(current_year)
-
-    if len(allowed_years) == 0:
-        if not data["matching_ready"]:
-            flash(
-                "Automated matching is not yet available because some project classes are not ready",
-                "error",
-            )
-            return redirect(redirect_url())
-
-        if data["rollover_in_progress"]:
-            (
-                flash(
-                    "Automated matching is not available because a rollover of the academic year is underway",
-                    "info",
-                ),
-            )
-            return redirect(redirect_url())
-
-        flash(
-            "Automated matching is not available because no years are currently eligible",
-            category="info",
-        )
-        return redirect(redirect_url())
-
-    SelectMatchingYearForm = SelectMatchingYearFormFactory(allowed_years)
-    form = SelectMatchingYearForm(request.form)
-
-    if flag and requested_year is not None and requested_year in allowed_years:
-        selected_year = requested_year
-    elif hasattr(form, "selector") and form.selector.data is not None and form.selector.data in allowed_years:
-        selected_year = form.selector.data
-    else:
-        selected_year = max(allowed_years)
-
-    if hasattr(form, "selector"):
-        form.selector.data = selected_year
-
-    info = get_matching_dashboard_data(selected_year)
-
-    return render_template_context(
-        "admin/matching/manage.html",
-        pane="manage",
-        info=info,
-        form=form,
-        year=selected_year,
-    )
+    # legacy entry point — the top-level Matches list now lives in the Matching Workspace
+    # (see .prompts/matching-workspace/PLAN.md, decision 2: "parallel v2, switch entry points")
+    year_arg = request.args.get("year", None)
+    kwargs = {"year": year_arg} if year_arg is not None else {}
+    return redirect(url_for("admin.matching_dashboard", **kwargs))
 
 
 @admin.route("/matches_ajax")
@@ -169,6 +121,193 @@ def matches_ajax():
         is_root=True,
         text="matching dashboard",
         url=url_for("admin.manage_matching", year=selected_year),
+    )
+
+
+def _resolve_matching_dashboard_scope():
+    """
+    Resolve the privilege-scoped view for the top-level Matches list (decision 3 in
+    .prompts/matching-workspace/PLAN.md): a `pclass_id` query arg selects the convenor scope
+    (config.published_matches for that pclass); otherwise root/admin see all attempts for a year.
+
+    Returns (is_root_view, pclass_or_none, config_or_none, year_or_none, error_response_or_none).
+    """
+    pclass_id = request.args.get("pclass_id", None)
+
+    if pclass_id is not None:
+        flag, pclass_id_value = is_integer(pclass_id)
+        if not flag:
+            abort(404)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id_value)
+
+        if not validate_is_convenor(pclass):
+            return False, None, None, None, redirect(redirect_url())
+
+        config: ProjectClassConfig = pclass.most_recent_config
+        if config is None:
+            flash(
+                "Could not find a current configuration for this project class. Please contact a system administrator.",
+                "error",
+            )
+            return False, None, None, None, redirect(url_for("convenor.overview"))
+
+        return False, pclass, config, config.year, None
+
+    if not (current_user.has_role("root") or current_user.has_role("admin")):
+        flash("This operation is available only to administrative users and project convenors.", "error")
+        return True, None, None, None, redirect(redirect_url())
+
+    return True, None, None, None, None
+
+
+@admin.route("/matching_dashboard")
+@roles_accepted("faculty", "admin", "root")
+def matching_dashboard():
+    """
+    Top-level Matches list (decision 5 in .prompts/matching-workspace/PLAN.md): one
+    privilege-scoped standalone page, replacing `manage.html` + `audit.html`.
+    """
+    is_root_view, pclass, config, _year, error = _resolve_matching_dashboard_scope()
+    if error is not None:
+        return error
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+    if url is None:
+        url = home_dashboard_url()
+        text = "home dashboard"
+
+    if not is_root_view:
+        return render_template_context(
+            "admin/matching_workspace/matching_dashboard.html",
+            is_root_view=False,
+            pclass=pclass,
+            config=config,
+            year=config.year,
+            form=None,
+            text=text,
+            url=url,
+        )
+
+    current_year = get_current_year()
+    year_arg = request.args.get("year", request.args.get("selector", None))
+    flag, requested_year = is_integer(year_arg)
+
+    allowed_years, data = _compute_allowed_matching_years(current_year)
+
+    if len(allowed_years) == 0:
+        if not data["matching_ready"]:
+            flash(
+                "Automated matching is not yet available because some project classes are not ready",
+                "error",
+            )
+            return redirect(redirect_url())
+
+        if data["rollover_in_progress"]:
+            flash(
+                "Automated matching is not available because a rollover of the academic year is underway",
+                "info",
+            )
+            return redirect(redirect_url())
+
+        flash(
+            "Automated matching is not available because no years are currently eligible",
+            category="info",
+        )
+        return redirect(redirect_url())
+
+    SelectMatchingYearForm = SelectMatchingYearFormFactory(allowed_years)
+    form = SelectMatchingYearForm(request.args)
+
+    if flag and requested_year is not None and requested_year in allowed_years:
+        selected_year = requested_year
+    elif hasattr(form, "selector") and form.selector.data is not None and form.selector.data in allowed_years:
+        selected_year = form.selector.data
+    else:
+        selected_year = max(allowed_years)
+
+    if hasattr(form, "selector"):
+        form.selector.data = selected_year
+
+    return render_template_context(
+        "admin/matching_workspace/matching_dashboard.html",
+        is_root_view=True,
+        pclass=None,
+        config=None,
+        year=selected_year,
+        form=form,
+        text=text,
+        url=url,
+    )
+
+
+@admin.route("/matches_v2_ajax")
+@roles_accepted("faculty", "admin", "root")
+def matches_v2_ajax():
+    """
+    Consolidated privilege-scoped feed for the top-level Matches list. Renders only cheap,
+    always-available fields (name/tags/status flags/counts) — never the expensive per-attempt
+    statistics (score, programme-preference/hint status, delta/CATS range, errors/warnings),
+    which are fetched on demand per-card via match_statistics_ajax.
+
+    Each card's own links (Open, Inspect: student/faculty view) must return to *this* dashboard
+    (scoped by pclass_id/year) — not to whatever upstream url/text the dashboard page itself was
+    given for its own Return control — so the return target is (re)built here rather than being
+    threaded through from the page's query args.
+    """
+    is_root_view, pclass, config, _year, error = _resolve_matching_dashboard_scope()
+    if error is not None:
+        return jsonify({"cards": []}), 403
+
+    if not is_root_view:
+        matches = config.published_matches.order_by(MatchingAttempt.creation_timestamp.desc()).all()
+        return ajax.admin.matches_dashboard_data(
+            matches,
+            config=config,
+            is_root=current_user.has_role("root"),
+            text="matching audit dashboard",
+            url=url_for("admin.matching_dashboard", pclass_id=pclass.id),
+        )
+
+    year_arg = request.args.get("year", None)
+    flag, requested_year = is_integer(year_arg)
+    if not flag:
+        return jsonify({"cards": []})
+
+    matches = db.session.query(MatchingAttempt).filter_by(year=requested_year).order_by(MatchingAttempt.creation_timestamp.desc()).all()
+
+    return ajax.admin.matches_dashboard_data(
+        matches,
+        config=None,
+        is_root=True,
+        text="matching dashboard",
+        url=url_for("admin.matching_dashboard", year=requested_year),
+    )
+
+
+@admin.route("/match_statistics_ajax/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def match_statistics_ajax(id):
+    """
+    On-demand statistics bundle for one MatchingAttempt (programme-preference matched/failed,
+    hint satisfied/violated, delta/CATS range, objective score, and validation errors/warnings).
+    Computed fresh on every call — never cached, and never touched by the initial dashboard
+    render (see PLAN.md non-goals: "no new caching").
+    """
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify({}), 403
+
+    if not attempt.finished or not attempt.solution_usable:
+        return jsonify({}), 404
+
+    stats = workspace_service.dashboard_statistics(attempt)
+
+    return render_template_context(
+        "admin/matching_workspace/_dashboard_stats.html",
+        m=attempt,
+        stats=stats,
     )
 
 
@@ -2141,9 +2280,11 @@ def matching_workspace(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
     if url is None:
-        # the top-level Matches list (matching_dashboard) lands in Phase 5; fall back to the
-        # existing dashboard until then
-        url = url_for("admin.manage_matching")
+        if current_user.has_role("root") or current_user.has_role("admin"):
+            url = url_for("admin.matching_dashboard", year=record.year)
+        else:
+            convened = next((pc for pc in record.available_pclasses if pc.is_convenor(current_user.id)), None)
+            url = url_for("admin.matching_dashboard", pclass_id=convened.id) if convened is not None else url_for("admin.matching_dashboard")
         text = "matches list"
 
     # filters are session-persisted, exactly as for the legacy student/faculty inspectors

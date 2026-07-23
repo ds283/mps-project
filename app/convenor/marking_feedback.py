@@ -144,29 +144,10 @@ def _get_scoped_configs(anchor_config: ProjectClassConfig, user: User) -> List[P
 @convenor.route("/audit_matches/<int:pclass_id>")
 @roles_accepted("faculty", "admin", "root")
 def audit_matches(pclass_id):
-    # pclass_id labels a ProjectClass
-    pclass = ProjectClass.query.get_or_404(pclass_id)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(redirect_url())
-
-    config = pclass.most_recent_config
-    if config is None:
-        flash(
-            "Could not find a current configuration for this project class. Please contact a system administrator.",
-            "error",
-        )
-        return redirect(url_for("convenor.overview"))
-
-    convenor_data = get_convenor_dashboard_data(pclass, config)
-
-    return render_template_context(
-        "convenor/matching/audit.html",
-        pclass=pclass,
-        config=config,
-        convenor_data=convenor_data,
-    )
+    # legacy entry point — the audit dashboard now lives in the Matching Workspace's top-level
+    # Matches list (see .prompts/matching-workspace/PLAN.md, decision 2: "parallel v2, switch
+    # entry points"), scoped to this project class's published matches
+    return redirect(url_for("admin.matching_dashboard", pclass_id=pclass_id))
 
 
 @convenor.route("/audit_matches_ajax/<int:pclass_id>")

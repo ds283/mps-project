@@ -4,7 +4,7 @@ Living checklist for the Matching Workspace redesign. See `PLAN.md` (same direct
 plan and rationale. Tick items as they complete; one commit per phase
 (`matching-workspace: <imperative summary>`).
 
-**Status:** Phase 0, Phase 1, Phase 2, Phase 3, and Phase 4 complete. Phase 5 not started.
+**Status:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5 complete. Phase 6 not started.
 
 ---
 
@@ -56,12 +56,14 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 5 — Top-level Matches list (consolidated dashboard)
-- [ ] `matching_dashboard.html` + `matching_dashboard` route (privilege-scoped, standalone page)
-- [ ] Info banner, Create (root), year selector, match cards with Open → + Actions menu (incl. View distributions)
-- [ ] `matches_v2_ajax` privilege-scoped feed (root all-for-year vs convenor published-for-pclass)
-- [ ] `match_statistics_ajax` on-demand (single) + Compute-all
-- [ ] Repoint `manage_matching` + convenor `audit_matches` entries → `matching_dashboard`
-- [ ] Commit
+- [x] `matching_dashboard.html` + `matching_dashboard` route (privilege-scoped, standalone page)
+- [x] Info banner, Create (root), year selector, match cards with Open → + Actions menu (incl. View distributions)
+- [x] `matches_v2_ajax` privilege-scoped feed (root all-for-year vs convenor published-for-pclass)
+- [x] `match_statistics_ajax` on-demand (single) + Compute-all
+- [x] Repoint `manage_matching` + convenor `audit_matches` entries → `matching_dashboard` (both routes
+      now redirect, so every existing `url_for(...)` caller lands in the new dashboard without
+      needing to be touched individually — same pattern as the Phase 2 `match_student_view` redirect)
+- [x] Commit
 
 ## Phase 6 — Review comments
 - [ ] `MatchingReviewComment` model (+ relationships, `scope_label`, cascades)

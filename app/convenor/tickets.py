@@ -57,16 +57,14 @@ def _class_scope_candidates(pclass, query_term):
 
     groups = []
     for section in (
-            _results(SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, "Submitting students"),
-            _results(SelectingStudent, TicketSubject.SELECTING_STUDENT, "Selecting students"),
+        _results(SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, "Submitting students"),
+        _results(SelectingStudent, TicketSubject.SELECTING_STUDENT, "Selecting students"),
     ):
         if section is not None:
             groups.append(section)
 
     if not query_term or query_term.lower() in pclass.name.lower():
-        groups.append(
-            {"text": "Project class", "children": [{"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}"}]}
-        )
+        groups.append({"text": "Project class", "children": [{"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}"}]})
 
     return groups
 

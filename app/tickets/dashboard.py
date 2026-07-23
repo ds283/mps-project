@@ -262,9 +262,9 @@ def _activity_feed(user, since, limit=10):
     fetch_limit = limit * 3
     items = []
     for event in (
-            TicketEvent.query.filter(TicketEvent.ticket_id.in_(ticket_ids), ~TicketEvent.kind.in_(_FEED_HIDDEN_EVENTS))
-                    .order_by(TicketEvent.created_at.desc())
-                    .limit(fetch_limit)
+        TicketEvent.query.filter(TicketEvent.ticket_id.in_(ticket_ids), ~TicketEvent.kind.in_(_FEED_HIDDEN_EVENTS))
+        .order_by(TicketEvent.created_at.desc())
+        .limit(fetch_limit)
     ):
         entry = {"kind": "event", "ticket_id": event.ticket_id, "when": event.created_at, "obj": event}
         entry.update(_describe_event(event))

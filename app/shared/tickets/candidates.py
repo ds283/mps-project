@@ -125,9 +125,9 @@ def faculty_classes(faculty):
         if pclass is None or not pclass.active or not pclass.publish:
             continue
         if (
-                enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                or enrollment.marker_state == EnrollmentRecord.MARKER_ENROLLED
-                or enrollment.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
+            enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+            or enrollment.marker_state == EnrollmentRecord.MARKER_ENROLLED
+            or enrollment.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
         ):
             classes[pclass.id] = pclass
     return classes
@@ -476,9 +476,7 @@ def faculty_candidates(user, query_term, tenant_id=None, include_past=False):
         classes = [pclass for pclass in classes if pclass.tenant_id == tenant_id]
     if query_term:
         classes = [pclass for pclass in classes if query_term.lower() in (pclass.name or "").lower()]
-    class_rows = [
-        {"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}", "kind": "class"} for pclass in classes
-    ]
+    class_rows = [{"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}", "kind": "class"} for pclass in classes]
     if class_rows:
         groups.append({"text": "Your classes", "children": class_rows[:SEARCH_LIMIT]})
 
@@ -503,8 +501,13 @@ def faculty_candidates(user, query_term, tenant_id=None, include_past=False):
         groups.append({"text": "Students you moderate", "children": moderator_rows})
 
     sel_rows = _named_role_rows(
-        faculty_selectee_query(user), SelectingStudent, TicketSubject.SELECTING_STUDENT, query_term, tenant_id, include_past,
-        "Requesting selector sign-off"
+        faculty_selectee_query(user),
+        SelectingStudent,
+        TicketSubject.SELECTING_STUDENT,
+        query_term,
+        tenant_id,
+        include_past,
+        "Requesting selector sign-off",
     )
     if sel_rows:
         groups.append({"text": "Your selectees", "children": sel_rows})
@@ -520,9 +523,9 @@ def office_candidates(user, query_term, tenant_id=None, include_past=False):
         return []
     groups = []
     for section in (
-            _student_results(SubmittingStudent, query_term, tenant_ids, "Submitting students", include_past),
-            _student_results(SelectingStudent, query_term, tenant_ids, "Selecting students", include_past),
-            _class_results(query_term, tenant_ids),
+        _student_results(SubmittingStudent, query_term, tenant_ids, "Submitting students", include_past),
+        _student_results(SelectingStudent, query_term, tenant_ids, "Selecting students", include_past),
+        _class_results(query_term, tenant_ids),
     ):
         if section is not None:
             groups.append(section)

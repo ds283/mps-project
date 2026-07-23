@@ -20,7 +20,7 @@ from flask_security import current_user, roles_accepted, roles_required
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 from flask_security.utils import config_value, do_flash, get_message, send_mail
-from sqlalchemy import literal, or_
+from sqlalchemy import func, literal, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.types import String
@@ -57,7 +57,6 @@ from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
 from ..shared.workflow_logging import log_db_commit
 from ..shared.conversions import is_boolean, is_integer
-from ..shared.sqlalchemy import func
 from ..shared.utils import (
     get_current_year,
     get_main_config,

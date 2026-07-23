@@ -4,7 +4,7 @@ Living checklist for the Matching Workspace redesign. See `PLAN.md` (same direct
 plan and rationale. Tick items as they complete; one commit per phase
 (`matching-workspace: <imperative summary>`).
 
-**Status:** Phase 0 and Phase 1 complete. Phase 2 not started.
+**Status:** Phase 0, Phase 1, and Phase 2 complete. Phase 3 not started.
 
 ---
 
@@ -25,16 +25,19 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 2 — Detail shell + Student tab
-- [ ] `workspace.html` detail shell (Return-to-matches, match-name heading, 3 pills + Changes badge, Review-comments button)
-- [ ] `_macros.html` (pills, swatches, bars, pref badges, chips)
-- [ ] Route `matching_workspace/<id>` (student/faculty/changes view dispatch)
-- [ ] `_student_pane.html` (filter well + table + footer)
-- [ ] `match_view_student_v2.py` formatter + `match_student_view_v2_ajax`
-- [ ] `_student_drawer.html` + `match_student_drawer_ajax`
-- [ ] `_role_editor_modal.html` + `match_role_editor_ajax` + `POST edit_match_roles`
-- [ ] Quick-reassignment buttons wired to existing reassign routes
-- [ ] Repoint `match_student_view` entry → workspace
-- [ ] Commit
+- [x] `workspace.html` detail shell (Return-to-matches, match-name heading, 3 pills + Changes badge, Review-comments button)
+- [x] `_macros.html` (pills, swatches, bars, pref badges, chips)
+- [x] Route `matching_workspace/<id>` (student/faculty/changes view dispatch — faculty/changes
+      render placeholder panes until Phases 3/4 land)
+- [x] `_student_pane.html` (filter well + table + footer)
+- [x] `match_view_student_v2.py` formatter + `match_student_view_v2_ajax`
+- [x] `_student_drawer.html` + `match_student_drawer_ajax`
+- [x] `_role_editor_modal.html` + `match_role_editor_ajax` + `POST edit_match_roles`
+- [x] Quick-reassignment buttons wired to existing reassign routes
+- [x] Repoint `match_student_view` entry → workspace (legacy route now redirects, so every
+      existing `url_for('admin.match_student_view', ...)` caller lands in the new workspace
+      without needing to be touched individually)
+- [x] Commit
 
 ## Phase 3 — Faculty tab + reassignment
 - [ ] `_faculty_pane.html`

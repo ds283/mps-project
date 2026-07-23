@@ -1,0 +1,40 @@
+{#
+  Shared presentational macros for the Matching Workspace (see
+  .prompts/matching-workspace/PLAN.md). Colours follow .claude/rules/template-colours.md —
+  Bootstrap 5.3 semantic tokens only, no raw hex.
+#}
+
+{% macro modified_pill() %}
+    <span class="badge rounded-pill small" style="border: 1px solid var(--bs-primary); color: var(--bs-primary);">Modified</span>
+{% endmacro %}
+
+{% macro programme_pref_line(value) %}
+    {% if value is not none %}
+        {% if value %}
+            <div class="small" style="color: var(--bs-success-text-emphasis);">
+                <i class="fas fa-check-circle me-1"></i>Meets programme prefs
+            </div>
+        {% else %}
+            <div class="small" style="color: var(--bs-warning-text-emphasis);">
+                <i class="fas fa-exclamation-circle me-1"></i>Programme prefs not met
+            </div>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro journal_chip(count) %}
+    {% if count %}
+        <span class="badge rounded-pill border text-body-secondary small">
+            <i class="fas fa-book me-1"></i>{{ count }}
+        </span>
+    {% endif %}
+{% endmacro %}
+
+{% macro ticket_chip(count) %}
+    {% if count %}
+        <span class="badge rounded-pill small" style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
+            <i class="fas fa-ticket-alt me-1"></i>{{ count }}
+        </span>
+    {% endif %}
+{% endmacro %}
+

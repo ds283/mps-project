@@ -59,6 +59,7 @@ from ..shared.context.matching import (
 )
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
+from ..shared import matching_workspace as workspace_service
 from ..shared.utils import (
     get_automatch_pclasses,
     get_current_year,
@@ -76,6 +77,7 @@ from .actions import estimate_CATS_load
 from .system import _compute_allowed_matching_years
 from .forms import (
     CompareMatchFormFactory,
+    EditMatchRolesFormFactory,
     EditSupervisorRolesForm,
     NewMatchFormFactory,
     RenameMatchFormFactory,
@@ -1565,76 +1567,9 @@ def match_export_excel(matching_id):
 @admin.route("/match_student_view/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def match_student_view(id):
-    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
-
-    if not record.finished:
-        if record.awaiting_upload:
-            flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
-                "error",
-            )
-        else:
-            flash(
-                'Match "{name}" is not yet available for inspection because it has not yet completed.'.format(name=record.name),
-                "error",
-            )
-        return redirect(redirect_url())
-
-    if not record.solution_usable:
-        flash(
-            'Match "{name}" is not available for inspection because it did not yield a useable solution'.format(name=record.name),
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_match_inspector(record):
-        return redirect(redirect_url())
-
-    pclass_filter = request.args.get("pclass_filter", default=None)
-    type_filter = request.args.get("type_filter", default=None)
-    hint_filter = request.args.get("hint_filter", default=None)
-
-    text = request.args.get("text", None)
-    url = request.args.get("url", None)
-
-    # if no state filter supplied, check if one is stored in session
-    if pclass_filter is None and session.get("admin_match_pclass_filter"):
-        pclass_filter = session["admin_match_pclass_filter"]
-
-    if pclass_filter is not None:
-        session["admin_match_pclass_filter"] = pclass_filter
-
-    if type_filter is None and session.get("admin_match_type_filter"):
-        type_filter = session["admin_match_type_filter"]
-
-    if type_filter not in ["all", "ordinary", "generic"]:
-        type_filter = "all"
-
-    if type_filter is not None:
-        session["admin_match_type_filter"] = type_filter
-
-    if hint_filter is None and session.get("admin_match_hint_filter"):
-        type_filter = session["admin_match_hint_filter"]
-
-    if hint_filter not in ["all", "satisfied", "violated"]:
-        hint_filter = "all"
-
-    if hint_filter is not None:
-        session["admin_match_hint_filter"] = hint_filter
-
-    pclasses = record.available_pclasses
-
-    return render_template_context(
-        "admin/match_inspector/student.html",
-        pane="student",
-        record=record,
-        pclasses=pclasses,
-        pclass_filter=pclass_filter,
-        type_filter=type_filter,
-        hint_filter=hint_filter,
-        text=text,
-        url=url,
-    )
+    # legacy entry point — the student inspector now lives in the Matching Workspace
+    # (see .prompts/matching-workspace/PLAN.md, decision 2: "parallel v2, switch entry points")
+    return redirect(url_for("admin.matching_workspace", id=id, view="student", **request.args.to_dict()))
 
 
 @admin.route("/match_faculty_view/<int:id>")
@@ -2103,6 +2038,300 @@ def match_faculty_view_ajax(id):
             )
 
         return handler.build_payload(row_formatter)
+
+
+@admin.route("/matching_workspace/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def matching_workspace(id):
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash(
+                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
+                "error",
+            )
+        else:
+            flash(
+                'Match "{name}" is not yet available for inspection because it has not yet completed.'.format(name=record.name),
+                "error",
+            )
+        return redirect(redirect_url())
+
+    if not record.solution_usable:
+        flash(
+            'Match "{name}" is not available for inspection because it did not yield a useable solution'.format(name=record.name),
+            "error",
+        )
+        return redirect(redirect_url())
+
+    if not validate_match_inspector(record):
+        return redirect(redirect_url())
+
+    view = request.args.get("view", "student")
+    if view not in ("student", "faculty", "changes"):
+        view = "student"
+
+    pclass_filter = request.args.get("pclass_filter", default=None)
+    type_filter = request.args.get("type_filter", default=None)
+    hint_filter = request.args.get("hint_filter", default=None)
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+    if url is None:
+        # the top-level Matches list (matching_dashboard) lands in Phase 5; fall back to the
+        # existing dashboard until then
+        url = url_for("admin.manage_matching")
+        text = "matches list"
+
+    # filters are session-persisted, exactly as for the legacy student/faculty inspectors
+    if pclass_filter is None and session.get("admin_match_pclass_filter"):
+        pclass_filter = session["admin_match_pclass_filter"]
+    if pclass_filter is not None:
+        session["admin_match_pclass_filter"] = pclass_filter
+
+    if type_filter is None and session.get("admin_match_type_filter"):
+        type_filter = session["admin_match_type_filter"]
+    if type_filter not in ["all", "ordinary", "generic"]:
+        type_filter = "all"
+    if type_filter is not None:
+        session["admin_match_type_filter"] = type_filter
+
+    if hint_filter is None and session.get("admin_match_hint_filter"):
+        hint_filter = session["admin_match_hint_filter"]
+    if hint_filter not in ["all", "satisfied", "violated"]:
+        hint_filter = "all"
+    if hint_filter is not None:
+        session["admin_match_hint_filter"] = hint_filter
+
+    pclasses = record.available_pclasses
+
+    return render_template_context(
+        "admin/matching_workspace/workspace.html",
+        view=view,
+        record=record,
+        pclasses=pclasses,
+        pclass_filter=pclass_filter,
+        type_filter=type_filter,
+        hint_filter=hint_filter,
+        changes_badge=workspace_service.changes_count(record),
+        text=text,
+        url=url,
+    )
+
+
+@admin.route("/match_student_view_v2_ajax/<int:id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def match_student_view_v2_ajax(id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify({})
+
+    if not attempt.finished or not attempt.solution_usable:
+        return jsonify({})
+
+    pclass_filter = request.args.get("pclass_filter", default=None)
+    pclass_flag, pclass_value = is_integer(pclass_filter)
+
+    type_filter = request.args.get("type_filter", default=None)
+    hint_filter = request.args.get("hint_filter", default=None)
+
+    url = request.args.get("url", default=None)
+    text = request.args.get("text", default=None)
+
+    base_query = attempt.records.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc())
+
+    def search_name(row: MatchingRecord):
+        return row.selector.student.user.name
+
+    def sort_name(row: MatchingRecord):
+        user: User = row.selector.student.user
+        return [user.last_name, user.first_name]
+
+    def search_pclass(row: MatchingRecord):
+        return row.selector.config.name
+
+    def sort_pclass(row: MatchingRecord):
+        return row.selector.config.name
+
+    def search_project(row: MatchingRecord):
+        return row.project.name if row.project is not None else ""
+
+    def sort_project(row: MatchingRecord):
+        return row.project.name if row.project is not None else ""
+
+    def sort_rank(row: MatchingRecord):
+        return row.total_rank
+
+    def sort_score(row: MatchingRecord):
+        return row.current_score
+
+    student = {"search": search_name, "order": sort_name}
+    pclass = {"search": search_pclass, "order": sort_pclass}
+    project = {"search": search_project, "order": sort_project}
+    rank = {"order": sort_rank}
+    score = {"order": sort_score}
+    columns = {
+        "student": student,
+        "pclass": pclass,
+        "project": project,
+        "markers": {},
+        "rank": rank,
+        "score": score,
+    }
+
+    filter_list = []
+
+    if pclass_flag:
+        filter_list.append(lambda row: row.selector.config.pclass_id == pclass_value)
+
+    if type_filter == "ordinary":
+        filter_list.append(lambda row: row.project is not None and not row.project.use_supervisor_pool)
+    elif type_filter == "generic":
+        filter_list.append(lambda row: row.project is not None and row.project.use_supervisor_pool)
+
+    if hint_filter == "satisfied":
+        filter_list.append(lambda row: row.hint_status is not None and len(row.hint_status[0]) > 0)
+    elif hint_filter == "violated":
+        filter_list.append(lambda row: row.hint_status is not None and len(row.hint_status[1]) > 0)
+
+    def row_filter(row: MatchingRecord):
+        return all(f(row) for f in filter_list)
+
+    with ServerSideInMemoryHandler(
+        request,
+        base_query,
+        columns,
+        row_filter=row_filter if len(filter_list) > 0 else None,
+    ) as handler:
+
+        def row_formatter(records: List[MatchingRecord]):
+            rows = [workspace_service.student_row(attempt, rec) for rec in records]
+            return ajax.admin.student_view_v2_data(rows, attempt.id, text=text, url=url)
+
+        return handler.build_payload(row_formatter)
+
+
+@admin.route("/match_student_drawer_ajax/<int:rec_id>")
+@roles_accepted("faculty", "admin", "root")
+def match_student_drawer_ajax(rec_id):
+    record: MatchingRecord = MatchingRecord.query.get_or_404(rec_id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return jsonify({}), 403
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+
+    drawer = workspace_service.student_drawer(record.matching_attempt, record)
+
+    return render_template_context(
+        "admin/matching_workspace/_student_drawer.html",
+        drawer=drawer,
+        text=text,
+        url=url,
+    )
+
+
+@admin.route("/match_role_editor_ajax/<int:rec_id>")
+@roles_accepted("faculty", "admin", "root")
+def match_role_editor_ajax(rec_id):
+    record: MatchingRecord = MatchingRecord.query.get_or_404(rec_id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return jsonify({}), 403
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+
+    form = EditMatchRolesFormFactory(record)()
+    form.project.data = record.project
+    form.supervisors.data = FacultyData.query.filter(FacultyData.id.in_(record.supervisor_role_ids)).all()
+    form.markers.data = FacultyData.query.filter(FacultyData.id.in_(record.marker_role_ids)).all()
+
+    return render_template_context(
+        "admin/matching_workspace/_role_editor_modal.html",
+        record=record,
+        form=form,
+        text=text,
+        url=url,
+    )
+
+
+@admin.route("/edit_match_roles/<int:rec_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_match_roles(rec_id):
+    record: MatchingRecord = MatchingRecord.query.get_or_404(rec_id)
+    attempt: MatchingAttempt = record.matching_attempt
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to edit this matching record."), 403
+
+    if attempt.selected:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" cannot be edited because an administrative user has marked it as '
+                '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    year = get_current_year()
+    if attempt.year != year:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    form = EditMatchRolesFormFactory(record)()
+
+    if not form.validate_on_submit():
+        return jsonify(success=False, errors=form.errors), 400
+
+    new_project: LiveProject = form.project.data
+    new_supervisor_ids = {fd.id for fd in form.supervisors.data}
+    new_marker_ids = {fd.id for fd in form.markers.data}
+
+    record.project_id = new_project.id
+    record.rank = record.selector.project_rank(new_project.id)
+    record.alternative = False
+    record.parent_id = None
+    record.priority = None
+
+    for item in list(record.roles):
+        item: MatchingRole
+        if item.role in (MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR) and item.user_id not in new_supervisor_ids:
+            record.roles.remove(item)
+        elif item.role == MatchingRole.ROLE_MARKER and item.user_id not in new_marker_ids:
+            record.roles.remove(item)
+    db.session.flush()
+
+    existing_supervisor_ids = {
+        item.user_id for item in record.roles if item.role in (MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
+    }
+    for fd_id in new_supervisor_ids - existing_supervisor_ids:
+        record.roles.add(MatchingRole(role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd_id))
+
+    existing_marker_ids = {item.user_id for item in record.roles if item.role == MatchingRole.ROLE_MARKER}
+    for fd_id in new_marker_ids - existing_marker_ids:
+        record.roles.add(MatchingRole(role=MatchingRole.ROLE_MARKER, user_id=fd_id))
+
+    attempt.last_edit_id = current_user.id
+    attempt.last_edit_timestamp = datetime.now()
+
+    try:
+        log_db_commit("Edit roles for matching record", user=current_user)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify(success=False, message="Could not save role changes because a database error was encountered."), 500
+
+    return jsonify(success=True)
 
 
 @admin.route("/delete_match_record/<int:attempt_id>/<int:selector_id>")

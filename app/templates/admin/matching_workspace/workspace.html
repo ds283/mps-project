@@ -1,0 +1,147 @@
+{#
+  Matching Workspace — detail shell (one attempt, three panes: Student / Faculty / Changes).
+  See .prompts/matching-workspace/PLAN.md. Faculty (Phase 3) and Changes (Phase 4) panes are
+  placeholders until their phases land; the pill nav and Changes badge are already wired.
+#}
+{% extends "base_app.html" %}
+
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "select2.html" import import_select2 %}
+
+{% block title %}
+    Matching workspace: {{ record.name }}
+{% endblock %}
+
+{% block pillblock %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <a class="text-decoration-none small" href="{{ url }}">
+                <i class="fas fa-angle-double-left me-1"></i>Return to {{ text|capitalize_first }}
+            </a>
+            <h5 class="mb-0">{{ record.name }}</h5>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                title="Review comments land in a later phase of the Matching Workspace rebuild">
+            <i class="fas fa-comment-dots me-1"></i>Review comments
+        </button>
+    </div>
+    <ul class="nav nav-pills dashboard-nav">
+        <li class="nav-item">
+            <a class="nav-link {% if view == 'student' %}active{% endif %}"
+               href="{{ url_for('admin.matching_workspace', id=record.id, view='student', text=text, url=url) }}">
+                Student
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view == 'faculty' %}active{% endif %}"
+               href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', text=text, url=url) }}">
+                Faculty
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view == 'changes' %}active{% endif %}"
+               href="{{ url_for('admin.matching_workspace', id=record.id, view='changes', text=text, url=url) }}">
+                Changes
+                {% if changes_badge %}
+                    <span class="badge rounded-pill" style="background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis);">{{ changes_badge }}</span>
+                {% else %}
+                    <span class="badge rounded-pill bg-secondary-subtle text-secondary">0</span>
+                {% endif %}
+            </a>
+        </li>
+    </ul>
+{% endblock %}
+
+{% block bodyblock %}
+    {% if view == 'student' %}
+        {% include "admin/matching_workspace/_student_pane.html" %}
+    {% elif view == 'faculty' %}
+        <div class="card border-primary mt-3">
+            <div class="card-header bg-primary text-white">Faculty view</div>
+            <div class="card-body text-body-secondary">
+                The redesigned Faculty view is not part of this workspace yet &mdash; it lands in a later
+                phase of the Matching Workspace rebuild.
+            </div>
+        </div>
+    {% elif view == 'changes' %}
+        <div class="card border-primary mt-3">
+            <div class="card-header bg-primary text-white">Changes</div>
+            <div class="card-body text-body-secondary">
+                The Changes view is not part of this workspace yet &mdash; it lands in a later phase of
+                the Matching Workspace rebuild.
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="matchStudentDrawer" aria-labelledby="matchStudentDrawerLabel"
+         data-return-url="{{ url|default('') }}" data-return-text="{{ text|default('') }}">
+        <div class="offcanvas-header bg-primary text-white">
+            <div>
+                <h5 class="offcanvas-title mb-0" id="matchStudentDrawerLabel">Student inspector</h5>
+                <div class="small" id="matchStudentDrawerSubtitle"></div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body" id="matchStudentDrawerBody">
+            <div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="matchRoleEditorModal" tabindex="-1" aria-labelledby="matchRoleEditorModalLabel" aria-hidden="true">
+        <div class="modal-dialog" style="max-width: 640px;">
+            <div class="modal-content" id="matchRoleEditorModalContent">
+                <div class="modal-body text-center text-secondary py-4">
+                    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    {% if view == 'student' %}
+        {{ import_datatables() }}
+    {% endif %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+        MATCH_WORKSPACE_RETURN_URL = {{ url|tojson|safe }};
+        MATCH_WORKSPACE_RETURN_TEXT = {{ text|tojson|safe }};
+    </script>
+
+    {% if view == 'student' %}
+        <script>
+            $(document).ready(function () {
+                window.matchStudentTable = $('#match_student_v2').DataTable({
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                    serverSide: true, processing: true,
+                    language: {{ bootstrap_spinner() }},
+                    ajax: {
+                        url: $SCRIPT_ROOT + '/admin/match_student_view_v2_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&type_filter={{ type_filter }}&hint_filter={{ hint_filter }}&text={{ text|urlencode }}&url={{ url|urlencode }}',
+                        type: 'POST',
+                        data: function (args) {
+                            return {"args": JSON.stringify(args)};
+                        }
+                    },
+                    "fnDrawCallback": function () {
+                        $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    },
+                    columns: [
+                        {data: 'student', orderable: true, searchable: true},
+                        {data: 'pclass', orderable: true, searchable: true},
+                        {data: 'project', orderable: true, searchable: true},
+                        {data: 'markers', orderable: false, searchable: false},
+                        {data: 'rank', orderable: true, searchable: false},
+                        {data: 'score', orderable: true, searchable: false}
+                    ],
+                    order: [[0, 'asc']]
+                });
+            });
+        </script>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/admin/matching_workspace.js') }}"></script>
+{% endblock %}

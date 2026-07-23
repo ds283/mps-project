@@ -43,6 +43,7 @@ from ..models import (
     BackupConfiguration,
     DegreeProgramme,
     DegreeType,
+    LiveProject,
     PresentationAssessment,
     ProjectClass,
     ProjectClassConfig,
@@ -1820,6 +1821,58 @@ class EditSupervisorRolesForm(Form):
             raise ValidationError("At least one supervisor should be selected.")
 
     submit = SubmitField("Save changes")
+
+
+def EditMatchRolesFormFactory(record):
+    """
+    Unified role editor for a single MatchingRecord: assigned project (drawn from the
+    selector's ranked selections, plus the current/original project so an already-unranked
+    assignment still shows up), supervisor set, and marker set (drawn from the assigned
+    project's assessor pool). Overassignment is allowed here; it surfaces downstream as a
+    validation warning rather than being blocked at this layer.
+    """
+    selections = record.selector.ordered_selections.all()
+    rank_by_project_id = {selection.liveproject_id: selection.rank for selection in selections}
+
+    project_ids = set(rank_by_project_id.keys())
+    project_ids.add(record.project_id)
+    project_ids.add(record.original_project_id)
+    project_ids.discard(None)
+
+    def GetSelectionProjects():
+        return LiveProject.query.filter(LiveProject.id.in_(project_ids)).order_by(LiveProject.name)
+
+    def BuildProjectLabel(proj):
+        rank = rank_by_project_id.get(proj.id)
+        if rank is not None:
+            return "#{rank}  {name}".format(rank=rank, name=proj.name)
+        return proj.name
+
+    def GetAssessorPool():
+        if record.project is None:
+            return []
+        return record.project.assessor_list_query
+
+    class EditMatchRolesForm(Form):
+        project = QuerySelectField(
+            "Assigned project",
+            query_factory=GetSelectionProjects,
+            get_label=BuildProjectLabel,
+            allow_blank=False,
+        )
+
+        supervisors = QuerySelectMultipleField("Supervisors", query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
+
+        markers = QuerySelectMultipleField(
+            "Markers (from assessor pool)",
+            query_factory=GetAssessorPool,
+            get_label=BuildActiveFacultyName,
+            validators=[Optional()],
+        )
+
+        submit = SubmitField("Save changes")
+
+    return EditMatchRolesForm
 
 
 def PresentationAssessmentMixinFactory(assessment: PresentationAssessment, query_factory):

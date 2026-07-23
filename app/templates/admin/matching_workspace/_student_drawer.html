@@ -1,0 +1,153 @@
+{#
+  Body fragment for the shared student inspector offcanvas (#matchStudentDrawer in
+  workspace.html), populated by AJAX (admin.match_student_drawer_ajax). See
+  .prompts/matching-workspace/PLAN.md.
+#}
+{% from "swatch.html" import medium_swatch %}
+{% from "admin/matching_workspace/_macros.html" import modified_pill %}
+
+{% set record = drawer.record %}
+{% set selector = drawer.selector %}
+{% set student = drawer.student %}
+{% set user = drawer.user %}
+{% set config = selector.config %}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="mb-1">
+            <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.name }}</a>
+        </h5>
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            {{ medium_swatch(config.project_class.make_CSS_style()) }}
+            <span class="text-secondary small">{{ config.name }}</span>
+            <span class="small">
+                <i class="fas fa-user-circle me-1"></i>
+                <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3 border-primary">
+    <div class="card-header bg-primary text-white">Assigned project</div>
+    <div class="card-body">
+        {% if drawer.project %}
+            <div class="d-flex align-items-center gap-2">
+                <strong>{{ drawer.project.name }}</strong>
+                {% if drawer.modified %}{{ modified_pill() }}{% endif %}
+            </div>
+            {% if drawer.owner %}
+                <div class="small text-body-secondary mt-1">
+                    <i class="fas fa-user-circle me-1"></i>
+                    <a class="text-decoration-none" href="mailto:{{ drawer.owner.user.email }}">{{ drawer.owner.user.name }}</a>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-danger">Unassigned</div>
+        {% endif %}
+
+        {% if drawer.ranked_selections %}
+            <p class="mt-3 mb-1 small fw-semibold text-body-secondary">Quick reassignment</p>
+            <div class="d-flex flex-column gap-1">
+                {% for item in drawer.ranked_selections %}
+                    <a class="btn btn-sm text-start {% if item.is_current %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       href="{{ url_for('admin.reassign_match_project', id=record.id, pid=item.project.id) }}">
+                        #{{ item.rank }}&nbsp;&nbsp;{{ item.project.name }}
+                        {% if item.project.owner %}&middot; {{ item.project.owner.user.name }}{% endif %}
+                        {% if item.is_original %}<span class="text-body-secondary small">&middot; automatch</span>{% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <button type="button" class="btn btn-sm btn-primary w-100 mt-3" data-bs-toggle="modal"
+                data-bs-target="#matchRoleEditorModal" data-rec-id="{{ record.id }}">
+            Open unified role editor&hellip;
+        </button>
+    </div>
+</div>
+
+{% if drawer.ranked_selections %}
+    <div class="card mb-3 border-secondary">
+        <div class="card-header">Ranked selection</div>
+        <div class="card-body">
+            <div class="row small">
+                <div class="col-1"><strong>Rank</strong></div>
+                <div class="col-6"><strong>Project</strong></div>
+                <div class="col-3"><strong>Owner</strong></div>
+                <div class="col-2"><strong>Hint</strong></div>
+            </div>
+            <hr>
+            {% for item in drawer.ranked_selections %}
+                <div class="row small align-items-center">
+                    <div class="col-1">#{{ item.rank }}</div>
+                    <div class="col-6">{{ item.project.name }}</div>
+                    <div class="col-3">{% if item.project.owner %}{{ item.project.owner.user.name }}{% endif %}</div>
+                    <div class="col-2">
+                        {% if item.hint_label %}
+                            <span class="badge bg-secondary-subtle text-secondary">{{ item.hint_label }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<div class="card mb-3 border-secondary">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Journal</span>
+        {% if drawer.journal.visible %}
+            <span class="badge bg-secondary-subtle text-secondary">{{ drawer.journal.visible }}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if drawer.journal.recent_entries %}
+            {% for entry in drawer.journal.recent_entries %}
+                <div class="mb-2">
+                    <div class="fw-semibold small">{{ entry.title }}</div>
+                    <div class="text-body-secondary small">{{ entry.created_timestamp.strftime("%a %d %b %Y") }}</div>
+                    <div class="small">{{ entry.entry|striptags|truncate(140) }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-body-secondary small">No accessible journal entries.</div>
+        {% endif %}
+        <a class="btn btn-sm btn-outline-secondary mt-1"
+           href="{{ url_for('convenor.student_journal_inspector', student_id=student.id) }}">
+            <i class="fas fa-book me-1"></i>View journal&hellip;
+        </a>
+    </div>
+</div>
+
+{% if drawer.open_tickets %}
+    <div class="card mb-3" style="border-color: var(--bs-warning-border-subtle);">
+        <div class="card-header" style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
+            Tickets in scope
+        </div>
+        <div class="card-body small">
+            {{ drawer.open_tickets }} open ticket{{ 's' if drawer.open_tickets != 1 else '' }}.
+        </div>
+    </div>
+{% endif %}
+
+{% if drawer.recent_emails %}
+    <div class="card mb-3 border-secondary">
+        <div class="card-header">Recent emails</div>
+        <div class="card-body">
+            <div class="row small">
+                <div class="col-3"><strong>Date</strong></div>
+                <div class="col-9"><strong>Subject</strong></div>
+            </div>
+            <hr>
+            {% for item in drawer.recent_emails %}
+                <div class="row small">
+                    <div class="col-3">{{ item.send_date.strftime("%a %d %b %Y") }}</div>
+                    <div class="col-9">
+                        <a class="text-decoration-none" href="{{ url_for('admin.display_email', id=item.id, text=text, url=url) }}">{{ item.subject }}</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}

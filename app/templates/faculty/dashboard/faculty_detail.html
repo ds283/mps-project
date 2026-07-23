@@ -1,6 +1,7 @@
 {# Ticket-detail wrapper for the faculty surface: inherits the faculty dashboard nav pills.
    The route supplies pane='tickets' plus the faculty dashboard-data keys. #}
 {% extends "faculty/dashboard/nav.html" %}
+{% from "tickets/_detail_body.html" import detail_body_scripts with context %}
 
 {% block title %}
     Ticket #{{ ticket.id }}
@@ -8,4 +9,9 @@
 
 {% block bodyblock %}
     {% include "tickets/_detail_body.html" %}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ detail_body_scripts() }}
 {% endblock %}

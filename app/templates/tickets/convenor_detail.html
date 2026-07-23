@@ -2,6 +2,7 @@
    (breadcrumb, lifecycle chip, metrics, dashboard pills). The route supplies pane='tickets',
    pclass, config, convenor_data. #}
 {% extends "convenor/dashboard/pclass_base.html" %}
+{% from "tickets/_detail_body.html" import detail_body_scripts with context %}
 
 {% block title %}
     Ticket #{{ ticket.id }}
@@ -9,4 +10,9 @@
 
 {% block bodyblock %}
     {% include "tickets/_detail_body.html" %}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ detail_body_scripts() }}
 {% endblock %}

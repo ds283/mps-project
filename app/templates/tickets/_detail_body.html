@@ -1,8 +1,9 @@
-{# ---- shared ticket-detail body, included by the per-surface wrapper templates ------------ #}
-{% if perms.edit_scope %}
-    {% from "select2.html" import import_select2 %}
-    {{ import_select2() }}
-{% endif %}
+{# ---- shared ticket-detail body, included by the per-surface wrapper templates ------------
+   Scripts that depend on jQuery (select2) live in the detail_body_scripts() macro below rather
+   than inline here, because this partial is {% include %}d into {% block bodyblock %}, which
+   renders before {% block scripts %} (where jQuery itself loads via bootstrap.load_js()) in the
+   vendored flask-bootstrap base template. Wrapper templates must import and call
+   detail_body_scripts() from their own {% block scripts %}. #}
 {# ---- local helpers ---------------------------------------------------------------------- #}
 {% set STATUS_TONE = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'} %}
 
@@ -475,89 +476,97 @@
     </div>
 </div>
 
-<script>
-    function tkWireSearch(inputSelector, optionSelector) {
-        var input = document.querySelector(inputSelector);
-        if (!input) return;
-        input.addEventListener('click', function (evt) { evt.stopPropagation(); });
-        input.addEventListener('input', function () {
-            var term = input.value.trim().toLowerCase();
-            document.querySelectorAll(optionSelector).forEach(function (row) {
-                var name = row.getAttribute('data-name') || '';
-                row.style.display = (term === '' || name.indexOf(term) !== -1) ? '' : 'none';
-            });
-        });
-    }
-    tkWireSearch('.tk-assign-search', '.tk-assign-option');
-    tkWireSearch('.tk-sub-search-input', '.tk-sub-option');
-
+{# Call from the wrapper template's own {% block scripts %} (after {{ super() }}), so this runs
+   once jQuery has loaded — see the note at the top of this file. #}
+{% macro detail_body_scripts() %}
     {% if perms.edit_scope %}
-        (function () {
-            var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+        {% from "select2.html" import import_select2 %}
+        {{ import_select2() }}
+    {% endif %}
+    <script>
+        function tkWireSearch(inputSelector, optionSelector) {
+            var input = document.querySelector(inputSelector);
+            if (!input) return;
+            input.addEventListener('click', function (evt) { evt.stopPropagation(); });
+            input.addEventListener('input', function () {
+                var term = input.value.trim().toLowerCase();
+                document.querySelectorAll(optionSelector).forEach(function (row) {
+                    var name = row.getAttribute('data-name') || '';
+                    row.style.display = (term === '' || name.indexOf(term) !== -1) ? '' : 'none';
+                });
+            });
+        }
+        tkWireSearch('.tk-assign-search', '.tk-assign-option');
+        tkWireSearch('.tk-sub-search-input', '.tk-sub-option');
 
-            function escapeHtml(str) {
-                return $('<div>').text(str === null || str === undefined ? '' : str).html();
-            }
+        {% if perms.edit_scope %}
+            (function () {
+                var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
-            function formatResult(result) {
-                if (!result.id) { return result.text; }
-                if (result.kind === 'class') {
-                    return $('<span><i class="fas fa-layer-group fa-fw text-secondary me-1"></i>' + escapeHtml(result.text) + '</span>');
+                function escapeHtml(str) {
+                    return $('<div>').text(str === null || str === undefined ? '' : str).html();
                 }
-                var subtitle = result.subtitle ? '<div class="text-secondary" style="font-size:11px">' + escapeHtml(result.subtitle) + '</div>' : '';
-                if (result.kind === 'anon') {
-                    // marker/moderator candidates: exam number only, no avatar, to preserve blind-marking anonymity
+
+                function formatResult(result) {
+                    if (!result.id) { return result.text; }
+                    if (result.kind === 'class') {
+                        return $('<span><i class="fas fa-layer-group fa-fw text-secondary me-1"></i>' + escapeHtml(result.text) + '</span>');
+                    }
+                    var subtitle = result.subtitle ? '<div class="text-secondary" style="font-size:11px">' + escapeHtml(result.subtitle) + '</div>' : '';
+                    if (result.kind === 'anon') {
+                        // marker/moderator candidates: exam number only, no avatar, to preserve blind-marking anonymity
+                        return $(
+                            '<div class="d-flex align-items-center gap-2 py-1">' +
+                                '<i class="fas fa-user-secret text-secondary" style="width:22px; text-align:center"></i>' +
+                                '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
+                            '</div>'
+                        );
+                    }
+                    var colourStyle = result.colour ? ' background-color:' + result.colour + ';' : '';
                     return $(
                         '<div class="d-flex align-items-center gap-2 py-1">' +
-                            '<i class="fas fa-user-secret text-secondary" style="width:22px; text-align:center"></i>' +
+                            '<span class="tk-av" style="width:22px; height:22px; font-size:10px;' + colourStyle + '">' + escapeHtml(result.initials || '?') + '</span>' +
                             '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
                         '</div>'
                     );
                 }
-                var colourStyle = result.colour ? ' background-color:' + result.colour + ';' : '';
-                return $(
-                    '<div class="d-flex align-items-center gap-2 py-1">' +
-                        '<span class="tk-av" style="width:22px; height:22px; font-size:10px;' + colourStyle + '">' + escapeHtml(result.initials || '?') + '</span>' +
-                        '<span><div>' + escapeHtml(result.text) + '</div>' + subtitle + '</span>' +
-                    '</div>'
-                );
-            }
 
-            var $select = $('#tk-subject-add-select');
-            $select.select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Search students or classes…',
-                minimumInputLength: 0,
-                templateResult: formatResult,
-                ajax: {
-                    url: $SCRIPT_ROOT + '{{ url_for("tickets.subject_people", ticket_id=ticket.id) }}',
-                    dataType: 'json',
-                    delay: 200,
-                    data: params => ({ q: params.term || '' }),
-                    processResults: data => ({ results: data.results }),
-                    cache: true
+                var $select = $('#tk-subject-add-select');
+                $select.select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    placeholder: 'Search students or classes…',
+                    minimumInputLength: 0,
+                    templateResult: formatResult,
+                    ajax: {
+                        url: $SCRIPT_ROOT + '{{ url_for("tickets.subject_people", ticket_id=ticket.id) }}',
+                        dataType: 'json',
+                        delay: 200,
+                        data: params => ({ q: params.term || '' }),
+                        processResults: data => ({ results: data.results }),
+                        cache: true
+                    }
+                });
+                $select.on('change', function () {
+                    var val = $select.val();
+                    $('#tk-subject-add-token').val(val || '');
+                    $('#tk-subject-add-submit').prop('disabled', !val);
+                });
+            })();
+        {% endif %}
+
+        document.querySelectorAll('.tk-copy-link').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var url = btn.getAttribute('data-url') || window.location.href;
+                var done = function () {
+                    var original = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check fa-fw"></i> Copied';
+                    setTimeout(function () { btn.innerHTML = original; }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(done).catch(function () {});
                 }
             });
-            $select.on('change', function () {
-                var val = $select.val();
-                $('#tk-subject-add-token').val(val || '');
-                $('#tk-subject-add-submit').prop('disabled', !val);
-            });
-        })();
-    {% endif %}
-
-    document.querySelectorAll('.tk-copy-link').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var url = btn.getAttribute('data-url') || window.location.href;
-            var done = function () {
-                var original = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-check fa-fw"></i> Copied';
-                setTimeout(function () { btn.innerHTML = original; }, 1500);
-            };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).then(done).catch(function () {});
-            }
         });
-    });
-</script>
+    </script>
+{% endmacro %}

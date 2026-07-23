@@ -1,5 +1,6 @@
 {# Personal-inbox / fallback ticket-detail wrapper: bare app chrome (no dashboard pills). #}
 {% extends "base_app.html" %}
+{% from "tickets/_detail_body.html" import detail_body_scripts with context %}
 
 {% block title %}
     Ticket #{{ ticket.id }}
@@ -7,4 +8,9 @@
 
 {% block bodyblock %}
     {% include "tickets/_detail_body.html" %}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ detail_body_scripts() }}
 {% endblock %}

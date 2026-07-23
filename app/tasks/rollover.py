@@ -21,7 +21,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import (
     ConfirmRequest,
-    ConvenorGenericTask,
     DegreeProgramme,
     DegreeType,
     EmailNotification,
@@ -138,21 +137,10 @@ def insert_new_pclass_config(self, old_config: ProjectClassConfig, convenor_id: 
         # clear out list of go live notification recipients to keep association table trim
         old_config.golive_notified = []
 
-        # attach any tasks that are marked as rolling over to the new ProjectClassConfig instance
-        rollover_tasks = set()
-        for tk in old_config.tasks:
-            tk: ConvenorGenericTask
-            if tk.rollover and not (tk.complete or tk.dropped):
-                rollover_tasks.add(tk)
-
-        for tk in rollover_tasks:
-            old_config.tasks.remove(tk)
-            new_config.tasks.append(tk)
-
         log_db_commit(
             f"Created new ProjectClassConfig for {pclass.name} year {new_year} "
             f"(rolled over from config #{old_config.id}), generated submission period records, "
-            f"retired old period records, and transferred rollover tasks",
+            f"and retired old period records",
             project_classes=pclass,
             endpoint=self.name,
         )

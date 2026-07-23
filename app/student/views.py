@@ -44,7 +44,6 @@ from ..models import (
     EmailWorkflowItem,
     LiveProject,
     MarkingEvent,
-    MarkingReport,
     MarkingWorkflow,
     MessageOfTheDay,
     PresentationAssessment,
@@ -73,7 +72,6 @@ from ..shared.utils import (
     get_current_year,
     get_main_config,
     home_dashboard,
-    home_dashboard_url,
     redirect_url,
 )
 from ..shared.validators import (

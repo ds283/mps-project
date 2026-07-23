@@ -29,7 +29,6 @@ shared with lexical_diversity_pipeline.py via mahalanobis_core.py.
 """
 
 import argparse
-import re
 import sys
 import textwrap
 from pathlib import Path
@@ -44,10 +43,6 @@ from language_analysis_core import (
     classify_burstiness,
     classify_sentence_cv,
     # Patterns (needed for verbose displays)
-    HEDGING_PATTERNS,
-    FILLER_PATTERNS,
-    EM_DASH_PATTERN,
-    # Regex (needed for verbose bibliography diagnostics)
     _BIBLIO_HEADING,
     _APPENDIX_HEADING,
     _NUMBERED_ENTRY,

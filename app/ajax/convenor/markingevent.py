@@ -1286,7 +1286,6 @@ def submitter_report_data(reports):
     actions_tmpl = env.from_string(_submitter_report_actions)
 
     from flask_login import current_user as _cu
-    from flask_security import current_user as _scu
 
     _roles = set(r.name for r in _cu.roles) if hasattr(_cu, "roles") else set()
     form = ActionForm()

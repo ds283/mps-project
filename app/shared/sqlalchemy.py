@@ -8,9 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from sqlalchemy import func, distinct, literal_column
-from sqlalchemy.orm import lazyload
-
 
 # taken from https://gist.github.com/hest/8798884
 # see also https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/

@@ -10,7 +10,7 @@
 import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from flask import current_app, render_template_string, url_for
 from flask_mailman import EmailMultiAlternatives

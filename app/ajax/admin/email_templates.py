@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, get_template_attribute, jsonify, render_template, url_for
+from flask import current_app, get_template_attribute, render_template
 from jinja2 import Environment, Template
 
 from ...models.emails import EmailTemplate

@@ -22,7 +22,7 @@ GeneratedAsset + DownloadCentreItem, and the requesting user is notified.
 from datetime import datetime, timedelta
 from io import BytesIO
 
-from flask import current_app, render_template_string, url_for
+from flask import current_app, render_template_string
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db

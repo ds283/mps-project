@@ -22,7 +22,7 @@ internal object-store buckets.
 
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import BinaryIO, List, Optional, Union
 

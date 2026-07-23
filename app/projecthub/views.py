@@ -27,7 +27,6 @@ from ..models import (
     FacultyData,
     FormattedArticle,
     LiveProject,
-    PeriodAttachmentRole,
     ProjectClass,
     ProjectClassConfig,
     ProjectSubmitterArticle,
@@ -66,7 +65,6 @@ def _get_hub_visible_attachments(period: SubmissionPeriodRecord, hub_role, my_ro
     Return the list of PeriodAttachment instances visible to the current user based on their
     hub role and specific submission role integer.
     """
-    from ..models.project_class import SubmissionPeriodRecord as _SPR  # avoid circular
 
     # convenors and admins see all attachments
     if hub_role.is_convenor or hub_role.is_admin:

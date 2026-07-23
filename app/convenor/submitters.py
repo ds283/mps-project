@@ -9,7 +9,7 @@
 #
 
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from flask import (
     current_app,
@@ -32,7 +32,6 @@ from ..models import (
     CanvasStudent,
     DegreeProgramme,
     DegreeType,
-    GeneratedAsset,
     MarkingEvent,
     MarkingReport,
     MarkingWorkflow,

@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, jsonify, url_for
+from flask import current_app, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import render_template_context

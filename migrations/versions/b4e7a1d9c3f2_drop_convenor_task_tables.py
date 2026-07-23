@@ -68,9 +68,7 @@ def downgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("owner_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(["id"], ["convenor_tasks.id"], name=op.f("fk_convenor_selector_tasks_id_convenor_tasks")),
-        sa.ForeignKeyConstraint(
-            ["owner_id"], ["selecting_students.id"], name=op.f("fk_convenor_selector_tasks_owner_id_selecting_students")
-        ),
+        sa.ForeignKeyConstraint(["owner_id"], ["selecting_students.id"], name=op.f("fk_convenor_selector_tasks_owner_id_selecting_students")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_convenor_selector_tasks")),
     )
 
@@ -79,9 +77,7 @@ def downgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("owner_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(["id"], ["convenor_tasks.id"], name=op.f("fk_convenor_submitter_tasks_id_convenor_tasks")),
-        sa.ForeignKeyConstraint(
-            ["owner_id"], ["submitting_students.id"], name=op.f("fk_convenor_submitter_tasks_owner_id_submitting_students")
-        ),
+        sa.ForeignKeyConstraint(["owner_id"], ["submitting_students.id"], name=op.f("fk_convenor_submitter_tasks_owner_id_submitting_students")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_convenor_submitter_tasks")),
     )
 
@@ -95,8 +91,6 @@ def downgrade():
         sa.Column("repeat_from_due_date", sa.Integer(), nullable=True, server_default=sa.text("1")),
         sa.Column("rollover", sa.Boolean(), nullable=True, server_default=sa.text("0")),
         sa.ForeignKeyConstraint(["id"], ["convenor_tasks.id"], name=op.f("fk_convenor_generic_tasks_id_convenor_tasks")),
-        sa.ForeignKeyConstraint(
-            ["owner_id"], ["project_class_config.id"], name=op.f("fk_convenor_generic_tasks_owner_id_project_class_config")
-        ),
+        sa.ForeignKeyConstraint(["owner_id"], ["project_class_config.id"], name=op.f("fk_convenor_generic_tasks_owner_id_project_class_config")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_convenor_generic_tasks")),
     )

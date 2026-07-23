@@ -11,7 +11,7 @@
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 
 from ..database import db
 from ..models import User

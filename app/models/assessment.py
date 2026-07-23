@@ -351,7 +351,7 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
     @property
     def available_talks(self):
         from .live_projects import SubmittingStudent
-        from .project_class import ProjectClass, ProjectClassConfig
+        from .project_class import ProjectClassConfig
         from .students import StudentData
         from .submissions import SubmissionPeriodRecord, SubmissionRecord
         from .users import User

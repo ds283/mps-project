@@ -12,7 +12,6 @@ from flask import (
     current_app,
     get_template_attribute,
     render_template,
-    render_template_string,
 )
 from jinja2 import Environment, Template
 

@@ -11,7 +11,7 @@
 from datetime import datetime
 from typing import List
 
-from flask import url_for, render_template, current_app
+from flask import render_template, current_app
 from jinja2 import Template, Environment
 
 from ...models import DownloadCentreItem

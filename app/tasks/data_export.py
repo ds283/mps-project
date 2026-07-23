@@ -42,7 +42,6 @@ from ..models import (
 from ..models.markingevent import (
     ConflationReport,
     MarkingEvent,
-    MarkingEventWorkflowStates,
     MarkingWorkflow,
     SubmitterReport,
 )

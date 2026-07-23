@@ -10,11 +10,11 @@
 
 from typing import List
 
-from flask import current_app, get_template_attribute, render_template, url_for
+from flask import current_app, get_template_attribute, render_template
 from jinja2 import Environment, Template
 
 from ...models import ProjectClass, Tenant
-from ...models.emails import _TYPE_NAMES, EmailTemplate
+from ...models.emails import _TYPE_NAMES
 
 # language=jinja2
 _email_template_type = """

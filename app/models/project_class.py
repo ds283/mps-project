@@ -18,7 +18,6 @@ from urllib.parse import urljoin
 if TYPE_CHECKING:
     from .assessment import PresentationAssessment
     from .projects import Project
-    from .submissions import SubmissionRecord, SubmissionRole
 
 from flask_security import current_user
 from sqlalchemy import and_, orm

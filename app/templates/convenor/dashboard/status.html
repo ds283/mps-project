@@ -142,25 +142,25 @@
                 <div class="card mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                         <span class="small">
-                            <i class="fas fa-book me-1 text-primary"></i> <strong>Journal activity</strong>
+                            <i class="fas fa-book me-1"></i> Journal activity
                             <span class="text-body-secondary">
                                 &middot; <span class="text-primary fw-semibold">{{ journal_summary.unread }}</span> unread
                                 &middot; <span class="text-warning-emphasis fw-semibold">{{ journal_summary.recent }}</span> this month
-                                &middot; {{ journal_summary.visible }} accessible
+                                &middot; {{ journal_summary.visible }} total
                             </span>
                         </span>
-                        <a class="btn btn-sm btn-outline-primary py-0"
+                        <a class="btn btn-sm btn-outline-secondary py-0"
                            href="{{ url_for('convenor.journal_tab', id=pclass.id) }}">
-                            Open journal <i class="fas fa-arrow-right"></i>
+                            View all in Journal tab <i class="fas fa-arrow-right"></i>
                         </a>
                     </div>
-                    <ul class="list-group list-group-flush small">
+                    <ul class="list-group list-group-flush" style="font-size: var(--cd-text-cta-desc)">
                         {% for entry in journal_summary.recent_entries %}
                             {% set unread = not entry.is_read_by(current_user) %}
                             <li class="list-group-item d-flex align-items-center gap-2 py-2{% if unread %} unread-row{% endif %}">
                                 {% if unread %}<span class="udot"></span>{% endif %}
                                 {{ journal_type_ico(entry, size=24) }}
-                                <a href="#" class="text-decoration-none fw-semibold"
+                                <a href="#" class="text-decoration-none fw-medium"
                                    data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
                                    data-student-id="{{ entry.student_id }}"
                                    data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">

@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#212529;background:#f6ecd4;-webkit-font-smoothing:antialiased}
+  a{color:#0d6efd;text-decoration:none}
+  a:hover{color:#0a58ca;text-decoration:underline}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:6px}
+  @keyframes drawerIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+<div style="min-height:100vh">
+  <!-- NAVBAR -->
+  <nav style="background:#1b1e21;color:#fff;padding:0 22px;height:56px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:19px;font-weight:600;letter-spacing:.1px">MPS projects management</div>
+    <div style="display:flex;gap:26px;align-items:center;font-size:15px;color:#adb5bd">
+      <span>My projects ▾</span><span>Reports ▾</span><span>Dashboards</span>
+      <span style="color:#fff">Convenor</span><span>Tickets</span><span>Admin ▾</span><span>Site management ▾</span>
+      <span style="color:#fff">◉ ds283 (Faculty) ▾</span>
+    </div>
+  </nav>
+
+  <!-- TOOLBAR / PILL NAV -->
+  <div style="background:#f6ecd4;padding:16px 22px 0">
+    <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#0d6efd;margin-bottom:12px">
+      <span style="color:#0d6efd">◀◀ Return to matching dashboard</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;gap:8px">
+        <button onClick="{{ goStudent }}" style="{{ pillStudent }}">Student view</button>
+        <button onClick="{{ goFaculty }}" style="{{ pillFaculty }}">Faculty view</button>
+        <button onClick="{{ goChanges }}" style="{{ pillChanges }}">Changes <span style="{{ changesBadge }}">{{ changesCount }}</span></button>
+        <button onClick="{{ goDash }}" style="{{ pillDash }}">Matches</button>
+      </div>
+      <button onClick="{{ toggleComments }}" style="border:1px solid #0d6efd;background:#fff;color:#0d6efd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px">
+        💬 Review comments <span style="background:#0d6efd;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px">{{ openCommentCount }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding:18px 22px 40px">
+    <!-- ===================== STUDENT VIEW ===================== -->
+    <sc-if value="{{ isStudent }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px;overflow:hidden">
+      <div style="background:#0d6efd;color:#fff;padding:12px 18px;font-size:16px">Student view of project matching <strong>{{ matchName }}</strong></div>
+      <div style="padding:18px">
+        <!-- filter well -->
+        <div style="background:#f4f5f6;border:1px solid #e3e6ea;border-radius:8px;padding:16px 18px;margin-bottom:16px">
+          <div style="font-size:13px;color:#495057;margin-bottom:8px">Filter by project class</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+            <sc-for list="{{ pclassChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button></sc-for>
+          </div>
+          <div style="display:flex;gap:48px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:13px;color:#495057;margin-bottom:8px">Filter by project type</div>
+              <div style="display:flex;gap:6px"><sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button></sc-for></div>
+            </div>
+            <div>
+              <div style="font-size:13px;color:#495057;margin-bottom:8px">Filter by hinting status</div>
+              <div style="display:flex;gap:6px"><sc-for list="{{ hintChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button></sc-for></div>
+            </div>
+          </div>
+        </div>
+        <!-- student table -->
+        <div style="border:1px solid #dee2e6;border-radius:6px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.6fr 1.5fr 2.1fr 1.7fr .6fr .8fr;background:#fff;border-bottom:2px solid #dee2e6;font-weight:700;font-size:13px">
+            <div style="padding:11px 12px">Student</div><div style="padding:11px 12px">Project class</div><div style="padding:11px 12px">Project</div><div style="padding:11px 12px">Markers</div><div style="padding:11px 12px">Rank</div><div style="padding:11px 12px">Score</div>
+          </div>
+          <sc-for list="{{ studentRows }}" as="r" hint-placeholder-count="6">
+          <div style="{{ r.rowStyle }}">
+            <div style="padding:12px">
+              <a onClick="{{ r.openDrawer }}" style="cursor:pointer;font-weight:500">{{ r.name }}</a>
+              <div style="margin-top:5px;display:flex;align-items:center;gap:8px">
+                <a onClick="{{ r.openDrawer }}" style="cursor:pointer;font-size:12px;color:#6c757d">Show details ›</a>
+                <sc-if value="{{ r.hasJournal }}" hint-placeholder-val="{{ true }}"><span onClick="{{ r.openDrawer }}" title="Journal entries available" style="cursor:pointer;font-size:11px;color:#6c757d;border:1px solid #ced4da;border-radius:10px;padding:0 7px;display:inline-flex;align-items:center;gap:3px">📖 {{ r.journalCount }}</span></sc-if>
+                <sc-if value="{{ r.hasTickets }}" hint-placeholder-val="{{ true }}"><span onClick="{{ r.openDrawer }}" title="Open tickets" style="cursor:pointer;font-size:11px;color:#b45309;background:#fff3cd;border:1px solid #ffe69c;border-radius:10px;padding:0 7px">🎫 {{ r.ticketCount }}</span></sc-if>
+                <span onClick="{{ r.openComments }}" title="Comment on this assignment" style="cursor:pointer;font-size:11px;color:#6c757d;border:1px solid #ced4da;border-radius:10px;padding:0 7px">💬</span>
+              </div>
+            </div>
+            <div style="padding:12px;font-size:13px">
+              <div style="display:flex;align-items:center;gap:7px"><span style="{{ r.pclassSwatch }}"></span>{{ r.pclassLabel }}</div>
+              <div style="color:#0d6efd;margin-top:3px">{{ r.cohort }}</div>
+              <div style="color:#6c757d;font-size:12px;margin-top:2px">◉ {{ r.owner }}</div>
+            </div>
+            <div style="padding:12px;font-size:13px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <a onClick="{{ r.openRoleEditor }}" style="{{ r.projectLinkStyle }}">{{ r.projectText }} ▾</a>
+                <sc-if value="{{ r.changed }}" hint-placeholder-val="{{ false }}"><span style="color:#0d6efd;border:1px solid #b6d4fe;border-radius:4px;padding:0 6px;font-size:10.5px;font-weight:600;letter-spacing:.02em">MODIFIED</span></sc-if>
+              </div>
+              <div style="margin-top:5px;display:flex;align-items:center;gap:10px;font-size:11.5px">
+                <sc-if value="{{ r.progOk }}" hint-placeholder-val="{{ false }}"><span style="color:#198754">✓ meets programme prefs</span></sc-if>
+                <sc-if value="{{ r.progBad }}" hint-placeholder-val="{{ false }}"><span style="color:#b45309">⚠ programme prefs not met</span></sc-if>
+              </div>
+            </div>
+            <div style="padding:12px;font-size:13px">
+              <sc-for list="{{ r.markers }}" as="m" hint-placeholder-count="2"><div style="color:#495057;margin-bottom:3px"><a onClick="{{ m.onClick }}" style="cursor:pointer;color:#495057">{{ m.name }} ▾</a></div></sc-for>
+            </div>
+            <div style="padding:12px">
+              <div style="{{ r.rankColor }}">#{{ r.rank }}</div>
+              <div style="color:#adb5bd;font-size:11px;margin-top:3px">preference</div>
+            </div>
+            <div style="padding:12px;font-size:13px;color:#6c757d">{{ r.score }}</div>
+          </div>
+          </sc-for>
+        </div>
+        <div style="font-size:13px;color:#495057;margin-top:12px">Showing {{ studentShown }} of {{ studentTotal }} entries</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== FACULTY / CHANGES / DASH placeholders ===================== -->
+    <sc-if value="{{ isFaculty }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px;overflow:hidden">
+      <div style="background:#0d6efd;color:#fff;padding:12px 18px;font-size:16px">Faculty view of project matching <strong>{{ matchName }}</strong></div>
+      <div style="padding:18px">
+        <div style="background:#f4f5f6;border:1px solid #e3e6ea;border-radius:8px;padding:16px 18px;margin-bottom:16px">
+          <div style="font-size:13px;color:#495057;margin-bottom:8px">Filter by project class</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ pclassChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button></sc-for></div>
+        </div>
+        <div style="border:1px solid #dee2e6;border-radius:6px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.3fr 2.2fr 2.2fr 1.3fr;background:#fff;border-bottom:2px solid #dee2e6;font-weight:700;font-size:13px">
+            <div style="padding:11px 12px">Name</div><div style="padding:11px 12px">Supervising</div><div style="padding:11px 12px">Marking</div><div style="padding:11px 12px">Workload</div>
+          </div>
+          <sc-for list="{{ facultyRows }}" as="f" hint-placeholder-count="6">
+          <div style="{{ f.rowStyle }}">
+            <div style="padding:12px">
+              <a onClick="{{ f.openDrawer }}" style="cursor:pointer;font-weight:500">{{ f.name }}</a>
+              <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px">
+                <sc-for list="{{ f.offered }}" as="o" hint-placeholder-count="2"><div style="font-size:11px;color:#6c757d;display:flex;align-items:center;gap:6px"><span style="{{ o.swatch }}"></span>{{ o.label }} · offered {{ o.n }}</div></sc-for>
+              </div>
+              <a onClick="{{ f.openDrawer }}" style="cursor:pointer;font-size:12px;color:#6c757d;display:inline-block;margin-top:8px">Show details ›</a>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <button onClick="{{ f.openReassign }}" style="border:1px solid #0d6efd;background:#fff;color:#0d6efd;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:600">Reassign…</button>
+                <button onClick="{{ f.openComments }}" title="Comment on this staff member" style="border:1px solid #ced4da;background:#fff;color:#6c757d;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer">💬</button>
+              </div>
+            </div>
+            <div style="padding:12px;font-size:12.5px">
+              <sc-for list="{{ f.supervising }}" as="g" hint-placeholder-count="1">
+                <div style="text-transform:uppercase;color:#adb5bd;font-size:10.5px;letter-spacing:.4px;margin:2px 0 4px">{{ g.label }}</div>
+                <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="1"><div style="margin-bottom:7px"><div style="display:flex;align-items:center;gap:6px"><span style="{{ it.swatch }}"></span><a onClick="{{ it.onClick }}" style="color:#0d6efd;cursor:pointer">{{ it.student }}</a><sc-if value="{{ it.progOk }}" hint-placeholder-val="{{ false }}"><span style="background:#198754;color:#fff;border-radius:3px;padding:0 5px;font-size:10px">✔</span></sc-if><sc-if value="{{ it.progBad }}" hint-placeholder-val="{{ false }}"><span style="background:#ffc107;color:#212529;border-radius:3px;padding:0 5px;font-size:10px">✖</span></sc-if></div><div style="font-size:11px;color:#adb5bd;margin-left:17px">{{ it.project }}</div></div></sc-for>
+              </sc-for>
+            </div>
+            <div style="padding:12px;font-size:12.5px">
+              <sc-for list="{{ f.marking }}" as="g" hint-placeholder-count="1">
+                <div style="text-transform:uppercase;color:#adb5bd;font-size:10.5px;letter-spacing:.4px;margin:2px 0 4px">{{ g.label }}</div>
+                <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="1"><div style="margin-bottom:6px;color:#495057">{{ it.student }}<div style="font-size:11px;color:#adb5bd">{{ it.project }}</div></div></sc-for>
+              </sc-for>
+            </div>
+            <div style="padding:12px;font-size:13px">
+              <div>Supervising <strong>{{ f.sup }}</strong></div>
+              <div>Marking <strong>{{ f.mark }}</strong></div>
+              <div style="color:#0d6efd;margin-top:2px">Total <strong>{{ f.total }}</strong></div>
+              <sc-if value="{{ f.hasBinding }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font-size:11px;background:#fff3cd;color:#664d03;border-radius:4px;padding:3px 7px;display:inline-block">⚖️ {{ f.bindingText }}</div></sc-if>
+            </div>
+          </div>
+          </sc-for>
+        </div>
+        <div style="font-size:13px;color:#495057;margin-top:12px">Showing {{ facultyShown }} of {{ facultyTotal }} entries</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- FACULTY DRAWER -->
+    <sc-if value="{{ facDrawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeFacDrawer }}" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:40;animation:fadeIn .15s ease"></div>
+    <div style="position:fixed;top:0;right:0;bottom:0;width:560px;max-width:94vw;background:#f8f9fa;z-index:41;box-shadow:-8px 0 30px rgba(0,0,0,.25);animation:drawerIn .2s ease;display:flex;flex-direction:column">
+      <div style="padding:18px 20px;border-bottom:1px solid #e3e6ea;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:22px;font-weight:600;color:#0d6efd">{{ fName }}</div>
+        <button onClick="{{ closeFacDrawer }}" style="border:none;background:none;font-size:22px;cursor:pointer;color:#6c757d;line-height:1">✕</button>
+      </div>
+      <div style="overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+        <!-- Workload + constraints -->
+        <div style="background:#fff;border:1px solid #6c757d;border-radius:8px;padding:14px">
+          <div style="font-weight:600;margin-bottom:10px">Workload &amp; binding constraints</div>
+          <div style="font-size:12px;color:#495057;margin-bottom:3px;display:flex;justify-content:space-between">Supervising <span>{{ fWorkSup }} / {{ fSupLimit }} CATS</span></div>
+          <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;margin-bottom:4px"><div style="{{ fSupBar }}"></div></div>
+          <sc-if value="{{ fSupBinding }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#842029;margin-bottom:8px">⚖️ At supervising CATS limit — no further supervisees can be added.</div></sc-if>
+          <div style="font-size:12px;color:#495057;margin:8px 0 3px;display:flex;justify-content:space-between">Marking <span>{{ fWorkMark }} / {{ fMarkLimit }} CATS</span></div>
+          <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;margin-bottom:4px"><div style="{{ fMarkBar }}"></div></div>
+          <sc-if value="{{ fMarkBinding }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#842029">⚖️ At marking CATS limit (EnrollmentRecord) — no further marking can be allocated.</div></sc-if>
+          <sc-if value="{{ fHasConstraints }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+            <sc-for list="{{ fConstraints }}" as="c" hint-placeholder-count="1"><div style="{{ c.style }}"><span>{{ c.icon }}</span><span>{{ c.text }}</span></div></sc-for>
+          </div>
+          </sc-if>
+        </div>
+        <!-- Projects offered -->
+        <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px">
+          <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600">Projects offered in this matching</div>
+          <div style="padding:6px 14px 14px">
+            <sc-for list="{{ fProjects }}" as="p" hint-placeholder-count="2">
+            <div style="padding:11px 0;border-bottom:1px solid #f1f3f5">
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+                <div style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500"><span style="{{ p.swatch }}"></span>{{ p.title }}</div>
+                <span style="{{ p.capStyle }}">{{ p.capLabel }}</span>
+              </div>
+              <div style="font-size:12px;color:#6c757d;margin-top:5px">{{ p.selected }} selectors chose this · allocated:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">
+                <sc-for list="{{ p.allocated }}" as="a" hint-placeholder-count="2"><span style="background:#e7f1ff;border:1px solid #b6d4fe;border-radius:5px;padding:2px 8px;font-size:11.5px;color:#0d6efd">{{ a }}</span></sc-for>
+              </div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        <!-- Staff-centric alternatives -->
+        <div style="background:#fff;border:1px solid #6c757d;border-radius:8px">
+          <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600;display:flex;justify-content:space-between;align-items:center">Who else could be allocated here?
+            <button onClick="{{ openReassign }}" style="border:none;background:#0d6efd;color:#fff;border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer">Reassignment workspace →</button>
+          </div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#343a40;margin-bottom:6px">Ranked a {{ fName }} project #1 but allocated elsewhere</div>
+              <sc-if value="{{ fHasRanked1 }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ fRankedYou1 }}" as="r" hint-placeholder-count="1"><div style="font-size:12.5px;padding:6px 0;border-bottom:1px solid #f4f5f6"><a href="#">{{ r.student }}</a> <span style="color:#6c757d">— {{ r.note }}; now on {{ r.current }}</span></div></sc-for></sc-if>
+              <sc-if value="{{ fRankedHasMore }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#0d6efd;margin-top:5px">+ {{ fRankedMore }} more — open reassignment workspace</div></sc-if>
+              <sc-if value="{{ fNoRanked1 }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#adb5bd">None — everyone who ranked a {{ fName }} project #1 was allocated one.</div></sc-if>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#343a40;margin-bottom:6px">Would prefer a {{ fName }} project to their current allocation</div>
+              <sc-if value="{{ fHasPrefer }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ fWouldPrefer }}" as="w" hint-placeholder-count="1"><div style="font-size:12.5px;padding:6px 0;border-bottom:1px solid #f4f5f6"><a href="#">{{ w.student }}</a> <span style="color:#6c757d">— {{ w.detail }}</span></div></sc-for></sc-if>
+              <sc-if value="{{ fPreferHasMore }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#0d6efd;margin-top:5px">+ {{ fPreferMore }} more — open reassignment workspace</div></sc-if>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#343a40;margin-bottom:6px">Next-highest interested (would take a freed place)</div>
+              <sc-if value="{{ fHasNext }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ fNextHighest }}" as="n" hint-placeholder-count="1"><div style="font-size:12.5px;padding:6px 0;border-bottom:1px solid #f4f5f6"><a href="#">{{ n.student }}</a> <span style="color:#6c757d">— ranks {{ n.project }} at #{{ n.rank }}; currently {{ n.currentlyOn }}</span></div></sc-for></sc-if>
+              <sc-if value="{{ fNextHasMore }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#0d6efd;margin-top:5px">+ {{ fNextMore }} more — open reassignment workspace</div></sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+    <!-- FACULTY-CENTRIC REASSIGNMENT WORKSPACE -->
+    <sc-if value="{{ facReassignOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeReassign }}" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:55;animation:fadeIn .15s ease;display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto">
+      <div onClick="{{ stop }}" style="background:#f8f9fa;border-radius:10px;width:920px;max-width:100%;box-shadow:0 24px 70px rgba(0,0,0,.35)">
+        <div style="background:#0d6efd;color:#fff;padding:14px 20px;border-radius:10px 10px 0 0;font-size:16px;display:flex;justify-content:space-between;align-items:center">
+          <span>Reassignment workspace — <strong>{{ frName }}</strong></span>
+          <button onClick="{{ closeReassign }}" style="border:none;background:none;color:#fff;font-size:20px;cursor:pointer;line-height:1">✕</button>
+        </div>
+        <sc-if value="{{ frOver }}" hint-placeholder-val="{{ false }}"><div style="margin:0;padding:10px 20px;background:#fff3cd;color:#664d03;font-size:12.5px">⚠️ <strong>Over limit.</strong> {{ frOverNote }}</div></sc-if>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <!-- Left: capacity + assigned -->
+          <div style="padding:18px 20px;border-right:1px solid #e3e6ea">
+            <div style="font-weight:700;font-size:13px;margin-bottom:10px">Capacity gauges</div>
+            <div style="font-size:12px;color:#495057;display:flex;justify-content:space-between;margin-bottom:3px">Supervising CATS <span>{{ frSup }} / {{ frSupLimit }}</span></div>
+            <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;margin-bottom:3px"><div style="{{ frSupBar }}"></div></div>
+            <sc-if value="{{ frSupBinding }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#842029;margin-bottom:8px">⚖️ binding — cannot accept more supervisees</div></sc-if>
+            <div style="font-size:12px;color:#495057;display:flex;justify-content:space-between;margin:8px 0 3px">Marking CATS <span>{{ frMark }} / {{ frMarkLimit }}</span></div>
+            <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden"><div style="{{ frMarkBar }}"></div></div>
+            <sc-if value="{{ frMarkBinding }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#842029;margin-top:3px">⚖️ binding — no more marking</div></sc-if>
+            <div style="font-weight:700;font-size:12px;margin:16px 0 8px">Per-project capacity</div>
+            <sc-for list="{{ frProjects }}" as="p" hint-placeholder-count="2">
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:3px"><span style="{{ p.swatch }}"></span><span style="flex:1">{{ p.title }}</span><span style="color:#6c757d">{{ p.count }}/{{ p.capacity }}</span></div>
+              <div style="height:7px;background:#e9ecef;border-radius:4px;overflow:hidden"><div style="{{ p.bar }}"></div></div>
+              <div style="{{ p.noteStyle }};margin-top:2px">{{ p.note }}</div>
+            </div>
+            </sc-for>
+            <div style="font-weight:700;font-size:13px;margin:18px 0 8px">Currently assigned ({{ frAssignedCount }})</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ frAssigned }}" as="a" hint-placeholder-count="2">
+              <div style="border:1px solid #e3e6ea;border-radius:6px;padding:8px 10px;background:#fff">
+                <div style="font-size:12.5px;font-weight:600">{{ a.student }} <sc-if value="{{ a.pending }}" hint-placeholder-val="{{ false }}"><span style="background:#0dcaf0;color:#212529;border-radius:4px;padding:0 6px;font-size:10px">pending</span></sc-if></div>
+                <div style="font-size:11.5px;color:#6c757d;margin-top:2px">{{ a.project }}</div>
+              </div>
+              </sc-for>
+            </div>
+          </div>
+          <!-- Right: candidate pool -->
+          <div style="padding:18px 20px">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px">Assignable pool ({{ frPoolCount }})</div>
+            <div style="font-size:11.5px;color:#6c757d;margin-bottom:12px">Students who could move here, ranked by strength of preference. Colour shows why.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ frPool }}" as="c" hint-placeholder-count="4">
+              <div style="border:1px solid #e3e6ea;border-radius:7px;padding:10px 12px;background:#fff;display:flex;justify-content:space-between;gap:10px;align-items:center">
+                <div style="min-width:0">
+                  <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.tone }};display:inline-block"></span>{{ c.name }}</div>
+                  <div style="font-size:11.5px;color:#495057;margin-top:3px">{{ c.why }}</div>
+                  <div style="font-size:11px;color:#adb5bd;margin-top:1px">{{ c.current }}</div>
+                </div>
+                <button onClick="{{ c.assign }}" title="{{ c.warnReason }}" style="{{ c.assignStyle }}">Assign →</button>
+              </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px 20px;border-top:1px solid #e3e6ea;display:flex;justify-content:flex-end;align-items:center">
+          
+          
+        <button onClick="{{ closeReassign }}" style="border: none; background: #0d6efd; color: #fff; border-radius: 6px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; align-self: auto">Done</button></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isChanges }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px;overflow:hidden">
+      <div style="background:#0d6efd;color:#fff;padding:12px 18px;font-size:16px;display:flex;justify-content:space-between;align-items:center">
+        <span>Changes vs. original optimizer allocation — <strong>{{ matchName }}</strong></span>
+        <button onClick="{{ resetAll }}" style="border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Revert all</button>
+      </div>
+      <div style="padding:18px">
+        <sc-if value="{{ hasChanges }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <div style="flex:1;min-width:130px;background:#f4f5f6;border:1px solid #e3e6ea;border-radius:8px;padding:12px 14px"><div style="font-size:22px;font-weight:700">{{ changesSummary.fields }}</div><div style="font-size:12px;color:#6c757d">field changes</div></div>
+          <div style="flex:1;min-width:130px;background:#f4f5f6;border:1px solid #e3e6ea;border-radius:8px;padding:12px 14px"><div style="font-size:22px;font-weight:700">{{ changesSummary.students }}</div><div style="font-size:12px;color:#6c757d">students affected</div></div>
+          <div style="flex:1;min-width:170px;background:#f4f5f6;border:1px solid #e3e6ea;border-radius:8px;padding:12px 14px"><div style="font-size:15px;font-weight:700"><span style="color:#198754">● {{ changesSummary.scoreFrom }}</span> → <span style="color:#0d6efd">● {{ changesSummary.scoreTo }}</span></div><div style="font-size:12px;color:#6c757d">objective score (optimizer → current)</div></div>
+        </div>
+        <div style="border:1px solid #dee2e6;border-radius:6px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr .7fr 1.9fr 1.9fr 1.1fr .7fr;background:#fff;border-bottom:2px solid #dee2e6;font-weight:700;font-size:13px"><div style="padding:11px 12px">Student</div><div style="padding:11px 12px">Field</div><div style="padding:11px 12px">Optimizer baseline</div><div style="padding:11px 12px">Current</div><div style="padding:11px 12px">Edited by</div><div style="padding:11px 12px"></div></div>
+          <sc-for list="{{ changeRows }}" as="c" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:1fr .7fr 1.9fr 1.9fr 1.1fr .7fr;border-bottom:1px solid #eef0f2;font-size:12.5px;align-items:center">
+            <div style="padding:11px 12px;font-weight:500">{{ c.student }}</div>
+            <div style="padding:11px 12px"><span style="background:#e9ecef;border-radius:4px;padding:2px 8px;font-size:11px">{{ c.field }}</span></div>
+            <div style="padding:11px 12px;color:#842029"><span style="text-decoration:line-through;opacity:.7">{{ c.from }}</span></div>
+            <div style="padding:11px 12px;color:#0f5132">{{ c.to }}</div>
+            <div style="padding:11px 12px;color:#6c757d"><div>{{ c.editor }}</div><div style="font-size:11px;color:#adb5bd">{{ c.when }}</div></div>
+            <div style="padding:11px 12px"><button onClick="{{ c.revert }}" style="border:1px solid #ced4da;background:#fff;color:#495057;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer">Revert</button></div>
+          </div>
+          </sc-for>
+        </div>
+        </sc-if>
+        <sc-if value="{{ noChanges }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center;padding:48px 20px;color:#adb5bd"><div style="font-size:34px">✓</div><div style="margin-top:8px;font-size:14px">This match matches the optimizer output exactly.</div><div style="font-size:12.5px;margin-top:4px">Reassign a project or edit roles (Student / Faculty view) to see changes tracked here.</div></div>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px;overflow:hidden">
+      <div style="background:#0d6efd;color:#fff;padding:12px 18px;font-size:16px;display:flex;justify-content:space-between;align-items:center">
+        <span>Automatic matching</span>
+        <button onClick="{{ loadAll }}" style="border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Compute all statistics</button>
+      </div>
+      <div style="padding:18px">
+        <div style="font-size:12.5px;color:#495057;background:#e7f1ff;border:1px solid #b6d4fe;border-radius:6px;padding:10px 12px;margin-bottom:16px;line-height:1.5">⚡ <strong>Fast first load, no cache.</strong> The page renders immediately from cheap columns; the expensive summary statistics (programme-pref match rate, hint satisfaction, CATS spread) are computed on demand per row — never cached, so there is nothing to invalidate after an edit.</div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <sc-for list="{{ dashMatches }}" as="m" hint-placeholder-count="3">
+          <div style="border:1px solid {{ m.borderStyle }};border-radius:8px;overflow:visible;{{ m.cardStyle }}">
+            <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 3fr;border-bottom:1px solid #eef0f2">
+              <div style="padding:14px;border-right:1px solid #f1f3f5">
+                <a href="#" style="font-weight:600;font-size:15px">{{ m.name }}</a>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ m.tagChips }}" as="t" hint-placeholder-count="2"><span style="{{ t.style }}">{{ t.label }}</span></sc-for></div>
+              </div>
+              <div style="padding:14px;border-right:1px solid #f1f3f5;font-size:13px">
+                <div style="color:#198754;font-weight:600">✔ {{ m.status }}</div>
+                <sc-if value="{{ m.modified }}" hint-placeholder-val="{{ false }}"><div style="color:#0dcaf0;margin-top:4px">ⓘ Modified</div></sc-if>
+                <sc-if value="{{ m.published }}" hint-placeholder-val="{{ false }}"><div style="color:#198754;margin-top:2px">✔ Published</div></sc-if>
+              </div>
+              <div style="padding:14px;border-right:1px solid #f1f3f5;font-size:13px">
+                <div style="color:#198754">● Original {{ m.orig }}</div>
+                <div style="color:#0d6efd;margin-top:2px">● Current {{ m.cur }}</div>
+                <div style="color:#6c757d;font-size:12px;margin-top:6px">{{ m.sel }} sel · {{ m.sup }} sup · {{ m.mark }} mark · {{ m.proj }} proj</div>
+              </div>
+              <div style="padding:14px;position:relative">
+                <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+                  <div style="position:relative">
+                    <button onClick="{{ m.toggleMenu }}" style="border:1px solid #6c757d;background:#6c757d;color:#fff;border-radius:6px;padding:5px 14px;font-size:12.5px;cursor:pointer;font-weight:500">Actions ▾</button>
+                    <sc-if value="{{ m.menuOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:34px;right:0;z-index:20;background:#fff;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.18);min-width:210px;overflow:hidden;padding:4px 0">
+                      <sc-for list="{{ matchActions }}" as="a" hint-placeholder-count="5"><div onClick="{{ m.toggleMenu }}" style="padding:8px 14px;font-size:13px;cursor:pointer;color:#212529" style-hover="background:#f1f3f5">{{ a }}</div></sc-for>
+                    </div>
+                    </sc-if>
+                  </div>
+                </div>
+                <sc-if value="{{ m.loaded }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:#198754;color:#fff;border-radius:4px;padding:3px 9px;font-size:11.5px">Matched {{ m.stats.matched }} programme prefs</span>
+                  <span style="border-radius:4px;padding:3px 9px;font-size:11.5px;background:{{ m.failStyle }}">Failed {{ m.stats.failed }} programme prefs</span>
+                  <span style="background:#6c757d;color:#fff;border-radius:4px;padding:3px 9px;font-size:11.5px">Satisfied {{ m.stats.hints }} hints</span>
+                  <span style="background:#e9ecef;border-radius:4px;padding:3px 9px;font-size:11.5px">δ {{ m.stats.dmin }}–{{ m.stats.dmax }}</span>
+                  <span style="background:#e9ecef;border-radius:4px;padding:3px 9px;font-size:11.5px">CATS {{ m.stats.cmin }}–{{ m.stats.cmax }}</span>
+                </div>
+                </sc-if>
+                <sc-if value="{{ m.loading }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:#eef0f2;color:transparent;border-radius:4px;padding:3px 9px;font-size:11.5px;animation:fadeIn .6s infinite alternate">Matched 00 programme prefs</span>
+                  <span style="background:#eef0f2;color:transparent;border-radius:4px;padding:3px 9px;font-size:11.5px;animation:fadeIn .6s infinite alternate">Satisfied 0 hints</span>
+                  <span style="background:#eef0f2;color:transparent;border-radius:4px;padding:3px 9px;font-size:11.5px;animation:fadeIn .6s infinite alternate">CATS spread</span>
+                </div>
+                </sc-if>
+                <sc-if value="{{ m.showLoad }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ m.loadStats }}" style="border:1px dashed #adb5bd;background:#fff;color:#6c757d;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Compute summary statistics ↻</button>
+                </sc-if>
+                <div style="font-size:12px;color:#6c757d;margin-top:10px">Created by ◉ <a href="#">{{ m.by }}</a> {{ m.when }}</div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <sc-if value="{{ m.hasErrors }}" hint-placeholder-val="{{ false }}"><span onClick="{{ m.toggleDetail }}" style="background:#dc3545;color:#fff;border-radius:5px;padding:3px 10px;font-size:12px;cursor:pointer">{{ m.errors }} errors ›</span></sc-if>
+                  <sc-if value="{{ m.hasWarnings }}" hint-placeholder-val="{{ false }}"><span onClick="{{ m.toggleDetail }}" style="background:#ffc107;color:#212529;border-radius:5px;padding:3px 10px;font-size:12px;cursor:pointer">{{ m.warnCount }} warnings ›</span></sc-if>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ m.detailOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px 16px;background:#fbfbfc;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ m.hasErrors }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#f8d7da;border:1px solid #f5c2c7;border-radius:7px;padding:11px 14px">
+                <div style="font-size:12.5px;font-weight:700;color:#842029;margin-bottom:6px">✖ Validation errors ({{ m.errors }})</div>
+                <ul style="margin:0;padding-left:18px;color:#842029;font-size:12px;line-height:1.6"><sc-for list="{{ m.errItems }}" as="e" hint-placeholder-count="2"><li>{{ e }}</li></sc-for></ul>
+              </div>
+              </sc-if>
+              <sc-if value="{{ m.hasWarnings }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff3cd;border:1px solid #ffe69c;border-radius:7px;padding:11px 14px">
+                <div style="font-size:12.5px;font-weight:700;color:#664d03;margin-bottom:6px">⚠️ Validation warnings ({{ m.warnCount }})</div>
+                <ul style="margin:0;padding-left:18px;color:#664d03;font-size:12px;line-height:1.6"><sc-for list="{{ m.warnItems }}" as="w" hint-placeholder-count="1"><li>{{ w }}</li></sc-for></ul>
+              </div>
+              </sc-if>
+            </div>
+            </sc-if>
+          </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+
+  <!-- ===================== STUDENT DRAWER ===================== -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:40;animation:fadeIn .15s ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:520px;max-width:94vw;background:#f8f9fa;z-index:41;box-shadow:-8px 0 30px rgba(0,0,0,.25);animation:drawerIn .2s ease;display:flex;flex-direction:column">
+    <div style="padding:18px 20px;border-bottom:1px solid #e3e6ea;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <a href="mailto:{{ selEmail }}" style="font-size:22px;font-weight:600;color:#0d6efd">{{ selName }}</a>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px">
+          <span style="{{ selPclassSwatch }}"></span><span style="color:#6c757d">{{ selPclass }}</span>
+          <span style="color:#495057">◉ <a href="#">{{ selConvenor }}</a></span>
+        </div>
+      </div>
+      <button onClick="{{ closeDrawer }}" style="border:none;background:none;font-size:22px;cursor:pointer;color:#6c757d;line-height:1">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+      <!-- Assigned project + reassignment -->
+      <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px">
+        <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600;display:flex;justify-content:space-between;align-items:center">Assigned project <sc-if value="{{ selChanged }}" hint-placeholder-val="{{ false }}"><span style="background:#0dcaf0;color:#212529;border-radius:4px;padding:1px 7px;font-size:11px">Modified</span></sc-if></div>
+        <div style="padding:14px">
+          <div style="font-size:14px;font-weight:500;margin-bottom:2px">{{ selProjectText }}</div>
+          <div style="font-size:12px;color:#6c757d;margin-bottom:12px">◉ {{ selProjectOwner }}</div>
+          <div style="font-size:12px;color:#495057;margin-bottom:6px;font-weight:600">Quick reassignment</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <sc-for list="{{ selReassign }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.onClick }}" style="{{ o.style }}"><span style="font-weight:600;margin-right:6px">#{{ o.rank }}</span>{{ o.project }} <span style="color:#8a8f94">· {{ o.owner }}{{ o.tag }}</span></button>
+            </sc-for>
+          </div>
+          <button onClick="{{ openSelRoleEditor }}" style="margin-top:12px;width:100%;border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:6px;padding:8px;font-size:13px;font-weight:600;cursor:pointer">Open unified role editor…</button>
+        </div>
+      </div>
+      <!-- Ranked selection -->
+      <div style="background:#fff;border:1px solid #0d6efd;border-radius:8px">
+        <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600">Ranked selection</div>
+        <div style="padding:6px 14px 14px">
+          <div style="display:grid;grid-template-columns:.5fr 3fr 1.6fr .8fr;font-size:12px;font-weight:700;padding:8px 0;border-bottom:1px solid #e9ecef"><div>Rank</div><div>Project</div><div>Owner</div><div style="text-align:right">Hint</div></div>
+          <sc-for list="{{ selSelections }}" as="s" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:.5fr 3fr 1.6fr .8fr;font-size:12.5px;padding:8px 0;border-bottom:1px solid #f1f3f5;align-items:center">
+            <div style="font-weight:700">#{{ s.rank }}</div><div><a href="#">{{ s.project }}</a></div><div style="color:#495057">◉ {{ s.owner }}</div>
+            <div style="text-align:right"><span style="{{ s.hintStyle }}">{{ s.hintLabel }}</span></div>
+          </div>
+          </sc-for>
+          <div style="display:flex;gap:8px;margin-top:12px"><a href="#" style="border:1px solid #ced4da;border-radius:6px;padding:5px 11px;font-size:12px;color:#495057">Edit selection…</a><a href="#" style="border:1px solid #ced4da;border-radius:6px;padding:5px 11px;font-size:12px;color:#495057">📖 View journal…</a></div>
+        </div>
+      </div>
+      <!-- Journal preview -->
+      <div style="background:#fff;border:1px solid #6c757d;border-radius:8px">
+        <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600;display:flex;justify-content:space-between">Journal preview <span style="color:#6c757d;font-weight:500;font-size:13px">{{ selJournalCount }} accessible</span></div>
+        <div style="padding:8px 14px 14px">
+          <sc-if value="{{ selHasJournal }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ selJournal }}" as="j" hint-placeholder-count="2">
+          <div style="padding:9px 0;border-bottom:1px solid #f1f3f5">
+            <div style="display:flex;justify-content:space-between;gap:10px"><span style="font-weight:600;font-size:13px">{{ j.title }}</span><span style="font-size:11px;color:#adb5bd;white-space:nowrap">{{ j.date }}</span></div>
+            <div style="font-size:12.5px;color:#6c757d;margin-top:3px;line-height:1.45">{{ j.snippet }}</div>
+          </div>
+          </sc-for>
+          </sc-if>
+          <sc-if value="{{ selNoJournal }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#adb5bd;padding:6px 0">No accessible journal entries.</div></sc-if>
+        </div>
+      </div>
+      <!-- Tickets -->
+      <sc-if value="{{ selHasTickets }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border:1px solid #f0ad4e;border-radius:8px">
+        <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600">Tickets in scope <span style="color:#6c757d;font-weight:500;font-size:13px">({{ selTicketCount }})</span></div>
+        <div style="padding:8px 14px 14px">
+          <sc-for list="{{ selTickets }}" as="t" hint-placeholder-count="1">
+          <div style="padding:9px 0;border-bottom:1px solid #f1f3f5;display:flex;justify-content:space-between;gap:10px;align-items:center">
+            <div><a href="#" style="font-size:13px">{{ t.title }}</a><div style="font-size:11px;color:#adb5bd;margin-top:2px">opened {{ t.opened }}</div></div>
+            <span style="{{ t.statusStyle }}">{{ t.status }}</span>
+          </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+      <!-- Recent emails -->
+      <div style="background:#fff;border:1px solid #6c757d;border-radius:8px">
+        <div style="padding:10px 14px;border-bottom:1px solid #e3e6ea;font-weight:600">Recent emails</div>
+        <div style="padding:8px 14px 14px">
+          <sc-for list="{{ selEmails }}" as="e" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:1.3fr 3fr;font-size:12.5px;padding:6px 0;border-bottom:1px solid #f1f3f5"><div style="color:#6c757d">{{ e.date }}</div><div><a href="#">{{ e.subject }}</a></div></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== UNIFIED ROLE EDITOR MODAL ===================== -->
+  <sc-if value="{{ roleEditorOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeRoleEditor }}" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;animation:fadeIn .15s ease;display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto">
+    <div onClick="{{ stop }}" style="background:#fff;border-radius:10px;width:640px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="background:#0d6efd;color:#fff;padding:14px 18px;border-radius:10px 10px 0 0;font-size:16px">Edit roles for <strong>{{ reName }}</strong> <span style="opacity:.8;font-size:13px">({{ rePeriod }})</span></div>
+      <div style="padding:18px">
+        
+        <!-- Project -->
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px">Assigned project</label>
+          <select onChange="{{ reSetProject }}" value="{{ reProjectId }}" style="width:100%;padding:8px 10px;border:1px solid #ced4da;border-radius:6px;font-size:13px">
+            <sc-for list="{{ reProjectOptions }}" as="o" hint-placeholder-count="4"><option value="{{ o.id }}">{{ o.label }}</option></sc-for>
+          </select>
+        </div>
+        <!-- Supervisors -->
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px">Supervisors</label>
+          <div style="border:1px solid #ced4da;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;min-height:42px">
+            <sc-for list="{{ reSupervisors }}" as="s" hint-placeholder-count="1"><span style="background:#e7f1ff;border:1px solid #b6d4fe;border-radius:5px;padding:3px 8px;font-size:12.5px;display:inline-flex;gap:6px;align-items:center">{{ s.name }} <span onClick="{{ s.remove }}" style="cursor:pointer;color:#6c757d">✕</span></span></sc-for>
+          </div>
+          <select onChange="{{ reAddSupervisor }}" value="" style="margin-top:6px;width:100%;padding:7px 10px;border:1px dashed #ced4da;border-radius:6px;font-size:12.5px;color:#6c757d"><option value="">+ Add supervisor…</option><sc-for list="{{ reAddableSup }}" as="o" hint-placeholder-count="3"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select>
+        </div>
+        <!-- Markers -->
+        <div style="margin-bottom:8px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px">Markers <span style="color:#6c757d;font-weight:400">(from assessor pool)</span></label>
+          <div style="border:1px solid #ced4da;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;min-height:42px">
+            <sc-for list="{{ reMarkers }}" as="m" hint-placeholder-count="1"><span style="background:#f1f3f5;border:1px solid #dee2e6;border-radius:5px;padding:3px 8px;font-size:12.5px;display:inline-flex;gap:6px;align-items:center">{{ m.name }} <span onClick="{{ m.remove }}" style="cursor:pointer;color:#6c757d">✕</span></span></sc-for>
+          </div>
+          <select onChange="{{ reAddMarker }}" value="" style="margin-top:6px;width:100%;padding:7px 10px;border:1px dashed #ced4da;border-radius:6px;font-size:12.5px;color:#6c757d"><option value="">+ Add marker…</option><sc-for list="{{ reAddableMark }}" as="o" hint-placeholder-count="3"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select>
+        </div>
+      </div>
+      <div style="padding:14px 18px;border-top:1px solid #e3e6ea;display:flex;justify-content:flex-end;gap:8px">
+        <button onClick="{{ closeRoleEditor }}" style="border:1px solid #ced4da;background:#fff;color:#495057;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">Cancel</button>
+        <button onClick="{{ reSave }}" style="border:none;background:#0d6efd;color:#fff;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer">Save changes</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== COMMENTS PANEL ===================== -->
+  <sc-if value="{{ commentsOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ toggleComments }}" style="position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:45;animation:fadeIn .15s ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:440px;max-width:94vw;background:#fff;z-index:46;box-shadow:-8px 0 30px rgba(0,0,0,.25);animation:drawerIn .2s ease;display:flex;flex-direction:column">
+    <div style="padding:16px 18px;border-bottom:1px solid #e3e6ea;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:17px;font-weight:600">Review comments</div>
+      <button onClick="{{ toggleComments }}" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6c757d">✕</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid #e3e6ea">
+      <button onClick="{{ ctGlobal }}" style="{{ ctGlobalStyle }}">Global ({{ globalCount }})</button>
+      <button onClick="{{ ctAssign }}" style="{{ ctAssignStyle }}">By assignment ({{ assignCount }})</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ visibleComments }}" as="c" hint-placeholder-count="3">
+      <div style="{{ c.wrapStyle }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:#0d6efd;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.initials }}</span><span style="font-size:13px;font-weight:600">{{ c.author }}</span></div>
+          <span style="font-size:11px;color:#adb5bd">{{ c.time }}</span>
+        </div>
+        <sc-if value="{{ c.hasScope }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;font-size:11px;color:#0d6efd;background:#e7f1ff;border-radius:4px;padding:2px 7px;display:inline-block">{{ c.scope }}</div></sc-if>
+        <div style="font-size:13px;color:#343a40;margin-top:6px;line-height:1.5">{{ c.body }}</div>
+        <sc-for list="{{ c.replies }}" as="rp" hint-placeholder-count="0">
+        <div style="margin-top:8px;margin-left:16px;padding-left:10px;border-left:2px solid #e3e6ea">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600">{{ rp.author }}</span><span style="font-size:10px;color:#adb5bd">{{ rp.time }}</span></div>
+          <div style="font-size:12.5px;color:#495057;margin-top:2px">{{ rp.body }}</div>
+        </div>
+        </sc-for>
+        <div style="display:flex;gap:14px;margin-top:9px">
+          <span onClick="{{ c.reply }}" style="cursor:pointer;font-size:12px;color:#0d6efd">Reply</span>
+          <span onClick="{{ c.toggleResolve }}" style="{{ c.resolveStyle }}">{{ c.resolveLabel }}</span>
+        </div>
+      </div>
+      </sc-for>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid #e3e6ea">
+      <sc-if value="{{ ctIsAssign }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;color:#6c757d;margin-bottom:6px">Scoped to: <strong>{{ assignScopeLabel }}</strong></div></sc-if>
+      <textarea value="{{ newComment }}" onInput="{{ setNewComment }}" placeholder="Record a change or a desired change…" style="width:100%;border:1px solid #ced4da;border-radius:6px;padding:9px;font-size:13px;resize:vertical;min-height:60px;font-family:inherit"></textarea>
+      <button onClick="{{ addComment }}" style="margin-top:8px;width:100%;border:none;background:#0d6efd;color:#fff;border-radius:6px;padding:9px;font-size:13px;font-weight:600;cursor:pointer">Post comment</button>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const P = {
+      FYP_BSC:{label:"Final Year Project (BSc)",short:"FYP BSc",color:"#9ec5fe"},
+      FYP_MP:{label:"Final Year Project (MPhys)",short:"FYP MPhys",color:"#d8b4fe"},
+      MPP:{label:"Mathematical Physics Project",short:"MPP",color:"#0f5132"},
+    };
+    this.P = P;
+    // faculty roster (assessor pool / supervisor options)
+    this.FAC = ["Prof David Seery","Prof Kathy Romer","Prof Ilian Iliev","Prof Antonella De Santo","Prof Andrea Banfi","Prof Daniel Litim","Prof Barry Garraway","Prof Robert Smith","Dr Christian Byrnes","Dr Jon Loveday","Prof Sebastian Jaeger","Prof Stephan Huber","Dr Josh McFayden","Dr Elisabeth Falk","Prof Xavier Calmet","Prof Sebastian Weidt","Prof Winfried Hensinger","Dr Alice King","Dr Clark Griffith","Prof Antony Lewis","Prof Fabrizio Salvatore","Dr Kate Shaw"];
+    const init = (i,f)=>({name:f,id:i});
+    // STUDENTS
+    this.students = [
+      {id:1,name:"Rachel Binnie",email:"rb@sussex.ac.uk",pclass:P.FYP_BSC,cohort:"Phys+Astro BSc · Y2 | 2024 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:4,delta:3,score:"0.25",journalCount:3,tickets:[{title:"Query about project scope",status:"Open",opened:"18 May 2026"}],
+        selections:[{rank:1,project:"From Observations of Clusters of Galaxies to Insights into Cosmology",owner:"Prof Kathy Romer",hint:"none"},{rank:2,project:"The galaxy luminosity and stellar mass functions from early WAVES data",owner:"Dr Jon Loveday",hint:"none"},{rank:3,project:"Inflation with the curvaton and the hot big bang",owner:"Dr Christian Byrnes",hint:"none"},{rank:4,project:"The Physics and Detectable Signatures of the Cosmic Dark Ages and the Epoch of Reionization",owner:"Prof Ilian Iliev",hint:"encourage"},{rank:5,project:"Testing the completeness of the WAVES input catalogue",owner:"Dr Jon Loveday",hint:"none"},{rank:6,project:"Neutrino Backgrounds in Direct Dark Matter Searches with the future XLZD Experiment",owner:"Prof Antonella De Santo",hint:"none"}],
+        journal:[{title:"Reading week catch-up",date:"12 Jun 2026",snippet:"Went through the WAVES cosmology background reading; flagged uncertainty about which dataset to prioritise."},{title:"Supervisor meeting notes",date:"05 Jun 2026",snippet:"Discussed swapping toward cluster cosmology — student keen on Romer's group but worried about coding load."},{title:"First-week reflection",date:"22 May 2026",snippet:"Excited but unsure about the reionization topic; would prefer something more observational."}],
+        emails:[{date:"Fri 15 May 2026",subject:"Ion Quantum Technology group projects now available"},{date:"Fri 08 May 2026",subject:"BSc final year project selections – update and new deadline 1 July"},{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (BSc))"}],
+        assignedRank:4,markers:[init(1,"Dr Jon Loveday"),init(2,"Prof Robert Smith")]},
+      {id:2,name:"Ted Campbell",email:"tc@sussex.ac.uk",pclass:P.FYP_BSC,cohort:"Phys BSc · Y2 | 2024 cohort",owner:"Prof Antonella De Santo",convenor:"Prof David Seery",
+        rank:1,delta:0,score:"1.0",journalCount:0,tickets:[],
+        selections:[{rank:1,project:"Neutrino Backgrounds in Direct Dark Matter Searches with the future XLZD Experiment",owner:"Prof Antonella De Santo",hint:"none"},{rank:2,project:"Topics in early universe cosmology",owner:"Prof David Seery",hint:"none"},{rank:3,project:"From Observations of Clusters of Galaxies to Insights into Cosmology",owner:"Prof Kathy Romer",hint:"none"}],
+        journal:[],emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (BSc))"}],
+        assignedRank:1,markers:[init(1,"Prof Andrea Banfi")]},
+      {id:3,name:"William Bowers",email:"wb@sussex.ac.uk",pclass:P.MPP,cohort:"MPhys · Y3 | 2023 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:2,delta:1,score:"1.5",journalCount:2,tickets:[],
+        selections:[{rank:1,project:"Theoretical Aspects of Black Holes",owner:"Prof Andrea Banfi",hint:"none"},{rank:2,project:"Quantum mechanics and path integrals",owner:"Prof Sebastian Jaeger",hint:"encourage"}],
+        journal:[{title:"Path integral notes",date:"10 Jun 2026",snippet:"Worked through Feynman's derivation; comfortable with the formalism, wants a computational component."},{title:"Topic decision",date:"28 May 2026",snippet:"Leaning toward Jaeger's QM path-integral project over the black-hole one."}],
+        emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Mathematical Physics Project)"}],
+        assignedRank:2,markers:[init(1,"Prof Andrea Banfi"),init(2,"Prof Stephan Huber")]},
+      {id:4,name:"Noah Boyer",email:"nb@sussex.ac.uk",pclass:P.FYP_MP,cohort:"Astro MPhys · Y3 | 2023 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:1,delta:0,score:"1.0",journalCount:1,tickets:[],progBad:true,
+        selections:[{rank:1,project:"Simulation of opaque scintillator neutrino detectors",owner:"Dr Clark Griffith",hint:"none"}],
+        journal:[{title:"Kickoff",date:"20 May 2026",snippet:"Detector simulation looks heavy on Geant4 — needs to confirm computing access."}],
+        emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (MPhys))"}],
+        assignedRank:1,markers:[init(1,"Dr Josh McFayden"),init(2,"Dr Elisabeth Falk")]},
+      {id:5,name:"Ben Briggs",email:"bb@sussex.ac.uk",pclass:P.FYP_BSC,cohort:"Phys+Astro BSc · Y2 | 2024 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:2,delta:1,score:"0.5",journalCount:2,tickets:[{title:"Requesting extension for selection",status:"Resolved",opened:"29 Apr 2026"}],
+        selections:[{rank:1,project:"Inflation with the curvaton and the hot big bang",owner:"Dr Christian Byrnes",hint:"none"},{rank:2,project:"Weak Gravitational Lensing",owner:"Prof Robert Smith",hint:"none"}],
+        journal:[{title:"Lensing basics",date:"08 Jun 2026",snippet:"Read Bartelmann & Schneider intro; keen on the statistics angle."},{title:"Selection thoughts",date:"25 May 2026",snippet:"Torn between inflation theory and lensing; slightly prefers Byrnes."}],
+        emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (BSc))"}],
+        assignedRank:2,markers:[init(1,"Prof Ilian Iliev"),init(2,"Prof David Seery")]},
+      {id:6,name:"Jessie-willow Baylis",email:"jb@sussex.ac.uk",pclass:P.FYP_MP,cohort:"Phys MPhys · Y3 | 2023 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:1,delta:0,score:"1.0",journalCount:0,tickets:[],
+        selections:[{rank:1,project:"ATLAS measurement of the top quark mass",owner:"Dr Josh McFayden",hint:"none"}],
+        journal:[],emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (MPhys))"}],
+        assignedRank:1,markers:[init(1,"Dr Kate Shaw"),init(2,"Prof Fabrizio Salvatore")]},
+      {id:7,name:"Adam Booth",email:"ab@sussex.ac.uk",pclass:P.FYP_BSC,cohort:"Phys BSc · Y2 | 2024 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:5,delta:4,score:"0.2",journalCount:1,tickets:[],
+        selections:[{rank:1,project:"Cold atoms in radio frequency traps",owner:"Prof Barry Garraway",hint:"none"},{rank:5,project:"Testing the completeness of the WAVES input catalogue",owner:"Dr Jon Loveday",hint:"none"}],
+        journal:[{title:"Disappointed with allocation",date:"14 Jun 2026",snippet:"Was hoping for the cold-atoms project; not sure about the WAVES catalogue work."}],
+        emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (BSc))"}],
+        assignedRank:5,markers:[init(1,"Dr Alice King"),init(2,"Dr Clark Griffith")]},
+      {id:8,name:"Amber Bower",email:"amb@sussex.ac.uk",pclass:P.FYP_BSC,cohort:"Phys BSc · Y2 | 2024 cohort",owner:"Prof David Seery",convenor:"Prof David Seery",
+        rank:1,delta:0,score:"0.5",journalCount:0,tickets:[],
+        selections:[{rank:1,project:"Topics in early universe cosmology",owner:"Prof David Seery",hint:"none"}],
+        journal:[],emails:[{date:"Fri 01 May 2026",subject:"Your project choices have been received (Final Year Project (BSc))"}],
+        assignedRank:1,markers:[init(1,"Prof David Seery"),init(2,"Prof Antony Lewis")]},
+    ];
+    // assigned project = selection at assignedRank; store current in state
+    const assignments = {};
+    this.students.forEach(s=>{
+      const sel = s.selections.find(x=>x.rank===s.assignedRank) || s.selections[0];
+      assignments[s.id] = {projectRank:sel.rank, project:sel.project, owner:sel.owner,
+        supervisors:[{id:1,name:sel.owner}], markers:s.markers.map(m=>({id:m.id,name:m.name})), changed:false};
+    });
+    this.original = JSON.parse(JSON.stringify(assignments));
+
+    // seed a few illustrative edits vs the optimizer baseline so the Changes tab is populated
+    const rSel=this.students[0].selections[0]; // Rachel -> her #1 (Romer, cluster cosmology)
+    assignments[1]={...assignments[1],projectRank:rSel.rank,project:rSel.project,owner:rSel.owner,supervisors:[{id:1,name:rSel.owner}],changed:true,editor:"ds283",when:"Today 09:14"};
+    assignments[3]={...assignments[3],markers:[{id:1,name:"Prof Andrea Banfi"},{id:9,name:"Prof Daniel Litim"}],changed:true,editor:"Prof Kathy Romer",when:"Yesterday 16:40"};
+    assignments[5]={...assignments[5],supervisors:[{id:1,name:"Prof Robert Smith"},{id:2,name:"Prof Ilian Iliev"}],changed:true,editor:"ds283",when:"Today 11:02"};
+
+    // FACULTY dataset (faculty view + new offcanvas)
+    const mk=(student,project,pclass,prog)=>({student,project,pclass,prog});
+    this.faculty=[
+      {id:1,name:"Prof Antonella De Santo",
+        offered:[{p:P.FYP_BSC,n:1},{p:P.FYP_MP,n:1},{p:P.MPP,n:1}],
+        supervising:[mk("Ted Campbell","Neutrino Backgrounds in Direct Dark Matter Searches",P.FYP_BSC,"ok"),mk("Charlotte Wood","Primordial black hole relics and the future",P.FYP_MP,"bad")],
+        marking:[],
+        workload:{sup:105,mark:0,total:105,supLimit:105,markLimit:35,supBinding:true,markBinding:false},
+        projects:[{title:"Neutrino Backgrounds in Direct Dark Matter Searches with the future XLZD Experiment",p:P.FYP_BSC,selected:4,capacity:2,enforce:false,allocated:["Ted Campbell","Ela Phaneuf"],full:false},
+                  {title:"Primordial black hole relics and the future",p:P.FYP_MP,selected:6,capacity:3,enforce:true,allocated:["Charlotte Wood","Olive Vroman","Swami Iavarazzo"],full:true}],
+        rankedYou1:[{student:"Ela Phaneuf",current:"unallocated (waitlist)",note:"ranked De Santo #1"},{student:"Marcus Webb",current:"Topics in early universe cosmology (Seery), #3",note:"ranked De Santo #1"},{student:"Priya Anand",current:"Weak Gravitational Lensing (Smith), #2",note:"ranked De Santo #1"},{student:"Tom Fisher",current:"Bremsstrahlung (Banfi), #4",note:"ranked De Santo #1"}],
+        wouldPrefer:[{student:"Adam Booth",yourRank:2,currentRank:5,project:"Neutrino Backgrounds…"},{student:"Rachel Binnie",yourRank:6,currentRank:4,project:"Neutrino Backgrounds…"},{student:"Sara Nkemelu",yourRank:3,currentRank:5,project:"Neutrino Backgrounds…"},{student:"Owen Blake",yourRank:2,currentRank:3,project:"Neutrino Backgrounds…"},{student:"Lucy Hart",yourRank:4,currentRank:6,project:"Neutrino Backgrounds…"}],
+        nextHighest:[{student:"Ela Phaneuf",rank:2,project:"Neutrino Backgrounds…",currentlyOn:"unallocated (waitlist)"},{student:"Owen Blake",rank:2,project:"Neutrino Backgrounds…",currentlyOn:"Topics in early universe cosmology (Seery)"}],
+        constraints:[{type:"cats",text:"Supervising CATS limit is binding — 105 / 105 CATS assigned. 2 further students who prefer a De Santo project cannot be added without exceeding her supervising limit."},
+                     {type:"capacity",text:"“Primordial black hole relics” is at capacity (3 / 3) with enforcement on — 3 more students selected it but could not be allocated."}]},
+      {id:2,name:"Prof Ilian Iliev",
+        offered:[{p:P.FYP_BSC,n:1},{p:P.FYP_MP,n:1},{p:P.MPP,n:1}],
+        supervising:[mk("Rachel Binnie","The Physics and Detectable Signatures of the Cosmic Dark Ages",P.FYP_BSC,null),mk("Emma Renouprez","The Physics and Detectable Signatures",P.FYP_BSC,null),mk("Alex Cauchi","Observational signatures of reionization",P.MPP,null)],
+        marking:[mk("Leo Barassi","From Observations of Clusters",P.FYP_BSC,null),mk("Ben Briggs","Weak Gravitational Lensing",P.FYP_BSC,null),mk("Gabriel Hobbs","Inflation with the curvaton",P.FYP_BSC,null)],
+        workload:{sup:90,mark:9,total:99,supLimit:105,markLimit:9,supBinding:false,markBinding:true},
+        projects:[{title:"The Physics and Detectable Signatures of the Cosmic Dark Ages and the Epoch of Reionization",p:P.FYP_BSC,selected:5,capacity:3,enforce:true,allocated:["Rachel Binnie","Emma Renouprez"],full:false},
+                  {title:"Observational signatures of reionization",p:P.MPP,selected:2,capacity:2,enforce:false,allocated:["Alex Cauchi"],full:false}],
+        rankedYou1:[],
+        wouldPrefer:[{student:"Rachel Binnie",yourRank:4,currentRank:4,project:"Cosmic Dark Ages",note:"already allocated here"}],
+        nextHighest:[{student:"Gabriel Hobbs",rank:1,project:"Cosmic Dark Ages",currentlyOn:"Inflation with the curvaton (Byrnes)"}],
+        constraints:[{type:"cats",text:"Marking CATS limit is binding — 9 / 9 CATS assigned (global limit on EnrollmentRecord). No further marking can be allocated to Iliev."}]},
+      {id:3,name:"Prof Kathy Romer",
+        offered:[{p:P.FYP_BSC,n:2},{p:P.FYP_MP,n:2},{p:P.MPP,n:1}],
+        supervising:[mk("Leo Barassi","From Observations of Clusters of Galaxies",P.FYP_BSC,"ok"),mk("Aidan So","From Observations of Clusters of Galaxies",P.FYP_BSC,"ok"),mk("Ray Staff","Why are clusters cosmological probes?",P.MPP,"ok")],
+        marking:[],
+        workload:{sup:90,mark:0,total:90,supLimit:105,markLimit:35,supBinding:false,markBinding:false},
+        projects:[{title:"From Observations of Clusters of Galaxies to Insights into Cosmology",p:P.FYP_BSC,selected:5,capacity:2,enforce:true,allocated:["Leo Barassi","Aidan So"],full:true},
+                  {title:"Why are clusters cosmological probes?",p:P.MPP,selected:3,capacity:2,enforce:false,allocated:["Ray Staff"],full:false}],
+        rankedYou1:[{student:"Rachel Binnie",current:"The Physics and Detectable Signatures… (Iliev), #4",note:"ranked Romer #1"},{student:"Nadia Rahman",current:"Inflation with the curvaton (Byrnes), #3",note:"ranked Romer #1"},{student:"James Wallis",current:"Cold atoms in radio frequency traps (Garraway), #2",note:"ranked Romer #1"}],
+        wouldPrefer:[{student:"Rachel Binnie",yourRank:1,currentRank:4,project:"Cluster cosmology"},{student:"Nadia Rahman",yourRank:1,currentRank:3,project:"Cluster cosmology"},{student:"Hugo Bennett",yourRank:2,currentRank:5,project:"Cluster cosmology"},{student:" Isla Frost",yourRank:2,currentRank:4,project:"Cluster cosmology"}],
+        nextHighest:[{student:"Ela Phaneuf",rank:3,project:"Cluster cosmology",currentlyOn:"unallocated (waitlist)"},{student:"Hugo Bennett",rank:2,project:"Cluster cosmology",currentlyOn:"Weak Gravitational Lensing (Smith)"},{student:"Isla Frost",rank:2,project:"Cluster cosmology",currentlyOn:"Inflation with the curvaton (Byrnes)"}],
+        constraints:[{type:"capacity",text:"“From Observations of Clusters of Galaxies” is at capacity (2 / 2) with enforcement on. 3 further students ranked it — including Rachel Binnie (#1) — but it is full, so they were allocated lower preferences."}]},
+      {id:4,name:"Prof Andrea Banfi",
+        offered:[{p:P.FYP_BSC,n:3},{p:P.FYP_MP,n:3},{p:P.MPP,n:3}],
+        supervising:[mk("Rowan Nevill","Higgs boson at high transverse momentum",P.FYP_BSC,"bad"),mk("Asha Norman","Longitudinal waves in plasma",P.MPP,"ok"),mk("Ray Staff","Bremsstrahlung",P.MPP,"ok"),mk("Connor Stocks","Longitudinal waves in plasma",P.MPP,"ok")],
+        marking:[mk("Dimitri Verai","Quantum effects in General Relativity",P.FYP_MP,null),mk("William Bowers","Theoretical Aspects of Black Holes",P.MPP,null)],
+        workload:{sup:95,mark:6,total:101,supLimit:175,markLimit:35,supBinding:false,markBinding:false},
+        projects:[{title:"Higgs boson at high transverse momentum",p:P.FYP_BSC,selected:3,capacity:3,enforce:false,allocated:["Rowan Nevill"],full:false}],
+        rankedYou1:[],wouldPrefer:[],nextHighest:[],constraints:[]},
+      {id:5,name:"Prof Daniel Litim",
+        offered:[{p:P.FYP_BSC,n:1},{p:P.FYP_MP,n:2},{p:P.MPP,n:1}],
+        supervising:[mk("Josh Aves","Fixed points and phase transitions",P.FYP_BSC,"ok"),mk("Asha Norman","Running couplings in particle physics",P.MPP,"ok"),mk("Connor Stocks","Running couplings in particle physics",P.MPP,"ok")],
+        marking:[mk("Brandon Kent","Dynamics of the electroweak phase",P.FYP_BSC,null),mk("Rowan Nevill","Higgs boson at high transverse",P.FYP_BSC,null),mk("William Bowers","Quantum mechanics and path integrals",P.MPP,null),mk("Ray Staff","Bremsstrahlung",P.MPP,null)],
+        workload:{sup:75,mark:12,total:87,supLimit:175,markLimit:35,supBinding:false,markBinding:false},
+        projects:[{title:"Running couplings in particle physics",p:P.MPP,selected:4,capacity:4,enforce:false,allocated:["Asha Norman","Connor Stocks"],full:false}],
+        rankedYou1:[],wouldPrefer:[],nextHighest:[],constraints:[]},
+      {id:6,name:"Prof Robert Smith",
+        offered:[{p:P.FYP_BSC,n:1},{p:P.FYP_MP,n:1},{p:P.MPP,n:0}],
+        supervising:[mk("Ben Briggs","Weak Gravitational Lensing",P.FYP_BSC,"ok"),mk("Dani Punchard","Weak Gravitational Lensing",P.FYP_BSC,"ok")],
+        marking:[mk("Rachel Binnie","The Physics and Detectable Signatures",P.FYP_BSC,null),mk("Gabriel Hobbs","Inflation with the curvaton",P.FYP_BSC,null),mk("Emma Renouprez","The Physics and Detectable Signatures",P.FYP_BSC,null),mk("Aidan So","From Observations of Clusters",P.FYP_BSC,null),mk("Ray Staff","Why are clusters cosmological",P.MPP,null)],
+        workload:{sup:70,mark:15,total:85,supLimit:175,markLimit:35,supBinding:false,markBinding:false},
+        projects:[{title:"Weak Gravitational Lensing",p:P.FYP_BSC,selected:4,capacity:4,enforce:true,allocated:["Ben Briggs","Dani Punchard"],full:false}],
+        rankedYou1:[],wouldPrefer:[],nextHighest:[],constraints:[]},
+    ];
+
+    this.state = {
+      view:"student", fPclass:"all", fType:"all", fHint:"all",
+      drawerSel:null, drawerFac:null,
+      roleEditor:null,
+      commentsOpen:false, ctab:"global", newComment:"", replyTo:null, commentTarget:null,
+      statsLoaded:{}, statsLoading:{}, facReassign:null, facAssigned:{}, openMatchDetail:null, openMatchMenu:null,
+      assignments,
+      comments:[
+        {id:1,scopeType:"global",author:"Prof David Seery",initials:"DS",time:"2 days ago",body:"Overall this looks strong. A couple of BSc students landed low on their lists — worth a look before we publish.",resolved:false,replies:[{author:"Prof Kathy Romer",time:"1 day ago",body:"Agreed. I can take one more supervisee if it helps Rachel."}]},
+        {id:2,scopeType:"assignment",scopeId:1,scopeLabel:"Rachel Binnie",author:"Prof Kathy Romer",initials:"KR",time:"1 day ago",body:"Rachel ranked my cluster-cosmology project #1 — happy to take her if De Santo/Iliev are over capacity.",resolved:false,replies:[]},
+        {id:3,scopeType:"assignment",scopeId:7,scopeLabel:"Adam Booth",author:"Prof David Seery",initials:"DS",time:"5 hours ago",body:"Adam is on his #5 — Garraway's cold-atoms project is full. Flagging for a manual look.",resolved:true,replies:[]},
+      ],
+    };
+  }
+
+  chip(active,label,onClick){
+    const base="border-radius:6px;padding:5px 12px;font-size:13px;cursor:pointer;border:1px solid ";
+    return {label,onClick,style: base + (active?"#0d6efd;background:#0d6efd;color:#fff":"#ced4da;background:#fff;color:#495057")};
+  }
+  pill(active){
+    return "border:none;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;"+(active?"background:#0d6efd;color:#fff":"background:transparent;color:#0d6efd");
+  }
+  initialsOf(name){const p=name.replace(/^(Prof|Dr)\s+/,"").split(" ");return (p[0][0]+(p[p.length-1][0]||"")).toUpperCase();}
+
+  renderVals(){
+    const st=this.state, S=(o)=>this.setState(o);
+    const asg=st.assignments;
+    // ---- filters
+    let rows = this.students;
+    if(st.fPclass!=="all") rows = rows.filter(s=>s.pclass.short===st.fPclass);
+    // hint filter is illustrative only
+    const studentRows = rows.map(s=>{
+      const a=asg[s.id];
+      const progOk = !s.progBad && (a.projectRank===1||a.projectRank===2);
+      const progBad = !!s.progBad;
+      const score = a.projectRank!=null ? (1/a.projectRank).toFixed(2).replace(/\.00$/,".0") : s.score;
+      return {
+        id:s.id,name:s.name,cohort:s.cohort,owner:s.owner,
+        pclassLabel:s.pclass.label,pclassSwatch:`width:13px;height:13px;border-radius:3px;background:${s.pclass.color};display:inline-block`,
+        projectText:a.project, projectLinkStyle:"cursor:pointer;color:"+(a.changed?"#0d6efd":"#0d6efd")+";font-weight:500",
+        progOk,progBad,changed:a.changed,
+        markers:a.markers.map(m=>({name:m.name,onClick:()=>this.openRoleEditor(s.id)})),
+        rank:a.projectRank,score:score,
+        rankColor:"font-size:24px;font-weight:700;line-height:1;color:"+(a.projectRank>=4?"#dc3545":a.projectRank>=3?"#fd7e14":"#198754"),
+        hasJournal:s.journalCount>0,journalCount:s.journalCount,
+        hasTickets:s.tickets.length>0,ticketCount:s.tickets.length,
+        rowStyle:"display:grid;grid-template-columns:1.6fr 1.5fr 2.1fr 1.7fr .6fr .8fr;border-bottom:1px solid #eef0f2;background:"+(s.id%2?"#fff":"#f8f9fa"),
+        openDrawer:()=>S({drawerSel:s.id}),
+        openRoleEditor:()=>this.openRoleEditor(s.id),
+        openComments:()=>S({commentsOpen:true,ctab:"assignment",commentTarget:s.name}),
+      };
+    });
+
+    // ---- drawer selected student
+    const sSel = st.drawerSel!=null ? this.students.find(x=>x.id===st.drawerSel) : null;
+    let drawer={};
+    if(sSel){
+      const a=asg[sSel.id];
+      drawer={
+        selName:sSel.name,selEmail:sSel.email,selPclass:sSel.pclass.label,selConvenor:sSel.convenor,
+        selPclassSwatch:`width:15px;height:15px;border-radius:3px;background:${sSel.pclass.color};display:inline-block`,
+        selProjectText:a.project,selProjectOwner:a.owner,selChanged:a.changed,
+        selReassign: sSel.selections.map(o=>({rank:o.rank,project:o.project.length>52?o.project.slice(0,52)+"…":o.project,owner:o.owner.replace(/^(Prof|Dr)\s+/,""),tag:o.rank===this.original[sSel.id].projectRank?" · automatch":"",
+          style:"text-align:left;border:1px solid "+(o.project===a.project?"#0d6efd":"#e3e6ea")+";background:"+(o.project===a.project?"#e7f1ff":"#fff")+";border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;color:#343a40",
+          onClick:()=>this.reassignProject(sSel.id,o)})),
+        selSelections: sSel.selections.map(o=>({rank:o.rank,project:o.project.length>44?o.project.slice(0,44)+"…":o.project,owner:o.owner.replace(/^(Prof|Dr)\s+/,""),
+          hintLabel:o.hint==="encourage"?"Encourage":o.hint==="forbid"?"Forbid":"Hint ▾",
+          hintStyle:"font-size:11px;border-radius:4px;padding:2px 7px;"+(o.hint==="encourage"?"background:#198754;color:#fff":"border:1px solid #ced4da;color:#6c757d")})),
+        selHasJournal:sSel.journalCount>0,selNoJournal:sSel.journalCount===0,selJournalCount:sSel.journalCount,
+        selJournal:sSel.journal.map(j=>({title:j.title,date:j.date,snippet:j.snippet})),
+        selHasTickets:sSel.tickets.length>0,selTicketCount:sSel.tickets.length,
+        selTickets:sSel.tickets.map(t=>({title:t.title,opened:t.opened,status:t.status,statusStyle:"font-size:11px;border-radius:4px;padding:2px 8px;"+(t.status==="Open"?"background:#fff3cd;color:#b45309;border:1px solid #ffe69c":"background:#d1e7dd;color:#0f5132")})),
+        selEmails:sSel.emails.map(e=>({date:e.date,subject:e.subject})),
+        openSelRoleEditor:()=>this.openRoleEditor(sSel.id),
+      };
+    }
+
+    // ---- role editor
+    const re = st.roleEditor;
+    let reVals={};
+    if(re){
+      const s=this.students.find(x=>x.id===re.sid);const a=asg[s.id];
+      const projOpts=s.selections.map(o=>({id:String(o.rank),label:"#"+o.rank+": "+o.project+" — "+o.owner.replace(/^(Prof|Dr)\s+/,"")}));
+      const usedSup=new Set(re.supervisors.map(x=>x.name));
+      const usedMark=new Set(re.markers.map(x=>x.name));
+      reVals={
+        reName:s.name,rePeriod:"Submission Period #1",
+        reProjectId:re.projectRank, reProjectOptions:projOpts,
+        reSetProject:(e)=>{const rank=parseInt(e.target.value);const o=s.selections.find(x=>x.rank===rank);S({roleEditor:{...re,projectRank:rank,project:o.project,owner:o.owner}});},
+        reSupervisors:re.supervisors.map((x,i)=>({name:x.name,remove:()=>S({roleEditor:{...re,supervisors:re.supervisors.filter((_,j)=>j!==i)}})})),
+        reAddableSup:this.FAC.filter(f=>!usedSup.has(f)).map((f,i)=>({id:String(i),name:f})),
+        reAddSupervisor:(e)=>{const name=this.FAC.filter(f=>!usedSup.has(f))[parseInt(e.target.value)];if(name)S({roleEditor:{...re,supervisors:[...re.supervisors,{id:Date.now(),name}]}});},
+        reMarkers:re.markers.map((x,i)=>({name:x.name,remove:()=>S({roleEditor:{...re,markers:re.markers.filter((_,j)=>j!==i)}})})),
+        reAddableMark:this.FAC.filter(f=>!usedMark.has(f)).map((f,i)=>({id:String(i),name:f})),
+        reAddMarker:(e)=>{const name=this.FAC.filter(f=>!usedMark.has(f))[parseInt(e.target.value)];if(name)S({roleEditor:{...re,markers:[...re.markers,{id:Date.now(),name}]}});},
+        reSave:()=>this.saveRoleEditor(),
+      };
+    }
+
+    // ---- comments
+    const cts=st.comments;
+    const globalCount=cts.filter(c=>c.scopeType==="global").length;
+    const assignCount=cts.filter(c=>c.scopeType==="assignment").length;
+    const openCommentCount=cts.filter(c=>!c.resolved).length;
+    const visC = cts.filter(c=> st.ctab==="global"?c.scopeType==="global":c.scopeType==="assignment");
+    const visibleComments = visC.map(c=>({
+      initials:c.initials,author:c.author,time:c.time,body:c.body,
+      hasScope:!!c.scopeLabel,scope:c.scopeLabel?("On: "+c.scopeLabel):"",
+      wrapStyle:"border:1px solid "+(c.resolved?"#d1e7dd":"#e3e6ea")+";border-radius:8px;padding:12px;background:"+(c.resolved?"#f6fbf8":"#fff"),
+      replies:(c.replies||[]).map(r=>({author:r.author,time:r.time,body:r.body})),
+      reply:()=>{},
+      toggleResolve:()=>S({comments:cts.map(x=>x.id===c.id?{...x,resolved:!x.resolved}:x)}),
+      resolveLabel:c.resolved?"✔ Resolved — reopen":"Resolve",
+      resolveStyle:"cursor:pointer;font-size:12px;color:"+(c.resolved?"#198754":"#6c757d"),
+    }));
+
+    // ---- FACULTY rows
+    let facSrc=this.faculty;
+    if(st.fPclass!=="all") facSrc=facSrc.filter(f=>f.offered.some(o=>o.p.short===st.fPclass&&o.n>0));
+    const tagStyle=(color,prog)=>"display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#0d6efd;margin-bottom:4px";
+    const facultyRows=facSrc.map(f=>({
+      id:f.id,name:f.name,
+      offered:f.offered.map(o=>({label:o.p.short,n:o.n,swatch:`width:11px;height:11px;border-radius:2px;background:${o.p.color};display:inline-block`})),
+      supervising:this.groupByPclass(f.supervising,(name)=>this.openStudentFrom(name,f.id)),
+      marking:this.groupByPclass(f.marking),
+      sup:f.workload.sup,mark:f.workload.mark,total:f.workload.total,
+      hasBinding:f.workload.supBinding||f.workload.markBinding||f.constraints.some(c=>c.type==="capacity"),
+      bindingText:f.workload.supBinding?"Supervising limit binding":f.workload.markBinding?"Marking limit binding":(f.constraints.some(c=>c.type==="capacity")?"Capacity binding":""),
+      rowStyle:"display:grid;grid-template-columns:1.3fr 2.2fr 2.2fr 1.3fr;border-bottom:1px solid #eef0f2;background:"+(f.id%2?"#fff":"#f8f9fa"),
+      openDrawer:()=>S({drawerFac:f.id}),
+      openComments:()=>S({commentsOpen:true,ctab:"assignment",commentTarget:f.name}),
+      openReassign:()=>S({drawerFac:f.id,facReassign:f.id}),
+    }));
+    const fSel=st.drawerFac!=null?this.faculty.find(x=>x.id===st.drawerFac):null;
+    let fdraw={};
+    if(fSel){
+      fdraw={
+        fName:fSel.name,
+        fWorkSup:fSel.workload.sup,fWorkMark:fSel.workload.mark,fWorkTotal:fSel.workload.total,fSupLimit:fSel.workload.supLimit,fMarkLimit:fSel.workload.markLimit,
+        fSupBar:this.bar(fSel.workload.sup,fSel.workload.supLimit),fMarkBar:this.bar(fSel.workload.mark,fSel.workload.markLimit),
+        fSupBinding:fSel.workload.supBinding,fMarkBinding:fSel.workload.markBinding,
+        fProjects:fSel.projects.map(p=>({title:p.title,pclass:p.p.short,swatch:`width:11px;height:11px;border-radius:2px;background:${p.p.color};display:inline-block`,
+          selected:p.selected,capacity:p.capacity,enforce:p.enforce,full:p.full,
+          capStyle:"font-size:11px;border-radius:4px;padding:2px 7px;"+(p.full?"background:#f8d7da;color:#842029":p.enforce?"background:#fff3cd;color:#b45309":"background:#e9ecef;color:#495057"),
+          capLabel:(p.enforce?(p.full?"FULL ":"")+p.allocated.length+" / "+p.capacity+" cap":p.allocated.length+" allocated"),
+          allocated:p.allocated})),
+        fRankedYou1:fSel.rankedYou1.slice(0,3),fHasRanked1:fSel.rankedYou1.length>0,fNoRanked1:fSel.rankedYou1.length===0,fRankedMore:Math.max(0,fSel.rankedYou1.length-3),fRankedHasMore:fSel.rankedYou1.length>3,
+        fWouldPrefer:fSel.wouldPrefer.slice(0,3).map(w=>({student:w.student,detail:(w.note?w.note:("ranks a "+fSel.name.split(" ").pop()+" project #"+w.yourRank+" vs current allocation #"+w.currentRank)),project:w.project})),
+        fHasPrefer:fSel.wouldPrefer.length>0,fPreferMore:Math.max(0,fSel.wouldPrefer.length-3),fPreferHasMore:fSel.wouldPrefer.length>3,
+        fNextHighest:fSel.nextHighest.slice(0,3),fHasNext:fSel.nextHighest.length>0,fNextMore:Math.max(0,fSel.nextHighest.length-3),fNextHasMore:fSel.nextHighest.length>3,
+        openReassign:()=>S({facReassign:fSel.id}),
+        fConstraints:fSel.constraints.map(c=>({text:c.text,style:"display:flex;gap:10px;padding:11px 12px;border-radius:7px;font-size:12.5px;line-height:1.5;background:"+(c.type==="cats"?"#fff3cd":"#f8d7da")+";color:"+(c.type==="cats"?"#664d03":"#842029"),icon:c.type==="cats"?"⚖️":"🚧"})),
+        fHasConstraints:fSel.constraints.length>0,
+      };
+    }
+
+    // ---- FACULTY-CENTRIC REASSIGNMENT WORKSPACE
+    const fr=st.facReassign!=null?this.faculty.find(x=>x.id===st.facReassign):null;
+    let frVals={};
+    if(fr){
+      const pending=st.facAssigned[fr.id]||[];
+      const assigned=[];
+      fr.supervising.forEach(x=>assigned.push({student:x.student,project:x.project,pending:false}));
+      pending.forEach(n=>assigned.push({student:n,project:"pending — added from candidate pool",pending:true}));
+      // unified candidate pool
+      const seen=new Set(fr.supervising.map(x=>x.student).concat(pending));
+      const pool=[];
+      fr.rankedYou1.forEach(r=>{if(!seen.has(r.student)){seen.add(r.student);pool.push({name:r.student,why:"Ranked a "+fr.name.split(" ").pop()+" project #1",current:r.current,tone:"#198754"});}});
+      fr.wouldPrefer.forEach(w=>{if(!seen.has(w.student)){seen.add(w.student);pool.push({name:w.student,why:(w.note?w.note:"Prefers this to their current allocation (their #"+w.yourRank+" vs #"+w.currentRank+")"),current:"currently on choice #"+(w.currentRank||"?"),tone:"#0d6efd"});}});
+      fr.nextHighest.forEach(n=>{if(!seen.has(n.student)){seen.add(n.student);pool.push({name:n.student,why:"Next-highest interested — ranks this at #"+n.rank,current:n.currentlyOn,tone:"#6c757d"});}});
+      const wl=fr.workload;
+      const capFullProjects=fr.projects.filter(p=>p.enforce&&p.full);
+      const overSup=wl.supBinding; // already at/over the supervising CATS limit
+      const overNote=overSup?"Assigning another supervisee here will exceed the supervising CATS limit ("+wl.sup+"/"+wl.supLimit+").":"";
+      frVals={
+        frName:fr.name,closeReassign:()=>S({facReassign:null}),
+        frAssigned:assigned,frAssignedCount:assigned.length,
+        frOver:overSup,frOverNote:overNote,
+        frPool:pool.map(c=>({name:c.name,why:c.why,current:c.current,tone:c.tone,
+          warn:overSup, warnReason:overNote,
+          assignStyle:"border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer",
+          assign:()=>{S({facAssigned:{...st.facAssigned,[fr.id]:[...(st.facAssigned[fr.id]||[]),c.name]}});}})),
+        frPoolCount:pool.length,
+        frSupBar:this.bar(wl.sup,wl.supLimit),frMarkBar:this.bar(wl.mark,wl.markLimit),
+        frSup:wl.sup,frSupLimit:wl.supLimit,frMark:wl.mark,frMarkLimit:wl.markLimit,
+        frSupBinding:wl.supBinding,frMarkBinding:wl.markBinding,
+        frProjects:fr.projects.map(p=>({title:p.title,swatch:`width:11px;height:11px;border-radius:2px;background:${p.p.color};display:inline-block`,
+          bar:this.bar(p.allocated.length,p.capacity),count:p.allocated.length,capacity:p.capacity,enforce:p.enforce,full:p.full,
+          note:p.enforce?(p.full?"at capacity — enforced":"capacity enforced"):"no capacity enforcement",
+          noteStyle:"font-size:11px;color:"+(p.full?"#842029":p.enforce?"#b45309":"#adb5bd")})),
+      };
+    }
+
+    // ---- CHANGES
+    const changeRows=[];
+    Object.keys(asg).forEach(k=>{
+      const a=asg[k],o=this.original[k],s=this.students.find(x=>x.id===parseInt(k));
+      if(!a.changed)return;
+      const meta={editor:a.editor||"ds283",when:a.when||"just now"};
+      if(a.projectRank!==o.projectRank) changeRows.push({id:"p"+k,student:s.name,field:"Project",from:o.project,to:a.project,fromRank:o.projectRank,toRank:a.projectRank,...meta,revert:()=>this.revert(parseInt(k))});
+      const oM=o.markers.map(m=>m.name).join(", "),nM=a.markers.map(m=>m.name).join(", ");
+      if(oM!==nM) changeRows.push({id:"m"+k,student:s.name,field:"Markers",from:oM||"—",to:nM||"—",...meta,revert:()=>this.revert(parseInt(k))});
+      const oS=o.supervisors.map(m=>m.name).join(", "),nS=a.supervisors.map(m=>m.name).join(", ");
+      if(oS!==nS) changeRows.push({id:"s"+k,student:s.name,field:"Supervisors",from:oS||"—",to:nS||"—",...meta,revert:()=>this.revert(parseInt(k))});
+    });
+    const changedStudents=new Set(changeRows.map(c=>c.student)).size;
+    const changesSummary={fields:changeRows.length,students:changedStudents,scoreFrom:"48.58",scoreTo:(48.58-0.46*changeRows.length).toFixed(2)};
+
+    // ---- DASHBOARD matches
+    const errsM1=["Assigned marker “Dr Josh McFayden” is not in the assessor pool for the assigned project (Noah Boyer)","Project “Cold atoms in radio frequency traps” has maximum capacity 2 but is assigned to supervisor Prof Barry Garraway with 3 selectors","“Prof Ilian Iliev” has been assigned a marking role but is not enrolled to mark for FYP BSc"];
+    const warnsM1=["There are 2 supervision roles assigned for William Bowers","Assigned project is an alternative for “Weak Gravitational Lensing” with priority 2 (Ben Briggs)"];
+    const warnsM3=["5 selectors were allocated a project that does not satisfy their programme preferences","Adam Booth was allocated their #5 choice (δ = 4)"];
+    const MATCHES=[
+      {id:"m1",name:"DS & HSDS draft #1",tags:["DS","HSDS"],warn:true,status:"Optimal solution",orig:"42.38",cur:"41.88",sel:53,sup:37,mark:40,proj:94,by:"Prof David Seery",when:"Tue 10 Mar 2026 11:15",errors:9,errList:errsM1,warnList:warnsM1,stats:{matched:16,failed:0,hints:0,dmax:4,dmin:0,cmax:152,cmin:0}},
+      {id:"m2",name:"DS & HSDS draft #2 (cloud CBC)",tags:["DS","HSDS"],warn:true,status:"Optimal solution",modified:true,published:true,orig:"42.38",cur:"43.92",sel:53,sup:37,mark:40,proj:94,by:"Prof David Seery",when:"Tue 10 Mar 2026 11:42",errors:18,errList:errsM1.concat(["Supervisor and marker roles coincide for Asha Norman","Project “Primordial black hole relics” exceeds capacity 3 (Prof Antonella De Santo, 4 selectors)"]),warnList:warnsM1,stats:{matched:15,failed:0,hints:0,dmax:4,dmin:0,cmax:152,cmin:0}},
+      {id:"m3",name:"Test match #1 July 2026",tags:["FYP BSc","FYP MPhys","MPP"],status:"Optimal solution",orig:"48.58",cur:"48.58",sel:56,sup:38,mark:33,proj:117,by:"Prof David Seery",when:"Wed 08 Jul 2026 18:22",errors:0,errList:[],warnList:warnsM3,current:true,stats:{matched:18,failed:5,hints:0,dmax:5,dmin:0,cmax:105,cmin:0}},
+    ];
+    const dashMatches=MATCHES.map(m=>({...m,
+      loaded:!!st.statsLoaded[m.id],loading:!!st.statsLoading[m.id],
+      loadStats:()=>{S({statsLoading:{...st.statsLoading,[m.id]:true}});setTimeout(()=>this.setState(prev=>({statsLoaded:{...prev.statsLoaded,[m.id]:true},statsLoading:{...prev.statsLoading,[m.id]:false}})),650);},
+      tagChips:m.tags.map(t=>({label:t,style:"font-size:11px;border-radius:4px;padding:2px 8px;font-weight:600;background:"+(t==="DS"?"#fd7e14":t==="HSDS"?"#ffc107":t==="MPP"?"#0f5132":"#9ec5fe")+";color:"+(t==="MPP"?"#fff":"#212529")})),
+      showLoad:!st.statsLoaded[m.id]&&!st.statsLoading[m.id],
+      hasErrors:m.errors>0, hasWarnings:m.warnList.length>0, warnCount:m.warnList.length,
+      detailOpen:st.openMatchDetail===m.id, toggleDetail:()=>S({openMatchDetail:st.openMatchDetail===m.id?null:m.id, openMatchMenu:null}),
+      menuOpen:st.openMatchMenu===m.id, toggleMenu:()=>S({openMatchMenu:st.openMatchMenu===m.id?null:m.id}),
+      errItems:m.errList, warnItems:m.warnList,
+      borderStyle:m.current?"#0d6efd":"#dee2e6",
+      cardStyle:m.current?"box-shadow:0 0 0 2px rgba(13,110,253,.15)":"",
+      failStyle:m.stats.failed>0?"#ffc107;color:#212529":"#6c757d;color:#fff",
+    }));
+    const matchActions=["Inspect: student view","Inspect: faculty view","View distributions","Compare to…","Publish to convenors","Duplicate match","Rename…","Download CSV","Delete…"];
+    const loadAll=()=>{const nl={};MATCHES.forEach(m=>nl[m.id]=true);S({statsLoading:nl});setTimeout(()=>{const done={};MATCHES.forEach(m=>done[m.id]=true);this.setState({statsLoaded:done,statsLoading:{}});},700);};
+
+    // ---- changes count
+    const changesCount = Object.keys(asg).filter(k=>asg[k].changed).length;
+
+    return {
+      matchName:"Test match #1 July 2026",
+      isStudent:st.view==="student",isFaculty:st.view==="faculty",isChanges:st.view==="changes",isDash:st.view==="dashboard",
+      goStudent:()=>S({view:"student"}),goFaculty:()=>S({view:"faculty"}),goChanges:()=>S({view:"changes"}),goDash:()=>S({view:"dashboard"}),
+      pillStudent:this.pill(st.view==="student"),pillFaculty:this.pill(st.view==="faculty"),pillChanges:this.pill(st.view==="changes"),pillDash:this.pill(st.view==="dashboard"),
+      changesCount, changesBadge:"background:"+(changesCount?"#0dcaf0":"#adb5bd")+";color:#212529;border-radius:10px;padding:1px 8px;font-size:11px",
+      pclassChips:[["all","All"],["FYP BSc","Final Year Project (BSc)"],["FYP MPhys","Final Year Project (MPhys)"],["MPP","Mathematical Physics Project"]].map(([v,l])=>this.chip(st.fPclass===v,l,()=>S({fPclass:v}))),
+      typeChips:[["all","All"],["ordinary","Ordinary"],["generic","Uses supervisor pool"]].map(([v,l])=>this.chip(st.fType===v,l,()=>S({fType:v}))),
+      hintChips:[["all","All"],["satisfied","Hint satisfied"],["violated","Hint violated"]].map(([v,l])=>this.chip(st.fHint===v,l,()=>S({fHint:v}))),
+      studentRows, studentShown:studentRows.length, studentTotal:this.students.length,
+      facultyRows, facultyShown:facultyRows.length, facultyTotal:this.faculty.length,
+      facDrawerOpen:fSel!=null, closeFacDrawer:()=>S({drawerFac:null}), ...fdraw,
+      facReassignOpen:fr!=null, ...frVals,
+      changeRows, hasChanges:changeRows.length>0, noChanges:changeRows.length===0, changesSummary,
+      resetAll:()=>this.setState({assignments:JSON.parse(JSON.stringify(this.original))}),
+      dashMatches, loadAll, matchActions,
+      drawerOpen:sSel!=null, closeDrawer:()=>S({drawerSel:null}), ...drawer,
+      roleEditorOpen:re!=null, closeRoleEditor:()=>S({roleEditor:null}), stop:(e)=>e.stopPropagation(), ...reVals,
+      commentsOpen:st.commentsOpen, toggleComments:()=>S({commentsOpen:!st.commentsOpen}),
+      openCommentCount, globalCount, assignCount, visibleComments,
+      ctGlobal:()=>S({ctab:"global"}),ctAssign:()=>S({ctab:"assignment"}),ctIsAssign:st.ctab==="assignment",
+      ctGlobalStyle:this.ctStyle(st.ctab==="global"),ctAssignStyle:this.ctStyle(st.ctab==="assignment"),
+      assignScopeLabel: st.commentTarget || (sSel?sSel.name:"whole match"),
+      newComment:st.newComment,setNewComment:(e)=>S({newComment:e.target.value}),
+      addComment:()=>{if(!st.newComment.trim())return;const c={id:Date.now(),scopeType:st.ctab,author:"ds283",initials:"DS",time:"just now",body:st.newComment.trim(),resolved:false,replies:[]};const tgt=st.commentTarget||(sSel?sSel.name:null);if(st.ctab==="assignment"&&tgt){c.scopeLabel=tgt;}S({comments:[c,...cts],newComment:""});},
+    };
+  }
+  groupByPclass(list,onStudent){const g={};list.forEach(x=>{const k=x.pclass.label;if(!g[k])g[k]={label:k,items:[]};g[k].items.push({student:x.student,project:x.project.length>34?x.project.slice(0,34)+"…":x.project,progOk:x.prog==="ok",progBad:x.prog==="bad",onClick:onStudent?()=>onStudent(x.student):null,swatch:`width:11px;height:11px;border-radius:2px;background:${x.pclass.color};display:inline-block`});});return Object.values(g);}
+  findStudentByName(name){const s=this.students.find(x=>x.name===name);return s?s.id:null;}
+  openStudentFrom(name,facId){const id=this.findStudentByName(name);if(id!=null)this.openRoleEditor(id);else this.setState({drawerFac:facId,facReassign:facId});}
+  bar(v,limit){const pct=Math.min(100,Math.round(v/limit*100));const col=pct>=100?"#dc3545":pct>=85?"#fd7e14":"#198754";return `width:${pct}%;height:100%;background:${col};border-radius:4px`;}
+  revert(sid){this.setState({assignments:{...this.state.assignments,[sid]:JSON.parse(JSON.stringify(this.original[sid]))}});}
+  ctStyle(active){return "flex:1;border:none;background:none;padding:11px;font-size:13px;cursor:pointer;font-weight:600;border-bottom:2px solid "+(active?"#0d6efd":"transparent")+";color:"+(active?"#0d6efd":"#6c757d");}
+  openRoleEditor(sid){const s=this.students.find(x=>x.id===sid);const a=this.state.assignments[sid];this.setState({roleEditor:{sid,projectRank:a.projectRank,project:a.project,owner:a.owner,supervisors:a.supervisors.map(x=>({...x})),markers:a.markers.map(x=>({...x}))}});}
+  reassignProject(sid,o){const asg=this.state.assignments;const orig=this.original[sid];const changed=(o.rank!==orig.projectRank)||asg[sid].markers.length!==orig.markers.length;this.setState({assignments:{...asg,[sid]:{...asg[sid],projectRank:o.rank,project:o.project,owner:o.owner,changed:true}}});}
+  saveRoleEditor(){const re=this.state.roleEditor;const asg=this.state.assignments;const orig=this.original[re.sid];const changed=re.projectRank!==orig.projectRank||JSON.stringify(re.markers.map(m=>m.name))!==JSON.stringify(orig.markers.map(m=>m.name))||JSON.stringify(re.supervisors.map(m=>m.name))!==JSON.stringify(orig.supervisors.map(m=>m.name));this.setState({assignments:{...asg,[re.sid]:{...asg[re.sid],projectRank:re.projectRank,project:re.project,owner:re.owner,supervisors:re.supervisors,markers:re.markers,changed}},roleEditor:null});}
+}
+</script>
+</body>
+</html>

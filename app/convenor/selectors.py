@@ -38,6 +38,7 @@ from ..models import (
     SelectingStudent,
     StudentData,
     StudentJournalEntry,
+    TicketSubject,
     User,
     batch_journal_counts,
 )
@@ -54,6 +55,7 @@ from ..shared.quickfixes import (
     QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE,
     QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE,
 )
+from ..shared.tickets import open_tickets_for_student, tombstone_subjects_for_student
 from ..shared.utils import (
     build_enrol_selector_candidates,
     get_current_year,
@@ -798,6 +800,7 @@ def delete_selector(sid):
         )
 
         try:
+            tombstone_subjects_for_student(sel, TicketSubject.SELECTING_STUDENT, actor=current_user)
             if has_associated_data:
                 sel.detach_records()
             db.session.delete(sel)
@@ -827,6 +830,8 @@ def delete_selector(sid):
 
         return redirect(url)
 
+    open_tickets = open_tickets_for_student(sel, TicketSubject.SELECTING_STUDENT)
+
     title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
     panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sel.student.user.name)
 
@@ -842,6 +847,14 @@ def delete_selector(sid):
         message = (
             '<p>Are you sure that you wish to delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
             "<p>This action cannot be undone.</p>".format(name=sel.student.user.name)
+        )
+
+    if open_tickets:
+        ticket_list = ", ".join(f"#{t.id}" for t in open_tickets)
+        message += (
+            f"<p><strong>This student has {len(open_tickets)} open ticket(s) linked to them: {ticket_list}.</strong> "
+            "Deleting the selector will preserve those tickets, but the link to this student record will be shown "
+            "as broken.</p>"
         )
 
     return render_template_context(

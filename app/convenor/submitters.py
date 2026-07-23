@@ -45,6 +45,7 @@ from ..models import (
     SubmissionRole,
     SubmitterReport,
     SubmittingStudent,
+    TicketSubject,
     User,
     batch_journal_counts,
 )
@@ -60,6 +61,7 @@ from ..shared.convenor import (
 )
 from ..shared.conversions import is_integer
 from ..shared.journal import create_auto_journal_entry
+from ..shared.tickets import open_tickets_for_student, tombstone_subjects_for_student
 from ..shared.utils import (
     build_enrol_submitter_candidates,
     build_submitters_data,
@@ -727,6 +729,7 @@ def delete_submitter(sid):
         )
 
         try:
+            tombstone_subjects_for_student(sub, TicketSubject.SUBMITTING_STUDENT, actor=current_user)
             sub.detach_records()
             db.session.delete(sub)
             db.session.flush()
@@ -755,12 +758,21 @@ def delete_submitter(sid):
 
         return redirect(url)
 
+    open_tickets = open_tickets_for_student(sub, TicketSubject.SUBMITTING_STUDENT)
+
     title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
     panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
     message = (
         '<p>Are you sure that you wish to delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
         "<p>This action cannot be undone.</p>".format(name=sub.student.user.name)
     )
+    if open_tickets:
+        ticket_list = ", ".join(f"#{t.id}" for t in open_tickets)
+        message += (
+            f"<p><strong>This student has {len(open_tickets)} open ticket(s) linked to them: {ticket_list}.</strong> "
+            "Deleting the submitter will preserve those tickets, but the link to this student record will be shown "
+            "as broken.</p>"
+        )
 
     return render_template_context(
         "convenor/journal/delete_with_reason.html",

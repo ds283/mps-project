@@ -60,7 +60,7 @@ _commit : bool
 """
 
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from sqlalchemy.exc import SQLAlchemyError
 

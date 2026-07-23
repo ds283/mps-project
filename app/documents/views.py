@@ -31,22 +31,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 import app.shared.cloud_object_store.bucket_types as buckets
-from app.shared.llm_thresholds import (
-    BURSTINESS_NOTE_HIGH,
-    BURSTINESS_NOTE_LOW,
-    BURSTINESS_STRONG_HIGH,
-    BURSTINESS_STRONG_LOW,
-    MATTR_NOTE_HIGH_THRESHOLD,
-    MATTR_NOTE_LOW_THRESHOLD,
-    MATTR_STRONG_THRESHOLD,
-    MTLD_HIGH_NOTE_THRESHOLD,
-    MTLD_NOTE_THRESHOLD,
-    MTLD_STRONG_THRESHOLD,
-    SENT_CV_NOTE_HIGH,
-    SENT_CV_NOTE_LOW,
-    SENT_CV_STRONG_HIGH,
-    SENT_CV_STRONG_LOW,
-)
 
 from ..database import db
 from ..models import (

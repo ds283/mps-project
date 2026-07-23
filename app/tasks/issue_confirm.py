@@ -34,7 +34,7 @@ from ..models import (
 from ..models.emails import encode_email_payload
 from ..shared.sqlalchemy import get_count
 from ..shared.workflow_logging import log_db_commit
-from ..task_queue import progress_update, register_task
+from ..task_queue import progress_update
 
 
 def register_issue_confirm_tasks(celery):

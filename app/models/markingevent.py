@@ -20,7 +20,7 @@ from .live_projects import SubmittingStudent
 from .model_mixins import EditingMetadataMixin, _get_current_year
 from .project_class import ProjectClass, ProjectClassConfig
 from .students import StudentData
-from .submissions import SubmissionRoleTypesMixin, SubmissionRole
+from .submissions import SubmissionRoleTypesMixin
 from .users import User
 
 

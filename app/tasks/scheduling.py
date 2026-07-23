@@ -56,7 +56,7 @@ from ..shared.scratch import ScratchFileManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.workflow_logging import log_db_commit
-from ..task_queue import progress_update, register_task
+from ..task_queue import progress_update
 
 # create type for availability matrices;
 # these are mathematically matrices, but we represent them as maps from a tuple (i,j) -> value.

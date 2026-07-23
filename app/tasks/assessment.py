@@ -15,7 +15,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    User,
     SubmittingStudent,
     PresentationAssessment,
     SubmitterAttendanceData,

@@ -12,7 +12,7 @@ import json
 from datetime import datetime
 
 from celery import chain
-from flask import current_app, flash, redirect, render_template_string, request, url_for
+from flask import current_app, flash, redirect, request, url_for
 from flask_security import current_user, roles_accepted
 from html2text import HTML2Text
 from sqlalchemy.exc import SQLAlchemyError

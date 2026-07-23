@@ -101,7 +101,6 @@ from scipy import stats
 
 matplotlib.use("Agg")
 import os
-import sys
 import warnings
 
 import matplotlib.patches as mpatches
@@ -111,9 +110,7 @@ from matplotlib.lines import Line2D
 from mahalanobis_core import (
     STUDENT_FILE,
     PRE_LLM_YEARS,
-    POST_LLM_YEARS,
     TRANS_YEARS,
-    EXCLUDE_YEARS,
     split_cohorts,
     build_reference,
     mahal_dist,

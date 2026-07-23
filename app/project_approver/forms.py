@@ -10,17 +10,10 @@
 
 from flask_security.forms import Form
 from wtforms import (
-    StringField,
-    IntegerField,
-    SelectField,
     SubmitField,
     TextAreaField,
     BooleanField,
 )
-from wtforms.validators import InputRequired, Optional
-from wtforms_alchemy.fields import QuerySelectField
-
-from functools import partial
 
 
 class EditCommentForm(Form):

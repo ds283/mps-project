@@ -17,7 +17,6 @@ from wtforms import (
     SelectField,
     StringField,
     SubmitField,
-    TextAreaField,
 )
 from wtforms.validators import InputRequired, Length, Optional
 from wtforms_alchemy import QuerySelectField

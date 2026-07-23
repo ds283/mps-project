@@ -13,7 +13,6 @@ from typing import List
 from flask import current_app, get_template_attribute, jsonify, render_template
 from jinja2 import Environment, Template
 
-from ...cache import cache
 from ...models import (
     EnrollmentRecord,
     FacultyData,

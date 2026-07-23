@@ -42,7 +42,6 @@ from ..models import (
     ProjectClassConfig,
     ProjectDescription,
     ProjectTag,
-    ProjectTagGroup,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmittingStudent,

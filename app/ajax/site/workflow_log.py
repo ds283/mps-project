@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, render_template_string
+from flask import current_app, render_template
 from jinja2 import Environment
 
 # language=jinja2

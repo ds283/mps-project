@@ -9,11 +9,11 @@
 #
 
 import humanize
-from flask import render_template_string, url_for
+from flask import render_template_string
 from sqlalchemy import func
 
 from ...database import db
-from ...models import EmailWorkflow, EmailWorkflowItem
+from ...models import EmailWorkflowItem
 
 # ---------------------------------------------------------------------------
 # Jinja2 template fragments – workflow list

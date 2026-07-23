@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import g, current_app
+from flask import current_app
 import redis
 
 

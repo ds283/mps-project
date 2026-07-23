@@ -20,7 +20,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import LiveProject, PopularityRecord, ProjectClass, ProjectClassConfig
-from ..shared.workflow_logging import log_db_commit
 
 
 def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):

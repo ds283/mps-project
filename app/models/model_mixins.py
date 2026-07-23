@@ -965,7 +965,6 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             return role_obj
 
         def has_access(self, user):
-            from flask import current_app
 
             user_ = self._get_user(user)
 

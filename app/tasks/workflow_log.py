@@ -10,7 +10,6 @@
 
 from datetime import datetime, timedelta
 from io import BytesIO
-from pathlib import Path
 from typing import Optional
 
 from flask import current_app, render_template_string

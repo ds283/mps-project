@@ -34,7 +34,6 @@ from flask_security import (
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
-import app.shared.cloud_object_store.bucket_types as buckets
 
 from ..cache import cache
 from ..database import db
@@ -61,7 +60,6 @@ from ..models import (
     TemporaryAsset,
     User,
 )
-from ..models.assets import ThumbnailAsset
 from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -80,7 +78,7 @@ from ..task_queue import register_task
 from ..tasks.thumbnails import (
     dispatch_force_regenerate_thumbnail_task,
 )
-from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
+from ..tools import ServerSideInMemoryHandler
 from ..shared.forms.forms import ConfirmActionForm
 from ..tools.ServerSideProcessing import FakeQuery
 from . import admin

@@ -13,7 +13,6 @@ from flask import current_app
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..database import db
 from ..models import User, TaskRecord
 from ..task_queue import progress_update
 

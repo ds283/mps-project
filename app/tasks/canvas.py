@@ -9,15 +9,12 @@
 #
 
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
 
-import requests
 from celery import group
 from flask import current_app
 from nameparser import HumanName
 from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
-from url_normalize import url_normalize
 
 from ..database import db
 from ..models import (
@@ -35,10 +32,8 @@ from ..models import (
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.canvas_api import (
-    CanvasAPIError,
     build_api_url,
     extract_turnitin_data,
-    fetch_submission,
     get_paginated,
     make_session,
 )

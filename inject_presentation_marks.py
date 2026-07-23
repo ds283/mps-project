@@ -83,7 +83,7 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 import pandas as pd
-from sqlalchemy import create_engine, text, MetaData, Table, select, and_, func
+from sqlalchemy import create_engine, MetaData, Table, select, and_, func
 from sqlalchemy.orm import Session
 
 

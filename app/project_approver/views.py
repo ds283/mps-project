@@ -17,7 +17,6 @@ from flask_security import current_user, roles_required, roles_accepted, login_r
 import app.ajax as ajax
 from . import project_approver
 from .forms import EditCommentForm
-from ..database import db
 from ..models import ProjectDescription, DescriptionComment, EnrollmentRecord
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm

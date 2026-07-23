@@ -545,8 +545,11 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             if len(included_matches) > 0:
                 total += sum(included_matches.values())
 
-        rval: bool = False
-        message: Optional[str] = None
+        # CATS-limit violations are warnings (sometimes supervisors must take more students than
+        # we would like, but the students do all have to be supervised somehow); enrolment
+        # violations are errors
+        error_messages: List[str] = []
+        warning_messages: List[str] = []
         pclass_label: str = "" if pclass is None else f"/{pclass.abbreviation}"
         name: str = faculty.user.name
 
@@ -554,13 +557,15 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         limit = self.supervising_limit
 
         if sup > self.supervising_limit:
-            message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds CATS limit {self.supervising_limit} for this match"
-            rval = True
+            warning_messages.append(
+                f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds CATS limit {self.supervising_limit} for this match"
+            )
 
         if not self.ignore_per_faculty_limits and faculty.CATS_supervision is not None and faculty.CATS_supervision >= 0:
             if sup > faculty.CATS_supervision:
-                message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_supervision} for this supervisor"
-                rval = True
+                warning_messages.append(
+                    f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_supervision} for this supervisor"
+                )
 
             if faculty.CATS_supervision < limit:
                 limit = faculty.CATS_supervision
@@ -570,25 +575,31 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             if enrolment_rec is not None:
                 if not self.ignore_per_faculty_limits and enrolment_rec.CATS_supervision is not None:
                     if 0 <= enrolment_rec.CATS_supervision < sup:
-                        message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_supervision} for this supervisor"
-                        rval = True
+                        warning_messages.append(
+                            f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_supervision} for this supervisor"
+                        )
 
                     if enrolment_rec.CATS_supervision < limit:
                         limit = enrolment_rec.CATS_supervision
 
                 if sup > 0 and enrolment_rec.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                    message = f"{name}{pclass_label} is not enrolled to supervise for {pclass.abbreviation}, but has been assigned a supervising workload {sup}"
-                    rval = True
+                    error_messages.append(
+                        f"{name}{pclass_label} is not enrolled to supervise for {pclass.abbreviation}, but has been assigned a supervising workload {sup}"
+                    )
 
-        if not rval and total > limit:
-            message = f"After inclusion of all matches, assigned supervising workload of {total} for {name} exceeds CATS limit {limit}"
-            rval = True
+        if len(error_messages) == 0 and len(warning_messages) == 0 and total > limit:
+            warning_messages.append(f"After inclusion of all matches, assigned supervising workload of {total} for {name} exceeds CATS limit {limit}")
+
+        rval: bool = len(error_messages) > 0 or len(warning_messages) > 0
+        all_messages = error_messages + warning_messages
 
         data = {
             "flag": rval,
             "CATS_total": total,
             "CATS_limit": limit,
-            "error_message": message,
+            "error_message": "; ".join(all_messages) if len(all_messages) > 0 else None,
+            "errors": error_messages,
+            "warnings": warning_messages,
         }
 
         if include_matches:
@@ -622,23 +633,24 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             if len(included_matches) > 0:
                 total += sum(included_matches.values())
 
-        rval = False
-        message = None
+        # CATS-limit violations are warnings; enrolment violations are errors
+        error_messages: List[str] = []
+        warning_messages: List[str] = []
         pclass_label = "" if pclass is None else f"/{pclass.abbreviation}"
         name = faculty.user.name
 
         limit = self.marking_limit
 
         if mark > self.marking_limit:
-            message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds CATS limit {self.marking_limit} for this match"
-            rval = True
+            warning_messages.append(
+                f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds CATS limit {self.marking_limit} for this match"
+            )
 
         if not self.ignore_per_faculty_limits and faculty.CATS_marking is not None and faculty.CATS_marking >= 0:
             if mark > faculty.CATS_marking:
-                message = (
+                warning_messages.append(
                     f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
                 )
-                rval = True
 
             if faculty.CATS_marking < limit:
                 limit = faculty.CATS_marking
@@ -648,27 +660,31 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             if enrolment_rec is not None:
                 if not self.ignore_per_faculty_limits and enrolment_rec.CATS_marking is not None:
                     if 0 <= enrolment_rec.CATS_marking < mark:
-                        message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_marking} for this marker"
-                        rval = True
+                        warning_messages.append(
+                            f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_marking} for this marker"
+                        )
 
                     if enrolment_rec.CATS_marking < limit:
                         limit = enrolment_rec.CATS_marking
 
                 if mark > 0 and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-                    message = (
+                    error_messages.append(
                         f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
                     )
-                    rval = True
 
-        if not rval and total > limit:
-            message = f"After inclusion of all matches, assigned marking workload of {total} for {name} exceeds CATS limit {limit}"
-            rval = True
+        if len(error_messages) == 0 and len(warning_messages) == 0 and total > limit:
+            warning_messages.append(f"After inclusion of all matches, assigned marking workload of {total} for {name} exceeds CATS limit {limit}")
+
+        rval: bool = len(error_messages) > 0 or len(warning_messages) > 0
+        all_messages = error_messages + warning_messages
 
         data = {
             "flag": rval,
             "CATS_total": total,
             "CATS_limit": limit,
-            "error_message": message,
+            "error_message": "; ".join(all_messages) if len(all_messages) > 0 else None,
+            "errors": error_messages,
+            "warnings": warning_messages,
         }
 
         if include_matches:
@@ -882,11 +898,10 @@ class MatchingRole(db.Model, SubmissionRoleTypesMixin):
 
     @validates("role")
     def _validate_role(self, key, value):
-        if value < self._MIN_ROLE:
-            value = self._MIN_ROLE
-
-        if value > self._MAX_ROLE:
-            value = self._MAX_ROLE
+        # reject out-of-range values rather than silently clamping them: clamping converts a
+        # data-entry bug into a wrong (but plausible-looking) role assignment
+        if value is None or value < self._MIN_ROLE or value > self._MAX_ROLE:
+            raise ValueError(f"Invalid MatchingRole role value: {value}")
 
         return value
 
@@ -985,12 +1000,19 @@ def _MatchingRecord_is_valid(id):
     errors = {}
     warnings = {}
 
+    # 0. SUBMISSION PERIOD SHOULD IDENTIFY A VALID PERIOD FOR THIS PROJECT CLASS
+    if obj.submission_period is None or obj.submission_period < 1:
+        errors[("period", 0)] = "Invalid submission period ({n})".format(n=obj.submission_period)
+        return False, errors, warnings
+
     if config.select_in_previous_cycle:
         from .project_class import SubmissionPeriodDefinition
 
         pd: SubmissionPeriodDefinition = pclass.get_period(obj.submission_period)
         if pd is None:
-            errors[("period", 0)] = "Missing record for submission period"
+            errors[("period", 0)] = "Missing record for submission period {n} (expected a period in range 1-{max})".format(
+                n=obj.submission_period, max=pclass.number_submissions
+            )
             return False, errors, warnings
 
         uses_supervisor = pclass.uses_supervisor
@@ -1000,20 +1022,38 @@ def _MatchingRecord_is_valid(id):
     else:
         pd: SubmissionPeriodRecord = config.get_period(obj.submission_period)
         if pd is None:
-            errors[("period", 0)] = "Missing record for submission period"
+            errors[("period", 0)] = "Missing record for submission period {n} (expected a period in range 1-{max})".format(
+                n=obj.submission_period, max=config.number_submissions
+            )
             return False, errors, warnings
 
         uses_supervisor = config.uses_supervisor
         uses_marker = config.uses_marker
         markers_needed = pd.number_markers
 
+    # supervisor_roles includes both ROLE_RESPONSIBLE_SUPERVISOR and plain ROLE_SUPERVISOR
     supervisor_roles: List[User] = obj.supervisor_roles
     marker_roles: List[User] = obj.marker_roles
 
     supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
     marker_ids: Set[int] = set(u.id for u in marker_roles)
 
-    # 1. SUPERVISOR AND MARKER ROLES SHOULD BE DISTINCT
+    responsible_supervisor_ids: Set[int] = obj.responsible_supervisor_role_ids
+    plain_supervisor_ids: Set[int] = obj.supervisor_only_role_ids
+
+    # 1. ONLY SUPERVISION AND MARKING ROLES ARE MEANINGFUL IN A MATCHING
+    valid_role_types = {
+        MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+        MatchingRole.ROLE_SUPERVISOR,
+        MatchingRole.ROLE_MARKER,
+    }
+    for r in obj.roles:
+        if r.role not in valid_role_types:
+            errors[("roles", r.id)] = 'Role "{role}" assigned to "{name}" is not valid in a matching'.format(
+                role=r.role_as_str, name=r.user.name if r.user is not None else "<unknown>"
+            )
+
+    # 1A. SUPERVISOR AND MARKER ROLES SHOULD BE DISTINCT
     a = supervisor_ids.intersection(marker_ids)
     if len(a) > 0:
         errors[("basic", 0)] = "Some supervisor and marker roles coincide"
@@ -1041,42 +1081,60 @@ def _MatchingRecord_is_valid(id):
             marker_counts[u.id] += 1
 
     if uses_supervisor:
-        # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
-        if len(supervisor_ids) == 0:
-            errors[("supervisors", 0)] = "No supervision roles are assigned for this project"
+        # 1B. AT LEAST ONE RESPONSIBLE SUPERVISOR SHOULD BE ASSIGNED
+        if len(responsible_supervisor_ids) == 0:
+            errors[("supervisors", 0)] = "No responsible supervisor is assigned for this project"
 
-        # 1B. USUALLY THERE SHOULD BE JUST ONE SUPERVISOR ROLE
-        if len(supervisor_ids) > 1:
-            warnings[("supervisors", 0)] = "There are {n} supervision roles assigned for this project".format(n=len(supervisor_ids))
+        # 1C. USUALLY THERE SHOULD BE JUST ONE RESPONSIBLE SUPERVISOR
+        # (plain supervisor roles are optional extras and attract no warning)
+        if len(responsible_supervisor_ids) > 1:
+            warnings[("supervisors", 0)] = "There are {n} responsible supervisors assigned for this project".format(n=len(responsible_supervisor_ids))
 
-        # 1C. SUPERVISORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        # 1D. NO-ONE SHOULD HOLD MORE THAN ONE SUPERVISION ROLE: this catches duplicate
+        # assignments within either role type, and assignment as both responsible supervisor
+        # and plain supervisor
         for u_id in supervisor_counts:
             count = supervisor_counts[u_id]
             if count > 1:
                 user: User = supervisor_dict[u_id]
 
-                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
+                if u_id in responsible_supervisor_ids and u_id in plain_supervisor_ids:
+                    errors[("supervisors", ("duplicate", u_id))] = (
+                        '"{name}" is assigned as both responsible supervisor and supervisor for this selector'.format(name=user.name)
+                    )
+                else:
+                    errors[("supervisors", ("duplicate", u_id))] = 'Supervisor "{name}" is assigned {n} times for this selector'.format(
+                        name=user.name, n=count
+                    )
+    else:
+        # 1E. IF SUPERVISORS ARE NOT USED, THERE SHOULD BE NO SUPERVISION ROLES
+        if len(supervisor_roles) > 0:
+            warnings[("supervisors", "unused")] = "Supervision roles are assigned, but this project class does not use supervisor roles"
 
     if uses_marker:
-        # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
+        # 1F. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
         if len(marker_ids) < markers_needed:
             errors[("markers", 0)] = "Fewer marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
                 assgn=len(marker_ids), exp=markers_needed
             )
 
-        # 1E. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
+        # 1G. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
         if len(marker_ids) > markers_needed:
             warnings[("markers", 0)] = "More marker roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
                 assgn=len(marker_ids), exp=markers_needed
             )
 
-        # 1F. MARKERS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        # 1H. MARKERS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
         for u_id in marker_counts:
             count = marker_counts[u_id]
             if count > 1:
                 user: User = marker_dict[u_id]
 
-                errors[("markers", 1)] = 'Marker "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
+                errors[("markers", ("duplicate", u_id))] = 'Marker "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
+    else:
+        # 1I. IF MARKERS ARE NOT USED, THERE SHOULD BE NO MARKER ROLES
+        if len(marker_roles) > 0:
+            warnings[("markers", "unused")] = "Marker roles are assigned, but this project class does not use marker roles"
 
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST, UNLESS IT IS AN ALTERNATIVE FOR ONE
     # OF THE SELECTED PROJECTED
@@ -1102,7 +1160,7 @@ def _MatchingRecord_is_valid(id):
             if offer_project is not None:
                 if project.id != offer_project.id:
                     errors[("custom", 0)] = (
-                        f'This selector accepted a custom offer for project "{project.name}" in period "{this_period.display_name(config.year + 1)}", but their assigned project is different'
+                        f'This selector accepted a custom offer for project "{offer_project.name}" in period "{this_period.display_name(config.year + 1)}", but their assigned project is different'
                     )
 
         # if there is only one submission period, and there is an accepted offer, it should match
@@ -1115,7 +1173,7 @@ def _MatchingRecord_is_valid(id):
                 if offer_project is not None:
                     if project.id != offer_project.id:
                         errors[("custom", 0)] = (
-                            f'This selector accepted a custom offer for project "{project.name}", but their assigned project is different'
+                            f'This selector accepted a custom offer for project "{offer_project.name}", but their assigned project is different'
                         )
 
     # 4. ASSIGNED PROJECT MUST BE PART OF THE PROJECT CLASS
@@ -1127,22 +1185,24 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                errors[("enrolment", 0)] = (
+                errors[("enrolment", ("supervisor", u.id))] = (
                     '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(name=u.name)
                 )
         else:
-            warnings[("enrolment", 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
+            warnings[("enrolment", ("supervisor", u.id))] = '"{name}" has been assigned a supervision role, but is not a faculty member'.format(
+                name=u.name
+            )
 
     # 6. STAFF WITH MARKER ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in marker_roles:
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-                errors[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(
-                    name=u.name
+                errors[("enrolment", ("marker", u.id))] = (
+                    '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(name=u.name)
                 )
         else:
-            warnings[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
+            warnings[("enrolment", ("marker", u.id))] = '"{name}" has been assigned a marking role, but is not a faculty member'.format(name=u.name)
 
     # 7. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(attempt.records.filter_by(selector_id=obj.selector_id, project_id=obj.project_id))
@@ -1157,25 +1217,46 @@ def _MatchingRecord_is_valid(id):
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
             errors[("assignment", 2)] = 'Project "{name}" is duplicated in multiple submission periods'.format(name=project.name)
 
-    # 9. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
+    # 9. ASSIGNED MARKERS SHOULD USUALLY BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     # (unambiguous to use config here since #4 checks config agrees with obj.selector.config)
+    # exceptions are allowed, so this is a warning rather than an error
     if uses_marker:
         for u in marker_roles:
             count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
             if count != 1:
-                errors[("markers", 2)] = 'Assigned marker "{name}" is not in assessor pool for assigned project'.format(name=u.name)
+                warnings[("markers", ("pool", u.id))] = 'Assigned marker "{name}" is not in the assessor pool for the assigned project'.format(
+                    name=u.name
+                )
 
-    # 10. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
-    if not project.use_supervisor_pool:
-        if project.owner is not None and project.owner_id not in supervisor_ids:
-            warnings[("supervisors", 2)] = 'Assigned project owner "{name}" does not have a supervision role'.format(name=project.owner.user.name)
+    if uses_supervisor:
+        if not project.use_supervisor_pool:
+            # 10. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE THE RESPONSIBLE SUPERVISOR
+            # exceptions are allowed, so this is a warning rather than an error
+            if project.owner is not None and project.owner_id not in responsible_supervisor_ids:
+                warnings[("supervisors", 2)] = 'Project owner "{name}" is not assigned as responsible supervisor'.format(name=project.owner.user.name)
 
-    # 11. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
-    if project.use_supervisor_pool:
-        for u in supervisor_roles:
-            if not any(u.id == fd.id for fd in project.supervisors):
-                errors[("supervisors", 3)] = 'Assigned supervisor "{name}" is not in supervision pool for assigned project'.format(name=u.name)
+        else:
+            pool_ids: Set[int] = set(fd.id for fd in project.supervisors)
+
+            # 11. FOR GENERIC PROJECTS, THE RESPONSIBLE SUPERVISOR SHOULD USUALLY BE IN THE SUPERVISION POOL
+            # exceptions are allowed, so this is a warning rather than an error; plain supervisor
+            # roles are unrestricted
+            for u_id in responsible_supervisor_ids:
+                if u_id not in pool_ids:
+                    user: User = supervisor_dict[u_id]
+                    warnings[("supervisors", ("pool", u_id))] = (
+                        'Assigned responsible supervisor "{name}" is not in the supervision pool for the assigned project'.format(name=user.name)
+                    )
+
+            # 11A. FOR GENERIC PROJECTS, ASSIGNING THE PROJECT OWNER IS USUALLY A MISTAKE
+            # (the owner is normally an administrator rather than a supervisor), but it is
+            # allowed if needed, so this is a warning rather than an error
+            if project.owner is not None and project.owner_id in supervisor_ids:
+                warnings[("supervisors", "owner")] = (
+                    'Project owner "{name}" has been assigned a supervision role; for projects using a supervision pool, '
+                    "the owner is usually an administrator, so please check this assignment is intended".format(name=project.owner.user.name)
+                )
 
     # 12. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
@@ -1189,7 +1270,6 @@ def _MatchingRecord_is_valid(id):
 
     # 13. THE PROJECT SHOULD NOT BE OVERASSIGNED
     if project.enforce_capacity and project.capacity is not None:
-        supervisor_roles = obj.supervisor_roles
         for supv in supervisor_roles:
             count = get_count(
                 attempt.records.filter(
@@ -1230,7 +1310,7 @@ def _MatchingRecord_is_valid(id):
                 )
 
                 if lo_rec is not None and lo_rec.id == obj.id:
-                    errors[("overassigned", 5)] = (
+                    errors[("overassigned", supv.id)] = (
                         'Project "{name}" has maximum capacity {max} but has been assigned to supervisor "{supv_name}" with {num} selectors'.format(
                             name=project.name,
                             max=project.capacity,
@@ -1651,6 +1731,27 @@ def _MatchingRecord_roles_remove_handler(target, value, initiator):
 
     with db.session.no_autoflush:
         _delete_MatchingRecord_cache(target.id, target.matching_id)
+
+
+def _MatchingRole_invalidate_owners(target):
+    # in-place edits to a MatchingRole (e.g. changing .role or .user_id) do not fire the
+    # append/remove events on MatchingRecord.roles, so we must invalidate the validation
+    # cache of any owning MatchingRecord explicitly
+    for rec in target.role_for:
+        rec._validated = False
+        _delete_MatchingRecord_cache(rec.id, rec.matching_id)
+
+
+@listens_for(MatchingRole, "before_update")
+def _MatchingRole_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _MatchingRole_invalidate_owners(target)
+
+
+@listens_for(MatchingRole, "before_delete")
+def _MatchingRole_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _MatchingRole_invalidate_owners(target)
 
 
 class MatchingReviewComment(db.Model):

@@ -1375,13 +1375,15 @@ def _MatchingAttempt_is_valid(id):
 
     # there are several steps:
     #   1. Validate that each MatchingRecord is valid (marker is not supervisor,
-    #      LiveProject is attached to right class).
-    #      These errors are fatal
-    #   2. Validate that project capacity constraints are not violated.
-    #      This is also a fatal error.
+    #      LiveProject is attached to right class, project capacity constraints
+    #      are not violated). Record-level errors are fatal; record-level warnings
+    #      are collected but do not invalidate the match.
+    #   2. Validate that each selector has exactly one assignment per submission period.
+    #      Gaps or duplicates are fatal errors.
     #   3. Validate that faculty CATS limits are respected.
-    #      This is a warning, not an error (sometimes supervisors have to take more
-    #      students than we would like, but they do all have to be supervised somehow)
+    #      These are warnings, not errors (sometimes supervisors have to take more
+    #      students than we would like, but they do all have to be supervised somehow).
+    #      Enrolment violations detected during the same sweep are errors.
     errors = {}
     warnings = {}
     student_issues = False
@@ -1392,50 +1394,87 @@ def _MatchingAttempt_is_valid(id):
         return True, student_issues, faculty_issues, errors, warnings
 
     # 1. EACH MATCHING RECORD SHOULD VALIDATE INDEPENDENTLY ACCORDING TO ITS OWN CRITERIA
+    # harvest both errors and warnings, whether or not the record is valid overall: a record
+    # that validates with warnings should still surface those warnings at attempt level
     for record in obj.records:
-        # check whether each matching record validates independently
-        if not record.is_valid:
-            record_errors = record.filter_errors(omit=["overassigned"])
-            record_warnings = record.filter_warnings(omit=["overassigned"])
+        record_is_valid = record.is_valid
+        record_errors = record.filter_errors()
+        record_warnings = record.filter_warnings()
 
-            if len(record_errors) == 0 and len(record_warnings) == 0:
-                current_app.logger.info(
-                    "** Internal inconsistency in response from _MatchingRecord_is_valid: record_errors = {x}, record_warnings = {y}".format(
-                        x=record_errors, y=record_warnings
-                    )
-                )
+        if record_is_valid is False and len(record_errors) == 0:
+            current_app.logger.info(
+                "** Internal inconsistency in response from _MatchingRecord_is_valid: record is invalid, but no errors reported "
+                "(record_warnings = {y})".format(y=record_warnings)
+            )
 
-            for n, msg in enumerate(record_errors):
-                errors[("basic", (record.id, n))] = "{name}/{abbv}: {msg}".format(
-                    msg=msg,
-                    name=record.selector.student.user.name,
-                    abbv=record.selector.config.project_class.abbreviation,
-                )
+        for n, msg in enumerate(record_errors):
+            errors[("basic", (record.id, n))] = "{name}/{abbv}: {msg}".format(
+                msg=msg,
+                name=record.selector.student.user.name,
+                abbv=record.selector.config.project_class.abbreviation,
+            )
 
-            for n, msg in enumerate(record_warnings):
-                warnings[("basic", (record.id, n))] = "{name}/{abbv}: {msg}".format(
-                    msg=msg,
-                    name=record.selector.student.user.name,
-                    abbv=record.selector.config.project_class.abbreviation,
-                )
+        for n, msg in enumerate(record_warnings):
+            warnings[("basic", (record.id, n))] = "{name}/{abbv}: {msg}".format(
+                msg=msg,
+                name=record.selector.student.user.name,
+                abbv=record.selector.config.project_class.abbreviation,
+            )
 
-            if len(record_errors) > 0:
-                student_issues = True
+        if len(record_errors) > 0:
+            student_issues = True
 
-    # 2. EACH PARTICIPATING FACULTY MEMBER SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
+    # 2. EACH SELECTOR SHOULD HAVE EXACTLY ONE ASSIGNMENT PER SUBMISSION PERIOD
+    for sel in obj.selector_list_query().all():
+        sel_config: "ProjectClassConfig" = sel.config
+
+        if sel_config.select_in_previous_cycle:
+            expected_periods = sel_config.project_class.number_submissions
+        else:
+            expected_periods = sel_config.number_submissions
+
+        periods = [rec.submission_period for rec in obj.records.filter_by(selector_id=sel.id)]
+
+        missing = sorted(set(range(1, expected_periods + 1)) - set(periods))
+        if len(missing) > 0:
+            errors[("coverage", sel.id)] = "{name}/{abbv}: No assignment for submission period{plural} {missing}".format(
+                name=sel.student.user.name,
+                abbv=sel_config.project_class.abbreviation,
+                plural="s" if len(missing) > 1 else "",
+                missing=", ".join(str(p) for p in missing),
+            )
+            student_issues = True
+
+        duplicated = sorted(set(p for p in periods if periods.count(p) > 1))
+        if len(duplicated) > 0:
+            errors[("coverage_dup", sel.id)] = "{name}/{abbv}: Multiple assignments for submission period{plural} {dup}".format(
+                name=sel.student.user.name,
+                abbv=sel_config.project_class.abbreviation,
+                plural="s" if len(duplicated) > 1 else "",
+                dup=", ".join(str(p) for p in duplicated),
+            )
+            student_issues = True
+
+    # 3. EACH PARTICIPATING FACULTY MEMBER SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
+    # CATS-limit violations are warnings; enrolment violations are errors
     query = obj.faculty_list_query()
     for fac in query.all():
         data = obj.is_supervisor_overassigned(fac, include_matches=True)
-        if data["flag"]:
-            errors[("supervising", fac.id)] = data["error_message"]
+        for n, msg in enumerate(data["errors"]):
+            errors[("supervising", (fac.id, n))] = msg
             faculty_issues = True
+        for n, msg in enumerate(data["warnings"]):
+            warnings[("supervising", (fac.id, n))] = msg
 
         data = obj.is_marker_overassigned(fac, include_matches=True)
-        if data["flag"]:
-            errors[("marking", fac.id)] = data["error_message"]
+        for n, msg in enumerate(data["errors"]):
+            errors[("marking", (fac.id, n))] = msg
             faculty_issues = True
+        for n, msg in enumerate(data["warnings"]):
+            warnings[("marking", (fac.id, n))] = msg
 
         # 4. FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
+        # these are also CATS-limit violations, so are warnings rather than errors
         for config in obj.config_members:
             config: "ProjectClassConfig"
             rec: "EnrollmentRecord" = fac.get_enrollment_record(config.pclass_id)
@@ -1444,18 +1483,16 @@ def _MatchingAttempt_is_valid(id):
                 sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
                 if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                    errors[("custom_sup", fac.id)] = "{pclass} assignment to {name} violates their custom supervising CATS limit = {n}".format(
+                    warnings[("custom_sup", fac.id)] = "{pclass} assignment to {name} violates their custom supervising CATS limit = {n}".format(
                         pclass=config.name,
                         name=fac.user.name,
                         n=rec.CATS_supervision,
                     )
-                    faculty_issues = True
 
                 if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                    errors[("custom_mark", fac.id)] = "{pclass} assignment to {name} violates their custom marking CATS limit = {n}".format(
+                    warnings[("custom_mark", fac.id)] = "{pclass} assignment to {name} violates their custom marking CATS limit = {n}".format(
                         pclass=config.name, name=fac.user.name, n=rec.CATS_marking
                     )
-                    faculty_issues = True
 
                 # UPDATE MODERATE CATS
 

@@ -11,7 +11,7 @@
 """add matching_review_comments table
 
 Revision ID: e7f8a9b0c1d2
-Revises: b4e7a1d9c3f2
+Revises: 7fddffd79190
 Create Date: 2026-07-23
 
 Adds the MatchingReviewComment model backing the Matching Workspace review-comments panel
@@ -20,13 +20,18 @@ Adds the MatchingReviewComment model backing the Matching Workspace review-comme
 parent_id, and independently resolvable. body is stored via EncryptedType/AesEngine, matching the
 ticket_comments.body encoding (LargeBinary at rest), since comment text may contain free-form,
 potentially sensitive student detail.
+
+Originally chained directly off b4e7a1d9c3f2 (the tip at the time this migration was written);
+re-pointed at 7fddffd79190 (add ticket_subjects tombstone columns) after that unrelated migration
+was merged from another branch onto the same base, forking the chain. The two touch disjoint
+tables, so linearising here is safe.
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "e7f8a9b0c1d2"
-down_revision = "b4e7a1d9c3f2"
+down_revision = "7fddffd79190"
 branch_labels = None
 depends_on = None
 

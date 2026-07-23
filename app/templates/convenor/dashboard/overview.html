@@ -50,8 +50,9 @@
                         {%- set stale_confirmations = outstanding_confirms and outstanding_confirms > 0 and age_oldest is not none and age_oldest > 5 -%}
                         {%- set canvas_issue = missing_canvas is not none and missing_canvas > 0 -%}
                         {%- set n_marking_urgent = data['marking_urgent_count'] -%}
+                        {%- set n_ticket_overdue = data['ticket_overdue_count'] -%}
                         {%- set lifecycle_action = lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED or lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE -%}
-                        {%- set has_alert = stale_confirmations or (n_marking_urgent > 0) -%}
+                        {%- set has_alert = stale_confirmations or (n_marking_urgent > 0) or (n_ticket_overdue > 0) -%}
                         {%- set has_warning = canvas_issue and not has_alert -%}
 
                         <div class="col">
@@ -74,6 +75,11 @@
                                         <div class="alert alert-danger py-1 px-2 small mb-2 d-flex align-items-center gap-2">
                                             <i class="fas fa-exclamation-circle fa-fw"></i>
                                             {{ n_marking_urgent }} marking report{{ '' if n_marking_urgent == 1 else 's' }} need{{ 's' if n_marking_urgent == 1 else '' }} immediate attention
+                                        </div>
+                                    {% elif n_ticket_overdue %}
+                                        <div class="alert alert-danger py-1 px-2 small mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-ticket-alt fa-fw"></i>
+                                            {{ n_ticket_overdue }} overdue ticket{{ '' if n_ticket_overdue == 1 else 's' }}
                                         </div>
                                     {% elif canvas_issue %}
                                         <div class="alert alert-warning py-1 px-2 small mb-2 d-flex align-items-center gap-2">
@@ -108,6 +114,7 @@
                                         {%- set n_proj = data['attached_projects'] -%}
                                         {%- set n_fac = data['faculty'] -%}
                                         {%- set n_fac_total = data['total_faculty'] -%}
+                                        {%- set n_ticket_open = data['ticket_open_count'] -%}
                                         {% if n_sel %}
                                             <span><i class="fas fa-user-graduate fa-fw"></i> {{ n_sel }} selector{{ '' if n_sel == 1 else 's' }}</span>
                                         {% endif %}
@@ -119,6 +126,11 @@
                                         {% endif %}
                                         {% if n_fac is not none and n_fac_total is not none %}
                                             <span><i class="fas fa-chalkboard-teacher fa-fw"></i> {{ n_fac }}/{{ n_fac_total }} faculty</span>
+                                        {% endif %}
+                                        {% if n_ticket_open %}
+                                            <span class="{% if n_ticket_overdue %}text-danger fw-semibold{% else %}text-primary{% endif %}">
+                                                <i class="fas fa-ticket-alt fa-fw"></i> {{ n_ticket_open }} ticket{{ '' if n_ticket_open == 1 else 's' }}{% if n_ticket_overdue %} ({{ n_ticket_overdue }} overdue){% endif %}
+                                            </span>
                                         {% endif %}
                                         {% if n_marking_urgent %}
                                             <span class="text-danger fw-semibold"><i class="fas fa-exclamation-circle fa-fw"></i> {{ n_marking_urgent }} marking action{{ '' if n_marking_urgent == 1 else 's' }} needed</span>

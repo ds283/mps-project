@@ -179,6 +179,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     )
     ticket_open_count = get_count(open_ticket_query)
     ticket_triage_count = sum(1 for ticket in open_ticket_query.filter(Ticket.assignee_id.is_(None)).all() if ticket.scope_classes.count() > 1)
+    ticket_overdue_count = get_count(open_ticket_query.filter(Ticket.due_date.isnot(None), Ticket.due_date < now))
 
     return {
         "faculty": enrolled_fac_count,
@@ -205,6 +206,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "journal_unread": journal_unread,
         "ticket_open_count": ticket_open_count,
         "ticket_triage_count": ticket_triage_count,
+        "ticket_overdue_count": ticket_overdue_count,
     }
 
 

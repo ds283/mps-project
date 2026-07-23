@@ -96,17 +96,7 @@ _project = """
         {% endfor %}
     </div>
 {% endif %}
-{% if row.programme_pref is not none %}
-    {% if row.programme_pref %}
-        <div class="small" style="color: var(--bs-success-text-emphasis);">
-            <i class="fas fa-check-circle me-1"></i>Meets programme prefs
-        </div>
-    {% else %}
-        <div class="small" style="color: var(--bs-warning-text-emphasis);">
-            <i class="fas fa-exclamation-circle me-1"></i>Programme prefs not met
-        </div>
-    {% endif %}
-{% endif %}
+{{ programme_pref_line(row.programme_pref) }}
 """
 
 
@@ -159,6 +149,7 @@ def student_view_v2_data(rows: List[dict], attempt_id: int, text: Optional[str] 
     """
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
     label_text = get_template_attribute("labels.html", "label_text")
+    programme_pref_line = get_template_attribute("admin/matching_workspace/_macros.html", "programme_pref_line")
 
     student_templ = _build_templ(_student)
     pclass_templ = _build_templ(_pclass)
@@ -171,7 +162,7 @@ def student_view_v2_data(rows: List[dict], attempt_id: int, text: Optional[str] 
         {
             "student": render_template(student_templ, row=row),
             "pclass": render_template(pclass_templ, row=row, small_swatch=small_swatch, label_text=label_text),
-            "project": render_template(project_templ, row=row),
+            "project": render_template(project_templ, row=row, programme_pref_line=programme_pref_line),
             "markers": render_template(markers_templ, row=row),
             "rank": render_template(rank_templ, row=row),
             "score": render_template(score_templ, row=row),

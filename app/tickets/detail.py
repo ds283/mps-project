@@ -34,6 +34,7 @@ from ..shared.tickets import (
     add_external_subscriber,
     add_label,
     add_subject,
+    admin_root_users_for,
     assign,
     authorized,
     can_assign,
@@ -250,13 +251,14 @@ def _build_assign_options(ticket):
     seen = set()
     sections = []
 
-    def _section(title, users, note=None):
+    def _section(title, rows_source, note=None):
         rows = []
-        for user in users:
+        for entry in rows_source:
+            user, row_note = (entry["user"], entry.get("note")) if isinstance(entry, dict) else (entry, note)
             if user is None or user.id in seen:
                 continue
             seen.add(user.id)
-            rows.append({"user": user, "note": note})
+            rows.append({"user": user, "note": row_note})
         if rows:
             sections.append({"title": title, "rows": rows})
 
@@ -279,6 +281,7 @@ def _build_assign_options(ticket):
         )
 
     _section("Convenors in scope", convenors_in_scope(ticket))
+    _section("Administrators", admin_root_users_for(ticket))
     _section("Supervisors of attached students", _supervisors_for(ticket))
     _section("Office", _office_users(ticket))
     return sections
@@ -291,9 +294,10 @@ def _build_subscriber_options(ticket):
     seen = set(already)
     sections = []
 
-    def _section(title, users):
+    def _section(title, rows_source):
         rows = []
-        for user in users:
+        for entry in rows_source:
+            user = entry["user"] if isinstance(entry, dict) else entry
             if user is None or user.id in seen:
                 continue
             seen.add(user.id)
@@ -302,6 +306,7 @@ def _build_subscriber_options(ticket):
             sections.append({"title": title, "rows": rows})
 
     _section("Convenors in scope", convenors_in_scope(ticket))
+    _section("Administrators", admin_root_users_for(ticket))
     _section("Supervisors of attached students", _supervisors_for(ticket))
     _section("Office", _office_users(ticket))
     _section("Management watchers", _management_watchers(ticket))

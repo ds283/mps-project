@@ -23,6 +23,7 @@ from .actions import (
     remove_label,
     unassign,
 )
+from .administrators import admin_root_users_for
 from .candidates import (
     SEARCH_LIMIT,
     authorized,
@@ -82,6 +83,7 @@ __all__ = [
     "add_external_subscriber",
     "add_label",
     "add_subject",
+    "admin_root_users_for",
     "apply_auto_assign",
     "assign",
     "authorized",

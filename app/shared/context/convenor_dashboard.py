@@ -354,6 +354,24 @@ def get_convenor_todo_data(config: ProjectClassConfig, task_limit=10):
     return {"top_to_dos": top_tks}
 
 
+def get_convenor_open_tickets(config: ProjectClassConfig, limit=10):
+    """
+    Top open (non-closed) tickets in scope for this config's project class, most-overdue first.
+    Ticket equivalent of get_convenor_todo_data, feeding the convenor overview dashboard's CTA panel.
+    """
+    tickets = (
+        Ticket.query.filter(
+            Ticket.status != Ticket.CLOSED,
+            Ticket.scope_classes.any(ProjectClass.id == config.pclass_id),
+        )
+        .order_by(Ticket.due_date.is_(None), Ticket.due_date)
+        .limit(limit)
+        .all()
+    )
+
+    return {"open_tickets": tickets}
+
+
 def build_convenor_tasks_query(
     config: ProjectClassConfig,
     status_filter="all",

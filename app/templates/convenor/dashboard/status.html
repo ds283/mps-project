@@ -8,7 +8,6 @@
 
 {% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card %}
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
-{% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 {% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
 {% from "convenor/dashboard/overview_cards/_action_panel.html" import action_panel %}
 {% from "convenor/dashboard/overview_cards/_metric_tile.html" import metric_tile %}
@@ -87,8 +86,8 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% set top_to_dos = todo['top_to_dos'] %}
-    {% set num_to_dos = convenor_data['todo_count'] %}
+    {% set top_tickets = open_tickets['open_tickets'] %}
+    {% set STATUS_TONE = {0: 'success', 1: 'warning', 2: 'primary', 3: 'secondary'} %}
     {% set lifecycle = config.selector_lifecycle %}
     <div class="row">
         <div class="col-1"></div>
@@ -97,67 +96,42 @@
             {# [A] ALERT BANNERS — centralised action panel #}
             {{ action_panel(action_items) }}
 
-            {# [T] UPCOMING TASKS — compact summary widget #}
-            {% if top_to_dos is defined and top_to_dos is not none and top_to_dos|length > 0 %}
+            {# [T] OPEN TICKETS — compact summary widget #}
+            {% if top_tickets is defined and top_tickets is not none and top_tickets|length > 0 %}
                 <div class="card border-secondary mt-2 mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                         <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
-                            <i class="fas fa-tasks fa-fw"></i> Upcoming tasks
+                            <i class="fas fa-ticket-alt fa-fw"></i> Open tickets
                         </span>
-                        <a href="{{ url_for('convenor.todo_list', id=pclass.id) }}"
+                        <a href="{{ url_for('convenor.tickets_tab', id=pclass.id) }}"
                            class="btn btn-outline-secondary btn-xs">
-                            View all in Tasks tab <i class="fas fa-arrow-right ms-1"></i>
+                            View all in Tickets tab <i class="fas fa-arrow-right ms-1"></i>
                         </a>
                     </div>
-                    {% for tk in top_to_dos %}
-                        {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
-                        {% set obj = tk.parent %}
-                        {% if tk.is_overdue %}
-                            {% set row_bg = 'background: var(--bs-danger-bg-subtle)' %}
-                        {% elif tk.complete %}
-                            {% set row_bg = 'background: var(--bs-success-bg-subtle)' %}
-                        {% else %}
-                            {% set row_bg = '' %}
-                        {% endif %}
+                    {% for ticket in top_tickets %}
+                        {% set is_overdue = ticket.due_date is not none and ticket.due_date < current_time %}
+                        {% set tone = STATUS_TONE.get(ticket.status, 'secondary') %}
                         <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom"
-                             style="{{ row_bg }}; font-size: var(--cd-text-cta-desc)">
-                            {% if tk.is_overdue %}
+                             style="{% if is_overdue %}background: var(--bs-danger-bg-subtle){% endif %}; font-size: var(--cd-text-cta-desc)">
+                            {% if is_overdue %}
                                 <i class="fas fa-exclamation-triangle text-danger flex-shrink-0"></i>
-                            {% elif tk.complete %}
-                                <i class="fas fa-check text-success flex-shrink-0"></i>
                             {% else %}
                                 <i class="fas fa-circle text-body-secondary flex-shrink-0" style="font-size: 0.5em"></i>
                             {% endif %}
                             <span class="flex-grow-1 fw-medium">
-                                {% if tk_type == 1 or tk_type == 2 %}
-                                    <a class="text-decoration-none"
-                                       href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                        {{ tk.description|truncate(60) }}
-                                    </a>
-                                {% elif tk_type == 3 %}
-                                    <a class="text-decoration-none"
-                                       href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                        {{ tk.description|truncate(60) }}
-                                    </a>
-                                {% else %}
-                                    {{ tk.description|truncate(60) }}
-                                {% endif %}
+                                <a class="text-decoration-none"
+                                   href="{{ url_for('tickets.detail', ticket_id=ticket.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
+                                    {{ ticket.title|truncate(60) }}
+                                </a>
                             </span>
-                            {% if tk.due_date %}
+                            {% if ticket.due_date %}
                                 <span class="text-body-secondary flex-shrink-0">
-                                    Due: {{ tk.due_date.strftime("%d %b %Y") }}
+                                    Due: {{ ticket.due_date.strftime("%d %b %Y") }}
                                 </span>
                             {% endif %}
-                            {% if tk.is_overdue %}
-                                <span class="badge bg-danger-subtle text-danger-emphasis"
-                                      style="font-size: var(--cd-text-micro)">Overdue</span>
-                            {% elif tk.complete %}
-                                <span class="badge bg-success-subtle text-success-emphasis"
-                                      style="font-size: var(--cd-text-micro)">Complete</span>
-                            {% elif tk.is_available %}
-                                <span class="badge bg-info-subtle text-info-emphasis"
-                                      style="font-size: var(--cd-text-micro)">Available</span>
-                            {% endif %}
+                            <span class="badge" style="font-size: var(--cd-text-micro); background: var(--bs-{{ tone }}-bg-subtle); color: var(--bs-{{ tone }}-text-emphasis)">
+                                {{ ticket._labels.get(ticket.status, 'Unknown') }}
+                            </span>
                         </div>
                     {% endfor %}
                 </div>
@@ -249,7 +223,6 @@
                                         {{ wtf.render_field(golive_form.notify_selectors) }}
                                     </div>
                                     {{ approvals_state(approval_data) }}
-                                    {{ blocking_task_list(config.get_blocking_tasks[0]) }}
                                 </form>
                             </div>
                             <div class="col-md-6">
@@ -1076,7 +1049,6 @@
                                 <div>&mdash; Some submitter activities are not yet complete</div>
                             {% endif %}
                         </div>
-                        {{ blocking_task_list(config.get_blocking_tasks[0]) }}
                     </div>
                 </div>
             {% endif %}

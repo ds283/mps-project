@@ -56,7 +56,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_action_items,
     get_convenor_approval_data,
     get_convenor_dashboard_data,
-    get_convenor_todo_data,
+    get_convenor_open_tickets,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import ConfirmActionForm
@@ -317,7 +317,7 @@ def status(id):
             )
         )
 
-    todo = get_convenor_todo_data(config)
+    open_tickets = get_convenor_open_tickets(config)
     approval_data = get_convenor_approval_data(pclass)
 
     return_url = url_for("convenor.status", id=id)
@@ -336,7 +336,7 @@ def status(id):
         convenor_data=data,
         action_items=action_items,
         approval_data=approval_data,
-        todo=todo,
+        open_tickets=open_tickets,
         return_url=return_url,
         return_text=return_text,
         consent_stats=consent_stats,

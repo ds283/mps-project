@@ -556,14 +556,13 @@
                       {{ sub_warnings|length }} warning{{ 's' if sub_warnings|length != 1 }}
                     </span>
                   {% endif %}
-                  {# Task badge #}
-                  {% set num_tasks = sub.number_available_tasks %}
-                  {% if num_tasks > 0 %}
-                    <a href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=_back_url) }}"
-                       class="sv2-pill" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">
-                      <i class="fas fa-tasks" style="font-size:9px"></i>
-                      {{ num_tasks }} task{{ 's' if num_tasks != 1 }}
-                    </a>
+                  {# Ticket badge #}
+                  {% set num_tickets = sub.number_open_tickets %}
+                  {% if num_tickets > 0 %}
+                    <span class="sv2-pill" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">
+                      <i class="fas fa-ticket-alt" style="font-size:9px"></i>
+                      {{ num_tickets }} ticket{{ 's' if num_tickets != 1 }}
+                    </span>
                   {% endif %}
                 </div>
               </div>

@@ -262,10 +262,10 @@ _name = """
 {% else %}
     <div class="text-danger small"><i class="fas fa-times-circle"></i> No convert to submitter</div>
 {% endif %}
-{% set num_tasks = sel.number_available_tasks %}
-{% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
-{% if num_tasks > 0 %}
-    <div class="badge bg-info">{{ num_tasks }} task{{ pl }}</div>
+{% set num_tickets = sel.number_open_tickets %}
+{% set pl = 's' %}{% if num_tickets == 1 %}{% set pl = '' %}{% endif %}
+{% if num_tickets > 0 %}
+    <div class="badge bg-info">{{ num_tickets }} ticket{{ pl }}</div>
 {% endif %}
 <div class="mt-1">{{ journal_indicator(counts, sel.student_id, sel.student.user.name) }}</div>
 </div>

@@ -1219,6 +1219,17 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return self.custom_offers.order_by(CustomOffer.creation_timestamp.asc())
 
     @property
+    def number_open_tickets(self):
+        from .tickets import Ticket, TicketSubject
+
+        return get_count(
+            Ticket.query.filter(
+                Ticket.status != Ticket.CLOSED,
+                Ticket.subjects.any(TicketSubject.selecting_student_id == self.id),
+            )
+        )
+
+    @property
     def number_bookmarks(self):
         return get_count(self.bookmarks)
 
@@ -1808,6 +1819,17 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         self._validated = False
         self._errors = False
         self._warnings = False
+
+    @property
+    def number_open_tickets(self):
+        from .tickets import Ticket, TicketSubject
+
+        return get_count(
+            Ticket.query.filter(
+                Ticket.status != Ticket.CLOSED,
+                Ticket.subjects.any(TicketSubject.submitting_student_id == self.id),
+            )
+        )
 
     @property
     def selector_config(self):

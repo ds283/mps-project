@@ -5,7 +5,9 @@
  * data-bs-toggle="offcanvas" data-bs-target="#matchStudentDrawer" data-rec-id="..." opens the
  * student inspector for that MatchingRecord; any element carrying
  * data-bs-toggle="modal" data-bs-target="#matchRoleEditorModal" data-rec-id="..." opens the
- * unified role editor for that record. Content for both is populated by AJAX.
+ * unified role editor for that record. Content for both is populated by AJAX. An element
+ * carrying data-bs-toggle="offcanvas" data-bs-target="#matchCommentsPanel" data-rec-id="..."
+ * opens the review-comments panel pre-scoped to that record's "By assignment" tab.
  */
 (function () {
     "use strict";
@@ -499,7 +501,35 @@
         });
     }
 
-    function loadCommentsPanel(attemptId) {
+    function focusAssignmentComposer(scope, recId) {
+        var tabBtn = document.getElementById("mwAssignmentTabBtn");
+        if (tabBtn) {
+            if (typeof bootstrap !== "undefined" && bootstrap.Tab) {
+                bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            } else {
+                tabBtn.click();
+            }
+        }
+
+        var select = scope.querySelector("#mwAssignmentComposerStudent");
+        if (select) {
+            select.value = recId;
+            if (typeof $ !== "undefined" && $.fn.select2) {
+                $(select).trigger("change.select2").trigger("change");
+            } else {
+                select.dispatchEvent(new Event("change"));
+            }
+        }
+
+        var body = scope.querySelector("#mwAssignmentComposerBody");
+        if (body) {
+            window.setTimeout(function () {
+                body.focus();
+            }, 150);
+        }
+    }
+
+    function loadCommentsPanel(attemptId, focusRecId) {
         var panelEl = document.getElementById("matchCommentsPanel");
         var bodyEl = document.getElementById("matchCommentsPanelBody");
         if (!panelEl || !bodyEl) {
@@ -521,6 +551,10 @@
                 bindCommentThreadActions(bodyEl, attemptId);
                 bindCommentComposer(document.getElementById("mwGlobalComposerForm"), attemptId);
                 bindCommentComposer(document.getElementById("mwAssignmentComposerForm"), attemptId);
+
+                if (focusRecId) {
+                    focusAssignmentComposer(bodyEl, focusRecId);
+                }
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load review comments.</div>';
@@ -529,10 +563,12 @@
 
     var commentsPanelEl = document.getElementById("matchCommentsPanel");
     if (commentsPanelEl) {
-        commentsPanelEl.addEventListener("show.bs.offcanvas", function () {
+        commentsPanelEl.addEventListener("show.bs.offcanvas", function (event) {
             var attemptId = commentsPanelEl.getAttribute("data-attempt-id");
+            var trigger = event.relatedTarget;
+            var recId = trigger ? trigger.getAttribute("data-rec-id") : null;
             if (attemptId) {
-                loadCommentsPanel(attemptId);
+                loadCommentsPanel(attemptId, recId);
             }
         });
     }

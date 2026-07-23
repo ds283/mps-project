@@ -1401,9 +1401,9 @@ class MatchingRecord(db.Model):
 
         return self._filter(self._warnings, include, omit)
 
-    def get_roles(self, role: str) -> List:
+    def get_role_records(self, role: str) -> List:
         """
-        Return User instances corresponding to attached MatchingRole records for role type 'role'
+        Return MatchingRole instances attached to this record for role type 'role'
         :param role: specified role type
         :return:
         """
@@ -1417,10 +1417,18 @@ class MatchingRecord(db.Model):
         }
 
         if role not in role_map:
-            raise KeyError("Unknown role in MatchingRecord.get_roles()")
+            raise KeyError("Unknown role in MatchingRecord.get_role_records()")
 
         role_ids = role_map[role]
-        return [role.user for role in self.roles if role.role in role_ids]
+        return [r for r in self.roles if r.role in role_ids]
+
+    def get_roles(self, role: str) -> List:
+        """
+        Return User instances corresponding to attached MatchingRole records for role type 'role'
+        :param role: specified role type
+        :return:
+        """
+        return [r.user for r in self.get_role_records(role)]
 
     def get_role_ids(self, role: str) -> Set[int]:
         """
@@ -1428,6 +1436,14 @@ class MatchingRecord(db.Model):
         :return:
         """
         return set(u.id for u in self.get_roles(role))
+
+    @property
+    def supervisor_role_records(self) -> List:
+        """
+        Convenience function for get_role_records() with role='supervisor'
+        :return:
+        """
+        return self.get_role_records("supervisor")
 
     @property
     def supervisor_roles(self) -> List:

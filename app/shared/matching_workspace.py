@@ -178,11 +178,10 @@ def student_row(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
         "project": {
             "instance": project,
             "name": project.name if project is not None else None,
-            "owner": project.owner.user.name if project is not None and project.owner is not None else None,
         },
         "modified": _record_is_modified(record),
         "programme_pref": project.satisfies_preferences(selector) if project is not None else None,
-        "supervisors": record.supervisor_roles,
+        "supervisors": record.supervisor_role_records,
         "markers": record.marker_roles,
         "rank": rank,
         "rank_band": _rank_band(rank),

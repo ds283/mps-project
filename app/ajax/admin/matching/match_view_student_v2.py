@@ -27,6 +27,11 @@ _student = """
        data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}">
         Show details <i class="fas fa-chevron-right"></i>
     </a>
+    <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+       data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+       title="Add a comment on {{ row.user.name }}'s assignment">
+        <i class="fas fa-comment-dots"></i>
+    </a>
     {% if row.journal.visible %}
         <span class="badge rounded-pill border text-body-secondary small">
             <i class="fas fa-book me-1"></i>{{ row.journal.visible }}
@@ -49,9 +54,6 @@ _pclass = """
     <span class="small">{{ label_text(row.pclass.label) }}</span>
 </div>
 {% if row.cohort %}<div class="small text-primary">Cohort {{ row.cohort }}</div>{% endif %}
-{% if row.project.owner %}
-    <div class="small text-body-secondary"><i class="fas fa-user-circle me-1"></i>{{ row.project.owner }}</div>
-{% endif %}
 """
 
 
@@ -70,6 +72,15 @@ _project = """
         <span class="badge rounded-pill small" style="border: 1px solid var(--bs-primary); color: var(--bs-primary);">Modified</span>
     {% endif %}
 </div>
+{% if row.supervisors %}
+    <div class="mt-1">
+        {% for s in row.supervisors %}
+            <div class="small text-body-secondary">
+                <i class="fas fa-user-circle me-1"></i>{{ s.user.name }} &middot; {{ s.role_as_str }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
 {% if row.programme_pref is not none %}
     {% if row.programme_pref %}
         <div class="small" style="color: var(--bs-success-text-emphasis);">
@@ -88,13 +99,13 @@ _project = """
 _markers = """
 {% if row.markers %}
     {% for m in row.markers %}
-        <div>
-            <a class="text-decoration-none" role="button" data-bs-toggle="modal" data-bs-target="#matchRoleEditorModal"
+        <div class="small text-body-secondary">
+            <a class="text-decoration-none text-body-secondary" role="button" data-bs-toggle="modal" data-bs-target="#matchRoleEditorModal"
                data-rec-id="{{ row.record.id }}">{{ m.name }} <i class="fas fa-caret-down"></i></a>
         </div>
     {% endfor %}
 {% else %}
-    <a class="text-decoration-none text-body-secondary" role="button" data-bs-toggle="modal"
+    <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="modal"
        data-bs-target="#matchRoleEditorModal" data-rec-id="{{ row.record.id }}">Assign marker&hellip; <i
             class="fas fa-caret-down"></i></a>
 {% endif %}

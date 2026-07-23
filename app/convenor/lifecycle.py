@@ -994,6 +994,11 @@ def confirm_go_live(id):
         _flash_blocking_tasks("Go-Live", blocking)
         return redirect(url_for("convenor.status", id=config.pclass_id))
 
+    blocking_tickets = config.get_blocking_tickets
+    if blocking_tickets:
+        _flash_blocking_tickets("Go-Live", blocking_tickets)
+        return redirect(url_for("convenor.status", id=config.pclass_id))
+
     close = bool(int(request.args.get("close", 0)))
     deadline = request.args.get("deadline", None)
     notify_faculty = bool(int(request.args.get("notify_faculty", 0)))
@@ -1087,6 +1092,11 @@ def perform_go_live(id):
     blocking, num_blocking = config.get_blocking_tasks
     if num_blocking > 0:
         _flash_blocking_tasks("Go-Live", blocking)
+        return redirect(redirect_url())
+
+    blocking_tickets = config.get_blocking_tickets
+    if blocking_tickets:
+        _flash_blocking_tickets("Go-Live", blocking_tickets)
         return redirect(redirect_url())
 
     close = bool(int(request.args.get("close", 0)))

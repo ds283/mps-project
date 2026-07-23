@@ -33,8 +33,8 @@
 - [x] **Icon compliance** — Font Awesome throughout; **no residual emoji glyphs** in templates,
       v2 formatters, or JS.
 
-> **Deferred to Screen 1:** `modified_pill()` renders sentence-case "Modified"; the reference
-> table (screenshot 01) shows uppercase "MODIFIED". Cosmetic — decide during the Student-view pass.
+> **Resolved in Screen 1:** `modified_pill()` now renders uppercase "MODIFIED" (matching the
+> reference table); the student v2 formatter's inline duplicate was removed and now calls the macro.
 
 ## Screen-by-screen (in build order)
 
@@ -72,7 +72,12 @@ For each surface, compare against its screenshot + the matching README section +
 
 - **Global pass** — ✅ done. Tokens/emoji clean across templates, formatters, JS. One fix:
   student v2 formatter now uses the shared `programme_pref_line` macro instead of an inline copy.
-- **Screen 1 Student view** — _not started_
+- **Screen 1 Student view** — ✅ done. Rank cell now dominant (`#N` + vivid
+  `--bs-success`/`--bs-orange`/`--bs-danger` tokens); project-class line enriched to programme
+  short_name + year label + cohort; `MODIFIED` pill uppercased + de-duplicated via the macro;
+  `programme_pref_line` lowercased; student table de-bordered (horizontal rules only) and the
+  filter-well `<hr>` removed. Kept: DataTables chrome, no "Matches" pill (PLAN decision 5),
+  supervisors in the Project column (user decision).
 - **Screen 2 Student drawer** — _not started_
 - **Role editor** — _not started_
 - **Screen 3 Faculty view** — _not started_

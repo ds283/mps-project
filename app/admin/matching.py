@@ -899,6 +899,68 @@ def perform_revert_match(id):
     return redirect(url)
 
 
+@admin.route("/revert_match_record/<int:rec_id>")
+@roles_accepted("faculty", "admin", "root")
+def revert_match_record(rec_id):
+    """
+    Revert a single MatchingRecord to its optimiser baseline (original_project_id/
+    original_alternative/original_parent_id/original_priority/original_roles). Unlike
+    revert_match/perform_revert_match (which reverts every record in the attempt via an
+    asynchronous Celery chain), this is a single-record edit and is applied synchronously,
+    consistent with reassign_match_project/reassign_match_marker.
+    """
+    record: MatchingRecord = MatchingRecord.query.get_or_404(rec_id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return redirect(redirect_url())
+
+    if record.matching_attempt.selected:
+        flash(
+            'Match "{name}" cannot be edited because an administrative user has marked it as '
+            '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    year = get_current_year()
+    if record.matching_attempt.year != year:
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.matching_attempt.name),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    record.project_id = record.original_project_id
+    record.rank = record.selector.project_rank(record.original_project_id)
+    record.alternative = record.original_alternative
+    record.parent_id = record.original_parent_id
+    record.priority = record.original_priority
+
+    for role in record.roles.all():
+        db.session.delete(role)
+    db.session.flush()
+
+    for orig_role in record.original_roles.all():
+        orig_role: MatchingRole
+        new_role = MatchingRole(user_id=orig_role.user_id, role=orig_role.role)
+        record.roles.append(new_role)
+
+    record.matching_attempt.last_edit_id = current_user.id
+    record.matching_attempt.last_edit_timestamp = datetime.now()
+
+    try:
+        log_db_commit(
+            "Reverted matching record #{id} to original project and role assignments".format(id=record.id),
+            user=current_user,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not revert matching record because a database error was encountered.", "error")
+
+    return redirect(redirect_url())
+
+
 @admin.route("/duplicate_match/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def duplicate_match(id):
@@ -2106,6 +2168,8 @@ def matching_workspace(id):
 
     pclasses = record.available_pclasses
 
+    changes = workspace_service.changes_data(record)
+
     return render_template_context(
         "admin/matching_workspace/workspace.html",
         view=view,
@@ -2114,7 +2178,8 @@ def matching_workspace(id):
         pclass_filter=pclass_filter,
         type_filter=type_filter,
         hint_filter=hint_filter,
-        changes_badge=workspace_service.changes_count(record),
+        changes=changes,
+        changes_badge=len(changes["rows"]),
         text=text,
         url=url,
     )

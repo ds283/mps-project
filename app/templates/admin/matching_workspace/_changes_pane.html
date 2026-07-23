@@ -1,0 +1,127 @@
+{#
+  Changes pane for the Matching Workspace (Phase 4). Included from workspace.html when
+  view == 'changes'. Data comes from app.shared.matching_workspace.changes_data(). See
+  .prompts/matching-workspace/PLAN.md.
+#}
+{% from "swatch.html" import small_swatch %}
+
+<div class="card border-primary mt-3 mb-3">
+    <div class="card-header bg-primary text-white">
+        Changes vs optimiser baseline <strong>{{ record.name }}</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="small text-body-secondary text-uppercase">Students affected</div>
+                        <div class="fs-3 fw-bold" style="color: {% if changes.rows %}var(--bs-primary){% else %}var(--bs-success-text-emphasis){% endif %};">
+                            {{ changes.distinct_student_count }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="small text-body-secondary text-uppercase">Field changes</div>
+                        <div class="fs-3 fw-bold" style="color: {% if changes.field_change_count %}var(--bs-primary){% else %}var(--bs-success-text-emphasis){% endif %};">
+                            {{ changes.field_change_count }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="small text-body-secondary text-uppercase">Objective score</div>
+                        <div class="fs-3 fw-bold">
+                            {{ '%0.2f'|format(changes.current_score) if changes.current_score is not none else '&mdash;'|safe }}
+                        </div>
+                        <div class="small text-body-secondary">
+                            baseline {{ '%0.2f'|format(changes.score) if changes.score is not none else '&mdash;'|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if changes.rows %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="small text-body-secondary">
+                    <i class="fas fa-info-circle me-1"></i>"Edited by / when" reflects the most recent edit to this
+                    match as a whole, not to each individual row.
+                </div>
+                <a class="btn btn-sm" style="border: 1px solid var(--bs-danger-border-subtle); color: var(--bs-danger-text-emphasis);"
+                   href="{{ url_for('admin.revert_match', id=record.id) }}">
+                    <i class="fas fa-undo me-1"></i>Revert all to baseline&hellip;
+                </a>
+            </div>
+
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                <tr>
+                    <th width="22%">Student</th>
+                    <th width="48%">Changes</th>
+                    <th width="18%">Edited</th>
+                    <th width="12%"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in changes.rows %}
+                    <tr>
+                        <td>
+                            {% if row.student %}
+                                <a class="text-decoration-none fw-semibold" role="button" data-bs-toggle="offcanvas"
+                                   data-bs-target="#matchStudentDrawer" data-rec-id="{{ row.record.id }}"
+                                   data-student-name="{{ row.student.user.name }}">
+                                    {{ row.student.user.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-body-secondary">Unknown student</span>
+                            {% endif %}
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                {{ small_swatch(row.record.selector.config.project_class.make_CSS_style()) }}
+                                <span class="small text-body-secondary">{{ row.record.selector.config.name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% for change in row.changes %}
+                                <div class="small mb-1">
+                                    <span class="text-body-secondary text-capitalize">{{ change.field }}:</span>
+                                    {% if change.field == 'project' %}
+                                        {{ change.before or 'Unassigned' }}
+                                        <i class="fas fa-arrow-right mx-1 text-body-secondary"></i>
+                                        {{ change.after or 'Unassigned' }}
+                                    {% else %}
+                                        {{ change.before|join(', ') if change.before else 'none' }}
+                                        <i class="fas fa-arrow-right mx-1 text-body-secondary"></i>
+                                        {{ change.after|join(', ') if change.after else 'none' }}
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </td>
+                        <td class="small text-body-secondary">
+                            {% if row.edited_by %}{{ row.edited_by.name }}{% else %}&mdash;{% endif %}
+                            {% if row.edited_at %}
+                                <div>{{ row.edited_at.strftime("%d %b %Y %H:%M") }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm" style="border: 1px solid var(--bs-danger-border-subtle); color: var(--bs-danger-text-emphasis);"
+                               href="{{ url_for('admin.revert_match_record', rec_id=row.record.id) }}">
+                                <i class="fas fa-undo me-1"></i>Revert
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="text-center text-body-secondary py-5">
+                <i class="fas fa-check-circle fa-2x mb-2" style="color: var(--bs-success-text-emphasis);"></i>
+                <div>The current allocation matches the optimiser baseline &mdash; no manual edits have been made.</div>
+            </div>
+        {% endif %}
+    </div>
+</div>

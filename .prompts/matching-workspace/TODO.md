@@ -4,7 +4,7 @@ Living checklist for the Matching Workspace redesign. See `PLAN.md` (same direct
 plan and rationale. Tick items as they complete; one commit per phase
 (`matching-workspace: <imperative summary>`).
 
-**Status:** Phase 0, Phase 1, Phase 2, and Phase 3 complete. Phase 4 not started.
+**Status:** Phase 0, Phase 1, Phase 2, Phase 3, and Phase 4 complete. Phase 5 not started.
 
 ---
 
@@ -48,10 +48,12 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 4 — Changes tab
-- [ ] `_changes_pane.html` (summary cards + table + empty state)
-- [ ] Changes badge count in shell
-- [ ] Revert (all + per-record) wired to existing routes
-- [ ] Commit
+- [x] `_changes_pane.html` (summary cards + table + empty state)
+- [x] Changes badge count in shell
+- [x] Revert (all + per-record) wired to existing routes (whole-attempt via existing
+      `revert_match`/`perform_revert_match`; per-record via new `revert_match_record`, applied
+      synchronously in the same style as `reassign_match_project`/`reassign_match_marker`)
+- [x] Commit
 
 ## Phase 5 — Top-level Matches list (consolidated dashboard)
 - [ ] `matching_dashboard.html` + `matching_dashboard` route (privilege-scoped, standalone page)

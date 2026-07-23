@@ -1,7 +1,6 @@
 {#
   Matching Workspace — detail shell (one attempt, three panes: Student / Faculty / Changes).
-  See .prompts/matching-workspace/PLAN.md. Changes (Phase 4) is a placeholder until that phase
-  lands; the pill nav and Changes badge are already wired.
+  See .prompts/matching-workspace/PLAN.md.
 #}
 {% extends "base_app.html" %}
 
@@ -58,13 +57,7 @@
     {% elif view == 'faculty' %}
         {% include "admin/matching_workspace/_faculty_pane.html" %}
     {% elif view == 'changes' %}
-        <div class="card border-primary mt-3">
-            <div class="card-header bg-primary text-white">Changes</div>
-            <div class="card-body text-body-secondary">
-                The Changes view is not part of this workspace yet &mdash; it lands in a later phase of
-                the Matching Workspace rebuild.
-            </div>
-        </div>
+        {% include "admin/matching_workspace/_changes_pane.html" %}
     {% endif %}
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="matchStudentDrawer" aria-labelledby="matchStudentDrawerLabel"

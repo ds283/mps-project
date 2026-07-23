@@ -230,15 +230,20 @@ def _related_faculty_for(ticket):
     supervisors/markers/moderators of a SUBMITTING_STUDENT subject (via SubmissionRole on any of
     their submission records), and the owning faculty member of a live sign-off request for a
     SELECTING_STUDENT subject (via ConfirmRequest). A person related through more than one
-    relationship gets a single row with all notes joined."""
+    relationship gets a single row with all notes/details joined. `note` is the assign-picker's
+    project-focused text; `detail` is the subscribe-picker's relationship-focused text (student
+    name, selector/submitter, role, and submission period when the project class has more than
+    one)."""
     related = {}
 
-    def _add(user, note):
+    def _add(user, note, detail):
         if user is None:
             return
-        entry = related.setdefault(user.id, {"user": user, "notes": []})
+        entry = related.setdefault(user.id, {"user": user, "notes": [], "details": []})
         if note not in entry["notes"]:
             entry["notes"].append(note)
+        if detail not in entry["details"]:
+            entry["details"].append(detail)
 
     for subject in ticket.subjects:
         target = subject.target
@@ -246,17 +251,26 @@ def _related_faculty_for(ticket):
             continue
 
         if subject.kind == TicketSubject.SUBMITTING_STUDENT:
+            student_name = _student_name(target)
+            config = getattr(target, "config", None)
+            show_period = config is not None and config.number_submissions > 1
+
             for user, role, record in faculty_roles_for_submitting_student(target):
-                note_builder = _ROLE_NOTES.get(role)
+                note_builder = _ROLE_NOTES.get(role.role)
                 if note_builder is None:
                     continue
-                _add(user, note_builder(getattr(record, "project", None)))
+                detail_parts = [student_name, "Submitter", role.role_as_str]
+                period = getattr(record, "period", None)
+                if show_period and period is not None:
+                    detail_parts.append(period.display_name)
+                _add(user, note_builder(getattr(record, "project", None)), " · ".join(detail_parts))
 
         elif subject.kind == TicketSubject.SELECTING_STUDENT:
+            student_name = _student_name(target)
             for user, project in faculty_for_selecting_student(target):
-                _add(user, f"Owns {project.name} (sign-off request)")
+                _add(user, f"Owns {project.name} (sign-off request)", f"{student_name} · Selector")
 
-    return [{"user": entry["user"], "note": "; ".join(entry["notes"])} for entry in related.values()]
+    return [{"user": entry["user"], "note": "; ".join(entry["notes"]), "detail": "; ".join(entry["details"])} for entry in related.values()]
 
 
 def _office_users(ticket):
@@ -339,11 +353,11 @@ def _build_subscriber_options(ticket):
     def _section(title, rows_source):
         rows = []
         for entry in rows_source:
-            user = entry["user"] if isinstance(entry, dict) else entry
+            user, detail = (entry["user"], entry.get("detail")) if isinstance(entry, dict) else (entry, None)
             if user is None or user.id in seen:
                 continue
             seen.add(user.id)
-            rows.append({"user": user})
+            rows.append({"user": user, "note": detail})
         if rows:
             sections.append({"title": title, "rows": rows})
 

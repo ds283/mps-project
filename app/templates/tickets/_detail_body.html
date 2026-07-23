@@ -320,9 +320,12 @@
                                         {% for row in section.rows %}
                                             <form method="POST" action="{{ url_for('tickets.subscriber_add', ticket_id=ticket.id, user_id=row.user.id) }}" class="tk-sub-option" data-name="{{ row.user.name|lower }}">
                                                 {{ action_form.hidden_tag() }}
-                                                <button type="submit" class="dropdown-item tk-assign-row">
+                                                <button type="submit" class="dropdown-item tk-assign-row" style="white-space:normal">
                                                     {{ avatar(row.user, 22) }}
-                                                    <span class="flex-grow-1 text-start">{{ row.user.name }}</span>
+                                                    <span class="flex-grow-1 text-start">
+                                                        <span class="d-block">{{ row.user.name }}</span>
+                                                        {% if row.note %}<span class="d-block" style="font-size:11px; color:var(--bs-secondary-color)">{{ row.note }}</span>{% endif %}
+                                                    </span>
                                                 </button>
                                             </form>
                                         {% endfor %}

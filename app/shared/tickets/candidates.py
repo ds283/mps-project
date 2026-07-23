@@ -204,10 +204,12 @@ def faculty_selectee_query(user):
 
 
 def faculty_roles_for_submitting_student(student):
-    """Inverse of the role queries above: given a SubmittingStudent, the (User, role, SubmissionRecord)
-    triples for every faculty member holding a supervisor / responsible-supervisor / marker /
-    moderator role on any of the student's submission records. Used to populate the ticket assign
-    picker's "Related faculty" section (app/tickets/detail.py) — not the compose-flow candidate
+    """Inverse of the role queries above: given a SubmittingStudent, the (User, SubmissionRole,
+    SubmissionRecord) triples for every faculty member holding a supervisor / responsible-supervisor
+    / marker / moderator role on any of the student's submission records. The SubmissionRole object
+    itself is returned (not just its role code) so callers can dispatch on `role.role` and render a
+    human-readable label via `role.role_as_str`. Used to populate the ticket assign/subscribe
+    pickers' "Related faculty" section (app/tickets/detail.py) — not the compose-flow candidate
     search, so presentation assessor and exam board / external examiner roles are excluded here even
     though they're broader than the roles offered when composing a ticket subject."""
     roles = (
@@ -215,7 +217,7 @@ def faculty_roles_for_submitting_student(student):
         .filter(SubmissionRecord.owner_id == student.id, SubmissionRole.role.in_(_ASSIGNABLE_STUDENT_ROLES))
         .all()
     )
-    return [(role.user, role.role, role.submission) for role in roles if role.user is not None]
+    return [(role.user, role, role.submission) for role in roles if role.user is not None]
 
 
 def faculty_for_selecting_student(student):

@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import List, Optional, Set
 
 from ...database import db
-from ...models import TicketSubject
+from ...models import TicketSubject, TicketSubjectTombstone
 
 
 def home_class(student):
@@ -47,22 +47,20 @@ def compute_scope_classes(ticket) -> Set:
     Compute the set of ProjectClass a ticket touches, from its subjects:
       - a pinned project_class subject contributes that class directly;
       - a student subject contributes the student's home_class.
-    A ticket with no subjects (a "General" ticket) has empty scope.
+    A ticket with no subjects (a "General" ticket) has empty scope. A tombstoned subject (its
+    linked student has been deleted) contributes nothing, the same as a missing project class.
     """
     classes = set()
 
     for subject in ticket.subjects:
+        target = subject.target
+        if target is None or isinstance(target, TicketSubjectTombstone):
+            continue
+
         if subject.kind == TicketSubject.PROJECT_CLASS:
-            if subject.project_class is not None:
-                classes.add(subject.project_class)
-
-        elif subject.kind == TicketSubject.SUBMITTING_STUDENT:
-            hc = home_class(subject.submitting_student)
-            if hc is not None:
-                classes.add(hc)
-
-        elif subject.kind == TicketSubject.SELECTING_STUDENT:
-            hc = home_class(subject.selecting_student)
+            classes.add(target)
+        else:
+            hc = home_class(target)
             if hc is not None:
                 classes.add(hc)
 

@@ -23,7 +23,7 @@ from datetime import datetime
 from typing import Iterable, Optional, Tuple
 
 from ...database import db
-from ...models import Ticket, TicketEvent, TicketSubject, TicketSubscription
+from ...models import Ticket, TicketEvent, TicketSubject, TicketSubjectTombstone, TicketSubscription
 from .events import record_event
 from .routing import apply_auto_assign
 from .scope import recompute_scope
@@ -75,10 +75,11 @@ def remove_subject(ticket, subject: TicketSubject, actor=None) -> bool:
     if ticket.subjects.count() <= 1:
         return False
 
-    payload = {
-        "kind": subject.kind,
-        "target": subject.submitting_student_id or subject.selecting_student_id or subject.project_class_id,
-    }
+    target = subject.target
+    if isinstance(target, TicketSubjectTombstone):
+        payload = {"kind": subject.kind, "label": target.label}
+    else:
+        payload = {"kind": subject.kind, "target": target.id if target is not None else None}
     db.session.delete(subject)
     db.session.flush()
 

@@ -23,7 +23,18 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.tickets import tickets
 
 from ..database import db
-from ..models import Label, ProjectClass, Role, SubmissionRole, Ticket, TicketEvent, TicketExternalSubscriber, TicketSubject, User
+from ..models import (
+    Label,
+    ProjectClass,
+    Role,
+    SubmissionRole,
+    Ticket,
+    TicketEvent,
+    TicketExternalSubscriber,
+    TicketSubject,
+    TicketSubjectTombstone,
+    User,
+)
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.faculty_dashboard import get_faculty_dashboard_data
 from ..shared.context.global_context import render_template_context
@@ -142,6 +153,9 @@ def _describe_event(event: TicketEvent) -> dict:
     if kind == TicketEvent.SUBJECT_REMOVED:
         return {"icon": "unlink", "text": "removed a subject", "kind": "generic"}
 
+    if kind == TicketEvent.SUBJECT_TOMBSTONED:
+        return {"icon": "user-slash", "text": "a linked student record was deleted", "kind": "generic"}
+
     return {"icon": "circle", "text": event.kind_label, "kind": "generic"}
 
 
@@ -227,21 +241,19 @@ def _related_faculty_for(ticket):
             entry["notes"].append(note)
 
     for subject in ticket.subjects:
+        target = subject.target
+        if target is None or isinstance(target, TicketSubjectTombstone):
+            continue
+
         if subject.kind == TicketSubject.SUBMITTING_STUDENT:
-            student = subject.submitting_student
-            if student is None:
-                continue
-            for user, role, record in faculty_roles_for_submitting_student(student):
+            for user, role, record in faculty_roles_for_submitting_student(target):
                 note_builder = _ROLE_NOTES.get(role)
                 if note_builder is None:
                     continue
                 _add(user, note_builder(getattr(record, "project", None)))
 
         elif subject.kind == TicketSubject.SELECTING_STUDENT:
-            student = subject.selecting_student
-            if student is None:
-                continue
-            for user, project in faculty_for_selecting_student(student):
+            for user, project in faculty_for_selecting_student(target):
                 _add(user, f"Owns {project.name} (sign-off request)")
 
     return [{"user": entry["user"], "note": "; ".join(entry["notes"])} for entry in related.values()]
@@ -349,8 +361,16 @@ def _student_name(student):
     return user.name if user is not None else "Student"
 
 
+_TOMBSTONE_LABELS = {
+    TicketSubject.SUBMITTING_STUDENT: "Submitter (deleted)",
+    TicketSubject.SELECTING_STUDENT: "Selector (deleted)",
+}
+
+
 def _subjects_display(ticket):
-    """Resolve each subject to a display row {label, name, icon, url?} for the Context section."""
+    """Resolve each subject to a display row {label, name, icon, url?} for the Context section. A
+    tombstoned subject (its linked student has since been deleted) renders with the snapshot label
+    captured at deletion time, a muted icon, and no link."""
     faculty = getattr(current_user, "faculty_data", None)
     convened = set()
     if faculty is not None:
@@ -358,14 +378,26 @@ def _subjects_display(ticket):
 
     rows = []
     for subject in ticket.subjects:
-        if subject.kind == TicketSubject.PROJECT_CLASS and subject.project_class is not None:
-            pclass = subject.project_class
-            url = url_for("convenor.tickets_tab", id=pclass.id) if pclass.id in convened else None
-            rows.append({"id": subject.id, "label": "Class", "name": pclass.name, "icon": "layer-group", "url": url})
-        elif subject.kind == TicketSubject.SUBMITTING_STUDENT and subject.submitting_student is not None:
-            rows.append({"id": subject.id, "label": "Submitter", "name": _student_name(subject.submitting_student), "icon": "user"})
-        elif subject.kind == TicketSubject.SELECTING_STUDENT and subject.selecting_student is not None:
-            rows.append({"id": subject.id, "label": "Selector", "name": _student_name(subject.selecting_student), "icon": "user-graduate"})
+        target = subject.target
+
+        if isinstance(target, TicketSubjectTombstone):
+            rows.append(
+                {
+                    "id": subject.id,
+                    "label": _TOMBSTONE_LABELS.get(target.kind, "Deleted"),
+                    "name": target.label,
+                    "icon": "user-slash",
+                    "url": None,
+                    "tombstoned": True,
+                }
+            )
+        elif subject.kind == TicketSubject.PROJECT_CLASS and target is not None:
+            url = url_for("convenor.tickets_tab", id=target.id) if target.id in convened else None
+            rows.append({"id": subject.id, "label": "Class", "name": target.name, "icon": "layer-group", "url": url})
+        elif subject.kind == TicketSubject.SUBMITTING_STUDENT and target is not None:
+            rows.append({"id": subject.id, "label": "Submitter", "name": _student_name(target), "icon": "user"})
+        elif subject.kind == TicketSubject.SELECTING_STUDENT and target is not None:
+            rows.append({"id": subject.id, "label": "Selector", "name": _student_name(target), "icon": "user-graduate"})
     return rows
 
 

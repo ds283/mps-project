@@ -429,7 +429,13 @@
                             <div class="tk-context-row">
                                 <i class="fas fa-{{ row.icon }} fa-fw text-secondary"></i>
                                 <span class="text-secondary">{{ row.label }}:</span>
-                                {% if row.url %}<a href="{{ row.url }}" class="fw-medium text-decoration-none">{{ row.name }}</a>{% else %}<span class="fw-medium">{{ row.name }}</span>{% endif %}
+                                {% if row.tombstoned %}
+                                    <span class="fst-italic text-secondary" title="This student record has been deleted">{{ row.name }}</span>
+                                {% elif row.url %}
+                                    <a href="{{ row.url }}" class="fw-medium text-decoration-none">{{ row.name }}</a>
+                                {% else %}
+                                    <span class="fw-medium">{{ row.name }}</span>
+                                {% endif %}
                                 {% if perms.edit_scope and subjects|length > 1 %}
                                     <form method="POST" action="{{ url_for('tickets.subject_remove', ticket_id=ticket.id, subject_id=row.id) }}" class="tk-inline-form ms-1">
                                         {{ action_form.hidden_tag() }}

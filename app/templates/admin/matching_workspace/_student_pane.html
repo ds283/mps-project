@@ -58,8 +58,7 @@
                        href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pc.id, type_filter=type_filter, hint_filter=hint_filter, text=text, url=url) }}">{{ pc.name }}</a>
                 {% endfor %}
             </div>
-            <hr class="intro-divider">
-            <div class="row">
+            <div class="row mt-3">
                 <div class="col-6">
                     <p class="mb-1">Filter by project type</p>
                     <div class="d-flex flex-wrap gap-2">
@@ -85,7 +84,7 @@
             </div>
         </div>
 
-        <table id="match_student_v2" class="table table-striped table-bordered">
+        <table id="match_student_v2" class="table table-striped">
             <thead>
             <tr>
                 <th width="18%">Student</th>

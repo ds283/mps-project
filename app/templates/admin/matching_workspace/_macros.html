@@ -5,18 +5,18 @@
 #}
 
 {% macro modified_pill() %}
-    <span class="badge rounded-pill small" style="border: 1px solid var(--bs-primary); color: var(--bs-primary);">Modified</span>
+    <span class="badge rounded-pill small" style="border: 1px solid var(--bs-primary); color: var(--bs-primary); letter-spacing: 0.4px;">MODIFIED</span>
 {% endmacro %}
 
 {% macro programme_pref_line(value) %}
     {% if value is not none %}
         {% if value %}
             <div class="small" style="color: var(--bs-success-text-emphasis);">
-                <i class="fas fa-check-circle me-1"></i>Meets programme prefs
+                <i class="fas fa-check-circle me-1"></i>meets programme prefs
             </div>
         {% else %}
             <div class="small" style="color: var(--bs-warning-text-emphasis);">
-                <i class="fas fa-exclamation-circle me-1"></i>Programme prefs not met
+                <i class="fas fa-exclamation-circle me-1"></i>programme prefs not met
             </div>
         {% endif %}
     {% endif %}

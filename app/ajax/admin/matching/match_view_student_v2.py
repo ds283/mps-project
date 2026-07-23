@@ -68,7 +68,12 @@ _pclass = """
     {{ small_swatch(row.pclass.instance.make_CSS_style()) }}
     <span class="small">{{ label_text(row.pclass.label) }}</span>
 </div>
-{% if row.cohort %}<div class="small text-primary">Cohort {{ row.cohort }}</div>{% endif %}
+{% if row.programme %}
+    {% set yl = row.record.selector.academic_year_label() %}
+    <div class="small text-primary">{{ row.programme.short_name }}{% if yl and yl.label %} &middot; {{ yl.label }}{% endif %}{% if row.cohort %} | {{ row.cohort }} cohort{% endif %}</div>
+{% elif row.cohort %}
+    <div class="small text-primary">Cohort {{ row.cohort }}</div>
+{% endif %}
 """
 
 
@@ -84,7 +89,7 @@ _project = """
                 class="fas fa-caret-down"></i></a>
     {% endif %}
     {% if row.modified %}
-        <span class="badge rounded-pill small" style="border: 1px solid var(--bs-primary); color: var(--bs-primary);">Modified</span>
+        {{ modified_pill() }}
     {% endif %}
 </div>
 {% if row.supervisors %}
@@ -121,11 +126,11 @@ _markers = """
 _rank = """
 {% set band = row.rank_band %}
 <div class="fw-bold" style="font-size: 22px; line-height: 1.1;
-    {% if band == 'success' %}color: var(--bs-success-text-emphasis);
-    {% elif band == 'warning' %}color: var(--bs-warning-text-emphasis);
-    {% elif band == 'danger' %}color: var(--bs-danger-text-emphasis);
+    {% if band == 'success' %}color: var(--bs-success);
+    {% elif band == 'warning' %}color: var(--bs-orange);
+    {% elif band == 'danger' %}color: var(--bs-danger);
     {% endif %}">
-    {{ row.rank if row.rank is not none else '&mdash;'|safe }}
+    {{ ('#' ~ row.rank) if row.rank is not none else '&mdash;'|safe }}
 </div>
 <div class="small text-body-secondary">preference</div>
 """
@@ -150,6 +155,7 @@ def student_view_v2_data(rows: List[dict], attempt_id: int, text: Optional[str] 
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
     label_text = get_template_attribute("labels.html", "label_text")
     programme_pref_line = get_template_attribute("admin/matching_workspace/_macros.html", "programme_pref_line")
+    modified_pill = get_template_attribute("admin/matching_workspace/_macros.html", "modified_pill")
 
     student_templ = _build_templ(_student)
     pclass_templ = _build_templ(_pclass)
@@ -162,7 +168,7 @@ def student_view_v2_data(rows: List[dict], attempt_id: int, text: Optional[str] 
         {
             "student": render_template(student_templ, row=row),
             "pclass": render_template(pclass_templ, row=row, small_swatch=small_swatch, label_text=label_text),
-            "project": render_template(project_templ, row=row, programme_pref_line=programme_pref_line),
+            "project": render_template(project_templ, row=row, programme_pref_line=programme_pref_line, modified_pill=modified_pill),
             "markers": render_template(markers_templ, row=row),
             "rank": render_template(rank_templ, row=row),
             "score": render_template(score_templ, row=row),

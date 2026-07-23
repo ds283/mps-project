@@ -53,9 +53,6 @@ from .students import StudentData
 from .submissions import Bookmark, CustomOffer, SelectionRecord, SubmissionRecord
 from .users import User
 from .utilities import (
-    ConvenorSelectorTask,
-    ConvenorSubmitterTask,
-    ConvenorTasksMixinFactory,
     EmailNotification,
     PopularityRecord,
     add_notification,
@@ -1073,7 +1070,7 @@ def _SelectingStudent_is_valid(sid):
     return True, errors, warnings
 
 
-class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)):
+class SelectingStudent(db.Model):
     """
     Model a student who is selecting a project in the current cycle
     """
@@ -1758,7 +1755,7 @@ def _SubmittingStudent_is_valid(sid):
     return True, errors, warnings
 
 
-class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTask)):
+class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
     """

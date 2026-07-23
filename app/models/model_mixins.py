@@ -1096,16 +1096,6 @@ class AutoEnrolMixin:
     AUTO_ENROLL_ALL_YEARS = 1
 
 
-class RepeatIntervalsMixin:
-    """
-    Single point of definition for task repeat intervals
-    """
-
-    REPEAT_DAILY = 0
-    REPEAT_MONTHLY = 1
-    REPEAT_YEARLY = 2
-
-
 class EmailNotificationsMixin:
     """
     Single point of definition for email notification types

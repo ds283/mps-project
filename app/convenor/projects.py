@@ -59,9 +59,7 @@ from ..models import (
     ProjectClassConfig,
     ProjectDescription,
     ResearchGroup,
-    SelectingStudent,
     SkillGroup,
-    SubmittingStudent,
     TransferableSkill,
     User,
     WorkflowMixin,
@@ -105,9 +103,6 @@ from .forms import (
     EditProjectAlternativeForm,
     EditProjectSupervisorsFactory,
 )
-
-STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
-STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
 
 # language=jinja2
 _marker_menu = """

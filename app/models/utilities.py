@@ -22,10 +22,8 @@ if TYPE_CHECKING:
     from .project_class import ProjectClassConfig
 
 from flask import current_app
-from sqlalchemy import and_, or_, orm
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy import orm
 from sqlalchemy.orm import validates
-from sqlalchemy.sql import func
 from url_normalize import url_normalize
 
 import app.shared.cloud_object_store.bucket_types as buckets
@@ -52,7 +50,6 @@ from .model_mixins import (
     EmailNotificationsMixin,
     MatchingEnumerationTypesMixin,
     NotificationTypesMixin,
-    RepeatIntervalsMixin,
     ScheduleEnumerationTypesMixin,
     TaskWorkflowStatesMixin,
 )
@@ -121,201 +118,6 @@ class MainConfig(db.Model):
         self._canvas_root_URL = url_normalize(self.canvas_url)
 
         return self._canvas_root_URL
-
-
-class ConvenorTask(db.Model, EditingMetadataMixin):
-    """
-    Record a to-do item for the convenor. Derived classes represent specific types of task, eg.,
-    associated with a specific selecting or submitting student, or a given project configuration
-    """
-
-    __tablename__ = "convenor_tasks"
-
-    # unique ID for this record
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # polymorphic identifier
-    type = db.Column(db.Integer(), default=0, nullable=False)
-
-    # task description
-    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
-
-    # task notes
-    notes = db.Column(db.Text())
-
-    # blocks movement to next lifecycle stage?
-    blocking = db.Column(db.Boolean(), default=False)
-
-    # completed?
-    complete = db.Column(db.Boolean(), default=False)
-
-    # dropped?
-    dropped = db.Column(db.Boolean(), default=False)
-
-    # defer date
-    defer_date = db.Column(db.DateTime(), index=True)
-
-    # due date
-    due_date = db.Column(db.DateTime(), index=True)
-
-    __mapper_args__ = {"polymorphic_identity": 0, "polymorphic_on": "type"}
-
-    @property
-    def is_overdue(self):
-        if self.complete or self.dropped:
-            return False
-
-        if self.due_date is None:
-            return False
-
-        now = datetime.now()
-        return self.due_date < now
-
-    @property
-    def is_available(self):
-        if self.complete or self.dropped:
-            return False
-
-        if self.defer_date is None:
-            return True
-
-        now = datetime.now()
-        return self.defer_date <= now
-
-
-class ConvenorSelectorTask(ConvenorTask):
-    """
-    Derived from ConvenorTask. Represents a task record attached to a specific SelectingStudent
-    """
-
-    __tablename__ = "convenor_selector_tasks"
-
-    # primary key links to base table
-    id = db.Column(db.Integer(), db.ForeignKey("convenor_tasks.id"), primary_key=True)
-
-    # owner SelectingStudent
-    owner_id = db.Column(db.Integer(), db.ForeignKey("selecting_students.id"))
-
-    __mapper_args__ = {"polymorphic_identity": 1}
-
-
-class ConvenorSubmitterTask(ConvenorTask):
-    """
-    Derived from ConvenorTask. Represents a task record attached to a specific SubmittingStudent
-    """
-
-    __tablename__ = "convenor_submitter_tasks"
-
-    # primary key links to base table
-    id = db.Column(db.Integer(), db.ForeignKey("convenor_tasks.id"), primary_key=True)
-
-    # owner SelectingStudent
-    owner_id = db.Column(db.Integer(), db.ForeignKey("submitting_students.id"))
-
-    __mapper_args__ = {"polymorphic_identity": 2}
-
-
-class ConvenorGenericTask(ConvenorTask, RepeatIntervalsMixin):
-    """
-    Derived from ConvenorTask. Represents a task record attached to a specific ProjectClassConfig
-    """
-
-    __tablename__ = "convenor_generic_tasks"
-
-    # primary key links to base table
-    id = db.Column(db.Integer(), db.ForeignKey("convenor_tasks.id"), primary_key=True)
-
-    # owner SelectingStudent
-    owner_id = db.Column(db.Integer(), db.ForeignKey("project_class_config.id"))
-
-    # is this task repeating, ie. does it recur every year?
-    repeat = db.Column(db.Boolean(), default=False)
-
-    # repeat period
-    repeat_options = [
-        (RepeatIntervalsMixin.REPEAT_DAILY, "Daily"),
-        (RepeatIntervalsMixin.REPEAT_MONTHLY, "Monthly"),
-        (RepeatIntervalsMixin.REPEAT_YEARLY, "Yearly"),
-    ]
-    repeat_interval = db.Column(db.Integer(), default=RepeatIntervalsMixin.REPEAT_DAILY)
-
-    # repeat frequency
-    repeat_frequency = db.Column(db.Integer())
-
-    # repeat from due date or real completion date?
-    repeat_from_due_date = db.Column(db.Integer(), default=True)
-
-    # roll over this task? ie., does this task repeat every cycle?
-    rollover = db.Column(db.Boolean(), default=False)
-
-    __mapper_args__ = {"polymorphic_identity": 3}
-
-
-def ConvenorTasksMixinFactory(subclass):
-    class ConvenorTasksMixin:
-        @declared_attr
-        def tasks(cls):
-            return db.relationship(
-                subclass.__name__,
-                primaryjoin=lambda: subclass.owner_id == cls.id,
-                lazy="dynamic",
-                backref=db.backref("parent", uselist=False),
-            )
-
-        @property
-        def available_tasks(self):
-            return self.tasks.filter(
-                ~subclass.complete,
-                ~subclass.dropped,
-                or_(
-                    subclass.defer_date.is_(None),
-                    and_(
-                        subclass.defer_date.isnot(None),
-                        subclass.defer_date <= func.curdate(),
-                    ),
-                ),
-            )
-
-        @property
-        def overdue_tasks(self):
-            return self.tasks.filter(
-                ~subclass.complete,
-                ~subclass.dropped,
-                subclass.due_date.isnot(None),
-                subclass.due_date < func.curdate(),
-            )
-
-        @property
-        def number_tasks(self):
-            return get_count(self.tasks)
-
-        @property
-        def number_available_tasks(self):
-            # for a reason that isn't very clear, get_count() does not seem to work with the query
-            # generated by self.available_tasks or self.overdue_tasks. Instead, the join turns into a
-            # Cartesian product, which means that we get a meaningless figure from the count operation.
-            # Instead, we have to use SQLAlchemy's plain .count() method
-            # TODO: fix this later, if possible
-            return self.available_tasks.count()
-
-        @property
-        def number_overdue_tasks(self):
-            # for a reason that isn't very clear, get_count() does not seem to work with the query
-            # generated by self.available_tasks or self.overdue_tasks. Instead, the join turns into a
-            # Cartesian product, which means that we get a meaningless figure from the count operation.
-            # Instead, we have to use SQLAlchemy's plain .count() method
-            # TODO: fix this later, if possible
-            return self.overdue_tasks.count()
-
-        @staticmethod
-        def TaskObjectFactory(**kwargs):
-            return subclass(**kwargs)
-
-        @staticmethod
-        def polymorphic_identity():
-            return subclass.__mapper_args__["polymorphic_identity"]
-
-    return ConvenorTasksMixin
 
 
 class EmailNotification(db.Model, EmailNotificationsMixin):

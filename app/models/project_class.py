@@ -71,10 +71,6 @@ from .projects import (
 from .students import StudentData
 from .users import User
 from .utilities import (
-    ConvenorGenericTask,
-    ConvenorSelectorTask,
-    ConvenorSubmitterTask,
-    ConvenorTasksMixinFactory,
     MainConfig,
     PopularityRecord,
 )
@@ -704,7 +700,6 @@ def _get_submission_period(period: SubmissionPeriodDefinitionLike, pclass: Proje
 
 class ProjectClassConfig(
     db.Model,
-    ConvenorTasksMixinFactory(ConvenorGenericTask),
     SelectorLifecycleStatesMixin,
     SubmitterLifecycleStatesMixin,
 ):
@@ -1365,70 +1360,6 @@ class ProjectClassConfig(
     @property
     def email_text_final_match_preamble(self):
         return self.project_class.email_text_final_match_preamble
-
-    @property
-    def get_blocking_tasks(self):
-        from .live_projects import SelectingStudent, SubmittingStudent
-
-        selectors: List[SelectingStudent] = self.selecting_students.filter(
-            SelectingStudent.tasks.any(
-                and_(
-                    ~ConvenorSelectorTask.complete,
-                    ~ConvenorSelectorTask.dropped,
-                    ConvenorSelectorTask.blocking,
-                )
-            )
-        ).all()
-
-        selector_tasks = []
-        for sel in selectors:
-            tks = sel.tasks.filter(
-                and_(
-                    ~ConvenorSelectorTask.complete,
-                    ~ConvenorSelectorTask.dropped,
-                    ConvenorSelectorTask.blocking,
-                )
-            ).all()
-            selector_tasks.extend(tks)
-
-        submitters: List[SubmittingStudent] = self.submitting_students.filter(
-            SubmittingStudent.tasks.any(
-                and_(
-                    ~ConvenorSubmitterTask.complete,
-                    ~ConvenorSubmitterTask.dropped,
-                    ConvenorSubmitterTask.blocking,
-                )
-            )
-        ).all()
-
-        submitter_tasks = []
-        for sub in submitters:
-            tks = sub.tasks.filter(
-                and_(
-                    ~ConvenorSubmitterTask.complete,
-                    ~ConvenorSubmitterTask.dropped,
-                    ConvenorSubmitterTask.blocking,
-                )
-            ).all()
-            submitter_tasks.extend(tks)
-
-        global_tasks: List[ConvenorGenericTask] = self.tasks.filter(
-            and_(
-                ~ConvenorGenericTask.complete,
-                ~ConvenorGenericTask.dropped,
-                ConvenorGenericTask.blocking,
-            )
-        ).all()
-
-        tasks = {
-            "selector": selector_tasks,
-            "submitter": submitter_tasks,
-            "global": global_tasks,
-        }
-
-        num_tasks = len(selector_tasks) + len(submitter_tasks) + len(global_tasks)
-
-        return tasks, num_tasks
 
     @property
     def get_blocking_tickets(self):

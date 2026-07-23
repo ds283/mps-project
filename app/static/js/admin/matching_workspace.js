@@ -362,10 +362,45 @@
             })
             .then(function (html) {
                 bodyEl.innerHTML = html;
+                bindOpenStudentLinks(bodyEl, drawerEl);
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load faculty inspector.</div>';
             });
+    }
+
+    // Allocated-student chips and candidate names in the faculty drawer cross-link to the student
+    // inspector. Bootstrap does not support two open offcanvases, so hide this one first and open
+    // the student drawer only once it has finished animating out.
+    function bindOpenStudentLinks(scope, facultyDrawerEl) {
+        var studentDrawerEl = document.getElementById("matchStudentDrawer");
+        if (!studentDrawerEl) {
+            return;
+        }
+
+        scope.querySelectorAll(".mw-open-student").forEach(function (link) {
+            link.addEventListener("click", function (e) {
+                e.preventDefault();
+
+                var recId = link.getAttribute("data-rec-id");
+                if (!recId) {
+                    return;
+                }
+
+                var openStudent = function () {
+                    loadDrawer(recId, link);
+                    bootstrap.Offcanvas.getOrCreateInstance(studentDrawerEl).show();
+                };
+
+                var facultyInstance = bootstrap.Offcanvas.getInstance(facultyDrawerEl);
+                if (facultyInstance) {
+                    facultyDrawerEl.addEventListener("hidden.bs.offcanvas", openStudent, {once: true});
+                    facultyInstance.hide();
+                } else {
+                    openStudent();
+                }
+            });
+        });
     }
 
     var facultyDrawerEl = document.getElementById("matchFacultyDrawer");

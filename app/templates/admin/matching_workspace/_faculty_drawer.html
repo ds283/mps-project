@@ -6,15 +6,22 @@
 {% from "swatch.html" import small_swatch %}
 {% from "admin/matching_workspace/_macros.html" import capacity_bar, constraint_callout %}
 
-{% macro pool_list(title, items, dot_colour) %}
-    {% if items %}
-        <div class="mb-3">
-            <div class="small fw-semibold mb-1">{{ title }}</div>
-            {% for entry in items[:5] %}
+{% set fac_id = drawer.faculty.id %}
+{% set fac_name = drawer.faculty.user.name %}
+{% set surname = drawer.faculty.user.last_name %}
+
+{% macro pool_list(title, items, dot_colour, empty_text=none) %}
+    <div class="mb-3">
+        <div class="small fw-semibold mb-1">{{ title }}</div>
+        {% if items %}
+            {% for entry in items[:3] %}
                 <div class="d-flex align-items-start gap-2 small mb-1">
                     <span class="rounded-circle flex-shrink-0 mt-1" style="width: 8px; height: 8px; background: {{ dot_colour }};"></span>
                     <div>
-                        <div>{{ entry.student.user.name }}</div>
+                        <div>
+                            <a class="text-decoration-none mw-open-student" href="#" data-rec-id="{{ entry.record_id }}"
+                               data-student-name="{{ entry.student.user.name }}">{{ entry.student.user.name }}</a>
+                        </div>
                         <div class="text-body-secondary">Ranked #{{ entry.best_rank }} &middot; {{ entry.best_project.name }}</div>
                         <div class="text-body-secondary">
                             {% if entry.current_project %}
@@ -26,26 +33,38 @@
                     </div>
                 </div>
             {% endfor %}
-            {% if items|length > 5 %}
-                <div class="small text-body-secondary">+ {{ items|length - 5 }} more</div>
+            {% if items|length > 3 %}
+                <button type="button" class="btn btn-link btn-sm p-0 small text-decoration-none"
+                        data-bs-toggle="modal" data-bs-target="#matchFacultyReassignModal"
+                        data-fac-id="{{ fac_id }}" data-fac-name="{{ fac_name }}">
+                    + {{ items|length - 3 }} more &mdash; open reassignment workspace
+                </button>
             {% endif %}
-        </div>
-    {% endif %}
+        {% elif empty_text %}
+            <div class="small text-body-secondary">{{ empty_text }}</div>
+        {% endif %}
+    </div>
 {% endmacro %}
 
 <div class="card mb-3">
     <div class="card-body">
-        <h5 class="mb-0">
-            <a class="text-decoration-none" href="mailto:{{ drawer.faculty.user.email }}">{{ drawer.faculty.user.name }}</a>
+        <h5 class="mb-1">
+            <a class="text-decoration-none" href="mailto:{{ drawer.faculty.user.email }}">{{ fac_name }}</a>
         </h5>
+        <div class="small text-body-secondary">
+            {{ drawer.projects_offered }} project{% if drawer.projects_offered != 1 %}s{% endif %} offered
+            &middot; {{ drawer.workload.cats_total }} CATS total
+        </div>
     </div>
 </div>
 
-<div class="card mb-3 border-primary">
-    <div class="card-header bg-primary text-white">Workload &amp; binding constraints</div>
+<div class="card mb-3">
+    <div class="card-header"><span class="fw-semibold">Workload &amp; binding constraints</span></div>
     <div class="card-body">
-        {{ capacity_bar('Supervising CATS', drawer.workload.cats_supervising, drawer.workload.cats_supervising_limit) }}
-        {{ capacity_bar('Marking CATS', drawer.workload.cats_marking, drawer.workload.cats_marking_limit) }}
+        {{ capacity_bar('Supervising', drawer.workload.cats_supervising, drawer.workload.cats_supervising_limit,
+                        binding_note='At supervising CATS limit — no further supervisees can be added.') }}
+        {{ capacity_bar('Marking', drawer.workload.cats_marking, drawer.workload.cats_marking_limit,
+                        binding_note='At marking CATS limit — no further marking can be allocated.') }}
 
         {% if drawer.constraints %}
             <div class="d-flex flex-column gap-2 mt-3">
@@ -57,30 +76,42 @@
     </div>
 </div>
 
-<div class="card mb-3 border-secondary">
-    <div class="card-header">Projects offered in this matching</div>
+<div class="card mb-3 border-primary">
+    <div class="card-header"><span class="fw-semibold">Projects offered in this matching</span></div>
     <div class="card-body">
         {% for p in drawer.projects %}
+            {% set pclass = p.project.config.project_class %}
             <div class="mb-3 pb-3{% if not loop.last %} border-bottom{% endif %}">
-                <div class="d-flex align-items-center gap-2">
-                    {{ small_swatch(p.project.config.project_class.make_CSS_style()) }}
-                    <strong>{{ p.project.name }}</strong>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        {{ small_swatch(pclass.make_CSS_style()) }}
+                        <span class="text-body-secondary small text-nowrap">{{ pclass.abbreviation }}</span>
+                        <strong>{{ p.project.name }}</strong>
+                    </div>
                     {% if p.enforce_capacity and p.capacity is not none %}
                         {% if p.assigned_count > p.capacity %}
-                            <span class="badge rounded-pill small" style="background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis);">FULL {{ p.assigned_count }}/{{ p.capacity }}</span>
+                            <span class="badge rounded-pill small text-nowrap"
+                                  style="background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis);">OVER {{ p.assigned_count }} / {{ p.capacity }} cap</span>
                         {% elif p.assigned_count == p.capacity %}
-                            <span class="badge rounded-pill small" style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">{{ p.assigned_count }}/{{ p.capacity }}</span>
+                            <span class="badge rounded-pill small text-nowrap"
+                                  style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">FULL {{ p.assigned_count }} / {{ p.capacity }} cap</span>
                         {% else %}
-                            <span class="badge rounded-pill small bg-secondary-subtle text-secondary">{{ p.assigned_count }}/{{ p.capacity }}</span>
+                            <span class="badge rounded-pill small text-nowrap bg-secondary-subtle text-secondary">{{ p.assigned_count }} / {{ p.capacity }} cap</span>
                         {% endif %}
                     {% else %}
-                        <span class="badge rounded-pill small bg-secondary-subtle text-secondary">{{ p.assigned_count }} allocated</span>
+                        <span class="badge rounded-pill small text-nowrap bg-secondary-subtle text-secondary">{{ p.assigned_count }} allocated</span>
                     {% endif %}
                 </div>
-                {% if p.assigned_students %}
-                    <div class="d-flex flex-wrap gap-1 mt-2">
-                        {% for student in p.assigned_students %}
-                            <span class="badge rounded-pill small" style="background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis);">{{ student.user.name }}</span>
+                <div class="small text-body-secondary mt-1">
+                    {{ p.selected_count }} selector{% if p.selected_count != 1 %}s{% endif %} chose this
+                    {%- if p.assigned %} &middot; allocated:{% endif %}
+                </div>
+                {% if p.assigned %}
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                        {% for item in p.assigned %}
+                            <a class="badge rounded-pill small text-decoration-none mw-open-student" href="#" data-rec-id="{{ item.record_id }}"
+                               data-student-name="{{ item.student.user.name }}"
+                               style="background: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis);">{{ item.student.user.name }}</a>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -91,20 +122,21 @@
     </div>
 </div>
 
-<div class="card mb-3 border-secondary">
+<div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center gap-2">
-        <span>Who else could be allocated here?</span>
+        <span class="fw-semibold">Who else could be allocated here?</span>
         <button type="button" class="btn btn-sm btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#matchFacultyReassignModal"
-                data-fac-id="{{ drawer.faculty.id }}" data-fac-name="{{ drawer.faculty.user.name }}">
+                data-fac-id="{{ fac_id }}" data-fac-name="{{ fac_name }}">
             Reassignment workspace &rarr;
         </button>
     </div>
     <div class="card-body">
-        {{ pool_list("Ranked a " ~ drawer.faculty.user.last_name ~ " project #1 but allocated elsewhere", drawer.assignable_pool.top_choice_elsewhere, "var(--bs-success)") }}
-        {{ pool_list("Would prefer a " ~ drawer.faculty.user.last_name ~ " project to their current allocation", drawer.assignable_pool.would_prefer, "var(--bs-primary)") }}
+        {{ pool_list("Ranked a " ~ surname ~ " project #1 but allocated elsewhere", drawer.assignable_pool.top_choice_elsewhere, "var(--bs-success)",
+                     empty_text="None — everyone who ranked a " ~ surname ~ " project #1 was allocated one.") }}
+        {{ pool_list("Would prefer a " ~ surname ~ " project to their current allocation", drawer.assignable_pool.would_prefer, "var(--bs-primary)") }}
         {{ pool_list("Next-highest interested (would take a freed place)", drawer.assignable_pool.interested, "var(--bs-secondary)") }}
 
-        {% if not drawer.assignable_pool.top_choice_elsewhere and not drawer.assignable_pool.would_prefer and not drawer.assignable_pool.interested %}
+        {% if not drawer.assignable_pool.would_prefer and not drawer.assignable_pool.interested and not drawer.assignable_pool.top_choice_elsewhere %}
             <div class="text-body-secondary small">No candidates found who ranked one of this staff member's projects.</div>
         {% endif %}
     </div>

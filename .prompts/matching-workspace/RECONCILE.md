@@ -117,7 +117,43 @@ For each surface, compare against its screenshot + the matching README section +
   **Also removed:** the single-row filter well's "Hide filters" collapse toggle — the rule in
   `.claude/rules/template-ui-patterns.md` only asks for a collapsible panel above two filter rows,
   and the reference has none here.
-- **Screen 4 Faculty drawer** — _not started_
+- **Screen 4 Faculty drawer** — ✅ done. Twelve divergences reviewed. Note this is the one surface
+  with **no reference screenshot** — the spec is `README.md` ("Faculty drawer, 560px") plus the
+  prototype markup (`Matching Workspace.dc.html:174-242`, view-model `:863-884`).
+  **Fixed (reference wins):** (1) the identity card was content-free (the name appeared three times
+  in the top 160px) — now carries "N projects offered · X CATS total"; (2) the workload card's
+  `bg-primary text-white` header sat directly under the blue offcanvas header — softened to a light
+  header (same fix as Screen 2), and the `border-primary` accent moved to the Projects card, which
+  is the primary content; (3) bar labels de-duplicated ("Supervising", not "Supervising CATS … CATS")
+  and each bar now states its own consequence via a new optional `binding_note` arg on `capacity_bar`
+  ("no further supervisees can be added" / "no further marking can be allocated"); (4) **the biggest
+  win** — constraint callouts stated the fact but not the blocked demand; a new
+  `_enrich_constraints_for_drawer()` adds a `detail` line ("N further students who would prefer one
+  of these projects cannot be added without exceeding this limit", "M more selectors chose this
+  project but could not be allocated"), rendered as a second line by `constraint_callout`. The
+  enrichment builds new dicts so the Faculty-tab `binding_pills` are untouched; (5) the missing
+  "N selectors chose this · allocated:" demand caption added, reusing `LiveProject.number_selections`;
+  (9) both drawers widened 400px → 560px (`max-width: 95vw`), matching the reference and the
+  existing `#matchCommentsPanel` pattern; (10) allocated-student chips moved off `--bs-info-*`
+  (discouraged by `.claude/rules/jinja2-templates.md`) onto primary-subtle tokens.
+  **Kept (better than reference):** the tri-state capacity severity — `OVER n / c cap` (danger) vs
+  `FULL n / c cap` (warning) vs plain — the reference collapses over-subscription and healthy
+  at-capacity into the same red; the structured three-line candidate rows with severity dots (the
+  reference's one-liner wraps at drawer width anyway, and only shows the ranked project for list 3);
+  gender-neutral constraint copy (the reference says "without exceeding **her** supervising limit").
+  Reference *labels* for the capacity badge were adopted — bare `0/3` was ambiguous.
+  **Beat both:** duplicate-titled projects (the same generic project offered across several project
+  classes) were distinguishable only by swatch colour. The reference has the same defect — it
+  computes the class short name in its view-model and never renders it. The implementation now shows
+  `project_class.abbreviation` beside the swatch, per the Screen 3 decision.
+  **Also:** candidate lists now cap at 3 (was 5) and the previously-dead "+ N more" text is a real
+  control opening the reassignment workspace; candidate names and allocated-student chips cross-link
+  to the student inspector. That required adding the faculty drawer's **first post-injection binding
+  step** (`bindOpenStudentLinks`) — Bootstrap does not support two open offcanvases, so the swap is
+  hide-then-show on a one-shot `hidden.bs.offcanvas`, mirroring the student drawer's comments-panel
+  handoff. `faculty_assignable_pool` entries and the per-project `assigned` list now carry
+  `record_id`; `assigned_students` was left in place because `_faculty_reassign_modal.html` consumes
+  the same dict.
 - **Screen 5 Faculty reassignment** — _not started_
 - **Screen 6 Changes tab** — _not started_
 - **Screen 7 Matches dashboard** — _not started_

@@ -64,7 +64,7 @@
     {% endif %}
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="matchStudentDrawer" aria-labelledby="matchStudentDrawerLabel"
-         data-return-url="{{ url|default('') }}" data-return-text="{{ text|default('') }}">
+         data-return-url="{{ url|default('') }}" data-return-text="{{ text|default('') }}" style="width: 560px; max-width: 95vw;">
         <div class="offcanvas-header bg-primary text-white">
             <div>
                 <h5 class="offcanvas-title mb-0" id="matchStudentDrawerLabel">Student inspector</h5>
@@ -88,7 +88,8 @@
     </div>
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="matchFacultyDrawer" aria-labelledby="matchFacultyDrawerLabel"
-         data-attempt-id="{{ record.id }}" data-return-url="{{ url|default('') }}" data-return-text="{{ text|default('') }}">
+         data-attempt-id="{{ record.id }}" data-return-url="{{ url|default('') }}" data-return-text="{{ text|default('') }}"
+         style="width: 560px; max-width: 95vw;">
         <div class="offcanvas-header bg-primary text-white">
             <div>
                 <h5 class="offcanvas-title mb-0" id="matchFacultyDrawerLabel">Faculty inspector</h5>

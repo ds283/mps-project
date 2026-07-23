@@ -436,6 +436,42 @@ def binding_constraints(attempt: MatchingAttempt, fac: FacultyData) -> List[dict
     return constraints
 
 
+def _enrich_constraints_for_drawer(constraints: List[dict], projects: List[dict], pool: dict) -> List[dict]:
+    """
+    Attach a "detail" sentence to each constraint callout quantifying the demand that the
+    constraint is blocking, so the Faculty drawer reads as a diagnosis rather than a status
+    readout. Returns new dicts; the input list (shared with the Faculty-tab binding pills) is
+    never mutated.
+    """
+    # candidates who would move onto one of this staff member's projects if the CATS budget allowed
+    blocked = len(pool["top_choice_elsewhere"]) + len(pool["would_prefer"])
+
+    # unmet demand per project: selectors who chose it but were not allocated to it
+    unmet = {p["project"].id: max(0, p["selected_count"] - p["assigned_count"]) for p in projects}
+
+    enriched: List[dict] = []
+
+    for c in constraints:
+        item = dict(c)
+
+        if c["category"] in ("supervision_cats", "marking_cats"):
+            if blocked > 0:
+                item["detail"] = (
+                    f"{blocked} further student{'' if blocked == 1 else 's'} who would prefer one of these projects "
+                    f"cannot be added without exceeding this limit."
+                )
+
+        elif c["category"] == "capacity":
+            project = c.get("project")
+            count = unmet.get(project.id, 0) if project is not None else 0
+            if count > 0:
+                item["detail"] = f"{count} more selector{'' if count == 1 else 's'} chose this project but could not be allocated."
+
+        enriched.append(item)
+
+    return enriched
+
+
 def faculty_drawer(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     """
     Assemble the view dict for the Faculty inspector drawer: workload bars, binding-constraint
@@ -453,9 +489,13 @@ def faculty_drawer(attempt: MatchingAttempt, fac: FacultyData) -> dict:
                 "capacity": project.capacity,
                 "enforce_capacity": project.enforce_capacity,
                 "assigned_count": attempt.number_project_assignments(project),
+                "selected_count": project.number_selections,
                 "assigned_students": [record.selector.student for record in assigned_records],
+                "assigned": [{"student": record.selector.student, "record_id": record.id} for record in assigned_records],
             }
         )
+
+    pool = faculty_assignable_pool(attempt, fac)
 
     return {
         "faculty": fac,
@@ -466,9 +506,10 @@ def faculty_drawer(attempt: MatchingAttempt, fac: FacultyData) -> dict:
             "cats_marking_limit": mark_info["CATS_limit"],
             "cats_total": sup_info["CATS_total"] + mark_info["CATS_total"],
         },
-        "constraints": binding_constraints(attempt, fac),
+        "constraints": _enrich_constraints_for_drawer(binding_constraints(attempt, fac), projects, pool),
         "projects": projects,
-        "assignable_pool": faculty_assignable_pool(attempt, fac),
+        "projects_offered": len(projects),
+        "assignable_pool": pool,
     }
 
 
@@ -521,6 +562,7 @@ def faculty_assignable_pool(attempt: MatchingAttempt, fac: FacultyData) -> dict:
 
         entry = {
             "selector": record.selector,
+            "record_id": record.id,
             "student": record.selector.student,
             "current_project": record.project,
             "current_rank": current_rank,

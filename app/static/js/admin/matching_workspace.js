@@ -212,4 +212,142 @@
             }
         });
     }
+
+    // ── Faculty drawer ──────────────────────────────────────────────────────
+
+    function reloadFacultyTable() {
+        if (window.matchFacultyTable) {
+            window.matchFacultyTable.ajax.reload(null, false);
+        }
+    }
+
+    function loadFacultyDrawer(facId, triggerEl) {
+        var drawerEl = document.getElementById("matchFacultyDrawer");
+        var bodyEl = document.getElementById("matchFacultyDrawerBody");
+        var subtitleEl = document.getElementById("matchFacultyDrawerSubtitle");
+        if (!drawerEl || !bodyEl) {
+            return;
+        }
+
+        var attemptId = drawerEl.getAttribute("data-attempt-id");
+
+        drawerEl.setAttribute("data-fac-id", facId);
+        if (subtitleEl) {
+            subtitleEl.textContent = (triggerEl && triggerEl.getAttribute("data-fac-name")) || "";
+        }
+        bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
+
+        fetch(
+            scriptRoot() + "/admin/match_faculty_drawer_ajax/" + attemptId + "/" + facId + "?" + returnParams().toString(),
+            {credentials: "same-origin"}
+        )
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Failed to load faculty inspector");
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                bodyEl.innerHTML = html;
+            })
+            .catch(function () {
+                bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load faculty inspector.</div>';
+            });
+    }
+
+    var facultyDrawerEl = document.getElementById("matchFacultyDrawer");
+    if (facultyDrawerEl) {
+        facultyDrawerEl.addEventListener("show.bs.offcanvas", function (event) {
+            var trigger = event.relatedTarget;
+            var facId = trigger && trigger.getAttribute("data-fac-id");
+            if (facId) {
+                loadFacultyDrawer(facId, trigger);
+            }
+        });
+    }
+
+    // ── Faculty reassignment workspace ──────────────────────────────────────
+
+    function bindAssignButtons(scope, attemptId, facId) {
+        var buttons = scope.querySelectorAll(".mw-fac-assign-btn");
+        buttons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var selectorId = btn.getAttribute("data-selector-id");
+                var projectId = btn.getAttribute("data-project-id");
+                var csrfForm = scope.querySelector("#matchFacultyAssignCsrf");
+                if (!selectorId || !projectId || !csrfForm) {
+                    return;
+                }
+
+                btn.disabled = true;
+
+                fetch(
+                    scriptRoot() + "/admin/faculty_reassign_assign/" + attemptId + "/" + facId + "/" + selectorId + "/" + projectId,
+                    {method: "POST", credentials: "same-origin", body: new FormData(csrfForm)}
+                )
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        if (data.success) {
+                            showToast("Student reassigned.", "success");
+                            reloadFacultyTable();
+                            loadReassignWorkspace(attemptId, facId);
+
+                            var drawerEl = document.getElementById("matchFacultyDrawer");
+                            if (drawerEl && drawerEl.getAttribute("data-fac-id") === String(facId) && drawerEl.classList.contains("show")) {
+                                loadFacultyDrawer(facId);
+                            }
+                        } else {
+                            showToast(data.message || "Could not reassign this student.", "error");
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(function () {
+                        showToast("Could not reassign this student due to a network error.", "error");
+                        btn.disabled = false;
+                    });
+            });
+        });
+    }
+
+    function loadReassignWorkspace(attemptId, facId) {
+        var contentEl = document.getElementById("matchFacultyReassignModalContent");
+        if (!contentEl) {
+            return;
+        }
+
+        contentEl.innerHTML = '<div class="modal-body text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
+
+        fetch(
+            scriptRoot() + "/admin/faculty_reassign_ajax/" + attemptId + "/" + facId + "?" + returnParams().toString(),
+            {credentials: "same-origin"}
+        )
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Failed to load reassignment workspace");
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                contentEl.innerHTML = html;
+                bindAssignButtons(contentEl, attemptId, facId);
+            })
+            .catch(function () {
+                contentEl.innerHTML = '<div class="modal-body text-danger small">Could not load the reassignment workspace.</div>';
+            });
+    }
+
+    var reassignModalEl = document.getElementById("matchFacultyReassignModal");
+    if (reassignModalEl) {
+        reassignModalEl.addEventListener("show.bs.modal", function (event) {
+            var trigger = event.relatedTarget;
+            var facId = trigger && trigger.getAttribute("data-fac-id");
+            var attemptId = reassignModalEl.getAttribute("data-attempt-id");
+            if (facId) {
+                reassignModalEl.setAttribute("data-fac-id", facId);
+                loadReassignWorkspace(attemptId, facId);
+            }
+        });
+    }
 })();

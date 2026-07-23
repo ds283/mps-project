@@ -11,7 +11,7 @@
 from datetime import datetime, timedelta
 from functools import partial
 from itertools import chain as itertools_chain
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from bokeh.embed import components
 from bokeh.plotting import figure
@@ -2334,6 +2334,170 @@ def edit_match_roles(rec_id):
     return jsonify(success=True)
 
 
+@admin.route("/match_faculty_view_v2_ajax/<int:id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def match_faculty_view_v2_ajax(id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify({})
+
+    if not attempt.finished or not attempt.solution_usable:
+        return jsonify({})
+
+    pclass_filter = request.args.get("pclass_filter", default=None)
+    pclass_flag, pclass_value = is_integer(pclass_filter)
+
+    url = request.args.get("url", default=None)
+    text = request.args.get("text", default=None)
+
+    base_query = attempt.faculty_list_query()
+
+    def search_name(row: FacultyData):
+        return row.user.name
+
+    def sort_name(row: FacultyData):
+        user: User = row.user
+        return [user.last_name, user.first_name]
+
+    def sort_workload(row: FacultyData):
+        sup_info = attempt.is_supervisor_overassigned(row)
+        mark_info = attempt.is_marker_overassigned(row)
+        return sup_info["CATS_total"] + mark_info["CATS_total"]
+
+    name = {"search": search_name, "order": sort_name}
+    workload = {"order": sort_workload}
+    columns = {
+        "name": name,
+        "supervising": {},
+        "marking": {},
+        "workload": workload,
+    }
+
+    row_filter = None
+    if pclass_flag:
+
+        def row_filter(row: FacultyData):
+            sup_records = attempt.get_supervisor_records(row.id).all()
+            if any(r.selector.config.pclass_id == pclass_value for r in sup_records):
+                return True
+
+            mark_records = attempt.get_marker_records(row.id).all()
+            return any(r.selector.config.pclass_id == pclass_value for r in mark_records)
+
+    with ServerSideInMemoryHandler(
+        request,
+        base_query,
+        columns,
+        row_filter=row_filter,
+    ) as handler:
+
+        def row_formatter(records: List[FacultyData]):
+            rows = [workspace_service.faculty_row(attempt, fac) for fac in records]
+            return ajax.admin.faculty_view_v2_data(rows, attempt, text=text, url=url)
+
+        return handler.build_payload(row_formatter)
+
+
+@admin.route("/match_faculty_drawer_ajax/<int:attempt_id>/<int:fac_id>")
+@roles_accepted("faculty", "admin", "root")
+def match_faculty_drawer_ajax(attempt_id, fac_id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+    fac: FacultyData = FacultyData.query.get_or_404(fac_id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify({}), 403
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+
+    drawer = workspace_service.faculty_drawer(attempt, fac)
+
+    return render_template_context(
+        "admin/matching_workspace/_faculty_drawer.html",
+        attempt=attempt,
+        drawer=drawer,
+        text=text,
+        url=url,
+    )
+
+
+@admin.route("/faculty_reassign_ajax/<int:attempt_id>/<int:fac_id>")
+@roles_accepted("faculty", "admin", "root")
+def faculty_reassign_ajax(attempt_id, fac_id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+    fac: FacultyData = FacultyData.query.get_or_404(fac_id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify({}), 403
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+
+    drawer = workspace_service.faculty_drawer(attempt, fac)
+
+    return render_template_context(
+        "admin/matching_workspace/_faculty_reassign_modal.html",
+        attempt_id=attempt.id,
+        drawer=drawer,
+        form=ConfirmActionForm(),
+        text=text,
+        url=url,
+    )
+
+
+@admin.route(
+    "/faculty_reassign_assign/<int:attempt_id>/<int:fac_id>/<int:selector_id>/<int:project_id>",
+    methods=["POST"],
+)
+@roles_accepted("faculty", "admin", "root")
+def faculty_reassign_assign(attempt_id, fac_id, selector_id, project_id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+    fac: FacultyData = FacultyData.query.get_or_404(fac_id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to edit this matching attempt."), 403
+
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return jsonify(success=False, message="Could not validate this request; please reload the page and try again."), 400
+
+    if attempt.selected:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" cannot be edited because an administrative user has marked it as '
+                '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    year = get_current_year()
+    if attempt.year != year:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    record: MatchingRecord = attempt.records.filter_by(selector_id=selector_id).first()
+    if record is None:
+        return jsonify(success=False, message="No matching record was found for this selector in this attempt."), 404
+
+    project: LiveProject = LiveProject.query.get_or_404(project_id)
+
+    if project.id not in workspace_service.faculty_project_ids(attempt, fac):
+        return jsonify(success=False, message="This project is not offered by the selected faculty member in this matching attempt."), 400
+
+    success, message = _apply_project_reassignment(record, project)
+    if not success:
+        return jsonify(success=False, message=message or "Could not reassign this student."), 400
+
+    return jsonify(success=True)
+
+
 @admin.route("/delete_match_record/<int:attempt_id>/<int:selector_id>")
 @roles_accepted("faculty", "admin", "root")
 def delete_match_record(attempt_id, selector_id):
@@ -2378,6 +2542,64 @@ def delete_match_record(attempt_id, selector_id):
     return redirect(redirect_url())
 
 
+def _apply_project_reassignment(record: MatchingRecord, project: LiveProject) -> Tuple[bool, Optional[str]]:
+    """
+    Core mutation shared by `reassign_match_project` and `faculty_reassign_assign`: reassign
+    `record`'s matched project to `project`, adjusting supervisor roles to match, subject to the
+    same validation (`project` must be one of the selector's submitted choices; a non-pooled
+    project's owner must still be enrolled as supervisor). Returns (success, error_message);
+    `error_message` is None both on success and on the pre-existing silent no-op cases (selector
+    has not submitted / project has no owner) inherited from the original `reassign_match_project`
+    behaviour.
+    """
+    if not record.selector.has_submitted:
+        return False, None
+
+    submitted_data = record.selector.is_project_submitted(project)
+    if not submitted_data.get("submitted"):
+        return False, "Could not reassign '{proj}' to {name} because this project was not included in this selector's choices".format(
+            proj=project.name, name=record.selector.student.user.name
+        )
+
+    if not project.use_supervisor_pool:
+        if project.owner is None:
+            return False, None
+
+        enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
+        if enroll_record is None or enroll_record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            return False, (
+                "Could not reassign '{proj}' to {name} because this project's supervisor is no longer enrolled for this project class.".format(
+                    proj=project.name, name=record.selector.student.user.name
+                )
+            )
+
+        # remove any previous supervision roles and replace with a supervision role for the new project
+        existing_supv = record.roles.filter(MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])).all()
+        for item in existing_supv:
+            record.roles.remove(item)
+
+        new_supv = MatchingRole(user_id=project.owner_id, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
+        record.roles.add(new_supv)
+
+    record.project_id = project.id
+    record.rank = record.selector.project_rank(project.id)
+    record.alternative = False
+    record.parent_id = None
+    record.priority = None
+
+    record.matching_attempt.last_edit_id = current_user.id
+    record.matching_attempt.last_edit_timestamp = datetime.now()
+
+    try:
+        log_db_commit("Reassign matched project for selector in matching attempt", user=current_user)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return False, "Could not reassign matched project because a database error was encountered."
+
+    return True, None
+
+
 @admin.route("/reassign_match_project/<int:id>/<int:pid>")
 @roles_accepted("faculty", "admin", "root")
 def reassign_match_project(id, pid):
@@ -2404,76 +2626,9 @@ def reassign_match_project(id, pid):
 
     project: LiveProject = LiveProject.query.get_or_404(pid)
 
-    if record.selector.has_submitted:
-        submitted_data = record.selector.is_project_submitted(project)
-        if submitted_data.get("submitted"):
-            adjust = False
-
-            if project.use_supervisor_pool:
-                # don't change supervisors here
-                adjust = True
-
-            else:
-                if project.owner is not None:
-                    enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
-
-                    if enroll_record is not None and enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
-                        adjust = True
-
-                        # remove any previous supervision roles and replace with a supervision role for the new project
-                        existing_supv = record.roles.filter(
-                            MatchingRole.role.in_(
-                                [
-                                    MatchingRole.ROLE_SUPERVISOR,
-                                    MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                                ]
-                            )
-                        ).all()
-                        for item in existing_supv:
-                            record.roles.remove(item)
-
-                        new_supv = MatchingRole(
-                            user_id=project.owner_id,
-                            role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                        )
-                        record.roles.add(new_supv)
-
-                    else:
-                        flash(
-                            "Could not reassign '{proj}' to {name} because this project's supervisor is no longer "
-                            "enrolled for this project class.".format(
-                                proj=project.name,
-                                name=record.selector.student.user.name,
-                            )
-                        )
-
-            if adjust:
-                record.project_id = project.id
-                record.rank = record.selector.project_rank(project.id)
-                record.alternative = False
-                record.parent_id = None
-                record.priority = None
-
-                record.matching_attempt.last_edit_id = current_user.id
-                record.matching_attempt.last_edit_timestamp = datetime.now()
-
-                try:
-                    log_db_commit("Reassign matched project for selector in matching attempt", user=current_user)
-                except SQLAlchemyError as e:
-                    flash(
-                        "Could not reassign matched project because a database error was encountered.",
-                        "error",
-                    )
-                    db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        else:
-            flash(
-                "Could not reassign '{proj}' to {name} because this project was not included in this selector's choices".format(
-                    proj=project.name, name=record.selector.student.user.name
-                ),
-                "error",
-            )
+    success, message = _apply_project_reassignment(record, project)
+    if not success and message:
+        flash(message, "error")
 
     return redirect(redirect_url())
 

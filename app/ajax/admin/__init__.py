@@ -30,6 +30,7 @@ from .project_tags import tags_data
 
 from .matching.compare_matches import compare_match_data
 from .matching.match_view_faculty import faculty_view_data
+from .matching.match_view_faculty_v2 import faculty_view_v2_data
 from .matching.match_view_student import student_view_data
 from .matching.match_view_student_v2 import student_view_v2_data
 from .matching.matches import matches_data

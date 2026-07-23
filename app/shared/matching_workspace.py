@@ -246,6 +246,15 @@ def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
 # ############################
 
 
+def faculty_project_ids(attempt: MatchingAttempt, fac: FacultyData) -> FrozenSet[int]:
+    """
+    Public wrapper over `_faculty_project_ids_query` for callers that only need the id set (e.g.
+    validating that a reassignment target project is actually one of `fac`'s), not a full
+    row/drawer assembly.
+    """
+    return frozenset(p.id for p in _faculty_project_ids_query(attempt, fac).all())
+
+
 def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     """
     Assemble the view dict for a single Faculty-tab row: offered project counts, supervising/

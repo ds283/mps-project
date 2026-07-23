@@ -1,0 +1,111 @@
+{#
+  Body fragment for the shared faculty inspector offcanvas (#matchFacultyDrawer in
+  workspace.html), populated by AJAX (admin.match_faculty_drawer_ajax). See
+  .prompts/matching-workspace/PLAN.md.
+#}
+{% from "swatch.html" import small_swatch %}
+{% from "admin/matching_workspace/_macros.html" import capacity_bar, constraint_callout %}
+
+{% macro pool_list(title, items, dot_colour) %}
+    {% if items %}
+        <div class="mb-3">
+            <div class="small fw-semibold mb-1">{{ title }}</div>
+            {% for entry in items[:5] %}
+                <div class="d-flex align-items-start gap-2 small mb-1">
+                    <span class="rounded-circle flex-shrink-0 mt-1" style="width: 8px; height: 8px; background: {{ dot_colour }};"></span>
+                    <div>
+                        <div>{{ entry.student.user.name }}</div>
+                        <div class="text-body-secondary">Ranked #{{ entry.best_rank }} &middot; {{ entry.best_project.name }}</div>
+                        <div class="text-body-secondary">
+                            {% if entry.current_project %}
+                                Currently: {{ entry.current_project.name }}{% if entry.current_rank %} (#{{ entry.current_rank }}){% endif %}
+                            {% else %}
+                                Currently unallocated
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            {% if items|length > 5 %}
+                <div class="small text-body-secondary">+ {{ items|length - 5 }} more</div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="mb-0">
+            <a class="text-decoration-none" href="mailto:{{ drawer.faculty.user.email }}">{{ drawer.faculty.user.name }}</a>
+        </h5>
+    </div>
+</div>
+
+<div class="card mb-3 border-primary">
+    <div class="card-header bg-primary text-white">Workload &amp; binding constraints</div>
+    <div class="card-body">
+        {{ capacity_bar('Supervising CATS', drawer.workload.cats_supervising, drawer.workload.cats_supervising_limit) }}
+        {{ capacity_bar('Marking CATS', drawer.workload.cats_marking, drawer.workload.cats_marking_limit) }}
+
+        {% if drawer.constraints %}
+            <div class="d-flex flex-column gap-2 mt-3">
+                {% for c in drawer.constraints %}
+                    {{ constraint_callout(c) }}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-3 border-secondary">
+    <div class="card-header">Projects offered in this matching</div>
+    <div class="card-body">
+        {% for p in drawer.projects %}
+            <div class="mb-3 pb-3{% if not loop.last %} border-bottom{% endif %}">
+                <div class="d-flex align-items-center gap-2">
+                    {{ small_swatch(p.project.config.project_class.make_CSS_style()) }}
+                    <strong>{{ p.project.name }}</strong>
+                    {% if p.enforce_capacity and p.capacity is not none %}
+                        {% if p.assigned_count > p.capacity %}
+                            <span class="badge rounded-pill small" style="background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis);">FULL {{ p.assigned_count }}/{{ p.capacity }}</span>
+                        {% elif p.assigned_count == p.capacity %}
+                            <span class="badge rounded-pill small" style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">{{ p.assigned_count }}/{{ p.capacity }}</span>
+                        {% else %}
+                            <span class="badge rounded-pill small bg-secondary-subtle text-secondary">{{ p.assigned_count }}/{{ p.capacity }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge rounded-pill small bg-secondary-subtle text-secondary">{{ p.assigned_count }} allocated</span>
+                    {% endif %}
+                </div>
+                {% if p.assigned_students %}
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        {% for student in p.assigned_students %}
+                            <span class="badge rounded-pill small" style="background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis);">{{ student.user.name }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="text-body-secondary small">No projects offered in this matching.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card mb-3 border-secondary">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2">
+        <span>Who else could be allocated here?</span>
+        <button type="button" class="btn btn-sm btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#matchFacultyReassignModal"
+                data-fac-id="{{ drawer.faculty.id }}" data-fac-name="{{ drawer.faculty.user.name }}">
+            Reassignment workspace &rarr;
+        </button>
+    </div>
+    <div class="card-body">
+        {{ pool_list("Ranked a " ~ drawer.faculty.user.last_name ~ " project #1 but allocated elsewhere", drawer.assignable_pool.top_choice_elsewhere, "var(--bs-success)") }}
+        {{ pool_list("Would prefer a " ~ drawer.faculty.user.last_name ~ " project to their current allocation", drawer.assignable_pool.would_prefer, "var(--bs-primary)") }}
+        {{ pool_list("Next-highest interested (would take a freed place)", drawer.assignable_pool.interested, "var(--bs-secondary)") }}
+
+        {% if not drawer.assignable_pool.top_choice_elsewhere and not drawer.assignable_pool.would_prefer and not drawer.assignable_pool.interested %}
+            <div class="text-body-secondary small">No candidates found who ranked one of this staff member's projects.</div>
+        {% endif %}
+    </div>
+</div>

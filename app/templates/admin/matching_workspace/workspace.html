@@ -1,7 +1,7 @@
 {#
   Matching Workspace — detail shell (one attempt, three panes: Student / Faculty / Changes).
-  See .prompts/matching-workspace/PLAN.md. Faculty (Phase 3) and Changes (Phase 4) panes are
-  placeholders until their phases land; the pill nav and Changes badge are already wired.
+  See .prompts/matching-workspace/PLAN.md. Changes (Phase 4) is a placeholder until that phase
+  lands; the pill nav and Changes badge are already wired.
 #}
 {% extends "base_app.html" %}
 
@@ -56,13 +56,7 @@
     {% if view == 'student' %}
         {% include "admin/matching_workspace/_student_pane.html" %}
     {% elif view == 'faculty' %}
-        <div class="card border-primary mt-3">
-            <div class="card-header bg-primary text-white">Faculty view</div>
-            <div class="card-body text-body-secondary">
-                The redesigned Faculty view is not part of this workspace yet &mdash; it lands in a later
-                phase of the Matching Workspace rebuild.
-            </div>
-        </div>
+        {% include "admin/matching_workspace/_faculty_pane.html" %}
     {% elif view == 'changes' %}
         <div class="card border-primary mt-3">
             <div class="card-header bg-primary text-white">Changes</div>
@@ -96,12 +90,37 @@
             </div>
         </div>
     </div>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="matchFacultyDrawer" aria-labelledby="matchFacultyDrawerLabel"
+         data-attempt-id="{{ record.id }}" data-return-url="{{ url|default('') }}" data-return-text="{{ text|default('') }}">
+        <div class="offcanvas-header bg-primary text-white">
+            <div>
+                <h5 class="offcanvas-title mb-0" id="matchFacultyDrawerLabel">Faculty inspector</h5>
+                <div class="small" id="matchFacultyDrawerSubtitle"></div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body" id="matchFacultyDrawerBody">
+            <div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="matchFacultyReassignModal" tabindex="-1" aria-labelledby="matchFacultyReassignModalLabel" aria-hidden="true"
+         data-attempt-id="{{ record.id }}">
+        <div class="modal-dialog modal-dialog-scrollable" style="max-width: 920px;">
+            <div class="modal-content" id="matchFacultyReassignModalContent">
+                <div class="modal-body text-center text-secondary py-4">
+                    <i class="fas fa-spinner fa-spin"></i> Loading&hellip;
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_select2() }}
-    {% if view == 'student' %}
+    {% if view in ('student', 'faculty') %}
         {{ import_datatables() }}
     {% endif %}
 
@@ -136,6 +155,36 @@
                         {data: 'markers', orderable: false, searchable: false},
                         {data: 'rank', orderable: true, searchable: false},
                         {data: 'score', orderable: true, searchable: false}
+                    ],
+                    order: [[0, 'asc']]
+                });
+            });
+        </script>
+    {% endif %}
+
+    {% if view == 'faculty' %}
+        <script>
+            $(document).ready(function () {
+                window.matchFacultyTable = $('#match_faculty_v2').DataTable({
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                    serverSide: true, processing: true,
+                    language: {{ bootstrap_spinner() }},
+                    ajax: {
+                        url: $SCRIPT_ROOT + '/admin/match_faculty_view_v2_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&text={{ text|urlencode }}&url={{ url|urlencode }}',
+                        type: 'POST',
+                        data: function (args) {
+                            return {"args": JSON.stringify(args)};
+                        }
+                    },
+                    "fnDrawCallback": function () {
+                        $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    },
+                    columns: [
+                        {data: 'name', orderable: true, searchable: true},
+                        {data: 'supervising', orderable: false, searchable: false},
+                        {data: 'marking', orderable: false, searchable: false},
+                        {data: 'workload', orderable: true, searchable: false}
                     ],
                     order: [[0, 'asc']]
                 });

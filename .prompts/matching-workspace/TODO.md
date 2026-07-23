@@ -4,7 +4,7 @@ Living checklist for the Matching Workspace redesign. See `PLAN.md` (same direct
 plan and rationale. Tick items as they complete; one commit per phase
 (`matching-workspace: <imperative summary>`).
 
-**Status:** Phase 0, Phase 1, and Phase 2 complete. Phase 3 not started.
+**Status:** Phase 0, Phase 1, Phase 2, and Phase 3 complete. Phase 4 not started.
 
 ---
 
@@ -40,12 +40,12 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 3 — Faculty tab + reassignment
-- [ ] `_faculty_pane.html`
-- [ ] `match_view_faculty_v2.py` formatter + `match_faculty_view_v2_ajax`
-- [ ] `_faculty_drawer.html` + `match_faculty_drawer_ajax`
-- [ ] `_faculty_reassign_modal.html` + `faculty_reassign_ajax` + `POST faculty_reassign_assign`
-- [ ] Over-limit warning bar; capacity/CATS gauges; binding notes
-- [ ] Commit
+- [x] `_faculty_pane.html`
+- [x] `match_view_faculty_v2.py` formatter + `match_faculty_view_v2_ajax`
+- [x] `_faculty_drawer.html` + `match_faculty_drawer_ajax`
+- [x] `_faculty_reassign_modal.html` + `faculty_reassign_ajax` + `POST faculty_reassign_assign`
+- [x] Over-limit warning bar; capacity/CATS gauges; binding notes
+- [x] Commit
 
 ## Phase 4 — Changes tab
 - [ ] `_changes_pane.html` (summary cards + table + empty state)

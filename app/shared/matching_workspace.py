@@ -23,6 +23,7 @@ which take the viewing user explicitly for the same reason.
 from collections import defaultdict
 from typing import Dict, FrozenSet, List, Optional, Tuple
 
+from flask import url_for
 from flask_security import current_user
 from sqlalchemy import func, or_
 
@@ -46,6 +47,39 @@ from ..models import (
 
 _SUPERVISOR_ROLES = [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
 _MARKER_ROLES = [MatchingRole.ROLE_MARKER]
+
+# Map each selection-hint value to a Bootstrap semantic token family used for the drawer's
+# ranked-selection hint badges. "neutral" renders as a dim/suppressed badge.
+_HINT_SEVERITY = {
+    SelectionRecord.SELECTION_HINT_NEUTRAL: "neutral",
+    SelectionRecord.SELECTION_HINT_REQUIRE: "success",
+    SelectionRecord.SELECTION_HINT_ENCOURAGE: "success",
+    SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG: "success",
+    SelectionRecord.SELECTION_HINT_DISCOURAGE: "warning",
+    SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG: "warning",
+    SelectionRecord.SELECTION_HINT_FORBID: "danger",
+}
+
+
+def _hint_menu() -> List[dict]:
+    """
+    Build the "Change hint" dropdown structure from SelectHintTypesMixin, preserving the same
+    order/section-header layout used by the convenor selector grid. String entries in
+    `_menu_order` are section headers; integer entries are selectable hint values.
+    """
+    menu = []
+    for entry in SelectionRecord._menu_order:
+        if isinstance(entry, str):
+            menu.append({"header": entry})
+        else:
+            menu.append(
+                {
+                    "value": entry,
+                    "label": SelectionRecord._menu_items.get(entry),
+                    "icon": SelectionRecord._icons.get(entry) or None,
+                }
+            )
+    return menu
 
 
 # ############################
@@ -215,18 +249,30 @@ def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
                 "rank": selection.rank,
                 "hint": selection.hint,
                 "hint_label": SelectionRecord._menu_items.get(selection.hint),
+                "hint_icon": SelectionRecord._icons.get(selection.hint) or None,
+                "hint_severity": _HINT_SEVERITY.get(selection.hint, "neutral"),
                 "is_current": selection.liveproject_id == record.project_id,
                 "is_original": selection.liveproject_id == record.original_project_id,
             }
         )
 
     journal = journal_activity_summary(current_user, [student.id])
-    open_tickets = get_count(
-        Ticket.query.filter(
+    open_tickets = [
+        {
+            "title": ticket.title,
+            "status_label": ticket.status_label,
+            "is_open": ticket.status == Ticket.OPEN,
+            "is_resolved": ticket.status == Ticket.RESOLVED,
+            "opened": ticket.creation_timestamp,
+            "url": url_for("tickets.detail", ticket_id=ticket.id),
+        }
+        for ticket in Ticket.query.filter(
             Ticket.subjects.any(TicketSubject.selecting_student_id == selector.id),
             Ticket.status.in_(Ticket.OPEN_STATES),
         )
-    )
+        .order_by(Ticket.creation_timestamp.desc())
+        .all()
+    ]
     recent_emails = user.received_emails.order_by(EmailLog.send_date.desc()).limit(5).all()
 
     return {
@@ -238,6 +284,7 @@ def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
         "owner": project.owner if project is not None and not project.use_supervisor_pool else None,
         "modified": _record_is_modified(record),
         "ranked_selections": ranked_selections,
+        "hint_menu": _hint_menu(),
         "journal": journal,
         "open_tickets": open_tickets,
         "recent_emails": recent_emails,

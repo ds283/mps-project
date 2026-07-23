@@ -39,7 +39,7 @@
                 <div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </div>
         <div class="mb-3">
-            {{ form.markers.label(class="form-label fw-semibold") }}
+            {{ form.markers.label(class="form-label fw-semibold") }}<span class="text-body-secondary fw-normal ms-1">(from assessor pool)</span>
             {{ form.markers(class="form-select select2" + (" is-invalid" if form.markers.errors else ""), multiple="multiple") }}
             <div class="form-text text-body-secondary">
                 Markers should normally be drawn from the project's assessor pool.

@@ -47,6 +47,7 @@ from ..models import (
     ProjectClass,
     ProjectClassConfig,
     SelectingStudent,
+    SelectionRecord,
     TaskRecord,
     User,
 )
@@ -2063,6 +2064,7 @@ def match_student_drawer_ajax(rec_id):
     return render_template_context(
         "admin/matching_workspace/_student_drawer.html",
         drawer=drawer,
+        hint_form=ConfirmActionForm(),
         text=text,
         url=url,
     )
@@ -2584,6 +2586,65 @@ def _apply_project_reassignment(record: MatchingRecord, project: LiveProject) ->
         return False, "Could not reassign matched project because a database error was encountered."
 
     return True, None
+
+
+@admin.route("/match_set_hint/<int:rec_id>/<int:sel_id>/<int:hint>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def match_set_hint(rec_id, sel_id, hint):
+    record: MatchingRecord = MatchingRecord.query.get_or_404(rec_id)
+    attempt: MatchingAttempt = record.matching_attempt
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to edit this matching attempt."), 403
+
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return jsonify(success=False, message="Could not validate this request; please reload the page and try again."), 400
+
+    if attempt.selected:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" cannot be edited because an administrative user has marked it as '
+                '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    year = get_current_year()
+    if attempt.year != year:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    selection: SelectionRecord = SelectionRecord.query.get_or_404(sel_id)
+    if selection.owner_id != record.selector_id:
+        return jsonify(success=False, message="This selection does not belong to the student for this matching record."), 400
+
+    if hint < SelectionRecord.SELECTION_HINT_NEUTRAL or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+        return jsonify(success=False, message="Unknown selection hint."), 400
+
+    # NB: hints feed the optimiser input; changing one here does not re-run matching. This only
+    # records the convenor's intent against the student's ranked selection.
+    try:
+        selection.set_hint(hint)
+        log_db_commit(
+            "Set selection hint for {student} on project {proj} from the matching workspace".format(
+                student=record.selector.student.user.name, proj=selection.liveproject.name
+            ),
+            user=current_user,
+            student=record.selector.student,
+            project_classes=record.selector.config.project_class,
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify(success=False, message="Could not set the selection hint due to a database error."), 500
+
+    return jsonify(success=True, hint_label=SelectionRecord._menu_items.get(selection.hint))
 
 
 @admin.route("/reassign_match_project/<int:id>/<int:pid>")

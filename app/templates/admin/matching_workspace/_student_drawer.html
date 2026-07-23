@@ -4,13 +4,15 @@
   .prompts/matching-workspace/PLAN.md.
 #}
 {% from "swatch.html" import medium_swatch %}
-{% from "admin/matching_workspace/_macros.html" import modified_pill %}
+{% from "admin/matching_workspace/_macros.html" import modified_pill, hint_badge %}
 
 {% set record = drawer.record %}
 {% set selector = drawer.selector %}
 {% set student = drawer.student %}
 {% set user = drawer.user %}
 {% set config = selector.config %}
+
+<form id="matchStudentDrawerCsrf" class="d-none">{{ hint_form.hidden_tag() }}</form>
 
 <div class="card mb-3">
     <div class="card-body">
@@ -29,13 +31,13 @@
 </div>
 
 <div class="card mb-3 border-primary">
-    <div class="card-header bg-primary text-white">Assigned project</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Assigned project</span>
+        {% if drawer.modified %}{{ modified_pill() }}{% endif %}
+    </div>
     <div class="card-body">
         {% if drawer.project %}
-            <div class="d-flex align-items-center gap-2">
-                <strong>{{ drawer.project.name }}</strong>
-                {% if drawer.modified %}{{ modified_pill() }}{% endif %}
-            </div>
+            <div><strong>{{ drawer.project.name }}</strong></div>
             {% if drawer.owner %}
                 <div class="small text-body-secondary mt-1">
                     <i class="fas fa-user-circle me-1"></i>
@@ -111,14 +113,37 @@
             </div>
             <hr>
             {% for item in drawer.ranked_selections %}
-                <div class="row small align-items-center">
+                <div class="row small align-items-center gy-1">
                     <div class="col-1">#{{ item.rank }}</div>
-                    <div class="col-6">{{ item.project.name }}</div>
-                    <div class="col-3">{% if item.project.owner %}{{ item.project.owner.user.name }}{% endif %}</div>
-                    <div class="col-2">
-                        {% if item.hint_label %}
-                            <span class="badge bg-secondary-subtle text-secondary">{{ item.hint_label }}</span>
+                    <div class="col-6">
+                        {% if item.project %}
+                            <a class="text-decoration-none"
+                               href="{{ url_for('faculty.live_project', pid=item.project.id, text='matching workspace', url=url) }}">{{ item.project.name }}</a>
                         {% endif %}
+                    </div>
+                    <div class="col-3">{% if item.project and item.project.owner %}{{ item.project.owner.user.name }}{% endif %}</div>
+                    <div class="col-2">
+                        <div class="dropdown mw-hint-dropdown" data-sel-id="{{ item.selection.id }}" data-rec-id="{{ record.id }}">
+                            <a class="text-decoration-none dropdown-toggle" href="#" role="button"
+                               data-bs-toggle="dropdown" aria-expanded="false" title="Change hint">
+                                {{ hint_badge(item) }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                {% for entry in drawer.hint_menu %}
+                                    {% if entry.header %}
+                                        <li><h6 class="dropdown-header">{{ entry.header }}</h6></li>
+                                    {% else %}
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2 small mw-set-hint {% if entry.value == item.hint %}active{% endif %}"
+                                               href="#" data-sel-id="{{ item.selection.id }}" data-hint="{{ entry.value }}">
+                                                {% if entry.icon %}<i class="fas fa-{{ entry.icon }} fa-fw"></i>{% else %}<i class="fas fa-fw"></i>{% endif %}
+                                                {{ entry.label }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
@@ -154,11 +179,28 @@
 
 {% if drawer.open_tickets %}
     <div class="card mb-3" style="border-color: var(--bs-warning-border-subtle);">
-        <div class="card-header" style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
-            Tickets in scope
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
+            <span>Tickets in scope</span>
+            <span class="badge rounded-pill" style="background: var(--bs-warning-text-emphasis); color: var(--bs-warning-bg-subtle);">{{ drawer.open_tickets|length }}</span>
         </div>
-        <div class="card-body small">
-            {{ drawer.open_tickets }} open ticket{{ 's' if drawer.open_tickets != 1 else '' }}.
+        <div class="card-body">
+            {% for ticket in drawer.open_tickets %}
+                <div class="d-flex justify-content-between align-items-start gap-2 {% if not loop.last %}mb-2 pb-2 border-bottom{% endif %}">
+                    <div>
+                        <div class="small">
+                            <a class="text-decoration-none" href="{{ ticket.url }}">{{ ticket.title }}</a>
+                        </div>
+                        <div class="text-body-secondary" style="font-size: 11px;">opened {{ ticket.opened.strftime("%d %b %Y") if ticket.opened }}</div>
+                    </div>
+                    <span class="badge rounded-pill small flex-shrink-0" style="
+                        {% if ticket.is_resolved %}background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);
+                        {% elif ticket.is_open %}background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
+                        {% else %}background: var(--bs-secondary-bg); color: var(--bs-secondary-color);{% endif %}">
+                        {{ ticket.status_label }}
+                    </span>
+                </div>
+            {% endfor %}
         </div>
     </div>
 {% endif %}

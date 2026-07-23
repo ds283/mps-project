@@ -78,8 +78,22 @@ For each surface, compare against its screenshot + the matching README section +
   `programme_pref_line` lowercased; student table de-bordered (horizontal rules only) and the
   filter-well `<hr>` removed. Kept: DataTables chrome, no "Matches" pill (PLAN decision 5),
   supervisors in the Project column (user decision).
-- **Screen 2 Student drawer** — _not started_
-- **Role editor** — _not started_
+- **Screen 2 Student drawer** — ✅ done. Ranked-selection hint badges are now colour-coded by
+  severity (encourage/require → success, discourage → warning, forbid → danger, neutral → dim)
+  via the new `hint_badge` macro + service-supplied `hint_icon`/`hint_severity`, and are editable
+  through a "Change hint" dropdown (`SelectionRecord._menu_order`) POSTing to the new
+  `admin.match_set_hint` endpoint (`validate_match_inspector`-guarded, CSRF via a drawer-scoped
+  `ConfirmActionForm`), which repaints the drawer. Tickets card enriched from a bare count to a
+  per-ticket list (title link → `tickets.detail`, opened date, status badge). Assigned-project
+  card header softened to a light header with the MODIFIED pill moved into it (removes the
+  blue-on-blue stack under the offcanvas header). Ranked-selection project titles now link to
+  `faculty.live_project`. Kept (better than reference): the inline Comments card, and the
+  offcanvas blue chrome for cross-drawer consistency.
+- **Role editor** — ✅ done. Kept the three-section split (Responsible supervisors / Supervisors
+  / Markers) — more correct than the reference's single group (models responsible-vs-additional +
+  the ≥1-responsible constraint). Added "(from assessor pool)" caption to the Markers label to
+  match the reference. select2 init already uses `select2-small` for
+  `selectionCssClass`/`dropdownCssClass` (verified — no change needed).
 - **Screen 3 Faculty view** — _not started_
 - **Screen 4 Faculty drawer** — _not started_
 - **Screen 5 Faculty reassignment** — _not started_

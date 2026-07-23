@@ -84,6 +84,8 @@
             .then(function (html) {
                 bodyEl.innerHTML = html;
 
+                bindHintDropdowns(bodyEl, recId);
+
                 var commentsLink = bodyEl.querySelector(".mw-drawer-open-comments");
                 if (commentsLink) {
                     commentsLink.addEventListener("click", function () {
@@ -108,6 +110,45 @@
             .catch(function () {
                 bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load student inspector.</div>';
             });
+    }
+
+    // Bind the "Change hint" dropdowns inside the ranked-selection table. Each item POSTs the
+    // new hint value, then repaints the drawer so the badge colour/label reflect the change.
+    function bindHintDropdowns(scope, recId) {
+        scope.querySelectorAll(".mw-set-hint").forEach(function (item) {
+            item.addEventListener("click", function (e) {
+                e.preventDefault();
+                if (item.classList.contains("active")) {
+                    return;
+                }
+                var selId = item.getAttribute("data-sel-id");
+                var hint = item.getAttribute("data-hint");
+                var csrfForm = scope.querySelector("#matchStudentDrawerCsrf");
+                if (!selId || hint === null || !csrfForm) {
+                    return;
+                }
+
+                fetch(scriptRoot() + "/admin/match_set_hint/" + recId + "/" + selId + "/" + hint, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    body: new FormData(csrfForm),
+                })
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        if (data.success) {
+                            showToast("Selection hint updated.", "success");
+                            loadDrawer(recId);
+                        } else {
+                            showToast(data.message || "Could not update the selection hint.", "error");
+                        }
+                    })
+                    .catch(function () {
+                        showToast("Could not update the selection hint due to a network error.", "error");
+                    });
+            });
+        });
     }
 
     var studentDrawerEl = document.getElementById("matchStudentDrawer");

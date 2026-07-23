@@ -108,7 +108,6 @@
                                         {%- set n_proj = data['attached_projects'] -%}
                                         {%- set n_fac = data['faculty'] -%}
                                         {%- set n_fac_total = data['total_faculty'] -%}
-                                        {%- set n_todo = data['todo_count'] -%}
                                         {% if n_sel %}
                                             <span><i class="fas fa-user-graduate fa-fw"></i> {{ n_sel }} selector{{ '' if n_sel == 1 else 's' }}</span>
                                         {% endif %}
@@ -120,9 +119,6 @@
                                         {% endif %}
                                         {% if n_fac is not none and n_fac_total is not none %}
                                             <span><i class="fas fa-chalkboard-teacher fa-fw"></i> {{ n_fac }}/{{ n_fac_total }} faculty</span>
-                                        {% endif %}
-                                        {% if n_todo %}
-                                            <span class="text-primary"><i class="fas fa-tasks fa-fw"></i> {{ n_todo }} task{{ '' if n_todo == 1 else 's' }}</span>
                                         {% endif %}
                                         {% if n_marking_urgent %}
                                             <span class="text-danger fw-semibold"><i class="fas fa-exclamation-circle fa-fw"></i> {{ n_marking_urgent }} marking action{{ '' if n_marking_urgent == 1 else 's' }} needed</span>

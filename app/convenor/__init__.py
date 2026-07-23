@@ -27,7 +27,6 @@ from . import (
     resources,
     selector_details,
     selectors,
-    student_tasks,
     submitters,
     tickets,
 )

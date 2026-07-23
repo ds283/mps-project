@@ -41,10 +41,8 @@ from .project_alternatives import project_alternatives, new_project_alternative
 from .selector_grid import selector_grid_data
 from .selectors import selectors_data
 from .show_confirmations import show_confirmations
-from .student_tasks import student_task_data
 from .submitters import submitters_data
 from .teaching_groups import teaching_group_by_faculty, teaching_group_by_student
-from .todo_list import todo_list_data
 from .submission_period_units import submission_period_units_data
 from .supervision_event_templates import supervision_event_templates_data
 from .supervision_events import supervision_events_data

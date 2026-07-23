@@ -33,7 +33,6 @@ from app.convenor import convenor
 from ..database import db
 from ..models import (
     BackupRecord,
-    ConvenorTask,
     EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
@@ -914,48 +913,6 @@ def go_live(id):
     return redirect(redirect_url())
 
 
-def _flash_blocking_tasks(operation: str, blocking):
-    flashed_tasks = 0
-    max_tasks_to_flash = 5
-
-    for task in blocking["submitter"]:
-        task: ConvenorTask
-
-        if flashed_tasks >= max_tasks_to_flash:
-            break
-        flash(
-            'Submitter task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
-            "warning",
-        )
-        flashed_tasks += 1
-
-    if flashed_tasks >= max_tasks_to_flash:
-        return
-
-    for task in blocking["selector"]:
-        task: ConvenorTask
-        if flashed_tasks >= max_tasks_to_flash:
-            break
-        flash(
-            'Selector task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
-            "warning",
-        )
-        flashed_tasks += 1
-
-    if flashed_tasks >= max_tasks_to_flash:
-        return
-
-    for task in blocking["global"]:
-        task: ConvenorTask
-        if flashed_tasks >= max_tasks_to_flash:
-            break
-        flash(
-            'Global project class task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
-            "warning",
-        )
-        flashed_tasks += 1
-
-
 def _flash_blocking_tickets(operation: str, tickets):
     max_to_flash = 5
     for ticket in tickets[:max_to_flash]:
@@ -987,11 +944,6 @@ def confirm_go_live(id):
             'A request to Go Live was ignored, because project "{name}" is already live.'.format(name=config.project_class.name),
             "error",
         )
-        return redirect(url_for("convenor.status", id=config.pclass_id))
-
-    blocking, num_blocking = config.get_blocking_tasks
-    if num_blocking > 0:
-        _flash_blocking_tasks("Go-Live", blocking)
         return redirect(url_for("convenor.status", id=config.pclass_id))
 
     blocking_tickets = config.get_blocking_tickets
@@ -1087,11 +1039,6 @@ def perform_go_live(id):
             'A request to Go Live was ignored, because project "{name}" is already live.'.format(name=config.project_class.name),
             "error",
         )
-        return redirect(redirect_url())
-
-    blocking, num_blocking = config.get_blocking_tasks
-    if num_blocking > 0:
-        _flash_blocking_tasks("Go-Live", blocking)
         return redirect(redirect_url())
 
     blocking_tickets = config.get_blocking_tickets
@@ -2289,11 +2236,6 @@ def confirm_rollover(id):
         )
         return redirect(redirect_url())
 
-    blocking, num_blocking = config.get_blocking_tasks
-    if num_blocking > 0:
-        _flash_blocking_tasks("roll-over to next academic year", blocking)
-        return redirect(redirect_url())
-
     blocking_tickets = config.get_blocking_tickets
     if blocking_tickets:
         _flash_blocking_tickets("roll-over to next academic year", blocking_tickets)
@@ -2356,11 +2298,6 @@ def rollover(id):
             f'"{config.name}" is not an active project class, and cannot be rolled over.',
             "error",
         )
-        return redirect(url) if url is not None else home_dashboard()
-
-    blocking, num_blocking = config.get_blocking_tasks
-    if num_blocking > 0:
-        _flash_blocking_tasks("roll-over to next academic year", blocking)
         return redirect(url) if url is not None else home_dashboard()
 
     blocking_tickets = config.get_blocking_tickets

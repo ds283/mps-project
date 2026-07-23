@@ -1,5 +1,4 @@
 {% from "icon_block.html" import icon_block %}
-{% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 
 {% macro rollover_not_yet_card(current_year, pclass, config) %}
     {% set selector_lifecycle = config.selector_lifecycle %}
@@ -30,7 +29,6 @@
                     &mdash; Some submitter activities are not yet complete
                 </div>
             {% endif %}
-            {{ blocking_task_list(config.get_blocking_tasks[0]) }}
         </div>
     </div>
 {% endmacro %}
@@ -93,7 +91,6 @@
                     {% endif %}
                 {% endcall %}
             </div>
-            {{ blocking_task_list(config.get_blocking_tasks[0]) }}
             <div class="d-flex flex-row justify-content-end align-self-end gap-2 mt-2">
                 {% if pclass.select_in_previous_cycle %}
                     <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"

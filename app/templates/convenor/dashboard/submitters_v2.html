@@ -608,12 +608,6 @@
                   </li>
                   <li><hr class="dropdown-divider"></li>
                   <li>
-                    <a class="dropdown-item d-flex gap-2"
-                       href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=_back_url) }}">
-                      <i class="fas fa-tasks fa-fw"></i> Tasks
-                    </a>
-                  </li>
-                  <li>
                     {% if is_published %}
                       <a class="dropdown-item d-flex gap-2"
                          href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">

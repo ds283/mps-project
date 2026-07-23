@@ -59,9 +59,6 @@ _menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_journal_inspector', student_id=sub.student_id, url=url_for('convenor.submitters', id=pclass.id), text='submitters view') }}">
             <i class="fas fa-book fa-fw"></i> View journal...
         </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-            <i class="fas fa-tasks fa-fw"></i> Tasks...
-        </a>
 
         {% if sub.published and pclass.publish %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
@@ -145,10 +142,10 @@ _name = """
             <span class="badge bg-secondary">#{{ student.exam_number }}</span>
         {% endif %}
     {% endif %}
-    {% set num_tasks = sub.number_available_tasks %}
-    {% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
-    {% if num_tasks > 0 %}
-        <span class="badge bg-info">{{ num_tasks }} task{{ pl }}</span>
+    {% set num_tickets = sub.number_open_tickets %}
+    {% set pl = 's' %}{% if num_tickets == 1 %}{% set pl = '' %}{% endif %}
+    {% if num_tickets > 0 %}
+        <span class="badge bg-info">{{ num_tickets }} ticket{{ pl }}</span>
     {% endif %}
 </div>
 <div>

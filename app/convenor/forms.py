@@ -46,7 +46,6 @@ from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_STRING_LENGTH,
     AlternativesPriorityMixin,
-    ConvenorGenericTask,
     FacultyData,
     GradingRubric,
     JournalEntryTypesMixin,
@@ -87,7 +86,6 @@ from ..shared.forms.queries import (
     GetPossibleSupervisors,
 )
 from ..shared.forms.wtf_validators import (
-    NotOptionalIf,
     globally_unique_project,
     globally_unique_submission_unit,
     globally_unique_supervision_event_template,
@@ -605,90 +603,6 @@ def ManualAssignFormFactory(config: ProjectClassConfig, is_admin: bool):
         pass
 
     return ManualAssignForm
-
-
-class ConvenorTaskMixin:
-    description = StringField(
-        "Description",
-        description="Briefly summarize the task",
-        validators=[InputRequired(), Length(max=DEFAULT_STRING_LENGTH)],
-    )
-
-    notes = TextAreaField(
-        "Notes",
-        description="Add any notes or commentary that you wish to associate with this task",
-        render_kw={"rows": 8},
-        validators=[Optional()],
-    )
-
-    blocking = BooleanField(
-        "Task blocks progress to next lifecycle stage",
-        description="Select if the task should block progress, eg. to Go Live or rollover to the next academic year",
-        default=False,
-    )
-
-    complete = BooleanField(
-        "Task has been completed",
-        default=False,
-        description="Select if the task has been finished.",
-    )
-
-    dropped = BooleanField(
-        "Task is dropped",
-        default=False,
-        description="Select if the task is no longer required, but should be kept in the database rather than simply deleted.",
-    )
-
-    defer_date = DateTimeField(
-        "Defer date",
-        format="%d/%m/%Y %H:%M",
-        description="If the task is deferred (that is, is not available to be completed) before some date, enter this here.",
-        validators=[Optional()],
-    )
-
-    due_date = DateTimeField(
-        "Due date",
-        format="%d/%m/%Y %H:%M",
-        description="If the task is due by a certain date, enter it here.",
-        validators=[Optional()],
-    )
-
-
-class ConvenorGenericTaskMixin:
-    repeat = BooleanField("Repeat task")
-
-    repeat_interval = SelectField("Repeat interval", choices=ConvenorGenericTask.repeat_options, coerce=int)
-
-    repeat_frequency = IntegerField("Repeat frequency", validators=[NotOptionalIf("repeat")])
-
-    repeat_from_due_date = BooleanField(
-        "Repeat from due date",
-        description="If selected, the due and defer dates of a repeating task "
-        "are calculated from the due date of the "
-        "predecessor task. Otherwise, these dates are determined "
-        "from true true completion date of the predecessor task.",
-    )
-
-    rollover = BooleanField(
-        "Rollover with academic year",
-        description="Select if this task should be retained (if not yet complete) when rolling over between academic years.",
-    )
-
-
-class AddConvenorStudentTask(Form, ConvenorTaskMixin):
-    submit = SubmitField("Create new task")
-
-
-class EditConvenorStudentTask(Form, ConvenorTaskMixin, SaveChangesMixin):
-    pass
-
-
-class AddConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin):
-    submit = SubmitField("Create new task")
-
-
-class EditConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin):
-    pass
 
 
 class EditSubmissionRoleForm(Form, SaveChangesMixin):

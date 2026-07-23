@@ -411,8 +411,11 @@
                         Context
                         {% if perms.edit_scope %}
                             <div class="dropdown ms-auto">
-                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" type="button"><i class="fas fa-plus"></i></button>
-                                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:280px">
+                                {# autoClose="outside": Bootstrap's default (true) closes the menu on ANY click
+                                   inside it too, which would dismiss this menu the instant the select2 widget
+                                   is opened or a result is picked. #}
+                                <button class="btn btn-sm btn-link p-0 text-secondary" data-bs-toggle="dropdown" data-bs-auto-close="outside" type="button"><i class="fas fa-plus"></i></button>
+                                <div class="dropdown-menu dropdown-menu-end p-2" id="tk-subject-add-menu" style="min-width:280px">
                                     <form method="POST" action="{{ url_for('tickets.subject_add', ticket_id=ticket.id) }}" id="tk-subject-add-form">
                                         {{ subject_add_form.hidden_tag() }}
                                         {{ subject_add_form.token(type="hidden", id="tk-subject-add-token") }}
@@ -538,6 +541,12 @@
                     placeholder: 'Search students or classes…',
                     minimumInputLength: 0,
                     templateResult: formatResult,
+                    // keep select2's own results dropdown inside the Bootstrap dropdown-menu
+                    // (rather than the default of appending it to <body>) so that clicking a
+                    // result still counts as "inside" the menu and doesn't trigger Bootstrap's
+                    // outside-click auto-close, which would otherwise dismiss the wrapping menu
+                    // before the click is registered.
+                    dropdownParent: $('#tk-subject-add-menu'),
                     ajax: {
                         url: $SCRIPT_ROOT + '{{ url_for("tickets.subject_people", ticket_id=ticket.id) }}',
                         dataType: 'json',

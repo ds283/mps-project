@@ -139,45 +139,44 @@
 
             {# [J] JOURNAL ACTIVITY — compact summary widget #}
             {% if journal_summary.visible > 0 %}
-                <div class="card mb-3">
+                <div class="card border-secondary mt-2 mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center py-2">
-                        <span class="small">
-                            <i class="fas fa-book me-1"></i> Journal activity
+                        <span class="fw-semibold text-secondary" style="font-size: var(--cd-text-subsection)">
+                            <i class="fas fa-book fa-fw"></i> Journal activity
                             <span class="text-body-secondary">
                                 &middot; <span class="text-primary fw-semibold">{{ journal_summary.unread }}</span> unread
                                 &middot; <span class="text-warning-emphasis fw-semibold">{{ journal_summary.recent }}</span> this month
                                 &middot; {{ journal_summary.visible }} total
                             </span>
                         </span>
-                        <a class="btn btn-sm btn-outline-secondary py-0"
-                           href="{{ url_for('convenor.journal_tab', id=pclass.id) }}">
-                            View all in Journal tab <i class="fas fa-arrow-right"></i>
+                        <a href="{{ url_for('convenor.journal_tab', id=pclass.id) }}"
+                           class="btn btn-outline-secondary btn-xs">
+                            View all in Journal tab <i class="fas fa-arrow-right ms-1"></i>
                         </a>
                     </div>
-                    <ul class="list-group list-group-flush" style="font-size: var(--cd-text-cta-desc)">
-                        {% for entry in journal_summary.recent_entries %}
-                            {% set unread = not entry.is_read_by(current_user) %}
-                            <li class="list-group-item d-flex align-items-center gap-2 py-2{% if unread %} unread-row{% endif %}">
-                                {% if unread %}<span class="udot"></span>{% endif %}
-                                {{ journal_type_ico(entry, size=24) }}
-                                <a href="#" class="text-decoration-none fw-medium"
-                                   data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
-                                   data-student-id="{{ entry.student_id }}"
-                                   data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
-                                    {{ entry.title or "Untitled" }}
-                                </a>
-                                {% if unread %}
-                                    <span class="recent-tag">new</span>
-                                {% endif %}
-                                <span class="text-body-secondary ms-auto">
-                                    {{ entry.student.user.name if entry.student and entry.student.user else "Unknown student" }}
-                                    &middot;
-                                    {% if entry.owner %}{{ entry.owner.name }}{% else %}<span class="badge bg-secondary">Auto</span>{% endif %}
-                                    &middot; {{ entry.created_timestamp.strftime("%d %b %H:%M") }}
-                                </span>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    {% for entry in journal_summary.recent_entries %}
+                        {% set unread = not entry.is_read_by(current_user) %}
+                        <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom{% if unread %} unread-row{% endif %}"
+                             style="font-size: var(--cd-text-cta-desc)">
+                            {% if unread %}<span class="udot"></span>{% endif %}
+                            {{ journal_type_ico(entry, size=24) }}
+                            <a href="#" class="text-decoration-none fw-medium"
+                               data-bs-toggle="offcanvas" data-bs-target="#journalDrawer"
+                               data-student-id="{{ entry.student_id }}"
+                               data-student-name="{{ entry.student.user.name if entry.student and entry.student.user else '' }}">
+                                {{ entry.title or "Untitled" }}
+                            </a>
+                            {% if unread %}
+                                <span class="recent-tag">new</span>
+                            {% endif %}
+                            <span class="text-body-secondary ms-auto">
+                                {{ entry.student.user.name if entry.student and entry.student.user else "Unknown student" }}
+                                &middot;
+                                {% if entry.owner %}{{ entry.owner.name }}{% else %}<span class="badge bg-secondary">Auto</span>{% endif %}
+                                &middot; {{ entry.created_timestamp.strftime("%d %b %H:%M") }}
+                            </span>
+                        </div>
+                    {% endfor %}
                 </div>
             {% endif %}
 

@@ -25,7 +25,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 from app.tickets import tickets
-
+from .detail import _describe_event
 from ..database import db
 from ..models import Label, ProjectClass, Ticket, TicketComment, TicketEmail, TicketEvent, TicketReadState, TicketSubject, TicketSubscription
 from ..shared.context.global_context import render_template_context
@@ -45,7 +45,6 @@ from ..shared.tickets import (
 )
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
-from .detail import _describe_event
 
 # events already shown as rich cards elsewhere in the feed (comment/email rows), matching the
 # ticket-detail timeline's own hidden set (app/tickets/detail.py:_TIMELINE_HIDDEN)
@@ -172,7 +171,7 @@ def _subject_label(token):
         return None
     kind, target = resolved
     if kind == TicketSubject.PROJECT_CLASS:
-        return f"{target.name} (whole class)"
+        return f"{target.name}"
     return _student_name(target)
 
 
@@ -263,9 +262,9 @@ def _activity_feed(user, since, limit=10):
     fetch_limit = limit * 3
     items = []
     for event in (
-        TicketEvent.query.filter(TicketEvent.ticket_id.in_(ticket_ids), ~TicketEvent.kind.in_(_FEED_HIDDEN_EVENTS))
-        .order_by(TicketEvent.created_at.desc())
-        .limit(fetch_limit)
+            TicketEvent.query.filter(TicketEvent.ticket_id.in_(ticket_ids), ~TicketEvent.kind.in_(_FEED_HIDDEN_EVENTS))
+                    .order_by(TicketEvent.created_at.desc())
+                    .limit(fetch_limit)
     ):
         entry = {"kind": "event", "ticket_id": event.ticket_id, "when": event.created_at, "obj": event}
         entry.update(_describe_event(event))

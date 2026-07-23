@@ -24,7 +24,6 @@ from flask import abort, flash, jsonify, redirect, request
 from flask_security import roles_accepted
 
 from app.convenor import convenor
-
 from ..models import Label, ProjectClass, ProjectClassConfig, SelectingStudent, StudentData, SubmittingStudent, Ticket, TicketSubject, User
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
@@ -58,15 +57,15 @@ def _class_scope_candidates(pclass, query_term):
 
     groups = []
     for section in (
-        _results(SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, "Submitting students"),
-        _results(SelectingStudent, TicketSubject.SELECTING_STUDENT, "Selecting students"),
+            _results(SubmittingStudent, TicketSubject.SUBMITTING_STUDENT, "Submitting students"),
+            _results(SelectingStudent, TicketSubject.SELECTING_STUDENT, "Selecting students"),
     ):
         if section is not None:
             groups.append(section)
 
     if not query_term or query_term.lower() in pclass.name.lower():
         groups.append(
-            {"text": "Project class", "children": [{"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)"}]}
+            {"text": "Project class", "children": [{"id": _token(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}"}]}
         )
 
     return groups
@@ -82,7 +81,7 @@ def _subject_label(token):
         return None
     kind, target = resolved
     if kind == TicketSubject.PROJECT_CLASS:
-        return f"{target.name} (whole class)"
+        return f"{target.name}"
     return _student_name(target)
 
 

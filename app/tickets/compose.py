@@ -23,7 +23,7 @@ from flask_security import current_user, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tickets import tickets
-
+from .forms import TicketComposeForm
 from ..database import db
 from ..models import (
     Label,
@@ -57,9 +57,8 @@ from ..shared.tickets import (
     target_tenant_id,
     user_tenant_ids,
 )
-from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import redirect_url
-from .forms import TicketComposeForm
+from ..shared.workflow_logging import log_db_commit
 
 
 def _available_tenants(user):
@@ -168,7 +167,7 @@ def _selected_subject_options(tokens):
             continue
         kind, target = resolved
         if kind == TicketSubject.PROJECT_CLASS:
-            options.append((token, f"{target.name} (whole class)"))
+            options.append((token, f"{target.name}"))
         else:
             options.append((token, student_name(target)))
     return options

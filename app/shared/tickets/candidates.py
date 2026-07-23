@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from .scope import home_class
 from ...models import (
     ConfirmRequest,
     EnrollmentRecord,
@@ -47,7 +48,6 @@ from ...models import (
     User,
 )
 from ...shared.utils import get_current_year
-from .scope import home_class
 
 _PREFIX_BY_KIND = {
     TicketSubject.SUBMITTING_STUDENT: "sub",
@@ -125,9 +125,9 @@ def faculty_classes(faculty):
         if pclass is None or not pclass.active or not pclass.publish:
             continue
         if (
-            enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-            or enrollment.marker_state == EnrollmentRecord.MARKER_ENROLLED
-            or enrollment.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
+                enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                or enrollment.marker_state == EnrollmentRecord.MARKER_ENROLLED
+                or enrollment.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
         ):
             classes[pclass.id] = pclass
     return classes
@@ -347,7 +347,7 @@ def _class_results(query_term, tenant_ids):
     if query_term:
         q = q.filter(ProjectClass.name.ilike(f"%{query_term}%"))
     rows = [
-        {"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)", "kind": "class"}
+        {"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}", "kind": "class"}
         for pclass in q.order_by(ProjectClass.name.asc()).limit(SEARCH_LIMIT).all()
     ]
     return {"text": "Project classes", "children": rows} if rows else None
@@ -398,7 +398,7 @@ def convenor_candidates(pclass, query_term):
         groups.append(
             {
                 "text": "Project classes",
-                "children": [{"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)", "kind": "class"}],
+                "children": [{"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}", "kind": "class"}],
             }
         )
 
@@ -477,7 +477,7 @@ def faculty_candidates(user, query_term, tenant_id=None, include_past=False):
     if query_term:
         classes = [pclass for pclass in classes if query_term.lower() in (pclass.name or "").lower()]
     class_rows = [
-        {"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name} (whole class)", "kind": "class"} for pclass in classes
+        {"id": token_for(TicketSubject.PROJECT_CLASS, pclass.id), "text": f"{pclass.name}", "kind": "class"} for pclass in classes
     ]
     if class_rows:
         groups.append({"text": "Your classes", "children": class_rows[:SEARCH_LIMIT]})
@@ -503,7 +503,8 @@ def faculty_candidates(user, query_term, tenant_id=None, include_past=False):
         groups.append({"text": "Students you moderate", "children": moderator_rows})
 
     sel_rows = _named_role_rows(
-        faculty_selectee_query(user), SelectingStudent, TicketSubject.SELECTING_STUDENT, query_term, tenant_id, include_past, "Selecting under you"
+        faculty_selectee_query(user), SelectingStudent, TicketSubject.SELECTING_STUDENT, query_term, tenant_id, include_past,
+        "Requesting selector sign-off"
     )
     if sel_rows:
         groups.append({"text": "Your selectees", "children": sel_rows})
@@ -519,9 +520,9 @@ def office_candidates(user, query_term, tenant_id=None, include_past=False):
         return []
     groups = []
     for section in (
-        _student_results(SubmittingStudent, query_term, tenant_ids, "Submitting students", include_past),
-        _student_results(SelectingStudent, query_term, tenant_ids, "Selecting students", include_past),
-        _class_results(query_term, tenant_ids),
+            _student_results(SubmittingStudent, query_term, tenant_ids, "Submitting students", include_past),
+            _student_results(SelectingStudent, query_term, tenant_ids, "Selecting students", include_past),
+            _class_results(query_term, tenant_ids),
     ):
         if section is not None:
             groups.append(section)

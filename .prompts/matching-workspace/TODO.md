@@ -4,7 +4,7 @@ Living checklist for the Matching Workspace redesign. See `PLAN.md` (same direct
 plan and rationale. Tick items as they complete; one commit per phase
 (`matching-workspace: <imperative summary>`).
 
-**Status:** Phase 0 complete. Phase 1 not started (awaiting go-ahead).
+**Status:** Phase 0 and Phase 1 complete. Phase 2 not started.
 
 ---
 
@@ -14,15 +14,15 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 1 — Service layer (`app/shared/matching_workspace.py`)
-- [ ] `student_row(attempt, record)`
-- [ ] `faculty_row(attempt, fac)`
-- [ ] `faculty_drawer(attempt, fac)`
-- [ ] `faculty_assignable_pool(attempt, fac)` (3 tone-coded, deduplicated lists)
-- [ ] `binding_constraints(attempt, fac)`
-- [ ] `student_drawer(attempt, record)` (selections, journal, tickets, emails)
-- [ ] `changes_data(attempt)` + `changes_count(attempt)` (live vs `original_*`/`original_roles`)
-- [ ] `dashboard_statistics(attempt)`
-- [ ] Commit
+- [x] `student_row(attempt, record)`
+- [x] `faculty_row(attempt, fac)`
+- [x] `faculty_drawer(attempt, fac)`
+- [x] `faculty_assignable_pool(attempt, fac)` (3 tone-coded, deduplicated lists)
+- [x] `binding_constraints(attempt, fac)`
+- [x] `student_drawer(attempt, record)` (selections, journal, tickets, emails)
+- [x] `changes_data(attempt)` + `changes_count(attempt)` (live vs `original_*`/`original_roles`)
+- [x] `dashboard_statistics(attempt)`
+- [x] Commit
 
 ## Phase 2 — Detail shell + Student tab
 - [ ] `workspace.html` detail shell (Return-to-matches, match-name heading, 3 pills + Changes badge, Review-comments button)

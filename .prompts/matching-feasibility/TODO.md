@@ -12,10 +12,12 @@ Commit each verified phase separately as a clean rollback point.
 ## Phase 1 — diagnostic core
 - [ ] New module `app/tasks/matching_diagnostics.py`: `SlackEntry` dataclass, `SlackRegistry`,
       weight constants, report renderer, `REMEDIATION` category→action map.
-- [ ] Add `diagnostic: bool = False` param to `_create_PuLP_problem`; branch the 8 elasticizable
-      sites (C1 1654, C2 1668, C3 1689/2017, C4 1725, C6 1812/1822, C7 1875, C9 1993, C11 2087/2123);
+- [ ] Add `diagnostic: bool = False` param to `_create_PuLP_problem`; branch the elasticizable
+      sites (C1 1654, C2 1668, C3 1689/2017, C4 1725, C6 1812/1822, C7 1875, C9 1993, C11 2087/2123,
+      **CP-M/CP-S pool eligibility** — the `M=0`/`P=0` cases at 1875/1725);
       in diagnostic mode skip score + all levelling/bias terms, objective `min Σ w·u` (+ ε·pref
-      tiebreaker for a sensible draft). Fold C10 into the registry too.
+      tiebreaker for a sensible draft). Fold C10 into the registry too. Pool slacks add NO new
+      variables (Y/S already exist); register a pool `SlackEntry` only for entries driven nonzero.
 - [ ] Extend `PuLPProblem` namedtuple with `slack_registry` (None in normal mode).
 - [ ] `_diagnose_infeasibility(record, init_data, base_data)`: rebuild diagnostic problem, solve
       packaged CBC `gapRel=0` timeLimit 600s, progress_update message, render + store report,
@@ -27,7 +29,8 @@ Commit each verified phase separately as a clean rollback point.
 
 ## Phase 2 — model, storage, lifecycle
 - [ ] `infeasibility_report` Text column on `PuLPMixin` (collation utf8_bin) + JSON
-      property/writer (LLMOrchestrationJob.recent_workflows pattern). Report schema in PLAN.md §7.
+      property/writer (LLMOrchestrationJob.recent_workflows pattern). Report schema in PLAN.md §7 —
+      note `remediations` is a **list** per violation, entity ids resolved in the renderer.
 - [ ] `is_draft` Boolean on `MatchingAttempt`. Keep `solution_usable` False for INFEASIBLE.
 - [ ] `_store_PuLP_solution` `draft: bool` param: skip strict `len(assigned)!=multiplicity`
       assertion (matching.py:2390) in draft mode; store partial assignments.
@@ -42,25 +45,46 @@ Commit each verified phase separately as a clean rollback point.
       audit all `solution_usable` gates (276, 922, 986, 1106, 1212, 1271, 1291, 1400, 1717, 1776,
       1888, 1964, 2206, …): view gates relaxed, mutation gates unchanged.
 
-## Phase 4 — UI surfacing
+## Phase 4 — UI surfacing + editable re-run
 - [ ] Card "View diagnosis" affordance + draft-records summary (matches_v2.py `_card` ~44);
       new `matching_diagnosis_ajax(id)` route (on-demand fragment, like match_statistics_ajax).
-- [ ] New `_diagnosis.html` panel — reads differently from error_block badges: full-width,
-      grouped by category, errors-first, amount + remediation buttons, interpretation caveat.
-      Semantic Bootstrap tokens; `render_convenor_actions` for buttons where it fits.
-- [ ] `rerun_match(id)` endpoint + `_clone_match_config` helper (config only, no records/enums);
-      menu item for infeasible attempts (matches_v2.py ~163).
+- [ ] New `_diagnosis.html` panel = **single remediation surface**: reads differently from
+      error_block badges (full-width, grouped by category, errors-first, amount + per-violation
+      `remediations` button list, interpretation caveat). Semantic Bootstrap tokens;
+      `render_convenor_actions` for the button rows.
+- [ ] **Editable** `rerun_match(id)` form (admin/matching.py): pre-fill from infeasible attempt,
+      expose match-option levers (`max_marking_multiplicity`, `max_different_*`, match CATS limits,
+      `ignore_per_faculty_limits`, `force_base`, biases), pre-highlight diagnosis-implicated ones;
+      on submit `_clone_match_config(src, overrides)` (config only, no records/enums) + launch
+      `create_match`. `rerun_option` remediations deep-link here. Menu item for infeasible attempts
+      (matches_v2.py ~163).
 - [ ] Draft banner in `workspace.html`.
 
-## Phase 5 — LiveProject capacity editing (convenor)
-- [ ] `edit_liveproject_capacity` route (app/convenor/projects.py ~467) + small WTForms form
-      (app/convenor/forms.py) with capacity/enforce_capacity (reuse DescriptionSettingsMixinFactory
-      fields). CSRF hidden_tag; url/text return convention; log_db_commit; pclass-ownership guard.
-- [ ] Point diagnosis `increase_capacity` remediation url here.
+## Phase 5 — remediation editors (single-surface fixes)
+- [ ] **NEW** `edit_liveproject_capacity` route (app/convenor/projects.py near
+      `edit_liveproject_supervisors` ~885) + small WTForms form (app/convenor/forms.py) with
+      capacity/enforce_capacity (reuse DescriptionSettingsMixinFactory fields). CSRF hidden_tag;
+      url/text return; log_db_commit; pclass-ownership guard. Category `project_capacity` → here.
+- [ ] Report renderer builds correct deep-links (with url/text) for the **reused** editors:
+      assessor pool (`liveproject_attach_assessor` 3307 / `attach_assessors` 2991),
+      supervisor pool (`edit_liveproject_supervisors` 885), `custom_CATS_limits` (documents.py:178),
+      custom-offer CRUD (selector_details.py:771+). **Verify each accepts/round-trips url/text**;
+      add where missing.
+- [ ] `out_of_pool_*` "accept out-of-pool" alternative = informational note (validation only warns;
+      no data edit).
+- [ ] CATS coherence: helper comparing EnrollmentRecord vs FacultyData CATS limits; non-blocking
+      warning in `custom_CATS_limits` (documents.py:178) when per-class > global; diagnosis advisory
+      on CATS violations involving incoherent limits.
 
 ## Verification (see PLAN.md)
-- [ ] 6 synthetic fixtures (one per category + feasible control).
+- [ ] 8 synthetic fixtures: project_capacity, forced_assignment, marker_capacity,
+      supervisor_is_marker, pclass_cats_limit, out_of_pool_marker, out_of_pool_supervisor,
+      + feasible control. Check category, amount, remediations deep-links, draft unassigned set,
+      and weight ordering (capacity blamed before pool).
 - [ ] Feasible-path regression (identical outcome/score/records/timing).
 - [ ] Lifecycle checks (publish ok; select/populate/rollover blocked).
-- [ ] UI + capacity round-trip + full re-run loop.
+- [ ] Single-surface UI: each remediation type deep-links + returns via url/text (capacity, pools,
+      CATS, offers, editable re-run with flagged option pre-highlighted).
+- [ ] Re-run loop both routes: data fix (capacity) + option fix (max_marking_multiplicity).
+- [ ] CATS coherence: edit-time warning + diagnosis advisory.
 - [ ] ruff check + format.

@@ -348,3 +348,70 @@ all independent conflicts surface in one pass rather than one IIS at a time — 
 to the production solve path, and both the elastic-slack pattern (C10) and the
 error/warning reporting vocabulary (`matching_validation.py`) already exist in the codebase
 to build on.
+
+---
+
+## 6. Post-study refinements (settled in discussion; supersede §1–§4 where they differ)
+
+The approved `PLAN.md` reflects these. Recorded here so the study stays consistent with it.
+
+### 6.1 Module name
+The shared module is **`app/tasks/matching_diagnostics.py`** (not `optimization_diagnostics.py`).
+
+### 6.2 Testing cannot use historical replay
+`MatchingEnumeration` rows exist **only** for the offline-upload workflow and are swept once
+`awaiting_upload` is False (`matching_enumeration_record_maintenance`), and are deleted when a
+successful optimization is uploaded. There is nothing to re-hydrate for a normal infeasible
+attempt. §4's "re-hydrate from `MatchingEnumeration`" testing strategy is therefore **dropped**
+in favour of synthetic fixtures only.
+
+### 6.3 Pool eligibility is elasticized (revises §1.2)
+§1.2 recommended keeping pool eligibility (`M=0` markers, `P=0` supervisors) hard. This is
+**reversed**. Downstream validation treats an out-of-pool marker (`matching_validation.py:278`)
+and out-of-pool supervisor (`:298`) as **warnings, not errors** — they do not block rollover — so
+the solver's hard pool constraints are *stricter* than the system requires. Elasticizing them:
+- is **cheap**: the `Y`/`S` variables already exist for `M=0`/`P=0` entries (the eligibility
+  constraint merely pins them to 0), so this adds slack on existing constraints with **no new
+  decision variables**;
+- adds two distinct report categories `out_of_pool_marker` / `out_of_pool_supervisor`, letting
+  the diagnosis separate "*pool* too small" from "*capacity* too small";
+- gives the user a genuine choice: enlarge the pool (data fix) or accept the already-permitted
+  out-of-pool assignment.
+Weight: **lighter** than `unassigned_student` (assigning out-of-pool beats leaving a student with
+no project) but **heavier** than the count/CATS levers (prefer to relax a capacity/CATS number
+before staffing outside the pool). To avoid blow-up, register a pool `SlackEntry` only for entries
+actually driven nonzero (filter at report time), not one per candidate pair.
+
+### 6.4 Remediation levers per category, and the single UI surface
+The diagnosis panel *is* the single remediation surface. Each violation carries a **list** of
+remediations (§ report schema in PLAN.md), split into two routes:
+
+| Category | Lever | Editor | New? |
+|---|---|---|---|
+| `project_capacity` | raise `LiveProject.capacity` / clear `enforce_capacity` | `edit_liveproject_capacity` | **new** |
+| `out_of_pool_marker`, `supervisor_is_marker` | add to assessor pool | `liveproject_attach_assessor` (projects.py:3307), `attach_assessors` (2991) | exists |
+| `out_of_pool_supervisor` | add to supervisor pool | `edit_liveproject_supervisors` (projects.py:885) | exists |
+| `pclass_cats_limit` | raise `EnrollmentRecord.CATS_*` | `custom_CATS_limits` (documents.py:178) | exists |
+| `global_cats_limit` | raise `FacultyData.CATS_*` / match limits / `ignore_per_faculty_limits` | admin faculty edit + re-run form | exists / re-run |
+| `marker_capacity` | raise `max_marking_multiplicity` | re-run form | re-run |
+| `distinct_projects` | raise `max_different_*` | re-run form | re-run |
+| `forced_assignment` | edit hint / withdraw-redirect custom offer | offer CRUD (selector_details.py:771+), hint edit | exists |
+| `base_match` | clear `force_base` | re-run form | re-run |
+
+Match-level option levers have **no edit form for an existing `MatchingAttempt`** (only
+`create_match`/`rename_match`), so they are changed through an **editable re-run form**: clone the
+config, edit the flagged option(s), relaunch. Data levers deep-link to their (mostly existing)
+editors. Every link is threaded with the `url`/`text` return convention back to the diagnosis.
+
+### 6.5 What the marker capacity constraint (C7) actually is
+`M[i,j] = max_marking_multiplicity` (from `record.max_marking_multiplicity`, floored at 1) when
+marker *i* is in the assessor pool for project *j*, else 0. The constraint `Σ_l Y[i,j,l] ≤ M[i,j]`
+caps how many students' reports from a **single LiveProject** one marker may be assigned. It is
+neither pool eligibility (the `M=0` case, now `out_of_pool_marker`) nor overall marking workload
+(that is CATS). Its lever is the match option `max_marking_multiplicity`.
+
+### 6.6 Global vs per-pclass CATS coherence
+Global (`FacultyData.CATS_*`) applies across the whole match; per-pclass
+(`EnrollmentRecord.CATS_*`) within one class. A per-pclass limit set **above** the global can never
+bind — almost certainly a mistake. Add a non-blocking warning in `custom_CATS_limits` at edit time,
+and a proactive advisory in the diagnosis when a CATS violation involves such an incoherence.

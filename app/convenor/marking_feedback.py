@@ -150,36 +150,6 @@ def audit_matches(pclass_id):
     return redirect(url_for("admin.matching_dashboard", pclass_id=pclass_id))
 
 
-@convenor.route("/audit_matches_ajax/<int:pclass_id>")
-@roles_accepted("faculty", "admin", "root")
-def audit_matches_ajax(pclass_id):
-    # pclass_id labels a ProjectClass
-    pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return jsonify({})
-
-    # get current configuration record for this project class
-    config: ProjectClassConfig = pclass.most_recent_config
-    if config is None:
-        flash(
-            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    matches = config.published_matches.all()
-
-    return ajax.admin.matches_data(
-        matches,
-        config=config,
-        text="matching audit dashboard",
-        url=url_for("convenor.audit_matches", pclass_id=pclass_id),
-        is_root=current_user.has_role("root"),
-    )
-
-
 @convenor.route("/audit_schedules/<int:pclass_id>")
 @roles_accepted("faculty", "admin", "root")
 def audit_schedules(pclass_id):

@@ -82,9 +82,20 @@ plan and rationale. Tick items as they complete; one commit per phase
 - [x] Commit
 
 ## Phase 7 — Consolidation & polish
-- [ ] Colour-token compliance pass (Bootstrap/`common.css` tokens; no raw hex; swatches via model)
-- [ ] Font Awesome icons (replace prototype emoji)
-- [ ] Retire `manage.html`, `audit.html`, superseded `student.html`/`faculty.html` (or thin redirects)
+- [x] Colour-token compliance pass (verified: no raw hex in workspace templates/v2 formatters/JS
+      except the policy-allowed `color: #fff`; swatches via `make_CSS_style`)
+- [x] Font Awesome icons (verified: no emoji glyphs remain in workspace templates, v2 formatters, or JS)
+- [x] Retire `manage.html`, `audit.html`, superseded `student.html`/`faculty.html`:
+      - `match_faculty_view` repointed to a redirect into the workspace (mirrors `match_student_view`);
+        this also removed the stray `E731` lambda that lived in its old body
+      - deleted templates `admin/matching/manage.html`, `convenor/matching/audit.html`,
+        `admin/match_inspector/faculty.html`, `admin/match_inspector/student.html`
+      - removed now-dead AJAX routes `matches_ajax`, `audit_matches_ajax`, `match_student_view_ajax`,
+        `match_faculty_view_ajax` and their orphaned formatters (`matches.py`, `match_view_faculty.py`,
+        `student_view_data`); kept `get_match_student_emails` (used by the live compare feature) and
+        `match_inspector/nav.html` (still extended by the live `dists.html`)
+      - `manage_matching`, `match_student_view`, `match_faculty_view`, `audit_matches` remain as thin
+        redirect shims so existing `url_for(...)` callers and external bookmarks keep working
 - [ ] Accessibility (focus, aria on offcanvas/modals) + responsive check
 - [ ] `ruff check`/`format`; full end-to-end QA; migration up/down
 - [ ] Commit

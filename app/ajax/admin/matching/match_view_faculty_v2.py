@@ -57,27 +57,26 @@ _supervising = """
             {% set ns.count = ns.count + items|length %}
             {% set pclass = pclass_lookup.get(pclass_id) %}
             <div>
-                <div class="text-body-secondary text-uppercase" style="font-size: 10.5px; letter-spacing: .4px;">
-                    {{ pclass.abbreviation if pclass else '' }}
+                <div class="d-flex align-items-center gap-2 text-body-secondary text-uppercase"
+                     style="font-size: 10.5px; letter-spacing: .4px;">
+                    {% if pclass %}{{ small_swatch(pclass.make_CSS_style()) }}{% endif %}
+                    <span>{{ pclass.abbreviation if pclass else '' }}</span>
                 </div>
                 {% for item in items %}
-                    <div class="d-flex align-items-start gap-2 mt-1">
-                        {% if pclass %}{{ small_swatch(pclass.make_CSS_style()) }}{% endif %}
-                        <div>
-                            <a class="text-decoration-none small" role="button" data-bs-toggle="modal" data-bs-target="#matchRoleEditorModal"
-                               data-rec-id="{{ item.record.id }}">{{ item.student.user.name }}</a>
-                            {% if item.programme_pref is not none %}
-                                {% if item.programme_pref %}
-                                    <i class="fas fa-check-circle small" style="color: var(--bs-success-text-emphasis);"
-                                       data-bs-toggle="tooltip" title="Meets programme prefs"></i>
-                                {% else %}
-                                    <i class="fas fa-times-circle small" style="color: var(--bs-warning-text-emphasis);"
-                                       data-bs-toggle="tooltip" title="Programme prefs not met"></i>
-                                {% endif %}
+                    <div class="mt-1" style="padding-left: 1.55rem;">
+                        <a class="text-decoration-none small" role="button" data-bs-toggle="modal" data-bs-target="#matchRoleEditorModal"
+                           data-rec-id="{{ item.record.id }}">{{ item.student.user.name }}</a>
+                        {% if item.programme_pref is not none %}
+                            {% if item.programme_pref %}
+                                <i class="fas fa-check-circle small" style="color: var(--bs-success-text-emphasis);"
+                                   data-bs-toggle="tooltip" title="Meets programme prefs"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle small" style="color: var(--bs-warning-text-emphasis);"
+                                   data-bs-toggle="tooltip" title="Programme prefs not met"></i>
                             {% endif %}
-                            <div class="small text-body-secondary mwfp-proj"
-                                 title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</div>
-                        </div>
+                        {% endif %}
+                        <div class="small text-body-secondary mwfp-proj"
+                             title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</div>
                     </div>
                 {% endfor %}
             </div>

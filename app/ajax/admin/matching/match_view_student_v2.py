@@ -48,9 +48,11 @@ _student = """
         </a>
     </span>
     {% if row.journal.visible %}
-        <span class="badge rounded-pill border text-body-secondary small">
+        <a class="badge rounded-pill border text-body-secondary small text-decoration-none" role="button"
+           data-bs-toggle="offcanvas" data-bs-target="#matchStudentDrawer" data-rec-id="{{ row.record.id }}"
+           data-student-name="{{ row.user.name }}" title="View journal entries for {{ row.user.name }}">
             <i class="fas fa-book me-1"></i>{{ row.journal.visible }}
-        </span>
+        </a>
     {% endif %}
     {% if row.open_tickets %}
         <span class="badge rounded-pill small"

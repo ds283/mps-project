@@ -79,7 +79,10 @@ _scope = """
     <span class="text-muted">General</span>
 {% elif subjects | length == 1 %}
     {% set s = subjects[0] %}
-    {% if s.kind == 0 and s.submitting_student %}
+    {% if s.is_tombstoned %}
+        <div class="text-muted fst-italic" title="This student record has been deleted">{{ s.deleted_snapshot_label }}</div>
+        <span class="tk-label" style="background:{{ kind_colours.get(s.kind, '#6c757d') }};color:#fff">{{ 'Submitter' if s.kind == 0 else 'Selector' }} (deleted)</span>
+    {% elif s.kind == 0 and s.submitting_student %}
         <div class="text-muted">{{ s.submitting_student.student.user.name if s.submitting_student.student and s.submitting_student.student.user else 'Student' }}</div>
         <span class="tk-label" style="background:{{ kind_colours[0] }};color:#fff">Submitter</span>
     {% elif s.kind == 1 and s.selecting_student %}

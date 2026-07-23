@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from sqlalchemy_utils import EncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
@@ -89,6 +90,7 @@ class TicketEventKindMixin:
     EMAIL_LOGGED = 9
     SUBJECT_ADDED = 10
     SUBJECT_REMOVED = 11
+    SUBJECT_TOMBSTONED = 12
 
     _labels = {
         OPENED: "Opened",
@@ -103,6 +105,7 @@ class TicketEventKindMixin:
         EMAIL_LOGGED: "Email logged",
         SUBJECT_ADDED: "Subject added",
         SUBJECT_REMOVED: "Subject removed",
+        SUBJECT_TOMBSTONED: "Subject link deleted",
     }
 
 
@@ -333,13 +336,37 @@ class TicketEvent(db.Model, TicketEventKindMixin):
             return None
 
 
+@dataclass(frozen=True)
+class TicketSubjectTombstone:
+    """
+    The well-defined value `TicketSubject.target` resolves to once its linked SubmittingStudent /
+    SelectingStudent has been deleted. `kind` is the TicketSubjectKindMixin value the subject used
+    to carry (still available from the subject itself, but repeated here for a self-contained
+    value); `label` is the student's display name captured at deletion time.
+    """
+
+    kind: int
+    label: str
+    deleted_at: datetime
+
+    @property
+    def kind_label(self) -> str:
+        return TicketSubjectKindMixin._labels.get(self.kind, "Unknown")
+
+
 class TicketSubject(db.Model, TicketSubjectKindMixin):
     """
     What a ticket is "about". A ticket has zero or more subjects, each pointing at exactly one
     target (a submitting student, a selecting student, or a pinned project class). A ticket with no
     subjects is a "General" ticket with empty class scope.
 
-    Exactly one of the three FK columns is non-null, matching kind (DB check constraint).
+    Exactly one of the three FK columns is non-null, matching kind — UNLESS the subject has been
+    tombstoned (see `deleted_at`), in which case all three are null: its target student was deleted
+    while still referenced by this subject, so the FK was cleared rather than blocking the deletion
+    or cascading it into the ticket. `kind` is left unchanged so the subject still identifies what
+    *kind* of link was lost. Client code should not inspect the FK columns directly to tell live
+    from tombstoned — use the `target` property, which resolves to either the live object or a
+    `TicketSubjectTombstone`.
     """
 
     __tablename__ = "ticket_subjects"
@@ -351,7 +378,8 @@ class TicketSubject(db.Model, TicketSubjectKindMixin):
 
     kind = db.Column(db.Integer(), nullable=False)
 
-    # exactly one of the following three is set, matching kind
+    # exactly one of the following three is set, matching kind — unless tombstoned (see class
+    # docstring), in which case all three are null.
     submitting_student_id = db.Column(db.Integer(), db.ForeignKey("submitting_students.id"), nullable=True, index=True)
     submitting_student = db.relationship(
         "SubmittingStudent", foreign_keys=[submitting_student_id], backref=db.backref("ticket_subjects", lazy="dynamic")
@@ -365,12 +393,44 @@ class TicketSubject(db.Model, TicketSubjectKindMixin):
     project_class_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"), nullable=True, index=True)
     project_class = db.relationship("ProjectClass", foreign_keys=[project_class_id], backref=db.backref("ticket_subjects", lazy="dynamic"))
 
+    # TOMBSTONE — set together when a linked SubmittingStudent/SelectingStudent is deleted (see
+    # app.shared.tickets.subjects.tombstone_subjects_for_student). deleted_at is None for a live
+    # subject; once set, the FK columns above are null and deleted_snapshot_label carries the
+    # student's display name at the time of deletion, for the "target" property / UI to fall back on.
+    deleted_snapshot_label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+    deleted_at = db.Column(db.DateTime(), nullable=True)
+
     __table_args__ = (
         db.CheckConstraint(
-            "((submitting_student_id IS NOT NULL) + (selecting_student_id IS NOT NULL) + (project_class_id IS NOT NULL)) = 1",
+            "(((submitting_student_id IS NOT NULL) + (selecting_student_id IS NOT NULL) + (project_class_id IS NOT NULL)) = 1)"
+            " OR "
+            "(submitting_student_id IS NULL AND selecting_student_id IS NULL AND project_class_id IS NULL AND deleted_at IS NOT NULL)",
             name="ck_ticket_subject_exactly_one_target",
         ),
     )
+
+    @property
+    def is_tombstoned(self) -> bool:
+        return self.deleted_at is not None
+
+    @property
+    def target(self) -> Union["TicketSubjectTombstone", object, None]:
+        """
+        Resolve this subject to its live target object, or to a `TicketSubjectTombstone` if the
+        linked record has been deleted. Client code must go through this property rather than
+        reading the FK/relationship columns directly, so it never needs to know that a null FK
+        means "deleted" as opposed to some other absence.
+        """
+        if self.kind == TicketSubject.SUBMITTING_STUDENT and self.submitting_student is not None:
+            return self.submitting_student
+        if self.kind == TicketSubject.SELECTING_STUDENT and self.selecting_student is not None:
+            return self.selecting_student
+        if self.kind == TicketSubject.PROJECT_CLASS:
+            return self.project_class
+
+        if self.is_tombstoned:
+            return TicketSubjectTombstone(kind=self.kind, label=self.deleted_snapshot_label, deleted_at=self.deleted_at)
+        return None
 
 
 class TicketSubscription(db.Model, TicketSubscriptionReasonMixin):

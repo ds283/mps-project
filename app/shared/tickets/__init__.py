@@ -23,12 +23,15 @@ from .actions import (
     remove_label,
     unassign,
 )
+from .administrators import admin_root_users_for
 from .candidates import (
     SEARCH_LIMIT,
     authorized,
     candidates_for,
     faculty_classes,
+    faculty_for_selecting_student,
     faculty_related_student_query,
+    faculty_roles_for_submitting_student,
     faculty_selectee_query,
     faculty_supervisee_query,
     is_office_like,
@@ -66,7 +69,7 @@ from .scope import (
     primary_convenor_user,
     recompute_scope,
 )
-from .subjects import add_subject, create_ticket, remove_subject
+from .subjects import add_subject, create_ticket, open_tickets_for_student, remove_subject, tombstone_subjects_for_student
 from .subscriptions import (
     add_external_subscriber,
     is_subscribed,
@@ -82,6 +85,7 @@ __all__ = [
     "add_external_subscriber",
     "add_label",
     "add_subject",
+    "admin_root_users_for",
     "apply_auto_assign",
     "assign",
     "authorized",
@@ -101,7 +105,9 @@ __all__ = [
     "create_ticket",
     "derive_tenant_id",
     "faculty_classes",
+    "faculty_for_selecting_student",
     "faculty_related_student_query",
+    "faculty_roles_for_submitting_student",
     "faculty_selectee_query",
     "faculty_supervisee_query",
     "home_class",
@@ -114,6 +120,7 @@ __all__ = [
     "log_email",
     "mark_read",
     "name_filter",
+    "open_tickets_for_student",
     "primary_convenor_user",
     "record_event",
     "record_inbox_visit",
@@ -129,6 +136,7 @@ __all__ = [
     "sync_convenor_subscriptions",
     "target_tenant_id",
     "token_for",
+    "tombstone_subjects_for_student",
     "touch",
     "unassign",
     "unsubscribe",

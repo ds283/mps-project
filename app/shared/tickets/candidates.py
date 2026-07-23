@@ -143,6 +143,11 @@ _FACULTY_STUDENT_ROLES = _SUPERVISOR_ROLES + (
     SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
 )
 
+# roles relevant to the ticket assign picker's "Related faculty" section (app/tickets/detail.py):
+# supervisors, markers and moderators. Presentation assessor is excluded (not ticket-relevant); exam
+# board / external examiner roles are not implemented.
+_ASSIGNABLE_STUDENT_ROLES = _SUPERVISOR_ROLES + (SubmissionRole.ROLE_MARKER, SubmissionRole.ROLE_MODERATOR)
+
 
 def _faculty_role_query(user, roles):
     return (
@@ -196,6 +201,42 @@ def faculty_selectee_query(user):
         .filter(LiveProject.owner_id == faculty.id, SelectingStudent.retired.is_(False))
         .distinct()
     )
+
+
+def faculty_roles_for_submitting_student(student):
+    """Inverse of the role queries above: given a SubmittingStudent, the (User, role, SubmissionRecord)
+    triples for every faculty member holding a supervisor / responsible-supervisor / marker /
+    moderator role on any of the student's submission records. Used to populate the ticket assign
+    picker's "Related faculty" section (app/tickets/detail.py) — not the compose-flow candidate
+    search, so presentation assessor and exam board / external examiner roles are excluded here even
+    though they're broader than the roles offered when composing a ticket subject."""
+    roles = (
+        SubmissionRole.query.join(SubmissionRecord, SubmissionRole.submission_id == SubmissionRecord.id)
+        .filter(SubmissionRecord.owner_id == student.id, SubmissionRole.role.in_(_ASSIGNABLE_STUDENT_ROLES))
+        .all()
+    )
+    return [(role.user, role.role, role.submission) for role in roles if role.user is not None]
+
+
+def faculty_for_selecting_student(student):
+    """Inverse of `faculty_selectee_query`: given a SelectingStudent, the (User, LiveProject) pairs
+    for every faculty member who owns a project the student has a live (requested or confirmed)
+    sign-off request against. Declined requests are excluded."""
+    requests = (
+        ConfirmRequest.query.join(LiveProject, ConfirmRequest.project_id == LiveProject.id)
+        .filter(
+            ConfirmRequest.owner_id == student.id,
+            ConfirmRequest.state.in_((ConfirmRequest.REQUESTED, ConfirmRequest.CONFIRMED)),
+        )
+        .all()
+    )
+    pairs = []
+    for request in requests:
+        project = request.project
+        if project is None or project.owner is None or project.owner.user is None:
+            continue
+        pairs.append((project.owner.user, project))
+    return pairs
 
 
 def convenor_submitting_query(pclass):

@@ -23,11 +23,16 @@ from datetime import datetime
 from typing import Iterable, Optional, Tuple
 
 from ...database import db
-from ...models import Ticket, TicketEvent, TicketSubject, TicketSubscription
+from ...models import Ticket, TicketEvent, TicketSubject, TicketSubjectTombstone, TicketSubscription
+from .candidates import student_name
 from .events import record_event
 from .routing import apply_auto_assign
 from .scope import recompute_scope
 from .subscriptions import subscribe, sync_convenor_subscriptions
+
+# subject kinds that can legitimately be tombstoned — a project class is never deleted through this
+# path, only submitting/selecting students are.
+_TOMBSTONABLE_KINDS = (TicketSubject.SUBMITTING_STUDENT, TicketSubject.SELECTING_STUDENT)
 
 # maps a subject kind to the FK column that carries its target id
 _KIND_FIELD = {
@@ -75,10 +80,11 @@ def remove_subject(ticket, subject: TicketSubject, actor=None) -> bool:
     if ticket.subjects.count() <= 1:
         return False
 
-    payload = {
-        "kind": subject.kind,
-        "target": subject.submitting_student_id or subject.selecting_student_id or subject.project_class_id,
-    }
+    target = subject.target
+    if isinstance(target, TicketSubjectTombstone):
+        payload = {"kind": subject.kind, "label": target.label}
+    else:
+        payload = {"kind": subject.kind, "target": target.id if target is not None else None}
     db.session.delete(subject)
     db.session.flush()
 
@@ -141,3 +147,56 @@ def create_ticket(
     sync_convenor_subscriptions(ticket, actor=actor)
 
     return ticket
+
+
+def open_tickets_for_student(student, kind: int):
+    """
+    The open (OPEN_STATES) tickets that reference `student` via a live (non-tombstoned)
+    TicketSubject of the given kind — used by the delete-submitter/delete-selector confirmation
+    pages to warn that deleting the student will affect a ticket, before the deletion happens.
+    """
+    field = _KIND_FIELD.get(kind)
+    if field is None or kind not in _TOMBSTONABLE_KINDS:
+        raise ValueError(f"Cannot look up tickets for a subject of kind: {kind}")
+
+    return (
+        Ticket.query.join(TicketSubject, TicketSubject.ticket_id == Ticket.id)
+        .filter(getattr(TicketSubject, field) == student.id, Ticket.status.in_(Ticket.OPEN_STATES))
+        .distinct()
+        .all()
+    )
+
+
+def tombstone_subjects_for_student(student, kind: int, actor=None) -> list[TicketSubject]:
+    """
+    Convert every TicketSubject referencing `student` (a SubmittingStudent or SelectingStudent about
+    to be deleted) into a tombstone: capture its display name and the deletion time, then null the
+    FK column so the subsequent delete of `student` no longer hits the FK constraint. `kind` is left
+    unchanged on the subject — it still identifies what kind of link was lost (see
+    `TicketSubject.target`). Never touches `ticket.assignee_id`, mirroring `add_subject` /
+    `remove_subject`'s "never steals an existing owner" rule. Does not commit — the caller owns the
+    transaction and should call this before deleting `student`.
+    """
+    field = _KIND_FIELD.get(kind)
+    if field is None or kind not in _TOMBSTONABLE_KINDS:
+        raise ValueError(f"Cannot tombstone a subject of kind: {kind}")
+
+    subjects = TicketSubject.query.filter(getattr(TicketSubject, field) == student.id).all()
+    if not subjects:
+        return []
+
+    label = student_name(student)
+    now = datetime.now()
+
+    for subject in subjects:
+        setattr(subject, field, None)
+        subject.deleted_snapshot_label = label
+        subject.deleted_at = now
+
+    db.session.flush()
+
+    for subject in subjects:
+        record_event(subject.ticket, actor, TicketEvent.SUBJECT_TOMBSTONED, {"kind": kind})
+        recompute_scope(subject.ticket)
+
+    return subjects

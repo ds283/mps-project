@@ -36,7 +36,8 @@
         </div>
     </div>
     {% if is_root_view and form is not none %}
-        <form action="{{ url_for('admin.matching_dashboard') }}" method="GET" name="selector_form" class="mt-2" style="max-width: 260px;">
+        <form action="{{ url_for('admin.matching_dashboard') }}" method="GET" name="selector_form" class="mt-2"
+              style="max-width: 260px;">
             <span class="form-text"><strong>Select academic year</strong></span>
             {{ on_click_selector_field(form.selector) }}
         </form>
@@ -44,15 +45,6 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="mt-3">
-        {% call icon_block("bolt") %}
-            <strong>Fast first load, no cache.</strong> The expensive summary statistics for each match
-            (programme-preference/hint status, rank &amp; CATS ranges, validation errors and warnings) are
-            computed on demand, per card, when you press &ldquo;Compute summary statistics&rdquo; &mdash;
-            never cached, so there is nothing to invalidate after an edit.
-        {% endcall %}
-    </div>
-
     <div id="mdash-cards" class="mt-3">
         <div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>
     </div>

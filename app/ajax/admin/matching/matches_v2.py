@@ -11,6 +11,7 @@
 from typing import List, Optional
 
 from flask import current_app, get_template_attribute, jsonify, render_template
+
 from jinja2 import Environment, Template
 from markupsafe import Markup
 
@@ -102,14 +103,13 @@ _card = """
 </div>
 """
 
-
 # language=jinja2
 _menu = """
 <div class="dropdown">
     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu-dark dropdown-menu-end">
         {% if m.finished and m.solution_usable %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.matching_workspace', id=m.id, view='student', text=text, url=url) }}">
                 <i class="fas fa-search fa-fw"></i> Inspect: student view

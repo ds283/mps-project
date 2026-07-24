@@ -88,6 +88,10 @@ def can_edit_scope(user, ticket) -> bool:
     return False
 
 
+def can_edit_title(user, ticket) -> bool:
+    return is_admin_or_root(user) or is_convenor_in_scope(user, ticket) or is_assignee(user, ticket)
+
+
 def can_manage_labels(user) -> bool:
     """Manage tenant label definitions: convenor (any class), or admin/root."""
     if is_admin_or_root(user):

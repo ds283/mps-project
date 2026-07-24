@@ -91,6 +91,7 @@ class TicketEventKindMixin:
     SUBJECT_ADDED = 10
     SUBJECT_REMOVED = 11
     SUBJECT_TOMBSTONED = 12
+    TITLE_CHANGED = 13
 
     _labels = {
         OPENED: "Opened",
@@ -106,6 +107,7 @@ class TicketEventKindMixin:
         SUBJECT_ADDED: "Subject added",
         SUBJECT_REMOVED: "Subject removed",
         SUBJECT_TOMBSTONED: "Subject link deleted",
+        TITLE_CHANGED: "Title changed",
     }
 
 

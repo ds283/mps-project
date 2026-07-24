@@ -52,6 +52,7 @@ from ..shared.tickets import (
     can_change_status,
     can_comment,
     can_edit_scope,
+    can_edit_title,
     can_label,
     can_manage_subscribers,
     can_view,
@@ -66,6 +67,7 @@ from ..shared.tickets import (
     remove_external_subscriber,
     remove_label,
     remove_subject,
+    rename_ticket,
     resolve_token,
     resolve_unsubscribe_token,
     subscribe,
@@ -73,7 +75,7 @@ from ..shared.tickets import (
     unsubscribe,
 )
 from ..shared.workflow_logging import log_db_commit
-from .forms import TicketCommentForm, TicketExternalSubscriberForm, TicketLogEmailForm, TicketSubjectAddForm
+from .forms import TicketCommentForm, TicketExternalSubscriberForm, TicketLogEmailForm, TicketSubjectAddForm, TicketTitleEditForm
 
 # events already represented in the thread as rich cards (or as the header) are hidden from the
 # inline timeline; they still appear in the side-panel actions log.
@@ -102,6 +104,13 @@ def _describe_event(event: TicketEvent) -> dict:
     """Render an event as an icon + human sentence for the timeline / actions log."""
     payload = event.payload or {}
     kind = event.kind
+
+    if kind == TicketEvent.TITLE_CHANGED:
+        return {
+            "icon": "heading",
+            "text": f"renamed the ticket from \"{payload.get('from')}\" to \"{payload.get('to')}\"",
+            "kind": "generic",
+        }
 
     if kind == TicketEvent.STATUS_CHANGED:
         return {
@@ -563,6 +572,7 @@ def detail(ticket_id):
         action_form=ConfirmActionForm(),
         external_form=TicketExternalSubscriberForm(),
         subject_add_form=TicketSubjectAddForm(),
+        title_form=TicketTitleEditForm(),
         perms={
             "comment": can_comment(current_user, ticket),
             "status": can_change_status(current_user, ticket),
@@ -570,6 +580,7 @@ def detail(ticket_id):
             "label": can_label(current_user, ticket),
             "subscribe": can_manage_subscribers(current_user, ticket),
             "edit_scope": can_edit_scope(current_user, ticket),
+            "edit_title": can_edit_title(current_user, ticket),
         },
     )
 
@@ -676,6 +687,27 @@ def set_status(ticket_id, status):
             ticket,
             "Could not update the ticket status due to a database error.",
         )
+
+    return _back(ticket)
+
+
+@tickets.route("/<int:ticket_id>/title", methods=["POST"])
+@login_required
+def title_edit(ticket_id):
+    ticket = _load_ticket(ticket_id)
+    if not can_edit_title(current_user, ticket):
+        abort(403)
+
+    form = TicketTitleEditForm()
+    if form.validate_on_submit():
+        rename_ticket(ticket, form.title.data, actor=current_user)
+        _commit_or_flash(
+            f"Renamed ticket #{ticket.id}",
+            ticket,
+            "Could not rename the ticket due to a database error.",
+        )
+    else:
+        flash("Could not rename the ticket — please check the title and try again.", "error")
 
     return _back(ticket)
 

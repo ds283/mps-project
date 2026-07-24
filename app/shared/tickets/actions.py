@@ -104,6 +104,14 @@ def log_email(
     return email
 
 
+def rename_ticket(ticket, new_title: str, actor=None) -> None:
+    old = ticket.title
+    if old == new_title:
+        return
+    ticket.title = new_title
+    record_event(ticket, actor, TicketEvent.TITLE_CHANGED, {"from": old, "to": new_title})
+
+
 def add_label(ticket, label, actor=None) -> None:
     if ticket.labels.filter_by(id=label.id).first() is not None:
         return

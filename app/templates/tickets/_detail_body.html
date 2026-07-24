@@ -88,7 +88,14 @@
     {# header #}
     <div class="d-flex align-items-start gap-3 mb-2">
         <div class="flex-grow-1" style="min-width:0">
-            <div style="font-size:20px; font-weight:700; line-height:1.3">{{ ticket.title }}</div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="font-size:20px; font-weight:700; line-height:1.3">{{ ticket.title }}</div>
+                {% if perms.edit_title %}
+                    <button class="btn btn-sm btn-link p-0 text-secondary" type="button" data-bs-toggle="modal" data-bs-target="#tk-title-edit-modal" title="Edit title">
+                        <i class="fas fa-pen" style="font-size:13px"></i>
+                    </button>
+                {% endif %}
+            </div>
             <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
                 {{ status_pill(ticket.status) }}
                 <span style="font-size:12.5px; color:var(--bs-secondary-color)">
@@ -482,6 +489,30 @@
             </div>
         </div>
     </div>
+
+    {% if perms.edit_title %}
+        <div class="modal fade" id="tk-title-edit-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="{{ url_for('tickets.title_edit', ticket_id=ticket.id) }}">
+                        {{ title_form.hidden_tag() }}
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit title</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            {{ title_form.title.label(class="form-label small") }}
+                            {{ title_form.title(class="form-control", value=ticket.title) }}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            {{ title_form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
 
 {# Call from the wrapper template's own {% block scripts %} (after {{ super() }}), so this runs

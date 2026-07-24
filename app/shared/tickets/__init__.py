@@ -21,6 +21,7 @@ from .actions import (
     change_status,
     log_email,
     remove_label,
+    rename_ticket,
     unassign,
 )
 from .administrators import admin_root_users_for
@@ -50,6 +51,7 @@ from .permissions import (
     can_change_status,
     can_comment,
     can_edit_scope,
+    can_edit_title,
     can_label,
     can_manage_labels,
     can_manage_subscribers,
@@ -95,6 +97,7 @@ __all__ = [
     "can_change_status",
     "can_comment",
     "can_edit_scope",
+    "can_edit_title",
     "can_label",
     "can_manage_labels",
     "can_manage_subscribers",
@@ -131,6 +134,7 @@ __all__ = [
     "remove_external_subscriber",
     "remove_label",
     "remove_subject",
+    "rename_ticket",
     "resolve_convenor_pclass",
     "resolve_token",
     "resolve_unsubscribe_token",

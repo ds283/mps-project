@@ -75,6 +75,14 @@ class TicketExternalSubscriberForm(Form):
     submit = SubmitField("Add")
 
 
+class TicketTitleEditForm(Form):
+    """Edit a ticket's title (detail view pencil-icon modal)."""
+
+    title = StringField("Title", validators=[DataRequired(), Length(max=255)])
+
+    submit = SubmitField("Save")
+
+
 class TicketSubjectAddForm(Form):
     """Add a scope subject to an existing ticket (detail view). `token` is the opaque
     "sub:<id>"/"sel:<id>"/"pc:<id>" value chosen from the select2 picker; re-validated server-side

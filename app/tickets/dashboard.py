@@ -131,9 +131,17 @@ def _convenor_base_query(user, class_id):
 
 
 def _apply_common_filters(query, args):
-    status = args.get("status", type=int)
-    if status is not None:
-        query = query.filter(Ticket.status == status)
+    status = args.get("status")
+    if status == "available":
+        query = query.filter(Ticket.status.in_((Ticket.OPEN, Ticket.IN_PROGRESS)))
+    elif status not in (None, "", "any"):
+        status_value = None
+        try:
+            status_value = int(status)
+        except (TypeError, ValueError):
+            pass
+        if status_value is not None:
+            query = query.filter(Ticket.status == status_value)
     label_id = args.get("label_id", type=int)
     if label_id is not None:
         query = query.filter(Ticket.labels.any(Label.id == label_id))

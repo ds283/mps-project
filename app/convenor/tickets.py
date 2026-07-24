@@ -119,6 +119,17 @@ def tickets_tab(id):
     if pclass.tenant_id is not None:
         labels = Label.query.filter_by(tenant_id=pclass.tenant_id).order_by(Label.name.asc()).all()
 
+    raw_status = request.args.get("status")
+    if raw_status in (None, "available"):
+        selected_status = "available"
+    elif raw_status == "any":
+        selected_status = "any"
+    else:
+        try:
+            selected_status = int(raw_status)
+        except (TypeError, ValueError):
+            selected_status = "available"
+
     return render_template_context(
         "convenor/dashboard/tickets.html",
         pane="tickets",
@@ -129,7 +140,7 @@ def tickets_tab(id):
         needs_triage_meta=[_triage_meta(ticket) for ticket in triage],
         labels=labels,
         all_statuses=[(value, label) for value, label in Ticket._labels.items()],
-        selected_status=request.args.get("status", type=int),
+        selected_status=selected_status,
         selected_label=request.args.get("label_id", type=int),
         selected_subject_kind=request.args.get("subject_kind"),
         selected_subject=request.args.get("subject"),

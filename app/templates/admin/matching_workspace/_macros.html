@@ -4,6 +4,30 @@
   Bootstrap 5.3 semantic tokens only, no raw hex.
 #}
 
+{% macro period_pill(pill) %}
+    {# Standalone period chip: pill.colours carries pill_bg/pill_fg/pill_border from
+       app.shared.colours.period_colour_family (class-anchored, or neutral var(--bs-secondary-*)
+       tokens if the owning ProjectClass has no colour). #}
+    {% if pill %}
+        <span class="badge rounded-pill small" style="background: {{ pill.colours.pill_bg }};
+                     color: {{ pill.colours.pill_fg }}; border: 1px solid {{ pill.colours.pill_border }};
+                     font-weight: 600; white-space: nowrap;">{{ pill.name }}</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro class_period_tag(pill) %}
+    {# "class · period" tag for the faculty tab / reassignment modal: class swatch + abbreviation,
+       then the period_pill for the record's SubmissionPeriodDefinition. #}
+    {% if pill %}
+        <span class="d-inline-flex align-items-center gap-2 flex-wrap">
+            <span style="width: 11px; height: 11px; border-radius: 3px; display: inline-block;
+                         {{ pill.pclass_swatch|safe }}"></span>
+            <span class="small text-body-secondary">{{ pill.pclass_abbrev }}</span>
+            {{ period_pill(pill) }}
+        </span>
+    {% endif %}
+{% endmacro %}
+
 {% macro modified_pill() %}
     <span class="badge rounded-pill small" style="border: 1px solid var(--bs-primary); color: var(--bs-primary); letter-spacing: 0.4px;">MODIFIED</span>
 {% endmacro %}

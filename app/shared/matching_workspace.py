@@ -28,6 +28,7 @@ from flask import url_for
 from flask_security import current_user
 from sqlalchemy import and_, case, func, literal, or_
 
+from .colours import period_colour_family
 from .sqlalchemy import get_count
 from ..database import db
 from ..models import (
@@ -47,6 +48,7 @@ from ..models import (
     batch_journal_counts,
     journal_activity_summary,
 )
+from ..models.project_class import SubmissionPeriodDefinition
 
 _SUPERVISOR_ROLES = [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
 _MARKER_ROLES = [MatchingRole.ROLE_MARKER]
@@ -211,6 +213,54 @@ def _group_records_by_pclass(records: List[MatchingRecord]) -> Dict[int, List[di
 
 
 # ############################
+# PERIOD IDENTITY
+# ############################
+
+
+def period_sort_key(spd: SubmissionPeriodDefinition) -> Tuple[str, int]:
+    """
+    Stable sort key for "by period" grouping/listing: group by `ProjectClass` (in `.name` order,
+    the ordering used app-wide), then by the definition's in-class position. Periods are keyed on
+    the `SubmissionPeriodDefinition` itself, so "period 1" of two different classes are always
+    distinct groups even though they share this key's second component.
+    """
+    return (spd.owner.name, spd.period)
+
+
+def build_period_pill(record: MatchingRecord) -> Optional[dict]:
+    """
+    Assemble the view dict for one MatchingRecord's period pill: the SubmissionPeriodDefinition
+    it belongs to, its position within the owning ProjectClass, and a class-anchored colour family
+    stop (see `app.shared.colours.period_colour_family`). Returns None if the record carries no
+    period (guards `MatchingRecord.period`, which can be None).
+
+    A record — not a bare SubmissionPeriodDefinition — is required because rendering the period's
+    display name needs the viewing config's academic year (`SubmissionPeriodDefinition.display_name`
+    substitutes {year1}/{year2} placeholders), which only the record's selector config carries.
+    """
+    spd = record.period
+    if spd is None:
+        return None
+
+    pclass = spd.owner
+    config = record.selector.config
+
+    family = period_colour_family(pclass.colour, max(pclass.number_submissions, 1))
+    position = spd.period or 1
+    colours = family[(position - 1) % len(family)]
+
+    return {
+        "id": spd.id,
+        "name": spd.display_name(config.year),
+        "position": position,
+        "count": pclass.number_submissions,
+        "pclass_abbrev": pclass.abbreviation,
+        "pclass_swatch": pclass.make_CSS_style(),
+        "colours": colours,
+    }
+
+
+# ############################
 # STUDENT TAB
 # ############################
 
@@ -237,6 +287,7 @@ def student_row(attempt: MatchingAttempt, record: MatchingRecord, comments: Opti
         "student": student,
         "user": student.user,
         "pclass": {"instance": selector.config.project_class, "label": selector.config.project_class.make_label()},
+        "period": build_period_pill(record),
         "cohort": student.cohort,
         "programme": student.programme,
         "project": {

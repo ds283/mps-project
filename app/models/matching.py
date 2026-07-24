@@ -206,6 +206,12 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     # flag whether this attempt has been published to convenors for comments/editing
     published = db.Column(db.Boolean())
 
+    # flag whether the stored MatchingRecord/MatchingRole rows are a coarse diagnostic draft
+    # (produced by _diagnose_infeasibility when the production solve is infeasible) rather than a
+    # genuine solution. The attempt's outcome remains INFEASIBLE and solution_usable stays False
+    # regardless of this flag; it exists purely so views can distinguish and label draft records.
+    is_draft = db.Column(db.Boolean(), default=False)
+
     # MATCHING OPTIONS
 
     # include only selectors who submitted choices

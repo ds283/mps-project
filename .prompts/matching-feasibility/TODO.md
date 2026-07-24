@@ -37,13 +37,18 @@ Commit each verified phase separately as a clean rollback point.
       Phase 2, since Phase 1 has nowhere else to persist the report.
 
 ## Phase 2 — model, storage, lifecycle
-- [ ] `infeasibility_report` Text column on `PuLPMixin` (collation utf8_bin) + JSON
+- [x] `infeasibility_report` Text column on `PuLPMixin` (collation utf8_bin) + JSON
       property/writer (LLMOrchestrationJob.recent_workflows pattern). Report schema in PLAN.md §7 —
       note `remediations` is a **list** per violation, entity ids resolved in the renderer.
-- [ ] `is_draft` Boolean on `MatchingAttempt`. Keep `solution_usable` False for INFEASIBLE.
-- [ ] `_store_PuLP_solution` `draft: bool` param: skip strict `len(assigned)!=multiplicity`
+      (Pulled forward into Phase 1 — see migration 6d4e2a9f1c73.)
+- [x] `is_draft` Boolean on `MatchingAttempt`. Keep `solution_usable` False for INFEASIBLE
+      (unchanged — only checks OPTIMAL/FEASIBLE). `_store_PuLP_solution` sets `record.is_draft = draft`.
+- [x] `_store_PuLP_solution` `draft: bool` param: skip strict `len(assigned)!=multiplicity`
       assertion (matching.py:2390) in draft mode; store partial assignments.
-- [ ] Hand-written Alembic migration (chain-tip check per CLAUDE.md; utf8_bin in migration).
+      (Pulled forward into Phase 1 alongside `_diagnose_infeasibility`, which already calls with
+      `draft=True`; Phase 2 added the `record.is_draft` flag write.)
+- [x] Hand-written Alembic migration (chain-tip check per CLAUDE.md; utf8_bin in migration) —
+      `9f2a8b1c4d6e` (down_revision `6d4e2a9f1c73`), `is_draft` Boolean on `matching_attempts`.
 
 ## Phase 3 — lifecycle gating
 - [ ] Publish gate relax: `publishable` model helper = usable OR (finished & INFEASIBLE & has report);

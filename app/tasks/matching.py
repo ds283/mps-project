@@ -2580,6 +2580,8 @@ def _store_PuLP_solution(
         slack solve — instead of raising. A count *exceeding* the multiplicity is always an error.
     """
 
+    record.is_draft = draft
+
     # store configuration data
     with Timer() as config_timer:
         for item in data.supervisor_data.dict.values():

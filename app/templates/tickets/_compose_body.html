@@ -1,26 +1,106 @@
 {# ---- shared compose body, included by the per-surface wrapper templates ------------------- #}
 <style>
-    .tk-crumb { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--bs-secondary-color); padding:10px 0; }
-    .tk-crumb .sep { color:var(--bs-border-color); }
-    .tk-lbl { font-size:11px; font-weight:700; color:var(--bs-secondary-color); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
-    .tk-route { border:1px solid var(--bs-warning-border-subtle); border-radius:9px; background:var(--bs-warning-bg-subtle); padding:13px 14px; margin-bottom:12px; font-size:12.5px; }
-    .tk-route.single { border-color:var(--bs-success-border-subtle); background:var(--bs-success-bg-subtle); }
-    .tk-route .hd { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; color:var(--bs-warning-text-emphasis); }
-    .tk-route.single .hd { color:var(--bs-success-text-emphasis); }
-    .tk-hint { border:1px dashed var(--bs-primary-border-subtle); border-radius:9px; background:var(--bs-primary-bg-subtle); padding:11px 13px; margin-bottom:12px; color:var(--bs-primary-text-emphasis); line-height:1.5; font-size:11.5px; }
-    .tk-side-card { border:1px solid var(--bs-border-color); border-radius:9px; background:var(--bs-body-bg); padding:13px 14px; margin-bottom:12px; font-size:12.5px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-    .tk-2col { display:flex; flex-direction:column; gap:1.5rem; align-items:stretch; }
-    .tk-2col > .tk-main { min-width:0; }
-    @media (min-width:992px) {
-        .tk-2col { flex-direction:row; align-items:flex-start; }
-        .tk-2col > .tk-main { flex:1 1 0; }
-        .tk-2col > .tk-side { flex:0 0 var(--tk-side, 290px); }
+    .tk-crumb {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 13px;
+        color: var(--bs-secondary-color);
+        padding: 10px 0;
+    }
+
+    .tk-crumb .sep {
+        color: var(--bs-border-color);
+    }
+
+    .tk-lbl {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--bs-secondary-color);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: 6px;
+    }
+
+    .tk-route {
+        border: 1px solid var(--bs-warning-border-subtle);
+        border-radius: 9px;
+        background: var(--bs-warning-bg-subtle);
+        padding: 13px 14px;
+        margin-bottom: 12px;
+        font-size: 12.5px;
+    }
+
+    .tk-route.single {
+        border-color: var(--bs-success-border-subtle);
+        background: var(--bs-success-bg-subtle);
+    }
+
+    .tk-route .hd {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: 8px;
+        color: var(--bs-warning-text-emphasis);
+    }
+
+    .tk-route.single .hd {
+        color: var(--bs-success-text-emphasis);
+    }
+
+    .tk-hint {
+        border: 1px dashed var(--bs-primary-border-subtle);
+        border-radius: 9px;
+        background: var(--bs-primary-bg-subtle);
+        padding: 11px 13px;
+        margin-bottom: 12px;
+        color: var(--bs-primary-text-emphasis);
+        line-height: 1.5;
+        font-size: 11.5px;
+    }
+
+    .tk-side-card {
+        border: 1px solid var(--bs-border-color);
+        border-radius: 9px;
+        background: var(--bs-body-bg);
+        padding: 13px 14px;
+        margin-bottom: 12px;
+        font-size: 12.5px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    }
+
+    .tk-2col {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: stretch;
+    }
+
+    .tk-2col > .tk-main {
+        min-width: 0;
+    }
+
+    @media (min-width: 992px) {
+        .tk-2col {
+            flex-direction: row;
+            align-items: flex-start;
+        }
+
+        .tk-2col > .tk-main {
+            flex: 1 1 0;
+        }
+
+        .tk-2col > .tk-side {
+            flex: 0 0 var(--tk-side, 290px);
+        }
     }
 </style>
 
 <div class="container-fluid">
     <div class="tk-crumb">
-        <a href="{{ cancel_url }}" class="text-decoration-none"><i class="fas fa-ticket-alt text-primary"></i> Tickets</a>
+        <a href="{{ cancel_url }}" class="text-decoration-none"><i class="fas fa-ticket-alt text-primary"></i>
+            Tickets</a>
         <span class="sep">/</span> <strong class="text-body">New ticket</strong>
     </div>
 
@@ -34,7 +114,9 @@
                 {% if tenants and tenants | length > 1 %}
                     <div class="mb-3">
                         <div class="tk-lbl">Tenant</div>
-                        <div class="form-text mb-1">A ticket concerns a single tenant. Choose one to scope the subject picker.</div>
+                        <div class="form-text mb-1">A ticket concerns a single tenant. Choose one to scope the subject
+                            picker.
+                        </div>
                         <select class="form-select" id="tk-tenant" style="max-width:360px">
                             {% for t in tenants %}
                                 <option value="{{ t.id }}">{{ t.name }}</option>
@@ -49,7 +131,9 @@
                         {% if scope_kind != 'convenor' %}
                             <div class="form-check form-switch m-0">
                                 <input type="checkbox" class="form-check-input" id="tk-include-past">
-                                <label class="form-check-label" for="tk-include-past" style="font-size:11.5px; color:var(--bs-secondary-color)">Show past students</label>
+                                <label class="form-check-label" for="tk-include-past"
+                                       style="font-size:11.5px; color:var(--bs-secondary-color)">Show past
+                                    students</label>
                             </div>
                         {% endif %}
                     </div>
@@ -57,9 +141,11 @@
                         {% if scope_kind == 'convenor' %}
                             You may attach <strong>any student</strong> currently in this class, or the whole class.
                         {% elif scope_kind == 'faculty' %}
-                            You may attach your <strong>supervisees</strong> or the <strong>classes you supervise</strong>.
+                            You may attach your <strong>supervisees</strong> or the <strong>project classes</strong> you
+                            supervise.
                         {% else %}
-                            You may attach <strong>any</strong> submitting or selecting student, or whole project classes, in your tenants.
+                            You may attach <strong>any</strong> submitting or selecting student, or whole project
+                            classes, in your tenants.
                         {% endif %}
                     </div>
                     {{ form.subjects(class="form-select", multiple="multiple", id="tk-subjects") }}
@@ -68,7 +154,8 @@
                 <div class="mb-3">
                     <div class="tk-lbl">{{ form.title.label.text }}</div>
                     {{ form.title(class="form-control") }}
-                    {% for err in form.title.errors %}<div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
+                    {% for err in form.title.errors %}
+                        <div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
                 </div>
 
                 <div class="mb-3">
@@ -83,11 +170,14 @@
                     </div>
                     <div class="col-md-6">
                         <div class="tk-lbl">{{ form.due_date.label.text }}</div>
-                        <div class="input-group{% if form.due_date.errors %} is-invalid{% endif %} date" id="tk-due-date-picker" data-target-input="nearest">
+                        <div class="input-group{% if form.due_date.errors %} is-invalid{% endif %} date"
+                             id="tk-due-date-picker" data-target-input="nearest">
                             {{ form.due_date(class="form-control datetimepicker-input", placeholder="dd/mm/yyyy", **{"data-bs-target": "#tk-due-date-picker"}) }}
-                            <div class="input-group-text" data-target="#tk-due-date-picker" data-bs-toggle="datetimepicker"><span class="fas fa-calendar"></span></div>
+                            <div class="input-group-text" data-target="#tk-due-date-picker"
+                                 data-bs-toggle="datetimepicker"><span class="fas fa-calendar"></span></div>
                         </div>
-                        {% for err in form.due_date.errors %}<div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
+                        {% for err in form.due_date.errors %}
+                            <div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
                     </div>
                 </div>
             </div>
@@ -95,12 +185,16 @@
             {# ---------- routing side panel ---------- #}
             <div class="tk-side" style="--tk-side:290px">
                 <div id="tk-routing">
-                    <div class="tk-hint"><i class="fas fa-lightbulb"></i> Select at least one subject to see how this ticket will be routed.</div>
+                    <div class="tk-hint"><i class="fas fa-lightbulb"></i> Select at least one subject to see how this
+                        ticket will be routed.
+                    </div>
                 </div>
                 <div class="tk-side-card">
                     <div class="tk-lbl">Subscribers</div>
                     <div class="d-flex align-items-center gap-2 flex-wrap mb-1" id="tk-sub-avatars">
-                        <span class="tk-av" style="width:24px; height:24px; font-size:10px; background-color:{{ current_user.avatar_colour }}" title="{{ current_user.name }}">{{ current_user.initials }}</span>
+                        <span class="tk-av"
+                              style="width:24px; height:24px; font-size:10px; background-color:{{ current_user.avatar_colour }}"
+                              title="{{ current_user.name }}">{{ current_user.initials }}</span>
                     </div>
                     <div class="text-secondary">You and any in-scope convenors are added automatically.</div>
                 </div>

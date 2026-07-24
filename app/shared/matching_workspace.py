@@ -630,8 +630,12 @@ def faculty_assignable_pool(attempt: MatchingAttempt, fac: FacultyData) -> dict:
 def changes_data(attempt: MatchingAttempt) -> dict:
     """
     Diff every MatchingRecord's live state against its optimiser baseline (`original_project_id`
-    / `original_roles`), field by field. Provenance is attempt-level only (`last_edited_by` /
-    `last_edit_timestamp`) — see PLAN.md non-goals for why per-record provenance is out of scope.
+    / `original_roles`), field by field. Provenance is per-record (`MatchingRecord.last_edited_by` /
+    `last_edit_timestamp`, written by `MatchingRecord.mark_edited()`); records edited before those
+    columns existed carry None, and the Changes tab renders those as an em dash rather than falling
+    back to the attempt-level value, which is the same for every row and therefore misleading.
+
+    Rows are returned most-recently-edited first, with un-attributed rows last.
     """
     records = attempt.records.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()).all()
 
@@ -680,17 +684,29 @@ def changes_data(attempt: MatchingAttempt) -> dict:
                     "record": record,
                     "student": record.selector.student if record.selector is not None else None,
                     "changes": changes,
-                    "edited_by": attempt.last_edited_by,
-                    "edited_at": attempt.last_edit_timestamp,
+                    "edited_by": record.last_edited_by,
+                    "edited_at": record.last_edit_timestamp,
                 }
             )
+
+    # most recently edited first; rows with no recorded provenance (edited before per-record
+    # provenance existed) sort to the end, ordered by student name
+    def _sort_key(row):
+        edited_at = row["edited_at"]
+        return (edited_at is None, -edited_at.timestamp() if edited_at is not None else 0.0, _student_name(row["record"]))
+
+    rows.sort(key=_sort_key)
+
+    score = attempt.score
+    current_score = attempt.current_score
 
     return {
         "rows": rows,
         "field_change_count": sum(len(row["changes"]) for row in rows),
         "distinct_student_count": len(distinct_students),
-        "score": attempt.score,
-        "current_score": attempt.current_score,
+        "score": score,
+        "current_score": current_score,
+        "score_delta": (current_score - score) if (score is not None and current_score is not None) else None,
     }
 
 

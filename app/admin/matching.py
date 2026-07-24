@@ -1059,6 +1059,9 @@ def revert_match_record(rec_id):
         new_role = MatchingRole(user_id=orig_role.user_id, role=orig_role.role)
         record.roles.append(new_role)
 
+    # the record is back at its optimizer baseline, so it no longer represents a manual divergence;
+    # but the attempt as a whole has just been edited, so its own provenance is updated
+    record.clear_edited()
     record.matching_attempt.last_edit_id = current_user.id
     record.matching_attempt.last_edit_timestamp = datetime.now()
 
@@ -1605,8 +1608,7 @@ def replace_matching_record(src_id, dest_id):
             )
             dest.roles.append(new_role)
 
-        dest.matching_attempt.last_edit_id = current_user.id
-        dest.matching_attempt.last_edit_timestamp = datetime.now()
+        dest.mark_edited(current_user)
 
         log_db_commit("Replace matching record project assignment and role assignments from source record", user=current_user)
     except SQLAlchemyError as e:
@@ -2184,8 +2186,7 @@ def edit_match_roles(rec_id):
     for fd_id in new_marker_ids - existing_marker_ids:
         record.roles.add(MatchingRole(role=MatchingRole.ROLE_MARKER, user_id=fd_id))
 
-    attempt.last_edit_id = current_user.id
-    attempt.last_edit_timestamp = datetime.now()
+    record.mark_edited(current_user)
 
     try:
         log_db_commit("Edit roles for matching record", user=current_user)
@@ -2575,8 +2576,7 @@ def _apply_project_reassignment(record: MatchingRecord, project: LiveProject) ->
     record.parent_id = None
     record.priority = None
 
-    record.matching_attempt.last_edit_id = current_user.id
-    record.matching_attempt.last_edit_timestamp = datetime.now()
+    record.mark_edited(current_user)
 
     try:
         log_db_commit("Reassign matched project for selector in matching attempt", user=current_user)
@@ -2738,8 +2738,7 @@ def reassign_match_marker(id, mid):
         new_role = MatchingRole(user_id=mid, role=MatchingRole.ROLE_MARKER)
         record.roles.append(new_role)
 
-        record.matching_attempt.last_edit_id = current_user.id
-        record.matching_attempt.last_edit_timestamp = datetime.now()
+        record.mark_edited(current_user)
 
         log_db_commit("Reassign marker for matching record", user=current_user)
 
@@ -2805,6 +2804,8 @@ def reassign_supervisor_roles(rec_id):
             if fd.id not in existing_roles:
                 new_item = MatchingRole(role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd.id)
                 record.roles.add(new_item)
+
+        record.mark_edited(current_user)
 
         try:
             log_db_commit("Reassign supervisor roles for matching record", user=current_user)

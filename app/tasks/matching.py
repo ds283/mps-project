@@ -3850,6 +3850,10 @@ def register_matching_tasks(celery):
                 new_role = MatchingRole(user_id=orig_role.user_id, role=orig_role.role)
                 record.roles.append(new_role)
 
+            # the record no longer diverges from its baseline, so per-record edit provenance is cleared;
+            # the attempt-level equivalent is cleared by revert_finalize once every record has been done
+            record.clear_edited()
+
             log_db_commit(
                 f"Reverted matching record #{record.id} to original project and role assignments",
                 user=None,

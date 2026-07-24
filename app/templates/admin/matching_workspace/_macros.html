@@ -53,6 +53,30 @@
     {% endif %}
 {% endmacro %}
 
+{% macro field_pill(label) %}
+    {# Names the field a change applies to, in the Changes tab: Project / Supervisors / Markers. #}
+    <span style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border-radius: 4px;
+                 padding: 2px 8px; font-size: 11px; white-space: nowrap;">{{ label }}</span>
+{% endmacro %}
+
+{% macro diff_pair(before, after, empty_label='none') %}
+    {# Before/after pair for one changed field: the optimiser baseline struck through in red, the
+       current value in green. An absent value on either side renders as empty_label, unstruck. #}
+    <span>
+        {% if before %}
+            <span style="color: var(--bs-danger-text-emphasis); text-decoration: line-through; opacity: 0.75;">{{ before }}</span>
+        {% else %}
+            <span class="text-body-secondary">{{ empty_label }}</span>
+        {% endif %}
+        <i class="fas fa-arrow-right mx-1 text-body-secondary"></i>
+        {% if after %}
+            <span style="color: var(--bs-success-text-emphasis);">{{ after }}</span>
+        {% else %}
+            <span class="text-body-secondary">{{ empty_label }}</span>
+        {% endif %}
+    </span>
+{% endmacro %}
+
 {% macro capacity_bar(label, value, limit, binding_note=none) %}
     <div class="mb-2">
         <div class="d-flex justify-content-between small">

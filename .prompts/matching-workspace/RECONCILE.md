@@ -202,7 +202,44 @@ For each surface, compare against its screenshot + the matching README section +
   — the marking-limit case is still surfaced by the red gauge note.
   **Noted, not actioned:** the workspace is one-way — students can be assigned in but never removed.
   Neither design has a remove control; this is a scope decision rather than a divergence.
-- **Screen 6 Changes tab** — _not started_
+- **Screen 6 Changes tab** — ✅ done. Twelve divergences reviewed.
+  **Fixed (model-layer — the headline item):** the "Edited" column showed the *attempt-level*
+  `last_edited_by`/`last_edit_timestamp` on every row, so all 13 rows read the same name and time
+  regardless of who touched which record — the column was misleading and the template carried an
+  apologetic caption admitting it. PLAN.md's "no per-record edit provenance" non-goal is now
+  **reversed**: `MatchingRecord` carries its own `last_edit_id` / `last_edited_by` /
+  `last_edit_timestamp` (added by hand, *not* via `EditingMetadataMixin` — a record is always
+  created by the optimiser run that owns it, so `created_by`/`creation_timestamp` would duplicate
+  the attempt). Two new methods keep the record/attempt pair written together:
+  `mark_edited(user)` stamps both, `clear_edited()` clears only the record's when it returns to
+  baseline. Migration `f4a8c2e1b7d3` (chain tip `e7f8a9b0c1d2`); legacy rows backfill NULL and
+  render as an em dash rather than falling back to the misleading attempt value. Every edit site
+  was swept — `edit_match_roles`, `_apply_project_reassignment` (serving both
+  `reassign_match_project` and `faculty_reassign_assign`), `reassign_match_marker`, the
+  replace-from-source path, and the Celery `revert_record` (now clears). This also fixed a latent
+  gap: `reassign_supervisor_roles` mutated roles but stamped *nothing*, at either level.
+  **Fixed (reference wins):** (2) changes were flat "Supervisor: A → B" text — now the reference's
+  grey `field_pill` (Project / Supervisors / Markers) + `diff_pair` (baseline struck through in
+  `--bs-danger-text-emphasis`, current in `--bs-success-text-emphasis`), both new shared macros;
+  (3) the objective-score card showed the current score with "baseline N" beneath, losing the
+  reference's optimiser → current narrative — now `baseline → current` inline, and we beat both
+  designs with a signed delta chip coloured by direction (success when the manual edits improved
+  the objective, danger when they degraded it), which the reference lacks; (4) "Revert all" moved
+  from the toolbar into the blue card header via `.btn-ghost-header`; (5) the empty state gained
+  the reference's second hint line.
+  **Neither:** rows were ordered by `selector_id`; now ordered most-recently-edited first with
+  un-attributed rows last — an ordering only made possible by the new per-record timestamps.
+  **Kept (implementation wins):** the project-class swatch + class line under the student name
+  (the reference is a bare name); the student name as a drawer trigger (the reference is inert
+  text); the danger-subtle per-row Revert (`.claude/rules/template-ui-patterns.md` requires danger
+  tokens for destructive actions — the reference uses neutral grey); the de-bordered table, per
+  the Screen 1/3 decision; **one row per record** rather than the reference's one row per field
+  change — `revert_match_record` reverts project *and* roles together, so per-field rows would
+  repeat an identical Revert button N times. The reference's *styling* was adopted inside that
+  per-record row.
+  **Not adopted:** the reference's relative timestamps ("Today 09:14", "Yesterday 16:40") — absolute
+  `16 Mar 2026 13:22` is unambiguous and consistent with the rest of the app, and avoids a new
+  Jinja filter.
 - **Screen 7 Matches dashboard** — _not started_
 - **Screen 8 Comments panel** — _not started_
 </content>

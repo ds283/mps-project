@@ -99,10 +99,14 @@ scattered pages while preserving today's access-control model.
 
 ## Non-goals / accepted limitations
 
-- **No per-record edit provenance.** The model records edit identity/time only at the attempt level
-  (`last_edited_by`, `last_edit_timestamp`). The Changes tab's "Edited by / when" column therefore
-  shows the *attempt-level* last editor/time for every row (documented in the UI copy). Adding
-  per-record provenance would be a further model change and is out of scope.
+- ~~**No per-record edit provenance.**~~ **Reversed during the Screen 6 reconciliation.** The
+  original decision was to record edit identity/time only at the attempt level, so the Changes
+  tab's "Edited" column showed the same editor/time on every row (documented in the UI copy). In
+  practice that column carried no information and was actively misleading, so `MatchingRecord` now
+  carries its own `last_edit_id` / `last_edit_timestamp` pair (added by hand rather than via
+  `EditingMetadataMixin`, whose `created_by`/`creation_timestamp` are redundant for a record that
+  is always created by the optimiser run owning it), written through `MatchingRecord.mark_edited()`
+  and cleared by `clear_edited()` on revert. Migration `f4a8c2e1b7d3`.
 - **No new caching.** The "fast first load, no cache" behaviour is achieved by not touching the
   expensive stat properties during the initial dashboard render and fetching them per-row on demand.
   We keep the existing `@cache.memoize` helpers as-is (they are already invalidated on edit); we add

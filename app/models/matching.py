@@ -1082,6 +1082,17 @@ class MatchingRecord(db.Model):
         backref=db.backref("original_role_for", lazy="dynamic"),
     )
 
+    # EDIT PROVENANCE
+
+    # who last diverged this record from its optimizer baseline, and when. Cleared when the record is
+    # reverted back to baseline. Note there is deliberately no created_by/creation_timestamp pair, and
+    # therefore no use of EditingMetadataMixin: a MatchingRecord is always created by the optimizer run
+    # that owns it, so per-record creation metadata would just duplicate the owning MatchingAttempt.
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True, default=None)
+    last_edited_by = db.relationship("User", foreign_keys=[last_edit_id], uselist=False)
+
+    last_edit_timestamp = db.Column(db.DateTime(), nullable=True, default=None)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1094,6 +1105,32 @@ class MatchingRecord(db.Model):
         self._validated = False
         self._errors = {}
         self._warnings = {}
+
+    def mark_edited(self, user):
+        """
+        Record a manual edit to this MatchingRecord, and propagate the same provenance to the owning
+        MatchingAttempt. The record-level and attempt-level pairs are always written together, so that
+        the Changes tab can attribute each row individually while the attempt still knows when it was
+        last touched as a whole. Does not commit; the caller owns the transaction.
+        """
+        now = datetime.now()
+
+        self.last_edit_id = user.id if user is not None else None
+        self.last_edit_timestamp = now
+
+        attempt = self.matching_attempt
+        if attempt is not None:
+            attempt.last_edit_id = self.last_edit_id
+            attempt.last_edit_timestamp = now
+
+    def clear_edited(self):
+        """
+        Clear per-record edit provenance. Used when the record is restored to its optimizer baseline,
+        after which it no longer represents a manual divergence. Does not touch the owning
+        MatchingAttempt (a revert is itself an edit of the attempt). Does not commit.
+        """
+        self.last_edit_id = None
+        self.last_edit_timestamp = None
 
     @property
     def is_valid(self):

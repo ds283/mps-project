@@ -4,10 +4,18 @@
   .prompts/matching-workspace/PLAN.md.
 #}
 {% from "swatch.html" import small_swatch %}
+{% from "admin/matching_workspace/_macros.html" import field_pill, diff_pair %}
+
+{% set field_labels = {'project': 'Project', 'supervisor': 'Supervisors', 'marker': 'Markers'} %}
 
 <div class="card border-primary mt-3 mb-3">
-    <div class="card-header bg-primary text-white">
-        Changes vs optimiser baseline <strong>{{ record.name }}</strong>
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center gap-3">
+        <span>Changes vs optimiser baseline &mdash; <strong>{{ record.name }}</strong></span>
+        {% if changes.rows %}
+            <a class="btn btn-sm btn-ghost-header text-nowrap" href="{{ url_for('admin.revert_match', id=record.id) }}">
+                <i class="fas fa-undo me-1"></i>Revert all to baseline&hellip;
+            </a>
+        {% endif %}
     </div>
     <div class="card-body">
         <div class="row g-3 mb-3">
@@ -35,29 +43,29 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <div class="small text-body-secondary text-uppercase">Objective score</div>
-                        <div class="fs-3 fw-bold">
-                            {{ '%0.2f'|format(changes.current_score) if changes.current_score is not none else '&mdash;'|safe }}
+                        <div class="fs-4 fw-bold">
+                            <span style="color: var(--bs-success-text-emphasis);">
+                                {{ '%0.2f'|format(changes.score) if changes.score is not none else '&mdash;'|safe }}
+                            </span>
+                            <i class="fas fa-arrow-right mx-1 text-body-secondary" style="font-size: 0.7em;"></i>
+                            <span style="color: var(--bs-primary);">
+                                {{ '%0.2f'|format(changes.current_score) if changes.current_score is not none else '&mdash;'|safe }}
+                            </span>
+                            {% if changes.score_delta is not none and '%0.2f'|format(changes.score_delta) != '0.00' %}
+                                {% set delta_severity = 'success' if changes.score_delta > 0 else 'danger' %}
+                                <span class="badge rounded-pill align-middle ms-1"
+                                      style="background: var(--bs-{{ delta_severity }}-bg-subtle); color: var(--bs-{{ delta_severity }}-text-emphasis); font-size: 0.55em;">
+                                    {{ '%+0.2f'|format(changes.score_delta) }}
+                                </span>
+                            {% endif %}
                         </div>
-                        <div class="small text-body-secondary">
-                            baseline {{ '%0.2f'|format(changes.score) if changes.score is not none else '&mdash;'|safe }}
-                        </div>
+                        <div class="small text-body-secondary">objective score (optimiser &rarr; current)</div>
                     </div>
                 </div>
             </div>
         </div>
 
         {% if changes.rows %}
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="small text-body-secondary">
-                    <i class="fas fa-info-circle me-1"></i>"Edited by / when" reflects the most recent edit to this
-                    match as a whole, not to each individual row.
-                </div>
-                <a class="btn btn-sm" style="border: 1px solid var(--bs-danger-border-subtle); color: var(--bs-danger-text-emphasis);"
-                   href="{{ url_for('admin.revert_match', id=record.id) }}">
-                    <i class="fas fa-undo me-1"></i>Revert all to baseline&hellip;
-                </a>
-            </div>
-
             <table class="table table-sm table-hover align-middle">
                 <thead>
                 <tr>
@@ -87,24 +95,23 @@
                         </td>
                         <td>
                             {% for change in row.changes %}
-                                <div class="small mb-1">
-                                    <span class="text-body-secondary text-capitalize">{{ change.field }}:</span>
+                                <div class="small mb-1 d-flex align-items-baseline gap-2">
+                                    {{ field_pill(field_labels.get(change.field, change.field|capitalize_first)) }}
                                     {% if change.field == 'project' %}
-                                        {{ change.before or 'Unassigned' }}
-                                        <i class="fas fa-arrow-right mx-1 text-body-secondary"></i>
-                                        {{ change.after or 'Unassigned' }}
+                                        {{ diff_pair(change.before, change.after, empty_label='Unassigned') }}
                                     {% else %}
-                                        {{ change.before|join(', ') if change.before else 'none' }}
-                                        <i class="fas fa-arrow-right mx-1 text-body-secondary"></i>
-                                        {{ change.after|join(', ') if change.after else 'none' }}
+                                        {{ diff_pair(change.before|join(', ') if change.before else none,
+                                                     change.after|join(', ') if change.after else none) }}
                                     {% endif %}
                                 </div>
                             {% endfor %}
                         </td>
                         <td class="small text-body-secondary">
-                            {% if row.edited_by %}{{ row.edited_by.name }}{% else %}&mdash;{% endif %}
-                            {% if row.edited_at %}
-                                <div>{{ row.edited_at.strftime("%d %b %Y %H:%M") }}</div>
+                            {% if row.edited_by and row.edited_at %}
+                                {{ row.edited_by.name }}
+                                <div style="color: var(--bs-tertiary-color);">{{ row.edited_at.strftime("%d %b %Y %H:%M") }}</div>
+                            {% else %}
+                                &mdash;
                             {% endif %}
                         </td>
                         <td class="text-end">
@@ -121,6 +128,9 @@
             <div class="text-center text-body-secondary py-5">
                 <i class="fas fa-check-circle fa-2x mb-2" style="color: var(--bs-success-text-emphasis);"></i>
                 <div>The current allocation matches the optimiser baseline &mdash; no manual edits have been made.</div>
+                <div class="small mt-1" style="color: var(--bs-tertiary-color);">
+                    Reassign a project or edit roles from the Student or Faculty view to see changes tracked here.
+                </div>
             </div>
         {% endif %}
     </div>

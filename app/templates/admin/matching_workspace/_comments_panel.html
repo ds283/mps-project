@@ -1,112 +1,393 @@
 {#
   Body fragment for the shared review-comments offcanvas (#matchCommentsPanel in workspace.html),
-  populated by AJAX (admin.match_comments_ajax). See .prompts/matching-workspace/PLAN.md,
-  Phase 6.
+  populated by AJAX (admin.match_comments_ajax). See .prompts/matching-workspace/PLAN.md, Phase 6.
+
+  Layout is a three-region flex column: a fixed head (scope banner + tabs + filter pills), a
+  scrolling thread/inbox list, and a footer composer pinned to the bottom. The composer is
+  collapsed to a "New comment" button so it stays reachable without consuming panel height.
+
+  The By-student tab is an inbox (one row per commented-on student) until the panel is scoped to
+  one assignment, at which point it shows that student's threads.
 #}
 
-{% macro comment_thread(thread) %}
+{% macro state_pill(label, value, count, active_state) %}
+    <button type="button" class="mw-comment-filter{% if value == active_state %} active{% endif %}" data-state="{{ value }}">
+        {{ label }} <span class="mw-comment-filter-count">{{ count }}</span>
+    </button>
+{% endmacro %}
+
+{% macro comment_meta(c, size) %}
+    <span class="tk-av" style="width: {{ size }}px; height: {{ size }}px; font-size: {{ (size * 0.45)|round|int }}px;
+            background: {{ c.owner.avatar_colour if c.owner else 'var(--bs-secondary)' }};">{{ c.owner.initials if c.owner else '?' }}</span>
+    <span class="small fw-semibold">{{ c.owner.name if c.owner else 'Unknown' }}</span>
+{% endmacro %}
+
+{% macro comment_thread(thread, show_scope=false) %}
     {% set c = thread.comment %}
-    <div class="card mb-3 {% if c.resolved %}border-success{% else %}border-secondary{% endif %}">
-        <div class="card-header d-flex justify-content-between align-items-center py-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="tk-av" style="width: 22px; height: 22px; font-size: 10px; background: {{ c.owner.avatar_colour if c.owner else 'var(--bs-secondary)' }};">{{ c.owner.initials if c.owner else '?' }}</span>
-                <span class="small fw-semibold">{{ c.owner.name if c.owner else 'Unknown' }}</span>
-                <span class="small text-body-secondary">{{ c.creation_timestamp.strftime("%d %b %Y %H:%M") if c.creation_timestamp }}</span>
+    <div class="mw-thread{% if c.resolved %} resolved{% endif %}" data-comment-id="{{ c.id }}">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                {{ comment_meta(c, 26) }}
+                {% if thread.new %}
+                    <span class="mw-thread-new">New</span>
+                {% endif %}
             </div>
-            {% if c.resolved %}
-                <span class="badge rounded-pill" style="background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis);">Resolved</span>
-            {% endif %}
-        </div>
-        <div class="card-body py-2">
-            <div class="small mb-2" style="white-space: pre-wrap;">{{ c.body }}</div>
-
-            {% for reply in thread.replies %}
-                {% set r = reply.comment %}
-                <div class="border-start ps-2 ms-2 mb-2" style="border-color: var(--bs-border-color) !important;">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="tk-av" style="width: 18px; height: 18px; font-size: 9px; background: {{ r.owner.avatar_colour if r.owner else 'var(--bs-secondary)' }};">{{ r.owner.initials if r.owner else '?' }}</span>
-                        <span class="small fw-semibold">{{ r.owner.name if r.owner else 'Unknown' }}</span>
-                        <span class="small text-body-secondary">{{ r.creation_timestamp.strftime("%d %b %Y %H:%M") if r.creation_timestamp }}</span>
-                    </div>
-                    <div class="small" style="white-space: pre-wrap;">{{ r.body }}</div>
-                </div>
-            {% endfor %}
-
-            <div class="d-flex gap-2 mt-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary mw-comment-reply-toggle" data-comment-id="{{ c.id }}">
-                    <i class="fas fa-reply me-1"></i>Reply
-                </button>
-                <button type="button" class="btn btn-sm {% if c.resolved %}btn-outline-secondary{% else %}btn-outline-success{% endif %} mw-comment-resolve-btn"
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <span class="mw-thread-time">{{ c.creation_timestamp.strftime("%d %b %Y %H:%M") if c.creation_timestamp }}</span>
+                {# resolve is a thread-level action, so it lives in the thread header, not beside Reply #}
+                <button type="button" class="mw-thread-resolve{% if c.resolved %} reopen{% endif %} mw-comment-resolve-btn"
                         data-comment-id="{{ c.id }}">
-                    {% if c.resolved %}Reopen{% else %}Resolve{% endif %}
+                    {% if c.resolved %}
+                        <i class="fas fa-rotate-left fa-fw"></i>Reopen
+                    {% else %}
+                        <i class="fas fa-check fa-fw"></i>Resolve
+                    {% endif %}
                 </button>
             </div>
+        </div>
 
-            <div class="mw-comment-reply-box d-none mt-2" data-comment-id="{{ c.id }}">
-                <textarea class="form-control form-control-sm mw-comment-reply-body" rows="2" placeholder="Write a reply&hellip;"></textarea>
-                <button type="button" class="btn btn-sm btn-primary mt-1 mw-comment-reply-submit" data-comment-id="{{ c.id }}">
-                    Post reply
-                </button>
+        {% if c.resolved %}
+            <div class="mw-thread-resolved-by">
+                <i class="fas fa-check fa-fw"></i>
+                Resolved{% if c.resolved_by %} by {{ c.resolved_by.name }}{% endif %}
+                {%- if c.resolved_timestamp %} &middot; {{ c.resolved_timestamp.strftime("%d %b %Y %H:%M") }}{% endif %}
+            </div>
+        {% endif %}
+
+        {% if show_scope and c.matching_record_id %}
+            <div class="mw-thread-scope">On: {{ c.scope_label }}</div>
+        {% endif %}
+
+        <div class="mw-thread-body">{{ c.body }}</div>
+
+        {% for reply in thread.replies %}
+            {% set r = reply.comment %}
+            <div class="mw-thread-reply">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        {{ comment_meta(r, 20) }}
+                        {% if reply.new %}
+                            <span class="mw-thread-new">New</span>
+                        {% endif %}
+                    </div>
+                    <span class="mw-thread-time">{{ r.creation_timestamp.strftime("%d %b %Y %H:%M") if r.creation_timestamp }}</span>
+                </div>
+                <div class="mw-thread-body">{{ r.body }}</div>
+            </div>
+        {% endfor %}
+
+        <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary mw-comment-reply-toggle" data-comment-id="{{ c.id }}">
+                <i class="fas fa-reply me-1"></i>Reply
+                {% if thread.replies %}<span class="mw-thread-replies">{{ thread.replies|length }}</span>{% endif %}
+            </button>
+        </div>
+
+        <div class="mw-comment-reply-box d-none mt-2" data-comment-id="{{ c.id }}">
+            <textarea class="form-control form-control-sm mw-comment-reply-body" rows="2" placeholder="Write a reply&hellip;"></textarea>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                {% if c.resolved %}
+                    {# a closed thread cannot silently accumulate discussion: replying reopens it #}
+                    <button type="button" class="btn btn-sm btn-primary mw-comment-reply-submit" data-comment-id="{{ c.id }}"
+                            data-transition="reopen">
+                        <i class="fas fa-rotate-left me-1"></i>Reopen and reply
+                    </button>
+                {% else %}
+                    <button type="button" class="btn btn-sm btn-primary mw-comment-reply-submit" data-comment-id="{{ c.id }}"
+                            data-transition="none">
+                        Post reply
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success mw-comment-reply-submit" data-comment-id="{{ c.id }}"
+                            data-transition="resolve">
+                        <i class="fas fa-check me-1"></i>Reply and resolve
+                    </button>
+                {% endif %}
             </div>
         </div>
     </div>
 {% endmacro %}
 
+{% macro empty_state(noun) %}
+    <div class="text-body-secondary small py-3">
+        {% if data.state == 'unresolved' %}
+            No unresolved {{ noun }}.
+            {% if data.counts.resolved %}
+                <a href="#" class="mw-comment-filter-link" data-state="all">Show all {{ data.counts.all }}</a>.
+            {% endif %}
+        {% elif data.state == 'resolved' %}
+            No resolved {{ noun }} yet.
+        {% else %}
+            No {{ noun }} yet.
+        {% endif %}
+    </div>
+{% endmacro %}
+
+<style>
+    .mw-comments { height: 100%; }
+
+    .mw-comments-head { flex: none; border-bottom: 1px solid var(--bs-border-color); }
+
+    .mw-comments-list { flex: 1 1 auto; overflow-y: auto; padding: 14px 16px; }
+
+    .mw-comments-foot { flex: none; border-top: 1px solid var(--bs-border-color); padding: 12px 16px; }
+
+    .mw-comment-filter {
+        border-radius: 20px;
+        font-size: 12px;
+        padding: 3px 11px;
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
+    }
+
+    .mw-comment-filter:hover { border-color: var(--bs-secondary-color); }
+
+    .mw-comment-filter.active {
+        background: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: var(--bs-white);
+    }
+
+    .mw-comment-filter-count { opacity: 0.75; }
+
+    .mw-comment-scope {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary-text-emphasis);
+        font-size: 12px;
+    }
+
+    .mw-thread {
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        padding: 12px;
+    }
+
+    .mw-thread + .mw-thread { margin-top: 12px; }
+
+    .mw-thread.resolved {
+        border-color: var(--bs-success-border-subtle);
+        background: var(--bs-success-bg-subtle);
+    }
+
+    .mw-thread-time { font-size: 11px; color: var(--bs-tertiary-color); }
+
+    .mw-thread-new {
+        font-size: 10px;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 1px 7px;
+        background: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary-text-emphasis);
+    }
+
+    .mw-thread-replies {
+        font-size: 10px;
+        border-radius: 10px;
+        padding: 0 6px;
+        margin-left: 4px;
+        background: var(--bs-secondary-bg);
+        color: var(--bs-secondary-color);
+    }
+
+    .mw-thread-resolve {
+        font-size: 11px;
+        border-radius: 6px;
+        padding: 2px 8px;
+        background: transparent;
+        border: 1px solid var(--bs-success-border-subtle);
+        color: var(--bs-success-text-emphasis);
+    }
+
+    .mw-thread-resolve.reopen {
+        border-color: var(--bs-border-color);
+        color: var(--bs-secondary-color);
+    }
+
+    .mw-thread-resolved-by {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--bs-success-text-emphasis);
+    }
+
+    .mw-thread-scope {
+        display: inline-block;
+        margin-top: 6px;
+        font-size: 11px;
+        border-radius: 4px;
+        padding: 2px 7px;
+        background: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary-text-emphasis);
+    }
+
+    .mw-thread-body { font-size: 13px; margin-top: 6px; line-height: 1.5; white-space: pre-wrap; }
+
+    .mw-thread-reply {
+        margin-top: 8px;
+        margin-left: 14px;
+        padding-left: 10px;
+        border-left: 2px solid var(--bs-border-color);
+    }
+
+    .mw-inbox-row {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: var(--bs-body-bg);
+    }
+
+    .mw-inbox-row + .mw-inbox-row { margin-top: 8px; }
+
+    .mw-inbox-row:hover { border-color: var(--bs-secondary-color); }
+
+    .mw-inbox-name { font-size: 13.5px; font-weight: 600; color: var(--bs-primary); }
+
+    .mw-inbox-snippet {
+        font-size: 12px;
+        color: var(--bs-secondary-color);
+        margin-top: 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mw-inbox-chip { font-size: 10.5px; border-radius: 10px; padding: 1px 7px; }
+
+    .mw-inbox-chip.unresolved { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+
+    .mw-inbox-chip.resolved { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+
+    .mw-inbox-chip.new { background: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+</style>
+
 <form id="matchCommentsCsrfForm" class="d-none">{{ resolve_form.hidden_tag() }}</form>
 
-<ul class="nav nav-tabs mb-3" id="matchCommentsTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="mwGlobalTabBtn" data-bs-toggle="tab" data-bs-target="#mwGlobalTab"
-                type="button" role="tab">
-            Global
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="mwAssignmentTabBtn" data-bs-toggle="tab" data-bs-target="#mwAssignmentTab"
-                type="button" role="tab">
-            By student
-            {% if data.assignments %}
-                <span class="badge rounded-pill bg-secondary-subtle text-secondary">{{ data.assignments|length }}</span>
-            {% endif %}
-        </button>
-    </li>
-</ul>
+<div class="mw-comments d-flex flex-column" id="mwComments" data-state="{{ data.state }}"
+     data-record-id="{{ scoped_record_id if scoped_record_id else '' }}"
+     data-tab="{{ 'student' if data.scoped else active_tab }}">
 
-<div class="tab-content">
-    <div class="tab-pane fade show active" id="mwGlobalTab" role="tabpanel">
-        {% for thread in data.global_threads %}
-            {{ comment_thread(thread) }}
-        {% else %}
-            <div class="text-body-secondary small mb-3">No whole-match comments yet.</div>
-        {% endfor %}
+    <div class="mw-comments-head">
+        {% if data.scoped %}
+            <div class="mw-comment-scope">
+                <div>
+                    <i class="fas fa-filter fa-fw"></i> Scoped to <strong>{{ data.scoped.student_name }}</strong>
+                </div>
+                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="mwCommentsClearScope">
+                    Show all students
+                </button>
+            </div>
+        {% endif %}
 
-        <form id="mwGlobalComposerForm">
-            {{ comment_form.hidden_tag() }}
-            <input type="hidden" name="scope" value="global">
-            <textarea name="body" id="mwGlobalComposerBody" class="form-control form-control-sm" rows="2"
-                      placeholder="Add a whole-match comment&hellip;" required></textarea>
-            <button type="submit" class="btn btn-sm btn-primary mt-2">Post comment</button>
-        </form>
+        <ul class="nav nav-underline px-3 pt-2">
+            <li class="nav-item">
+                <button type="button" class="nav-link mw-comment-tab" data-tab="global">
+                    Global ({{ data.counts.global_total }})
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link mw-comment-tab" data-tab="student">
+                    By student ({{ data.counts.student_total }})
+                </button>
+            </li>
+        </ul>
+
+        <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2">
+            {{ state_pill("All", "all", data.counts.all, data.state) }}
+            {{ state_pill("Unresolved", "unresolved", data.counts.unresolved, data.state) }}
+            {{ state_pill("Resolved", "resolved", data.counts.resolved, data.state) }}
+        </div>
     </div>
 
-    <div class="tab-pane fade" id="mwAssignmentTab" role="tabpanel">
-        {% for entry in data.assignments %}
-            <h6 class="small text-body-secondary text-uppercase mt-2">{{ entry.student_name }}</h6>
-            {% for thread in entry.threads %}
+    <div class="mw-comments-list">
+        <div class="mw-comments-pane" data-tab="global">
+            {% for thread in data.global_threads %}
                 {{ comment_thread(thread) }}
+            {% else %}
+                {{ empty_state("whole-match comments") }}
             {% endfor %}
-        {% else %}
-            <div class="text-body-secondary small mb-3">No per-student comments yet.</div>
-        {% endfor %}
+        </div>
 
-        <form id="mwAssignmentComposerForm">
-            <input type="hidden" name="csrf_token" value="{{ comment_form.csrf_token._value() }}">
-            <input type="hidden" name="scope" value="assignment">
-            {{ comment_form.matching_record.label(class="form-label small fw-semibold") }}
-            {{ comment_form.matching_record(id="mwAssignmentComposerStudent", class="form-select form-select-sm select2") }}
-            <textarea name="body" id="mwAssignmentComposerBody" class="form-control form-control-sm mt-2" rows="2"
-                      placeholder="Add a comment on this student's assignment&hellip;" required></textarea>
-            <button type="submit" class="btn btn-sm btn-primary mt-2">Post comment</button>
+        <div class="mw-comments-pane" data-tab="student">
+            {% if data.scoped %}
+                {% for thread in data.scoped_threads %}
+                    {{ comment_thread(thread) }}
+                {% else %}
+                    {{ empty_state("comments on " ~ data.scoped.student_name) }}
+                {% endfor %}
+            {% else %}
+                {% if data.inbox|length > 10 %}
+                    <input type="search" class="form-control form-control-sm mb-2" id="mwInboxFilter"
+                           placeholder="Filter by student name&hellip;" autocomplete="off">
+                {% endif %}
+
+                {% for entry in data.inbox %}
+                    <button type="button" class="mw-inbox-row mw-comment-open-student{% if loop.index > 25 %} mw-inbox-overflow d-none{% endif %}"
+                            data-rec-id="{{ entry.record_id }}" data-student-name="{{ entry.student_name }}">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <span class="mw-inbox-name">{{ entry.student_name }}</span>
+                            <span class="mw-thread-time">
+                                {{ entry.latest_timestamp.strftime("%d %b %Y %H:%M") if entry.latest_timestamp }}
+                            </span>
+                        </div>
+                        <div class="mw-inbox-snippet">{{ entry.snippet }}</div>
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            {% if entry.unresolved %}
+                                <span class="mw-inbox-chip unresolved">{{ entry.unresolved }} unresolved</span>
+                            {% endif %}
+                            {% if entry.resolved %}
+                                <span class="mw-inbox-chip resolved">{{ entry.resolved }} resolved</span>
+                            {% endif %}
+                            {% if entry.new %}
+                                <span class="mw-inbox-chip new">{{ entry.new }} new</span>
+                            {% endif %}
+                        </div>
+                    </button>
+                {% else %}
+                    {{ empty_state("per-student comments") }}
+                {% endfor %}
+
+                {% if data.inbox|length > 25 %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2" id="mwInboxShowMore">
+                        Show {{ data.inbox|length - 25 }} more&hellip;
+                    </button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mw-comments-foot">
+        <button type="button" class="btn btn-sm btn-primary w-100" id="mwComposerToggle">
+            <i class="fas fa-plus me-1"></i>New comment
+        </button>
+
+        <form id="mwComposerForm" class="d-none">
+            {{ comment_form.hidden_tag() }}
+            <input type="hidden" name="scope" id="mwComposerScope" value="{{ 'assignment' if data.scoped else 'global' }}">
+
+            {% if data.scoped %}
+                <input type="hidden" name="matching_record" value="{{ data.scoped.record_id }}">
+                <div class="small text-body-secondary mb-2">Scoped to: <strong>{{ data.scoped.student_name }}</strong></div>
+            {% else %}
+                <div class="mb-2 d-none" id="mwComposerStudentGroup">
+                    {{ comment_form.matching_record.label(class="form-label small fw-semibold mb-1") }}
+                    {{ comment_form.matching_record(id="mwComposerStudent", class="form-select form-select-sm select2") }}
+                </div>
+            {% endif %}
+
+            <textarea name="body" id="mwComposerBody" class="form-control form-control-sm" rows="3"
+                      placeholder="Record a change or a desired change&hellip;" required></textarea>
+
+            <div class="d-flex gap-2 mt-2">
+                <button type="submit" class="btn btn-sm btn-primary flex-grow-1">Post comment</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="mwComposerCancel">Cancel</button>
+            </div>
         </form>
     </div>
 </div>

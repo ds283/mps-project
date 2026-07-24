@@ -88,8 +88,20 @@
                         {{ drawer.comments.unresolved_count }} unresolved
                     </span>
                 {% endif %}
+                {% if drawer.comments.new_count %}
+                    <span class="badge rounded-pill small" style="background: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis);">
+                        {{ drawer.comments.new_count }} new
+                    </span>
+                {% endif %}
             </div>
             <div class="small" style="white-space: pre-wrap;">{{ c.body|truncate(160) }}</div>
+            {% if c.resolved %}
+                <div class="small mt-1" style="color: var(--bs-success-text-emphasis);">
+                    <i class="fas fa-check fa-fw"></i>
+                    Resolved{% if c.resolved_by %} by {{ c.resolved_by.name }}{% endif %}
+                    {%- if c.resolved_timestamp %} &middot; {{ c.resolved_timestamp.strftime("%d %b %Y %H:%M") }}{% endif %}
+                </div>
+            {% endif %}
         {% else %}
             <div class="text-body-secondary small">No comments yet on this assignment.</div>
         {% endif %}

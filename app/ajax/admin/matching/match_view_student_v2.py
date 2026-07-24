@@ -28,11 +28,20 @@ _student = """
         Show details <i class="fas fa-chevron-right"></i>
     </a>
     <span class="d-inline-flex align-items-center gap-1">
-        {% if row.comment_count %}
-            <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+        {% if row.comments.unresolved %}
+            {# unresolved threads need a reviewer's attention, so they carry the same warning tone as open tickets #}
+            <a class="badge rounded-pill small text-decoration-none" role="button" data-bs-toggle="offcanvas"
                data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
-               title="View comments on {{ row.user.name }}'s assignment">
-                <i class="fas fa-comment-dots"></i> {{ row.comment_count }}
+               style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);"
+               title="{{ row.comments.unresolved }} unresolved comment thread(s) on {{ row.user.name }}'s assignment">
+                <i class="fas fa-comment-dots me-1"></i>{{ row.comments.unresolved }}
+            </a>
+        {% elif row.comments.total %}
+            <a class="badge rounded-pill small text-decoration-none" role="button" data-bs-toggle="offcanvas"
+               data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+               style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color);"
+               title="All comments on {{ row.user.name }}'s assignment are resolved">
+                <i class="fas fa-check me-1"></i>{{ row.comments.total }}
             </a>
         {% else %}
             <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
@@ -40,6 +49,10 @@ _student = """
                title="No comments yet on {{ row.user.name }}'s assignment">
                 <i class="far fa-comment"></i>
             </a>
+        {% endif %}
+        {% if row.comments.new %}
+            <span class="d-inline-block rounded-circle" title="{{ row.comments.new }} comment(s) you have not seen"
+                  style="width: 7px; height: 7px; background: var(--bs-primary);"></span>
         {% endif %}
         <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
            data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"

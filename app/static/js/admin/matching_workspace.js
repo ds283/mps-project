@@ -7,7 +7,8 @@
  * data-bs-toggle="modal" data-bs-target="#matchRoleEditorModal" data-rec-id="..." opens the
  * unified role editor for that record. Content for both is populated by AJAX. An element
  * carrying data-bs-toggle="offcanvas" data-bs-target="#matchCommentsPanel" data-rec-id="..."
- * opens the review-comments panel pre-scoped to that record's "By assignment" tab.
+ * opens the review-comments panel scoped to that record — its By-student tab shows only that
+ * student's threads, and the composer posts against them.
  */
 (function () {
     "use strict";
@@ -684,6 +685,41 @@
         return data;
     }
 
+    // The panel's view state (resolved-state filter, scoped record, active tab) lives on the
+    // offcanvas element so that a re-fetch after a mutation returns the user to exactly where they
+    // were, rather than resetting to the default Global/Unresolved view.
+    function commentsViewState(panelEl) {
+        return {
+            state: panelEl.getAttribute("data-state") || "unresolved",
+            recordId: panelEl.getAttribute("data-record-id") || "",
+            tab: panelEl.getAttribute("data-tab") || "global",
+        };
+    }
+
+    function setCommentsViewState(panelEl, view) {
+        panelEl.setAttribute("data-state", view.state || "unresolved");
+        panelEl.setAttribute("data-tab", view.tab || "global");
+        if (view.recordId) {
+            panelEl.setAttribute("data-record-id", view.recordId);
+        } else {
+            panelEl.removeAttribute("data-record-id");
+        }
+    }
+
+    function updateCommentBadges(data) {
+        var unresolved = document.getElementById("matchCommentsUnresolvedBadge");
+        if (unresolved && typeof data.unresolved_count !== "undefined") {
+            unresolved.textContent = data.unresolved_count;
+            unresolved.classList.toggle("d-none", !data.unresolved_count);
+        }
+
+        var fresh = document.getElementById("matchCommentsNewBadge");
+        if (fresh && typeof data.new_count !== "undefined") {
+            fresh.textContent = data.new_count + " new";
+            fresh.classList.toggle("d-none", !data.new_count);
+        }
+    }
+
     function bindCommentThreadActions(scope, attemptId) {
         scope.querySelectorAll(".mw-comment-reply-toggle").forEach(function (btn) {
             btn.addEventListener("click", function () {
@@ -691,10 +727,16 @@
                 var box = scope.querySelector('.mw-comment-reply-box[data-comment-id="' + commentId + '"]');
                 if (box) {
                     box.classList.toggle("d-none");
+                    var textarea = box.querySelector(".mw-comment-reply-body");
+                    if (textarea && !box.classList.contains("d-none")) {
+                        textarea.focus();
+                    }
                 }
             });
         });
 
+        // "Post reply", "Reply and resolve" and "Reopen and reply" all hit the same endpoint with a
+        // different transition; the reply and the thread state change commit together server-side
         scope.querySelectorAll(".mw-comment-reply-submit").forEach(function (btn) {
             btn.addEventListener("click", function () {
                 var commentId = btn.getAttribute("data-comment-id");
@@ -705,27 +747,36 @@
                     return;
                 }
 
-                btn.disabled = true;
+                var siblings = box ? Array.prototype.slice.call(box.querySelectorAll(".mw-comment-reply-submit")) : [btn];
+                siblings.forEach(function (el) {
+                    el.disabled = true;
+                });
 
                 fetch(scriptRoot() + "/admin/reply_match_comment/" + commentId, {
                     method: "POST",
                     credentials: "same-origin",
-                    body: csrfFormData({body: body}),
+                    body: csrfFormData({body: body, transition: btn.getAttribute("data-transition") || "none"}),
                 })
                     .then(function (response) {
                         return response.json();
                     })
                     .then(function (data) {
                         if (data.success) {
-                            loadCommentsPanel(attemptId);
+                            updateCommentBadges(data);
+                            reloadCommentsPanel(attemptId);
+                            reloadStudentTable();
                         } else {
                             showToast(data.message || "Could not post this reply.", "error");
-                            btn.disabled = false;
+                            siblings.forEach(function (el) {
+                                el.disabled = false;
+                            });
                         }
                     })
                     .catch(function () {
                         showToast("Could not post this reply due to a network error.", "error");
-                        btn.disabled = false;
+                        siblings.forEach(function (el) {
+                            el.disabled = false;
+                        });
                     });
             });
         });
@@ -745,7 +796,9 @@
                     })
                     .then(function (data) {
                         if (data.success) {
-                            loadCommentsPanel(attemptId);
+                            updateCommentBadges(data);
+                            reloadCommentsPanel(attemptId);
+                            reloadStudentTable();
                         } else {
                             showToast(data.message || "Could not update this comment.", "error");
                             btn.disabled = false;
@@ -759,10 +812,137 @@
         });
     }
 
-    function bindCommentComposer(formEl, attemptId) {
+    // Tab switching is done here rather than with bootstrap.Tab so the active tab can be part of
+    // the persisted view state and the composer can follow it.
+    function showCommentsTab(scope, panelEl, tab) {
+        scope.querySelectorAll(".mw-comment-tab").forEach(function (btn) {
+            btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
+        });
+        scope.querySelectorAll(".mw-comments-pane").forEach(function (pane) {
+            pane.classList.toggle("d-none", pane.getAttribute("data-tab") !== tab);
+        });
+
+        var view = commentsViewState(panelEl);
+        view.tab = tab;
+        setCommentsViewState(panelEl, view);
+
+        // the composer posts against whichever scope the visible tab represents
+        var scopeInput = scope.querySelector("#mwComposerScope");
+        if (scopeInput) {
+            scopeInput.value = tab === "student" ? "assignment" : "global";
+        }
+
+        var studentGroup = scope.querySelector("#mwComposerStudentGroup");
+        if (studentGroup) {
+            studentGroup.classList.toggle("d-none", tab !== "student");
+        }
+    }
+
+    // Filter pills, tab switches and inbox drill-in are all the same operation: change one piece of
+    // view state, then re-fetch the fragment for it.
+    function bindCommentNavigation(scope, panelEl, attemptId) {
+        scope.querySelectorAll(".mw-comment-filter, .mw-comment-filter-link").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+                e.preventDefault();
+                var view = commentsViewState(panelEl);
+                view.state = btn.getAttribute("data-state");
+                setCommentsViewState(panelEl, view);
+                reloadCommentsPanel(attemptId);
+            });
+        });
+
+        scope.querySelectorAll(".mw-comment-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                showCommentsTab(scope, panelEl, btn.getAttribute("data-tab"));
+            });
+        });
+
+        scope.querySelectorAll(".mw-comment-open-student").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var view = commentsViewState(panelEl);
+                view.recordId = btn.getAttribute("data-rec-id");
+                view.tab = "student";
+                setCommentsViewState(panelEl, view);
+                reloadCommentsPanel(attemptId);
+            });
+        });
+
+        var clearScope = scope.querySelector("#mwCommentsClearScope");
+        if (clearScope) {
+            clearScope.addEventListener("click", function () {
+                var view = commentsViewState(panelEl);
+                view.recordId = "";
+                view.tab = "student";
+                setCommentsViewState(panelEl, view);
+                reloadCommentsPanel(attemptId);
+            });
+        }
+
+        var inboxFilter = scope.querySelector("#mwInboxFilter");
+        if (inboxFilter) {
+            inboxFilter.addEventListener("input", function () {
+                var needle = inboxFilter.value.trim().toLowerCase();
+                scope.querySelectorAll(".mw-inbox-row").forEach(function (row) {
+                    // a name search overrides the "first 25 only" cap, otherwise a match sitting in
+                    // the hidden tail would look like no match at all
+                    var name = (row.getAttribute("data-student-name") || "").toLowerCase();
+                    var hidden = needle ? name.indexOf(needle) === -1 : row.classList.contains("mw-inbox-overflow");
+                    row.classList.toggle("d-none", hidden);
+                });
+            });
+        }
+
+        var showMore = scope.querySelector("#mwInboxShowMore");
+        if (showMore) {
+            showMore.addEventListener("click", function () {
+                scope.querySelectorAll(".mw-inbox-overflow").forEach(function (row) {
+                    row.classList.remove("d-none");
+                    row.classList.remove("mw-inbox-overflow");
+                });
+                showMore.classList.add("d-none");
+            });
+        }
+    }
+
+    function bindCommentComposer(scope, attemptId) {
+        var formEl = scope.querySelector("#mwComposerForm");
+        var toggle = scope.querySelector("#mwComposerToggle");
+        var cancel = scope.querySelector("#mwComposerCancel");
         if (!formEl) {
             return;
         }
+
+        // the composer stays collapsed to a button so it is always visible at the foot of the panel
+        // without eating the height the thread list needs
+        function expand(focus) {
+            formEl.classList.remove("d-none");
+            if (toggle) {
+                toggle.classList.add("d-none");
+            }
+            if (focus) {
+                var body = formEl.querySelector("#mwComposerBody");
+                if (body) {
+                    body.focus();
+                }
+            }
+        }
+
+        function collapse() {
+            formEl.classList.add("d-none");
+            if (toggle) {
+                toggle.classList.remove("d-none");
+            }
+        }
+
+        if (toggle) {
+            toggle.addEventListener("click", function () {
+                expand(true);
+            });
+        }
+        if (cancel) {
+            cancel.addEventListener("click", collapse);
+        }
+        scope.mwExpandComposer = expand;
 
         formEl.addEventListener("submit", function (e) {
             e.preventDefault();
@@ -782,7 +962,9 @@
                 })
                 .then(function (data) {
                     if (data.success) {
-                        loadCommentsPanel(attemptId);
+                        updateCommentBadges(data);
+                        reloadCommentsPanel(attemptId);
+                        reloadStudentTable();
                     } else {
                         var messages = [];
                         Object.keys(data.errors || {}).forEach(function (field) {
@@ -805,34 +987,29 @@
         });
     }
 
-    function selectAssignmentComposer(scope, recId, focusBody) {
-        var tabBtn = document.getElementById("mwAssignmentTabBtn");
-        if (tabBtn) {
-            if (typeof bootstrap !== "undefined" && bootstrap.Tab) {
-                bootstrap.Tab.getOrCreateInstance(tabBtn).show();
-            } else {
-                tabBtn.click();
-            }
-        }
+    // Stamp the read marker once the body has been delivered. The render used the *previous*
+    // marker, so the "New" pills stay visible on the view that clears them.
+    function markCommentsRead(attemptId) {
+        fetch(scriptRoot() + "/admin/mark_match_comments_read/" + attemptId, {
+            method: "POST",
+            credentials: "same-origin",
+            body: csrfFormData(),
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (data.success) {
+                    updateCommentBadges(data);
+                }
+            })
+            .catch(function () {
+                /* a lost read receipt is not worth interrupting the user for */
+            });
+    }
 
-        var select = scope.querySelector("#mwAssignmentComposerStudent");
-        if (select) {
-            select.value = recId;
-            if (typeof $ !== "undefined" && $.fn.select2) {
-                $(select).trigger("change.select2").trigger("change");
-            } else {
-                select.dispatchEvent(new Event("change"));
-            }
-        }
-
-        if (focusBody) {
-            var body = scope.querySelector("#mwAssignmentComposerBody");
-            if (body) {
-                window.setTimeout(function () {
-                    body.focus();
-                }, 150);
-            }
-        }
+    function reloadCommentsPanel(attemptId) {
+        loadCommentsPanel(attemptId, null, false);
     }
 
     function loadCommentsPanel(attemptId, focusRecId, focusBody) {
@@ -842,9 +1019,21 @@
             return;
         }
 
+        if (focusRecId) {
+            setCommentsViewState(panelEl, {state: commentsViewState(panelEl).state, recordId: focusRecId, tab: "student"});
+        }
+
+        var view = commentsViewState(panelEl);
+        var params = returnParams();
+        params.set("state", view.state);
+        params.set("tab", view.tab);
+        if (view.recordId) {
+            params.set("record_id", view.recordId);
+        }
+
         bodyEl.innerHTML = '<div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>';
 
-        fetch(scriptRoot() + "/admin/match_comments_ajax/" + attemptId + "?" + returnParams().toString(), {credentials: "same-origin"})
+        fetch(scriptRoot() + "/admin/match_comments_ajax/" + attemptId + "?" + params.toString(), {credentials: "same-origin"})
             .then(function (response) {
                 if (!response.ok) {
                     throw new Error("Failed to load review comments");
@@ -853,14 +1042,31 @@
             })
             .then(function (html) {
                 bodyEl.innerHTML = html;
+
+                var root = bodyEl.querySelector("#mwComments");
+                if (!root) {
+                    return;
+                }
+
+                // the fragment is authoritative about scope — an unknown record id is dropped
+                // server-side — so adopt what it actually rendered
+                setCommentsViewState(panelEl, {
+                    state: root.getAttribute("data-state"),
+                    recordId: root.getAttribute("data-record-id"),
+                    tab: root.getAttribute("data-tab"),
+                });
+
                 initCommentsSelect2(bodyEl, panelEl);
                 bindCommentThreadActions(bodyEl, attemptId);
-                bindCommentComposer(document.getElementById("mwGlobalComposerForm"), attemptId);
-                bindCommentComposer(document.getElementById("mwAssignmentComposerForm"), attemptId);
+                bindCommentNavigation(bodyEl, panelEl, attemptId);
+                bindCommentComposer(bodyEl, attemptId);
+                showCommentsTab(bodyEl, panelEl, root.getAttribute("data-tab") || "global");
 
-                if (focusRecId) {
-                    selectAssignmentComposer(bodyEl, focusRecId, focusBody);
+                if (focusBody && typeof bodyEl.mwExpandComposer === "function") {
+                    bodyEl.mwExpandComposer(true);
                 }
+
+                markCommentsRead(attemptId);
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="text-danger small p-2">Could not load review comments.</div>';
@@ -891,6 +1097,16 @@
             var focusBody = trigger ? trigger.getAttribute("data-comment-focus") === "1" : commentsPanelEl.getAttribute("data-pending-focus") === "1";
             commentsPanelEl.removeAttribute("data-pending-rec-id");
             commentsPanelEl.removeAttribute("data-pending-focus");
+
+            // every open starts from the default view: unresolved first, and scoped only if this
+            // particular trigger asked for a student — otherwise a scope left over from a previous
+            // open would silently hide most of the panel
+            setCommentsViewState(commentsPanelEl, {
+                state: "unresolved",
+                recordId: recId || "",
+                tab: recId ? "student" : "global",
+            });
+
             if (attemptId) {
                 loadCommentsPanel(attemptId, recId, focusBody);
             }

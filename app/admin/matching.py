@@ -41,6 +41,7 @@ from ..models import (
     FacultyData,
     LiveProject,
     MatchingAttempt,
+    MatchingCommentReadMarker,
     MatchingRecord,
     MatchingReviewComment,
     MatchingRole,
@@ -1951,6 +1952,7 @@ def matching_workspace(id):
         changes=changes,
         changes_badge=len(changes["rows"]),
         unresolved_comments=workspace_service.unresolved_comment_count(record),
+        new_comments=workspace_service.new_comment_count(record, current_user),
         text=text,
         url=url,
     )
@@ -2043,8 +2045,8 @@ def match_student_view_v2_ajax(id):
     ) as handler:
 
         def row_formatter(records: List[MatchingRecord]):
-            comment_counts = workspace_service.comment_counts_by_record(attempt)
-            rows = [workspace_service.student_row(attempt, rec, comment_count=comment_counts.get(rec.id, 0)) for rec in records]
+            comment_counts = workspace_service.comment_counts_by_record(attempt, user=current_user)
+            rows = [workspace_service.student_row(attempt, rec, comments=comment_counts.get(rec.id)) for rec in records]
             return ajax.admin.student_view_v2_data(rows, attempt.id, text=text, url=url)
 
         return handler.build_payload(row_formatter)
@@ -2362,6 +2364,17 @@ def faculty_reassign_assign(attempt_id, fac_id, selector_id, project_id):
     return jsonify(success=True)
 
 
+def _comment_badge_counts(attempt: MatchingAttempt) -> dict:
+    """
+    Counts driving the workspace shell's Review-comments button, returned by every comment
+    mutation so the client can repaint the badges without a page reload.
+    """
+    return {
+        "unresolved_count": workspace_service.unresolved_comment_count(attempt),
+        "new_count": workspace_service.new_comment_count(attempt, current_user),
+    }
+
+
 @admin.route("/match_comments_ajax/<int:attempt_id>")
 @roles_accepted("faculty", "admin", "root")
 def match_comments_ajax(attempt_id):
@@ -2373,12 +2386,30 @@ def match_comments_ajax(attempt_id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    data = workspace_service.comments_data(attempt)
+    state = request.args.get("state", workspace_service.DEFAULT_COMMENT_STATE)
+
+    # scope the By-student tab to one assignment, but only if that record really belongs to this
+    # attempt — the record id arrives from the client
+    record_id = request.args.get("record_id", None, type=int)
+    record: Optional[MatchingRecord] = MatchingRecord.query.get(record_id) if record_id is not None else None
+    if record is None or record.matching_id != attempt.id:
+        record_id = None
+        record = None
+
+    # which tab the client was last on, so a re-fetch after a mutation does not bounce the user
+    # back to Global; a scoped panel always lands on the By-student tab
+    active_tab = request.args.get("tab", "global")
+    if active_tab not in ("global", "student"):
+        active_tab = "global"
+
+    data = workspace_service.comments_data(attempt, state=state, record=record if record_id is not None else None, user=current_user)
 
     return render_template_context(
         "admin/matching_workspace/_comments_panel.html",
         attempt=attempt,
         data=data,
+        active_tab=active_tab,
+        scoped_record_id=record_id,
         comment_form=MatchCommentFormFactory(attempt)(),
         reply_form=MatchCommentReplyForm(),
         resolve_form=ConfirmActionForm(),
@@ -2417,7 +2448,7 @@ def post_match_comment(attempt_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         return jsonify(success=False, message="Could not post this comment because a database error was encountered."), 500
 
-    return jsonify(success=True)
+    return jsonify(success=True, **_comment_badge_counts(attempt))
 
 
 @admin.route("/reply_match_comment/<int:comment_id>", methods=["POST"])
@@ -2436,15 +2467,30 @@ def reply_match_comment(comment_id):
     if not form.validate_on_submit():
         return jsonify(success=False, errors=form.errors), 400
 
+    now = datetime.now()
+
     reply = MatchingReviewComment(
         matching_attempt_id=attempt.id,
         matching_record_id=parent.matching_record_id,
         parent_id=parent.id,
         owner_id=current_user.id,
         body=form.body.data,
-        creation_timestamp=datetime.now(),
+        creation_timestamp=now,
     )
     db.session.add(reply)
+
+    # "Reply and resolve" and "Reopen and reply" both land here: the reply and the thread's state
+    # change are one action, so they commit together. Each transition is a no-op if the thread is
+    # already in the requested state, rather than an error.
+    transition = form.transition.data
+    if transition == "resolve" and not parent.resolved:
+        parent.resolved = True
+        parent.resolved_by_id = current_user.id
+        parent.resolved_timestamp = now
+    elif transition == "reopen" and parent.resolved:
+        parent.resolved = False
+        parent.resolved_by_id = None
+        parent.resolved_timestamp = None
 
     try:
         log_db_commit("Reply to matching review comment", user=current_user)
@@ -2453,7 +2499,7 @@ def reply_match_comment(comment_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         return jsonify(success=False, message="Could not post this reply because a database error was encountered."), 500
 
-    return jsonify(success=True)
+    return jsonify(success=True, resolved=parent.resolved, **_comment_badge_counts(attempt))
 
 
 @admin.route("/resolve_match_comment/<int:comment_id>", methods=["POST"])
@@ -2484,7 +2530,43 @@ def resolve_match_comment(comment_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         return jsonify(success=False, message="Could not update this comment because a database error was encountered."), 500
 
-    return jsonify(success=True, resolved=comment.resolved)
+    return jsonify(success=True, resolved=comment.resolved, **_comment_badge_counts(attempt))
+
+
+@admin.route("/mark_match_comments_read/<int:attempt_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def mark_match_comments_read(attempt_id):
+    """
+    Stamp the current user's read marker for this attempt's review comments. Fired by the client
+    *after* the panel body has been delivered, so the marker used to compute the "new" flags is
+    the previous one and those flags stay visible on the view that clears them.
+    """
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+
+    if not validate_match_inspector(attempt):
+        return jsonify(success=False, message="You do not have permission to view this matching attempt."), 403
+
+    form = ConfirmActionForm()
+    if not form.validate_on_submit():
+        return jsonify(success=False, message="Could not validate this request; please reload the page and try again."), 400
+
+    marker: MatchingCommentReadMarker = MatchingCommentReadMarker.query.filter_by(user_id=current_user.id, matching_attempt_id=attempt.id).first()
+    if marker is None:
+        marker = MatchingCommentReadMarker(user_id=current_user.id, matching_attempt_id=attempt.id)
+        db.session.add(marker)
+
+    marker.last_read_timestamp = datetime.now()
+
+    # deliberately not log_db_commit(): a read receipt is routine per-view bookkeeping, not a
+    # workflow event worth an audit entry
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify(success=False, message="Could not record that these comments have been read."), 500
+
+    return jsonify(success=True, unresolved_count=workspace_service.unresolved_comment_count(attempt), new_count=0)
 
 
 @admin.route("/delete_match_record/<int:attempt_id>/<int:selector_id>")

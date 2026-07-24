@@ -2044,6 +2044,15 @@ def MatchCommentFormFactory(attempt):
 class MatchCommentReplyForm(Form):
     body = TextAreaField("Reply", validators=[DataRequired()])
 
+    # "resolve" posts the reply and closes the thread in one action; "reopen" is the only way to
+    # reply to a thread that is already resolved, so a closed conversation cannot silently
+    # accumulate discussion. Anything else leaves the thread's state untouched.
+    transition = SelectField(
+        "Thread state",
+        choices=[("none", "Leave unchanged"), ("resolve", "Resolve"), ("reopen", "Reopen")],
+        default="none",
+    )
+
     submit = SubmitField("Reply")
 
 

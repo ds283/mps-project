@@ -21,11 +21,12 @@ which take the viewing user explicitly for the same reason.
 """
 
 from collections import defaultdict
+from datetime import datetime
 from typing import Dict, FrozenSet, List, Optional, Tuple
 
 from flask import url_for
 from flask_security import current_user
-from sqlalchemy import func, or_
+from sqlalchemy import and_, case, func, literal, or_
 
 from .sqlalchemy import get_count
 from ..database import db
@@ -35,6 +36,7 @@ from ..models import (
     FacultyData,
     LiveProject,
     MatchingAttempt,
+    MatchingCommentReadMarker,
     MatchingRecord,
     MatchingReviewComment,
     MatchingRole,
@@ -213,7 +215,7 @@ def _group_records_by_pclass(records: List[MatchingRecord]) -> Dict[int, List[di
 # ############################
 
 
-def student_row(attempt: MatchingAttempt, record: MatchingRecord, comment_count: int = 0) -> dict:
+def student_row(attempt: MatchingAttempt, record: MatchingRecord, comments: Optional[dict] = None) -> dict:
     """
     Assemble the view dict for a single Student-tab row.
     """
@@ -251,7 +253,8 @@ def student_row(attempt: MatchingAttempt, record: MatchingRecord, comment_count:
         "score": record.current_score,
         "journal": journal,
         "open_tickets": open_tickets,
-        "comment_count": comment_count,
+        # {"total", "unresolved", "new"} from comment_counts_by_record; absent means no comments
+        "comments": comments or {"total": 0, "unresolved": 0, "new": 0},
     }
 
 
@@ -315,7 +318,7 @@ def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
         "journal": journal,
         "open_tickets": open_tickets,
         "recent_emails": recent_emails,
-        "comments": student_comment_summary(record),
+        "comments": student_comment_summary(record, user=current_user),
     }
 
 
@@ -762,20 +765,142 @@ def _student_name(record: Optional[MatchingRecord]) -> str:
     return "Unknown student"
 
 
-def _comment_thread(comment: MatchingReviewComment, replies_by_parent: Dict[int, List[MatchingReviewComment]]) -> dict:
+def _comment_thread(
+    comment: MatchingReviewComment,
+    replies_by_parent: Dict[int, List[MatchingReviewComment]],
+    marker: Optional[datetime] = None,
+    viewer_id: Optional[int] = None,
+) -> dict:
+    """
+    Nest one top-level comment with its one level of replies. `new` flags whether this particular
+    comment is new to the viewer; `thread_new` whether anything anywhere in the thread is, so the
+    template can mark both the individual reply and the thread as a whole.
+    """
+    replies = [_comment_thread(reply, replies_by_parent, marker, viewer_id) for reply in replies_by_parent.get(comment.id, [])]
+    new = _comment_is_new(comment, marker, viewer_id)
+
     return {
         "comment": comment,
-        "replies": [_comment_thread(reply, replies_by_parent) for reply in replies_by_parent.get(comment.id, [])],
+        "replies": replies,
+        "new": new,
+        "thread_new": new or any(reply["thread_new"] for reply in replies),
     }
 
 
-def comments_data(attempt: MatchingAttempt) -> dict:
+#: allowed values of the review-comments panel's resolved-state filter
+COMMENT_STATES = ("all", "unresolved", "resolved")
+
+#: default filter for the panel — it opens as an action queue, not an archive
+DEFAULT_COMMENT_STATE = "unresolved"
+
+#: characters of the most recent comment shown as the inbox row's preview snippet
+_SNIPPET_LENGTH = 110
+
+
+def _comment_is_new(comment: MatchingReviewComment, marker: Optional[datetime], viewer_id: Optional[int]) -> bool:
     """
-    Assemble the review-comments panel content for one attempt: a Global thread (whole-match
-    scope, matching_record_id is None) and a set of By-assignment threads, one per commented-on
-    MatchingRecord, sorted by student name. Each thread is a top-level comment nested with its
-    one level of replies.
+    True if a comment postdates the viewing user's read marker. An absent marker means the user
+    has never opened the panel, in which case everything is new. A user's own comments are never
+    new to them.
     """
+    if viewer_id is not None and comment.owner_id == viewer_id:
+        return False
+
+    if marker is None:
+        return True
+
+    return comment.creation_timestamp is not None and comment.creation_timestamp > marker
+
+
+def _thread_latest_timestamp(thread: dict) -> Optional[datetime]:
+    """
+    Timestamp of the most recent activity anywhere in a thread, used to order the inbox by
+    recency rather than by when the conversation was started.
+    """
+    stamps = [thread["comment"].creation_timestamp]
+    stamps.extend(_thread_latest_timestamp(reply) for reply in thread["replies"])
+    stamps = [s for s in stamps if s is not None]
+
+    return max(stamps) if stamps else None
+
+
+def _thread_latest_comment(thread: dict) -> MatchingReviewComment:
+    """
+    The most recent comment anywhere in a thread, whose body supplies the inbox preview snippet.
+    """
+    latest = thread["comment"]
+    for reply in thread["replies"]:
+        candidate = _thread_latest_comment(reply)
+        if latest.creation_timestamp is None:
+            latest = candidate
+        elif candidate.creation_timestamp is not None and candidate.creation_timestamp > latest.creation_timestamp:
+            latest = candidate
+
+    return latest
+
+
+def _snippet(comment: MatchingReviewComment) -> str:
+    body = (comment.body or "").strip().replace("\n", " ")
+    if len(body) <= _SNIPPET_LENGTH:
+        return body
+
+    return body[:_SNIPPET_LENGTH].rstrip() + "…"
+
+
+def _filter_threads(threads: List[dict], state: str) -> List[dict]:
+    if state == "unresolved":
+        return [t for t in threads if not t["comment"].resolved]
+    if state == "resolved":
+        return [t for t in threads if t["comment"].resolved]
+
+    return threads
+
+
+def read_marker(attempt: MatchingAttempt, user) -> Optional[datetime]:
+    """
+    The instant at which `user` last had the review-comments panel rendered for `attempt`, or
+    None if they have never opened it. Comments created after this are "new".
+    """
+    marker: Optional[MatchingCommentReadMarker] = MatchingCommentReadMarker.query.filter_by(user_id=user.id, matching_attempt_id=attempt.id).first()
+
+    return marker.last_read_timestamp if marker is not None else None
+
+
+def _empty_inbox_entry(record: MatchingRecord) -> dict:
+    """
+    Inbox entry for a record that carries no comments yet. The panel can still be scoped to such a
+    record — that is exactly what the Student tab's "add a comment" control does — so the scoped
+    view needs an entry to name the student and bind the composer.
+    """
+    return {
+        "record": record,
+        "record_id": record.id,
+        "student_name": _student_name(record),
+        "threads": [],
+        "unresolved": 0,
+        "resolved": 0,
+        "new": 0,
+        "latest_timestamp": None,
+        "snippet": "",
+    }
+
+
+def comments_data(attempt: MatchingAttempt, state: str = DEFAULT_COMMENT_STATE, record: Optional[MatchingRecord] = None, user=None) -> dict:
+    """
+    Assemble the review-comments panel content for one attempt.
+
+    The Global tab is a flat list of whole-match threads (matching_record_id is None). The
+    By-student tab is either an *inbox* — one row per commented-on MatchingRecord, ordered by most
+    recent activity — or, when `record` scopes the panel to one assignment, that record's threads.
+    Each thread is a top-level comment nested with its one level of replies.
+
+    `state` filters top-level threads by resolved state; the returned `counts` are deliberately
+    computed *before* filtering so the filter pills and tab counts do not move as the filter
+    changes. `user` supplies the read marker driving the "new" flags.
+    """
+    if state not in COMMENT_STATES:
+        state = DEFAULT_COMMENT_STATE
+
     comments: List[MatchingReviewComment] = attempt.review_comments.order_by(MatchingReviewComment.creation_timestamp.asc()).all()
 
     replies_by_parent: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
@@ -786,30 +911,65 @@ def comments_data(attempt: MatchingAttempt) -> dict:
         else:
             replies_by_parent[comment.parent_id].append(comment)
 
-    global_threads = [_comment_thread(c, replies_by_parent) for c in top_level if c.matching_record_id is None]
+    marker = read_marker(attempt, user) if user is not None else None
+    viewer_id = user.id if user is not None else None
 
-    assignment_top_level: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
+    global_threads = [_comment_thread(c, replies_by_parent, marker, viewer_id) for c in top_level if c.matching_record_id is None]
+
+    student_top_level: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
     for comment in top_level:
         if comment.matching_record_id is not None:
-            assignment_top_level[comment.matching_record_id].append(comment)
+            student_top_level[comment.matching_record_id].append(comment)
 
-    assignments = []
-    for record_id, record_comments in assignment_top_level.items():
-        record = record_comments[0].matching_record
-        assignments.append(
+    # one inbox entry per commented-on record, carrying its own threads so the scoped view and the
+    # inbox row aggregates are derived from exactly the same data
+    entries = []
+    for rec_id, record_comments in student_top_level.items():
+        threads = [_comment_thread(c, replies_by_parent, marker, viewer_id) for c in record_comments]
+        latest_thread = max(threads, key=lambda t: _thread_latest_timestamp(t) or datetime.min)
+
+        entries.append(
             {
-                "record": record,
-                "student_name": _student_name(record),
-                "threads": [_comment_thread(c, replies_by_parent) for c in record_comments],
+                "record": record_comments[0].matching_record,
+                "record_id": rec_id,
+                "student_name": _student_name(record_comments[0].matching_record),
+                "threads": threads,
+                "unresolved": sum(1 for t in threads if not t["comment"].resolved),
+                "resolved": sum(1 for t in threads if t["comment"].resolved),
+                "new": sum(1 for t in threads if t["thread_new"]),
+                "latest_timestamp": _thread_latest_timestamp(latest_thread),
+                "snippet": _snippet(_thread_latest_comment(latest_thread)),
             }
         )
-    assignments.sort(key=lambda entry: entry["student_name"])
+
+    scoped_entry = None
+    if record is not None:
+        scoped_entry = next((entry for entry in entries if entry["record_id"] == record.id), None) or _empty_inbox_entry(record)
+
+    counts = {
+        "all": len(top_level),
+        "unresolved": sum(1 for c in top_level if not c.resolved),
+        "resolved": sum(1 for c in top_level if c.resolved),
+        "global_total": len(global_threads),
+        "student_total": sum(len(entry["threads"]) for entry in entries),
+        "new": sum(1 for t in global_threads if t["thread_new"]) + sum(entry["new"] for entry in entries),
+    }
+
+    # a student stays in the inbox only while they have a thread matching the current filter
+    inbox = [entry for entry in entries if _filter_threads(entry["threads"], state)]
+    inbox.sort(key=lambda entry: entry["latest_timestamp"] or datetime.min, reverse=True)
 
     return {
-        "global_threads": global_threads,
-        "assignments": assignments,
+        "state": state,
+        "marker": marker,
+        "viewer_id": viewer_id,
+        "global_threads": _filter_threads(global_threads, state),
+        "inbox": inbox,
+        "scoped": scoped_entry,
+        "scoped_threads": _filter_threads(scoped_entry["threads"], state) if scoped_entry is not None else [],
+        "counts": counts,
         "total_count": len(comments),
-        "unresolved_count": sum(1 for c in top_level if not c.resolved),
+        "unresolved_count": counts["unresolved"],
     }
 
 
@@ -821,13 +981,49 @@ def unresolved_comment_count(attempt: MatchingAttempt) -> int:
     return attempt.review_comments.filter_by(parent_id=None, resolved=False).count()
 
 
-def comment_counts_by_record(attempt: MatchingAttempt) -> Dict[int, int]:
+def new_comment_count(attempt: MatchingAttempt, user) -> int:
     """
-    Cheap batch count of review comments (including replies), grouped by MatchingRecord, for the
-    Student-tab comment-shortcut badge. One query per AJAX page load, not one per row.
+    Cheap count of review comments (replies included) postdating this user's read marker, for the
+    workspace shell's "N new" badge. A user who has never opened the panel sees every comment as
+    new, except their own — nothing you wrote yourself is news to you.
     """
+    marker = read_marker(attempt, user)
+
+    query = attempt.review_comments.filter(MatchingReviewComment.owner_id != user.id)
+    if marker is not None:
+        query = query.filter(MatchingReviewComment.creation_timestamp > marker)
+
+    return query.count()
+
+
+def comment_counts_by_record(attempt: MatchingAttempt, user=None) -> Dict[int, dict]:
+    """
+    Cheap batch summary of review comments grouped by MatchingRecord, for the Student-tab comment
+    chip: total, unresolved *threads*, and how many comments postdate the viewer's read marker.
+    One query per AJAX page load, not one per row.
+
+    Note the unresolved count is over top-level comments only — resolution is a thread-level
+    action — whereas total and new count every comment, replies included.
+    """
+    marker = read_marker(attempt, user) if user is not None else None
+
+    unresolved_case = case((and_(MatchingReviewComment.parent_id.is_(None), MatchingReviewComment.resolved.is_(False)), 1), else_=0)
+
+    if user is None:
+        new_case = literal(0)
+    else:
+        is_new = MatchingReviewComment.owner_id != user.id
+        if marker is not None:
+            is_new = and_(is_new, MatchingReviewComment.creation_timestamp > marker)
+        new_case = case((is_new, 1), else_=0)
+
     rows = (
-        db.session.query(MatchingReviewComment.matching_record_id, func.count(MatchingReviewComment.id))
+        db.session.query(
+            MatchingReviewComment.matching_record_id,
+            func.count(MatchingReviewComment.id),
+            func.sum(unresolved_case),
+            func.sum(new_case),
+        )
         .filter(
             MatchingReviewComment.matching_attempt_id == attempt.id,
             MatchingReviewComment.matching_record_id.isnot(None),
@@ -835,10 +1031,13 @@ def comment_counts_by_record(attempt: MatchingAttempt) -> Dict[int, int]:
         .group_by(MatchingReviewComment.matching_record_id)
         .all()
     )
-    return {record_id: count for record_id, count in rows}
+
+    return {
+        record_id: {"total": int(total or 0), "unresolved": int(unresolved or 0), "new": int(new or 0)} for record_id, total, unresolved, new in rows
+    }
 
 
-def student_comment_summary(record: MatchingRecord) -> dict:
+def student_comment_summary(record: MatchingRecord, user=None) -> dict:
     """
     Assemble a summary of review-comment threads scoped to one student's assignment, for a
     preview in the Student inspector drawer. Full thread detail lives in the Review comments
@@ -854,10 +1053,15 @@ def student_comment_summary(record: MatchingRecord) -> dict:
         else:
             replies_by_parent[comment.parent_id].append(comment)
 
-    threads = [_comment_thread(c, replies_by_parent) for c in top_level]
+    marker = read_marker(record.matching_attempt, user) if user is not None and record.matching_attempt is not None else None
+    viewer_id = user.id if user is not None else None
+    threads = [_comment_thread(c, replies_by_parent, marker, viewer_id) for c in top_level]
 
     return {
         "count": len(comments),
         "unresolved_count": sum(1 for c in top_level if not c.resolved),
+        "new_count": sum(1 for t in threads if t["thread_new"]),
+        "marker": marker,
+        "viewer_id": viewer_id,
         "latest": threads[-1] if threads else None,
     }

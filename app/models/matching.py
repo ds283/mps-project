@@ -1479,7 +1479,9 @@ class MatchingReviewComment(db.Model):
         "MatchingAttempt",
         foreign_keys=[matching_attempt_id],
         uselist=False,
-        backref=db.backref("review_comments", lazy="dynamic"),
+        # passive_deletes: matching_attempt_id is NOT NULL, so the ORM's default "null out the FK
+        # on parent delete" would fail; let the DB-level ON DELETE CASCADE do the work
+        backref=db.backref("review_comments", lazy="dynamic", passive_deletes=True),
     )
 
     # NULL = whole-match scope; set = scoped to one student's assignment
@@ -1526,3 +1528,32 @@ class MatchingReviewComment(db.Model):
             return record.selector.student.user.name
 
         return "this assignment"
+
+
+class MatchingCommentReadMarker(db.Model):
+    """
+    Records the last time a given user looked at the review-comments panel for a given
+    MatchingAttempt. Comments created after that instant are shown as "new", both in the panel and
+    on the Student tab's per-row comment chip. One row per (user, attempt); the marker is stamped
+    only after a panel render has been served, so the "new" markers are visible on the view that
+    clears them.
+    """
+
+    __tablename__ = "matching_comment_read_markers"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    user_id = db.Column(db.Integer(), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user = db.relationship("User", foreign_keys=[user_id], uselist=False)
+
+    matching_attempt_id = db.Column(db.Integer(), db.ForeignKey("matching_attempts.id", ondelete="CASCADE"), nullable=False, index=True)
+    matching_attempt = db.relationship(
+        "MatchingAttempt",
+        foreign_keys=[matching_attempt_id],
+        uselist=False,
+        backref=db.backref("comment_read_markers", lazy="dynamic", passive_deletes=True),
+    )
+
+    last_read_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    __table_args__ = (db.UniqueConstraint("user_id", "matching_attempt_id", name="uq_comment_read_marker_user_attempt"),)

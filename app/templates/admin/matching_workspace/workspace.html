@@ -22,9 +22,10 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="offcanvas"
                 data-bs-target="#matchCommentsPanel">
             <i class="fas fa-comment-dots me-1"></i>Review comments
-            {% if unresolved_comments %}
-                <span class="badge rounded-pill bg-danger ms-1">{{ unresolved_comments }}</span>
-            {% endif %}
+            <span class="badge rounded-pill bg-danger ms-1 {% if not unresolved_comments %}d-none{% endif %}"
+                  id="matchCommentsUnresolvedBadge">{{ unresolved_comments }}</span>
+            <span class="badge rounded-pill ms-1 {% if not new_comments %}d-none{% endif %}" id="matchCommentsNewBadge"
+                  style="background: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis);">{{ new_comments }} new</span>
         </button>
     </div>
     <ul class="nav nav-pills dashboard-nav">
@@ -129,7 +130,8 @@
             <h5 class="offcanvas-title mb-0" id="matchCommentsPanelLabel">Review comments</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body" id="matchCommentsPanelBody">
+        {# flex column with no padding: the fragment supplies its own head / scrolling list / pinned composer #}
+        <div class="offcanvas-body d-flex flex-column p-0" id="matchCommentsPanelBody">
             <div class="text-center text-secondary py-4"><i class="fas fa-spinner fa-spin"></i> Loading&hellip;</div>
         </div>
     </div>

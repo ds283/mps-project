@@ -286,5 +286,75 @@ For each surface, compare against its screenshot + the matching README section +
   copy is implementation trivia, and the dashed Compute button is self-explanatory.
   **Noted, not actioned:** `error_block_popover` uses a positive `tabindex="1"`, which hijacks the
   global tab order — an app-wide a11y wart, out of scope now that this surface no longer uses it.
-- **Screen 8 Comments panel** — _not started_
+- **Screen 8 Comments panel** — ✅ done. The largest gaps here were in neither design: the panel had
+  no filter, no per-student index, no scoping, and no unread notion, so with more than a handful of
+  comments it became an undifferentiated wall.
+  **Fixed (reference wins):** (1) the panel was one long scrolling `offcanvas-body` with the composer
+  *after* the last comment — already ~1,400px down with four comments. It is now the reference's
+  three-region flex column (fixed head / scrolling list / pinned footer), with `#matchCommentsPanelBody`
+  carrying `d-flex flex-column p-0` and the fragment supplying its own regions; (2) tab counts —
+  Global had none and "By student" counted *students*; both now count threads, reference-style, on
+  `nav-underline` tabs (Bootstrap 5.3.8, so the class is available); (3) resolved threads only
+  swapped a border colour — they now take the reference's full green tint
+  (`--bs-success-bg-subtle` + `--bs-success-border-subtle`), and the heavy `card`/`card-header`
+  chrome is gone in favour of the reference's light bordered block; (4) the reference's `On: {…}`
+  scope pill added as an optional `show_scope` macro arg.
+  **Fixed (implementation defects the reference also has or worsens):** (5) `resolved_by_id` /
+  `resolved_timestamp` were written by `resolve_match_comment` but **never rendered** — a resolved
+  thread never said who closed it or when; there is now a `Resolved by … · <timestamp>` line;
+  (6) Resolve (a thread-level action) sat beside Reply (a comment-level action), and Reopen sat in
+  the body action row far from the "Resolved" badge in the header — Resolve/Reopen moved into the
+  thread header beside the resolved-by line, Reply stayed in the body; (7) replying to a resolved
+  thread silently left it resolved, so a closed conversation could accumulate unread discussion. The
+  reply box now offers `Post reply` + `Reply and resolve` on an open thread and *only*
+  `Reopen and reply` on a closed one — a new `transition` field on `MatchCommentReplyForm`, applied
+  by `reply_match_comment` in the same transaction as the reply insert (each transition a no-op if
+  already in that state, not an error).
+  **Beat both (new structure):** the By-student tab is now an **inbox** — one row per commented-on
+  student (name, latest snippet, unresolved/resolved/new chips, latest-activity timestamp, ordered by
+  recency), drilling into that student's threads. Above 10 rows a client-side name filter appears;
+  beyond 25 the tail sits behind "Show more" (a name search overrides the cap, so a match in the
+  hidden tail is never invisible). No paginator — its controls are cramped at 440px.
+  A three-way filter (`All` / `Unresolved` / `Resolved`, **default Unresolved**) applies to both
+  tabs, with counts computed *before* filtering so the pills and tab counts do not move as the filter
+  changes. Opening from a student's comment chip now **hard-scopes** the panel (`?record_id=`) with a
+  `Scoped to <name>` banner and a "Show all students" control — previously only the composer's
+  dropdown was preselected while the list still showed everyone. Inbox drill-in reuses that same
+  scoping path, so there is one mechanism, not two. Scope/filter/tab live on the offcanvas element
+  and are echoed back by the fragment, so a re-fetch after post/reply/resolve returns to exactly the
+  same view — previously every mutation bounced the user to the Global tab. Opening the panel afresh
+  deliberately resets to unresolved/unscoped, so a stale scope cannot silently hide most of it.
+  The two composer forms collapsed into one pinned footer, collapsed to a `+ New comment` button that
+  expands in place; its scope follows the active tab. This also **fixed a CSRF policy violation** —
+  the assignment composer injected `comment_form.csrf_token._value()` as a raw hidden input, which
+  CLAUDE.md forbids; it is now `{{ comment_form.hidden_tag() }}`.
+  **Unread (neither design has any):** new `MatchingCommentReadMarker` (one row per user/attempt,
+  migration `c3d9e2f6a1b4`, chain tip `f4a8c2e1b7d3`) plus
+  `POST /admin/mark_match_comments_read/<id>`, fired by JS *after* the body renders so the marker
+  used to compute the flags is the previous one and the `New` pills stay visible on the view that
+  clears them. A user's own comments are never new to them. Drives per-comment `New` pills, inbox
+  `N new` chips, a `N new` pill on the header button (repainted from the counts every mutation now
+  returns), and a dot on the Student-tab row. The read receipt uses a plain `db.session.commit()`,
+  not `log_db_commit` — it is exactly the routine bookkeeping CLAUDE.md says to exclude from the
+  audit log.
+  **Student-row chip:** was a neutral grey *total*, so an unresolved thread looked identical to a
+  resolved one. Now severity-coded — warning-subtle with the unresolved count (the same tone as the
+  open-ticket chip), neutral grey with a tick when everything is resolved, outline when there are no
+  comments — plus the unread dot. `comment_counts_by_record` returns
+  `{total, unresolved, new}` from one grouped query with conditional aggregates, so it is still one
+  query per AJAX page, not one per row.
+  **Kept (implementation wins):** grouping/indexing by student over the reference's flat list; the
+  explicit student `<select>` in the unscoped composer over the reference's ambient "Scoped to:"
+  caption, which is incoherent even in its own screenshot (*Noah Boyer* above comments about Rachel
+  Binnie and Adam Booth); absolute timestamps, per the Screen 6 decision.
+  **Not adopted:** a CTA banner for unresolved comments — it would duplicate the header button's
+  badge, which is the same information in less space.
+  **Also fixed (latent):** the `review_comments` backrefs lacked `passive_deletes=True` despite a
+  NOT NULL `matching_attempt_id` and a DB-level `ON DELETE CASCADE`, so an ORM-level attempt delete
+  would have tried to null the FK. Both backrefs (and the new read-marker backref) now defer to the
+  database cascade.
+  **Noted, not actioned:** the student drawer's comments card stays a read-only *preview* rather than
+  adopting the full thread macro — its reply/resolve controls would need their own JS binding inside
+  the drawer, and "View full conversation" already hands off to the panel. It did gain the
+  resolved-by line and the `N new` badge.
 </content>

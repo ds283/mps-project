@@ -1,9 +1,14 @@
 {#
-  Student pane for the Matching Workspace (Phase 2). Included from workspace.html when
-  view == 'student'. See .prompts/matching-workspace/PLAN.md.
+  Student pane for the Matching Workspace (Phase 2, 1a "period-anchored" redesign). Server-
+  rendered, grouped, paginated list — replaces the match_student_v2 DataTable. Included from
+  workspace.html when view == 'student'. See .prompts/matching-workspace-refine/PLAN.md.
 #}
+{% from "labels.html" import label_text %}
+{% from "admin/matching_workspace/_macros.html" import period_pill, modified_pill, programme_pref_line %}
+{% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, mw_toolbar_end, mw_toolbar_sep, mw_search_form, mw_toggle_pills, mw_pager %}
+
 <style>
-    .mwsp-fbtn {
+    .mw-sp-fbtn {
         font-size: 12px;
         padding: 3px 11px;
         border-radius: 20px;
@@ -15,18 +20,18 @@
         display: inline-block;
     }
 
-    .mwsp-fbtn.active {
+    .mw-sp-fbtn.active {
         background: var(--bs-primary);
         color: #fff;
         border-color: var(--bs-primary);
     }
 
-    .mwsp-fbtn:hover:not(.active) {
+    .mw-sp-fbtn:hover:not(.active) {
         border-color: var(--bs-secondary-color);
         color: var(--bs-body-color);
     }
 
-    .mwsp-filter-toggle {
+    .mw-sp-filter-toggle {
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -35,6 +40,62 @@
         color: var(--bs-secondary-color);
         margin-bottom: 6px;
     }
+
+    .mw-sp-grid {
+        display: grid;
+        grid-template-columns: 160px minmax(300px, 1fr) 210px 104px 96px 130px;
+        gap: 0 18px;
+        align-items: start;
+    }
+
+    .mw-sp-colhead {
+        padding: 0 14px 10px;
+        border-bottom: 2px solid var(--bs-border-color);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: var(--bs-secondary-color);
+    }
+
+    .mw-sp-band {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+
+    .mw-sp-band-student {
+        background: var(--bs-tertiary-bg);
+    }
+
+    .mw-sp-swatch {
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .mw-sp-row {
+        padding: 14px;
+        border-bottom: 1px dashed var(--bs-border-color-translucent);
+    }
+
+    .mw-sp-row:last-child {
+        border-bottom: 3px solid var(--bs-border-color);
+    }
+
+    .mw-sp-total-pill {
+        background: var(--bs-primary);
+        color: #fff;
+        padding: 3px 11px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 12px;
+    }
 </style>
 
 <div class="card border-primary mt-3 mb-3">
@@ -42,7 +103,7 @@
         Student view <strong>{{ record.name }}</strong>
     </div>
     <div class="card-body">
-        <div class="mwsp-filter-toggle" onclick="mwspToggleFilters()">
+        <div class="mw-sp-filter-toggle" onclick="mwspToggleFilters()">
             <i class="fas fa-filter fa-fw" style="font-size: 12px"></i>
             <span id="mwsp-filter-toggle-label">Hide filters</span>
             <i class="fas fa-chevron-up fa-fw" id="mwsp-filter-chevron" style="font-size: 11px"></i>
@@ -51,51 +112,232 @@
         <div class="card mb-3 card-body bg-well" id="mwsp-filters-body">
             <p class="mb-1">Filter by project class</p>
             <div class="d-flex flex-wrap gap-2">
-                <a class="mwsp-fbtn{% if pclass_filter is none or pclass_filter == 'all' %} active{% endif %}"
-                   href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter='all', type_filter=type_filter, hint_filter=hint_filter, text=text, url=url) }}">All</a>
+                <a class="mw-sp-fbtn{% if pclass_filter is none or pclass_filter == 'all' %} active{% endif %}"
+                   href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter='all', type_filter=type_filter, hint_filter=hint_filter, group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">All</a>
                 {% for pc in pclasses %}
-                    <a class="mwsp-fbtn{% if pclass_filter == pc.id|string %} active{% endif %}"
-                       href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pc.id, type_filter=type_filter, hint_filter=hint_filter, text=text, url=url) }}">{{ pc.name }}</a>
+                    <a class="mw-sp-fbtn{% if pclass_filter == pc.id|string %} active{% endif %}"
+                       href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pc.id, type_filter=type_filter, hint_filter=hint_filter, group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">{{ pc.name }}</a>
                 {% endfor %}
             </div>
             <div class="row mt-3">
                 <div class="col-6">
                     <p class="mb-1">Filter by project type</p>
                     <div class="d-flex flex-wrap gap-2">
-                        <a class="mwsp-fbtn{% if type_filter is none or type_filter == 'all' %} active{% endif %}"
-                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter='all', hint_filter=hint_filter, text=text, url=url) }}">All</a>
-                        <a class="mwsp-fbtn{% if type_filter == 'ordinary' %} active{% endif %}"
-                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter='ordinary', hint_filter=hint_filter, text=text, url=url) }}">Ordinary</a>
-                        <a class="mwsp-fbtn{% if type_filter == 'generic' %} active{% endif %}"
-                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter='generic', hint_filter=hint_filter, text=text, url=url) }}">Uses supervisor pool</a>
+                        <a class="mw-sp-fbtn{% if type_filter is none or type_filter == 'all' %} active{% endif %}"
+                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter='all', hint_filter=hint_filter, group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">All</a>
+                        <a class="mw-sp-fbtn{% if type_filter == 'ordinary' %} active{% endif %}"
+                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter='ordinary', hint_filter=hint_filter, group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">Ordinary</a>
+                        <a class="mw-sp-fbtn{% if type_filter == 'generic' %} active{% endif %}"
+                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter='generic', hint_filter=hint_filter, group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">Uses supervisor pool</a>
                     </div>
                 </div>
                 <div class="col-6">
                     <p class="mb-1">Filter by hinting status</p>
                     <div class="d-flex flex-wrap gap-2">
-                        <a class="mwsp-fbtn{% if hint_filter is none or hint_filter == 'all' %} active{% endif %}"
-                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='all', text=text, url=url) }}">All</a>
-                        <a class="mwsp-fbtn{% if hint_filter == 'satisfied' %} active{% endif %}"
-                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='satisfied', text=text, url=url) }}">Hint satisfied</a>
-                        <a class="mwsp-fbtn{% if hint_filter == 'violated' %} active{% endif %}"
-                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='violated', text=text, url=url) }}">Hint violated</a>
+                        <a class="mw-sp-fbtn{% if hint_filter is none or hint_filter == 'all' %} active{% endif %}"
+                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='all', group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">All</a>
+                        <a class="mw-sp-fbtn{% if hint_filter == 'satisfied' %} active{% endif %}"
+                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='satisfied', group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">Hint satisfied</a>
+                        <a class="mw-sp-fbtn{% if hint_filter == 'violated' %} active{% endif %}"
+                           href="{{ url_for('admin.matching_workspace', id=record.id, view='student', pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='violated', group_by=group_by, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">Hint violated</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <table id="match_student_v2" class="table table-striped">
-            <thead>
-            <tr>
-                <th width="18%">Student</th>
-                <th width="16%">Project class</th>
-                <th width="27%">Project</th>
-                <th width="15%">Markers</th>
-                <th width="12%">Rank</th>
-                <th width="12%">Score</th>
-            </tr>
-            </thead>
-        </table>
+        {% set view_args = {'id': record.id, 'view': 'student'} %}
+        {% set base_params = {
+            'pclass_filter': pclass_filter,
+            'type_filter': type_filter,
+            'hint_filter': hint_filter,
+            'group_by': group_by,
+            'name_filter': name_filter,
+            'per_page': per_page,
+            'text': text,
+            'url': url,
+        } %}
+
+        {{ mw_toolbar_start() }}
+        {{ mw_search_form('admin.matching_workspace', view_args, base_params, name_filter, placeholder='Search students…') }}
+        {{ mw_toolbar_sep() }}
+        <span class="small text-body-secondary">Group by</span>
+        {{ mw_toggle_pills('admin.matching_workspace', view_args, base_params, 'group_by',
+                            [{'value': 'student', 'label': 'Student', 'icon': 'user-graduate'},
+                             {'value': 'period', 'label': 'Submission period', 'icon': 'layer-group'}],
+                            group_by) }}
+        {{ mw_toolbar_end() }}
+
+        <div class="mw-sp-grid mw-sp-colhead mt-3">
+            <div>{% if group_by == 'period' %}Student{% else %}Period{% endif %}</div>
+            <div>Project</div>
+            <div>Markers</div>
+            <div>Rank</div>
+            <div>Score</div>
+            <div class="text-end">Actions</div>
+        </div>
+
+        {% if group_by == 'period' %}
+            <div class="small text-body-secondary py-2">
+                <i class="fas fa-info-circle me-1" style="color: var(--bs-primary);"></i>
+                Groups are keyed on the submission period definition, not the period number &mdash;
+                periods that share a position (e.g. &ldquo;period 1&rdquo;) in different project classes
+                are shown separately.
+            </div>
+        {% endif %}
+
+        {% for group in groups %}
+            {% if group.kind == 'student' %}
+                <div class="mw-sp-band mw-sp-band-student">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="mw-sp-swatch" style="{{ group.swatch|safe }}"></span>
+                        <strong style="font-size: 15px;">{{ group.title }}</strong>
+                        {% if not group.rows[0].record.selector.convert_to_submitter %}
+                            <i class="fas fa-exclamation-triangle text-danger" data-bs-toggle="tooltip"
+                               title="Conversion to submitter is disabled"></i>
+                        {% endif %}
+                        <span class="small text-body-secondary">{{ label_text(group.pclass_label) }}{% if group.subtitle %} &middot; {{ group.subtitle }}{% endif %}</span>
+                    </div>
+                    <span class="small text-body-secondary">
+                        {{ group.period_count }} period{{ 's' if group.period_count != 1 }}
+                        <span class="mw-sp-total-pill ms-1">Total {{ '%0.2f'|format(group.total_score) if group.total_score is not none else '&mdash;'|safe }}</span>
+                    </span>
+                </div>
+            {% else %}
+                <div class="mw-sp-band" style="background: {{ group.pill.colours.band_bg }}; border-bottom-color: {{ group.pill.colours.band_border }};">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="mw-sp-swatch" style="{{ group.rows[0].pclass.instance.make_CSS_style()|safe }}"></span>
+                        <strong style="font-size: 14.5px; color: {{ group.pill.colours.band_fg }};">{{ group.title }}</strong>
+                        <span class="small" style="color: {{ group.pill.colours.band_fg }}; opacity: 0.85;">
+                            {{ group.allocation_count }} allocation{{ 's' if group.allocation_count != 1 }}
+                        </span>
+                    </div>
+                    <span class="mw-sp-total-pill">&Sigma; {{ '%0.2f'|format(group.total_score) if group.total_score is not none else '&mdash;'|safe }}</span>
+                </div>
+            {% endif %}
+
+            {% for row in group.rows %}
+                <div class="mw-sp-grid mw-sp-row">
+                    <div>
+                        {% if group_by == 'period' %}
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="mw-sp-swatch" style="{{ row.pclass.instance.make_CSS_style()|safe }}"></span>
+                                <a class="text-decoration-none fw-semibold" href="mailto:{{ row.user.email }}">{{ row.user.name }}</a>
+                                {% if not row.record.selector.convert_to_submitter %}
+                                    <i class="fas fa-exclamation-triangle text-danger" data-bs-toggle="tooltip"
+                                       title="Conversion to submitter is disabled"></i>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            {{ period_pill(row.period) }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if row.project.instance %}
+                            <a class="text-decoration-none fw-semibold" role="button" data-bs-toggle="modal"
+                               data-bs-target="#matchRoleEditorModal" data-rec-id="{{ row.record.id }}">{{ row.project.name }} <i class="fas fa-caret-down"></i></a>
+                        {% else %}
+                            <a class="text-decoration-none text-danger fw-semibold" role="button" data-bs-toggle="modal"
+                               data-bs-target="#matchRoleEditorModal" data-rec-id="{{ row.record.id }}">Unassigned <i class="fas fa-caret-down"></i></a>
+                        {% endif %}
+                        {% if row.modified %}
+                            <span class="ms-1">{{ modified_pill() }}</span>
+                        {% endif %}
+                        {% if row.supervisors %}
+                            <div class="mt-1">
+                                {% for s in row.supervisors %}
+                                    <div class="small text-body-secondary">
+                                        <i class="fas fa-user-circle me-1"></i>{{ s.user.name }} &middot; {{ s.role_as_str }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {{ programme_pref_line(row.programme_pref) }}
+                    </div>
+                    <div>
+                        {% if row.markers %}
+                            {% for m in row.markers %}
+                                <div class="small text-body-secondary">
+                                    <a class="text-decoration-none text-body-secondary" role="button" data-bs-toggle="modal"
+                                       data-bs-target="#matchRoleEditorModal" data-rec-id="{{ row.record.id }}">{{ m.name }} <i class="fas fa-caret-down"></i></a>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="modal"
+                               data-bs-target="#matchRoleEditorModal" data-rec-id="{{ row.record.id }}">Assign marker&hellip; <i class="fas fa-caret-down"></i></a>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% set band = row.rank_band %}
+                        <div class="fw-bold" style="font-size: 20px; line-height: 1.1;
+                            {% if band == 'success' %}color: var(--bs-success);
+                            {% elif band == 'warning' %}color: var(--bs-orange);
+                            {% elif band == 'danger' %}color: var(--bs-danger);
+                            {% endif %}">
+                            {{ ('#' ~ row.rank) if row.rank is not none else '&mdash;'|safe }}
+                        </div>
+                        <div class="small text-body-secondary">preference</div>
+                    </div>
+                    <div>
+                        <span class="small text-body-secondary">{{ '%0.2f'|format(row.score) if row.score is not none else '&mdash;'|safe }}</span>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        <a class="small text-decoration-none" role="button" data-bs-toggle="offcanvas" data-bs-target="#matchStudentDrawer"
+                           data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}">
+                            Show details <i class="fas fa-chevron-right"></i>
+                        </a>
+                        <div class="d-flex align-items-center gap-1">
+                            {% if row.comments.unresolved %}
+                                <a class="badge rounded-pill small text-decoration-none" role="button" data-bs-toggle="offcanvas"
+                                   data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+                                   style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);"
+                                   title="{{ row.comments.unresolved }} unresolved comment thread(s) on {{ row.user.name }}'s assignment">
+                                    <i class="fas fa-comment-dots me-1"></i>{{ row.comments.unresolved }}
+                                </a>
+                            {% elif row.comments.total %}
+                                <a class="badge rounded-pill small text-decoration-none" role="button" data-bs-toggle="offcanvas"
+                                   data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+                                   style="background: var(--bs-secondary-bg); color: var(--bs-secondary-color);"
+                                   title="All comments on {{ row.user.name }}'s assignment are resolved">
+                                    <i class="fas fa-check me-1"></i>{{ row.comments.total }}
+                                </a>
+                            {% else %}
+                                <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+                                   data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+                                   title="No comments yet on {{ row.user.name }}'s assignment">
+                                    <i class="far fa-comment"></i>
+                                </a>
+                            {% endif %}
+                            {% if row.comments.new %}
+                                <span class="d-inline-block rounded-circle" title="{{ row.comments.new }} comment(s) you have not seen"
+                                      style="width: 7px; height: 7px; background: var(--bs-primary);"></span>
+                            {% endif %}
+                            <a class="small text-decoration-none text-body-secondary" role="button" data-bs-toggle="offcanvas"
+                               data-bs-target="#matchCommentsPanel" data-rec-id="{{ row.record.id }}" data-student-name="{{ row.user.name }}"
+                               data-comment-focus="1" title="Add a comment on {{ row.user.name }}'s assignment">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                        </div>
+                        {% if row.journal.visible %}
+                            <a class="badge rounded-pill border text-body-secondary small text-decoration-none" role="button"
+                               data-bs-toggle="offcanvas" data-bs-target="#matchStudentDrawer" data-rec-id="{{ row.record.id }}"
+                               data-student-name="{{ row.user.name }}" title="View journal entries for {{ row.user.name }}">
+                                <i class="fas fa-book me-1"></i>{{ row.journal.visible }}
+                            </a>
+                        {% endif %}
+                        {% if row.open_tickets %}
+                            <span class="badge rounded-pill small"
+                                  style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
+                                <i class="fas fa-ticket-alt me-1"></i>{{ row.open_tickets }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center text-body-secondary py-4">No matching records found.</div>
+        {% endfor %}
+
+        {{ mw_pager('admin.matching_workspace', view_args, base_params, page, per_page, total_groups, item_noun='groups') }}
     </div>
 </div>
 

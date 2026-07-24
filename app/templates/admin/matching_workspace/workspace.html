@@ -140,7 +140,7 @@
 {% block scripts %}
     {{ super() }}
     {{ import_select2() }}
-    {% if view in ('student', 'faculty') %}
+    {% if view == 'faculty' %}
         {{ import_datatables() }}
     {% endif %}
 
@@ -149,38 +149,6 @@
         MATCH_WORKSPACE_RETURN_URL = {{ url|tojson|safe }};
         MATCH_WORKSPACE_RETURN_TEXT = {{ text|tojson|safe }};
     </script>
-
-    {% if view == 'student' %}
-        <script>
-            $(document).ready(function () {
-                window.matchStudentTable = $('#match_student_v2').DataTable({
-                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
-                    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                    serverSide: true, processing: true,
-                    language: {{ bootstrap_spinner() }},
-                    ajax: {
-                        url: $SCRIPT_ROOT + '/admin/match_student_view_v2_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&type_filter={{ type_filter }}&hint_filter={{ hint_filter }}&text={{ text|urlencode }}&url={{ url|urlencode }}',
-                        type: 'POST',
-                        data: function (args) {
-                            return {"args": JSON.stringify(args)};
-                        }
-                    },
-                    "fnDrawCallback": function () {
-                        $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
-                    },
-                    columns: [
-                        {data: 'student', orderable: true, searchable: true},
-                        {data: 'pclass', orderable: true, searchable: true},
-                        {data: 'project', orderable: true, searchable: true},
-                        {data: 'markers', orderable: false, searchable: false},
-                        {data: 'rank', orderable: true, searchable: false},
-                        {data: 'score', orderable: true, searchable: false}
-                    ],
-                    order: [[0, 'asc']]
-                });
-            });
-        </script>
-    {% endif %}
 
     {% if view == 'faculty' %}
         <script>

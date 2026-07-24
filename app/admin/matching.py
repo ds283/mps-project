@@ -1941,6 +1941,59 @@ def matching_workspace(id):
 
     changes = workspace_service.changes_data(record)
 
+    student_ctx = {}
+    if view == "student":
+        group_by = request.args.get("group_by", default=None)
+        if group_by is None and session.get("admin_match_group_by"):
+            group_by = session["admin_match_group_by"]
+        if group_by not in ("student", "period"):
+            group_by = "student"
+        session["admin_match_group_by"] = group_by
+
+        name_filter = request.args.get("name_filter", "").strip()
+
+        page = request.args.get("page", 1, type=int)
+        _ALLOWED_PER_PAGE = {5, 10, 15, 20}
+        per_page_raw = request.args.get("per_page", 10, type=int)
+        per_page = per_page_raw if per_page_raw in _ALLOWED_PER_PAGE else 10
+
+        pclass_flag, pclass_value = is_integer(pclass_filter)
+
+        filter_list = []
+        if pclass_flag:
+            filter_list.append(lambda row: row.selector.config.pclass_id == pclass_value)
+        if type_filter == "ordinary":
+            filter_list.append(lambda row: row.project is not None and not row.project.use_supervisor_pool)
+        elif type_filter == "generic":
+            filter_list.append(lambda row: row.project is not None and row.project.use_supervisor_pool)
+        if hint_filter == "satisfied":
+            filter_list.append(lambda row: row.hint_status is not None and len(row.hint_status[0]) > 0)
+        elif hint_filter == "violated":
+            filter_list.append(lambda row: row.hint_status is not None and len(row.hint_status[1]) > 0)
+        if name_filter:
+            name_lower = name_filter.lower()
+            filter_list.append(lambda row: name_lower in row.selector.student.user.name.lower())
+
+        matching_records = [
+            r
+            for r in record.records.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()).all()
+            if all(f(r) for f in filter_list)
+        ]
+
+        all_groups = workspace_service.build_student_groups(record, matching_records, group_by)
+        total_groups = len(all_groups)
+        page_start = (page - 1) * per_page
+        groups = all_groups[page_start : page_start + per_page]
+
+        student_ctx = dict(
+            groups=groups,
+            group_by=group_by,
+            name_filter=name_filter,
+            page=page,
+            per_page=per_page,
+            total_groups=total_groups,
+        )
+
     return render_template_context(
         "admin/matching_workspace/workspace.html",
         view=view,
@@ -1955,101 +2008,8 @@ def matching_workspace(id):
         new_comments=workspace_service.new_comment_count(record, current_user),
         text=text,
         url=url,
+        **student_ctx,
     )
-
-
-@admin.route("/match_student_view_v2_ajax/<int:id>", methods=["POST"])
-@roles_accepted("faculty", "admin", "root")
-def match_student_view_v2_ajax(id):
-    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
-
-    if not validate_match_inspector(attempt):
-        return jsonify({})
-
-    if not attempt.finished or not attempt.solution_usable:
-        return jsonify({})
-
-    pclass_filter = request.args.get("pclass_filter", default=None)
-    pclass_flag, pclass_value = is_integer(pclass_filter)
-
-    type_filter = request.args.get("type_filter", default=None)
-    hint_filter = request.args.get("hint_filter", default=None)
-
-    url = request.args.get("url", default=None)
-    text = request.args.get("text", default=None)
-
-    base_query = attempt.records.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc())
-
-    def search_name(row: MatchingRecord):
-        return row.selector.student.user.name
-
-    def sort_name(row: MatchingRecord):
-        user: User = row.selector.student.user
-        return [user.last_name, user.first_name]
-
-    def search_pclass(row: MatchingRecord):
-        return row.selector.config.name
-
-    def sort_pclass(row: MatchingRecord):
-        return row.selector.config.name
-
-    def search_project(row: MatchingRecord):
-        return row.project.name if row.project is not None else ""
-
-    def sort_project(row: MatchingRecord):
-        return row.project.name if row.project is not None else ""
-
-    def sort_rank(row: MatchingRecord):
-        return row.total_rank
-
-    def sort_score(row: MatchingRecord):
-        return row.current_score
-
-    student = {"search": search_name, "order": sort_name}
-    pclass = {"search": search_pclass, "order": sort_pclass}
-    project = {"search": search_project, "order": sort_project}
-    rank = {"order": sort_rank}
-    score = {"order": sort_score}
-    columns = {
-        "student": student,
-        "pclass": pclass,
-        "project": project,
-        "markers": {},
-        "rank": rank,
-        "score": score,
-    }
-
-    filter_list = []
-
-    if pclass_flag:
-        filter_list.append(lambda row: row.selector.config.pclass_id == pclass_value)
-
-    if type_filter == "ordinary":
-        filter_list.append(lambda row: row.project is not None and not row.project.use_supervisor_pool)
-    elif type_filter == "generic":
-        filter_list.append(lambda row: row.project is not None and row.project.use_supervisor_pool)
-
-    if hint_filter == "satisfied":
-        filter_list.append(lambda row: row.hint_status is not None and len(row.hint_status[0]) > 0)
-    elif hint_filter == "violated":
-        filter_list.append(lambda row: row.hint_status is not None and len(row.hint_status[1]) > 0)
-
-    def row_filter(row: MatchingRecord):
-        return all(f(row) for f in filter_list)
-
-    with ServerSideInMemoryHandler(
-        request,
-        base_query,
-        columns,
-        row_filter=row_filter if len(filter_list) > 0 else None,
-    ) as handler:
-
-        def row_formatter(records: List[MatchingRecord]):
-            comment_counts = workspace_service.comment_counts_by_record(attempt, user=current_user)
-            rows = [workspace_service.student_row(attempt, rec, comments=comment_counts.get(rec.id)) for rec in records]
-            return ajax.admin.student_view_v2_data(rows, attempt.id, text=text, url=url)
-
-        return handler.build_payload(row_formatter)
 
 
 @admin.route("/match_student_drawer_ajax/<int:rec_id>")

@@ -53,9 +53,19 @@
         toast.show();
     }
 
+    // The Student pane (Phase 2) is a server-rendered, paginated list, not a DataTable — the
+    // current URL already carries view + filters + group_by + page + per_page, so a full reload
+    // re-renders it in place. The Faculty pane still uses a DataTable (removed in a later phase),
+    // so that branch is kept as the fast path while it still applies.
+    function reloadWorkspace() {
+        window.location.reload();
+    }
+
     function reloadStudentTable() {
         if (window.matchStudentTable) {
             window.matchStudentTable.ajax.reload(null, false);
+        } else {
+            reloadWorkspace();
         }
     }
 

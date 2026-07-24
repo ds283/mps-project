@@ -309,6 +309,97 @@ def student_row(attempt: MatchingAttempt, record: MatchingRecord, comments: Opti
     }
 
 
+# ############################
+# STUDENT TAB — GROUPING
+# ############################
+
+
+def _student_group_sort_key(row: dict) -> Tuple[str, str]:
+    user = row["user"]
+    return ((user.last_name or "").lower(), (user.first_name or "").lower())
+
+
+def build_student_groups(attempt: MatchingAttempt, records: List[MatchingRecord], group_by: str) -> List[dict]:
+    """
+    Assemble the Student-tab's grouped, roll-up row list: one `student_row()` view dict per
+    record, wrapped into either "by student" groups (a student's own periods within one
+    ProjectClass, in period order, rolled up to a Total score) or "by period" groups (every
+    allocation sharing one SubmissionPeriodDefinition, rolled up to a summed score). See
+    `period_sort_key` for why "period 1" of two different classes never merge under "by period".
+    """
+    comment_counts = comment_counts_by_record(attempt, user=current_user)
+    rows = [student_row(attempt, rec, comments=comment_counts.get(rec.id)) for rec in records]
+
+    if group_by == "period":
+        return _group_students_by_period(rows)
+    return _group_students_by_student(rows)
+
+
+def _group_students_by_student(rows: List[dict]) -> List[dict]:
+    groups: Dict[Tuple[int, int], List[dict]] = defaultdict(list)
+    for row in rows:
+        groups[(row["student"].id, row["pclass"]["instance"].id)].append(row)
+
+    result = []
+    for group_rows in groups.values():
+        group_rows.sort(key=lambda r: r["period"]["position"] if r["period"] is not None else 0)
+        head = group_rows[0]
+        scores = [r["score"] for r in group_rows if r["score"] is not None]
+
+        subtitle_parts = []
+        if head["programme"] is not None:
+            subtitle_parts.append(head["programme"].short_name)
+        if head["cohort"] is not None:
+            subtitle_parts.append(f"{head['cohort']} cohort")
+
+        result.append(
+            {
+                "kind": "student",
+                "title": head["user"].name,
+                "subtitle": " · ".join(subtitle_parts),
+                "swatch": head["pclass"]["instance"].make_CSS_style(),
+                "pclass_label": head["pclass"]["label"],
+                "period_count": len(group_rows),
+                "total_score": sum(scores) if scores else None,
+                "rows": group_rows,
+            }
+        )
+
+    result.sort(key=lambda g: (_student_group_sort_key(g["rows"][0]), g["rows"][0]["pclass"]["instance"].name))
+    return result
+
+
+def _group_students_by_period(rows: List[dict]) -> List[dict]:
+    groups: Dict[int, List[dict]] = defaultdict(list)
+    for row in rows:
+        pill = row["period"]
+        if pill is None:
+            # a record with no resolvable SubmissionPeriodDefinition cannot be placed in a
+            # period-anchored group; this should not happen for a usable matching solution
+            continue
+        groups[pill["id"]].append(row)
+
+    result = []
+    for group_rows in groups.values():
+        group_rows.sort(key=_student_group_sort_key)
+        pill = group_rows[0]["period"]
+        scores = [r["score"] for r in group_rows if r["score"] is not None]
+
+        result.append(
+            {
+                "kind": "period",
+                "pill": pill,
+                "title": f"{pill['pclass_abbrev']} · {pill['name']}",
+                "allocation_count": len(group_rows),
+                "total_score": sum(scores) if scores else None,
+                "rows": group_rows,
+            }
+        )
+
+    result.sort(key=lambda g: (g["rows"][0]["pclass"]["instance"].name, g["pill"]["position"]))
+    return result
+
+
 def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
     """
     Assemble the view dict for the Student inspector drawer: assigned project, quick

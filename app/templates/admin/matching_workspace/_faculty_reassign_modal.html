@@ -10,6 +10,17 @@
 {% set surname = drawer.faculty.user.last_name %}
 
 <style>
+    /* the workspace sits on a recessed surface so that the pool cards and the currently-assigned
+       cards read as panels rather than as hairline outlines on white */
+    #matchFacultyReassignModalContent .modal-body,
+    #matchFacultyReassignModalContent .modal-footer {
+        background: var(--bs-tertiary-bg);
+    }
+
+    .mwfr-panel {
+        background: var(--bs-body-bg);
+    }
+
     /* project titles in the per-project capacity and currently-assigned lists are clamped so that
        long titles cannot push the capacity figures out of view; full title in the title attribute */
     .mwfr-proj {
@@ -34,7 +45,7 @@
 {% endmacro %}
 
 {% macro pool_card(entry, dot_colour) %}
-    <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2 mb-2">
+    <div class="mwfr-panel d-flex align-items-center justify-content-between gap-2 border rounded p-2 mb-2">
         <div class="d-flex align-items-start gap-2">
             <span class="rounded-circle flex-shrink-0 mt-1" style="width: 8px; height: 8px; background: {{ dot_colour }};"></span>
             <div class="small">
@@ -88,8 +99,8 @@
 <form id="matchFacultyAssignCsrf" class="d-none">{{ form.hidden_tag() }}</form>
 <div class="modal-body">
     {% if drawer.workload.cats_supervising_limit is not none and drawer.workload.cats_supervising >= drawer.workload.cats_supervising_limit %}
-        <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
-            <i class="fas fa-exclamation-triangle"></i>
+        <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+            <i class="fas fa-exclamation-triangle mt-1"></i>
             <div>
                 <strong>Over limit.</strong> Assigning another supervisee here will exceed the supervising CATS limit
                 ({{ drawer.workload.cats_supervising }}/{{ drawer.workload.cats_supervising_limit }}). Overassignment is allowed here; it

@@ -4,7 +4,7 @@
   when view == 'faculty'. See .prompts/matching-workspace-refine/PLAN.md.
 #}
 {% from "swatch.html" import small_swatch %}
-{% from "admin/matching_workspace/_macros.html" import class_period_tag %}
+{% from "admin/matching_workspace/_macros.html" import class_period_tag, programme_pref_line %}
 {% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, mw_toolbar_end, mw_toolbar_sep, mw_search_form, mw_toggle_pills, mw_pager %}
 {% include "admin/matching_workspace/_list_controls.html" %}
 
@@ -167,16 +167,8 @@
                                    data-bs-target="#matchRoleEditorModal" data-rec-id="{{ item.record.id }}">{{ item.student.user.name }}</a>
                                 &middot;
                                 <span class="mwfp-proj" title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</span>
-                                {% if item.programme_pref is not none %}
-                                    {% if item.programme_pref %}
-                                        <i class="fas fa-check-circle small" style="color: var(--bs-success-text-emphasis);"
-                                           data-bs-toggle="tooltip" title="Meets programme prefs"></i>
-                                    {% else %}
-                                        <i class="fas fa-times-circle small" style="color: var(--bs-warning-text-emphasis);"
-                                           data-bs-toggle="tooltip" title="Programme prefs not met"></i>
-                                    {% endif %}
-                                {% endif %}
                             </div>
+                            {{ programme_pref_line(item.programme_pref) }}
                         </div>
                     {% else %}
                         <span class="text-body-secondary small">None</span>

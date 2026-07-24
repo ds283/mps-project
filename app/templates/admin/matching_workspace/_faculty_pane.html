@@ -5,7 +5,7 @@
 #}
 {% from "swatch.html" import small_swatch %}
 {% from "admin/matching_workspace/_macros.html" import class_period_tag %}
-{% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, mw_toolbar_end, mw_search_form, mw_pager %}
+{% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, mw_toolbar_end, mw_toolbar_sep, mw_search_form, mw_toggle_pills, mw_pager %}
 {% include "admin/matching_workspace/_list_controls.html" %}
 
 <style>
@@ -77,10 +77,10 @@
             <p class="mb-1">Filter by project class</p>
             <div class="d-flex flex-wrap gap-2">
                 <a class="mw-fp-fbtn{% if pclass_filter is none or pclass_filter == 'all' %} active{% endif %}"
-                   href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter='all', name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">All</a>
+                   href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter='all', name_filter=name_filter, sort_by=sort_by, sort_dir=sort_dir, per_page=per_page, page=1, text=text, url=url) }}">All</a>
                 {% for pc in pclasses %}
                     <a class="mw-fp-fbtn{% if pclass_filter == pc.id|string %} active{% endif %}"
-                       href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter=pc.id, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">{{ pc.name }}</a>
+                       href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter=pc.id, name_filter=name_filter, sort_by=sort_by, sort_dir=sort_dir, per_page=per_page, page=1, text=text, url=url) }}">{{ pc.name }}</a>
                 {% endfor %}
             </div>
         </div>
@@ -89,6 +89,8 @@
         {% set base_params = {
             'pclass_filter': pclass_filter,
             'name_filter': name_filter,
+            'sort_by': sort_by,
+            'sort_dir': sort_dir,
             'per_page': per_page,
             'text': text,
             'url': url,
@@ -96,6 +98,23 @@
 
         {{ mw_toolbar_start() }}
         {{ mw_search_form('admin.matching_workspace', view_args, base_params, name_filter, placeholder='Search faculty…') }}
+        {{ mw_toolbar_sep() }}
+        <span class="small text-body-secondary">Sort by</span>
+        <div class="d-inline-flex align-items-center gap-1">
+            <a class="mw-fbtn{% if sort_by == 'name' %} active{% endif %}"
+               href="{{ url_for('admin.matching_workspace', **dict(view_args, **dict(base_params, sort_by='name', sort_dir='asc', page=1))) }}">
+                <i class="fas fa-user"></i>Name
+            </a>
+            <a class="mw-fbtn{% if sort_by == 'workload' %} active{% endif %}"
+               href="{{ url_for('admin.matching_workspace', **dict(view_args, **dict(base_params, sort_by='workload', sort_dir='desc', page=1))) }}">
+                <i class="fas fa-weight-hanging"></i>Workload
+            </a>
+        </div>
+        {% set dir_options = [
+            {'value': 'asc', 'label': 'A → Z' if sort_by == 'name' else 'Low → High', 'icon': 'arrow-up'},
+            {'value': 'desc', 'label': 'Z → A' if sort_by == 'name' else 'High → Low', 'icon': 'arrow-down'},
+        ] %}
+        {{ mw_toggle_pills('admin.matching_workspace', view_args, base_params, 'sort_dir', dir_options, sort_dir) }}
         {{ mw_toolbar_end() }}
 
         <div class="mw-fp-grid mw-fp-colhead mt-3">

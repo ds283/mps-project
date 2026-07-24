@@ -252,6 +252,38 @@ distinct, allocations sort by class then period, and search/pagination work.
 
 ---
 
+## Phase 6 — Faculty pane sort controls
+
+**Goal:** the Faculty tab's hard-coded surname-order sort becomes a Name/Workload toggle with independent
+ascending/descending direction, session-persisted like the pane's other filters.
+
+1. **`matching_workspace.py`**: add `faculty_workload_total(attempt, fac)` next to `faculty_row` — returns
+   `sup + mark` from the memoized `attempt.get_faculty_CATS(fac.id)`, so summing it across every candidate
+   for sorting before pagination is cheap.
+2. **`matching.py`** (faculty branch of `matching_workspace()`): read `sort_by` (`"name"`/`"workload"`,
+   default `"name"`) and `sort_dir` (`"asc"`/`"desc"`) via the same query-arg → session-fallback → validate
+   → session-write pattern as `group_by`, under new keys `admin_match_faculty_sort_by` /
+   `admin_match_faculty_sort_dir`. When no `sort_dir` is supplied by either the query string or the
+   session, default it from `sort_by`: `"desc"` for `workload`, `"asc"` for `name` — so a bare first visit
+   and a field switch both land on the sensible per-field default. Replace the hard-coded
+   `candidates.sort(...)` with a branch on `sort_by` (`faculty_workload_total` vs. surname/first-name),
+   `reverse=(sort_dir == "desc")` in both branches. Add `sort_by`/`sort_dir` to `faculty_ctx`.
+3. **`_faculty_pane.html`**: import `mw_toolbar_sep, mw_toggle_pills`; add `sort_by`/`sort_dir` to
+   `base_params` (so search, pager, and pclass-filter links round-trip them) and to the two pclass-filter
+   `<a>` links' explicit `url_for` args. In the toolbar, after `mw_search_form(...)`: a separator, a "Sort
+   by" label, two hand-built `mw-fbtn` pills (Name → `sort_by='name', sort_dir='asc'`; Workload →
+   `sort_by='workload', sort_dir='desc'`) — plain links rather than `mw_toggle_pills`, since each pill must
+   set two query params at once — then an `mw_toggle_pills(..., 'sort_dir', dir_options, sort_dir)` toggle
+   whose `dir_options` labels ("A → Z"/"Z → A" vs. "Low → High"/"High → Low") depend on the current
+   `sort_by`.
+
+**Verify:** default load is unchanged (Name A→Z); Workload pill reorders highest-CATS-first with "High →
+Low" active; the direction pill flips to "Low → High" and reverses order; switching back to Name resets to
+A→Z; the sort selection survives pclass filter, name search, per-page, and paging.
+**Commit:** "matching-workspace-refine: faculty pane name/workload sort controls".
+
+---
+
 ## Cross-cutting constraints
 
 - **Colours:** only Bootstrap 5.3 tokens or app semantic tokens, except the model-supplied class hex fed

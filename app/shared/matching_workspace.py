@@ -557,6 +557,13 @@ def _flat_role_records(records: List[MatchingRecord]) -> List[dict]:
     ]
 
 
+def faculty_workload_total(attempt: MatchingAttempt, fac: FacultyData) -> float:
+    """Total CATS (supervising + marking) for one faculty member, used as the Faculty-tab
+    workload sort key. Cheap: MatchingAttempt.get_faculty_CATS() is memoized."""
+    sup, mark = attempt.get_faculty_CATS(fac.id)
+    return sup + mark
+
+
 def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     """
     Assemble the view dict for a single Faculty-tab row: offered project counts, flat period-

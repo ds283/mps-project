@@ -2004,6 +2004,20 @@ def matching_workspace(id):
 
     faculty_ctx = {}
     if view == "faculty":
+        sort_by = request.args.get("sort_by", default=None)
+        if sort_by is None and session.get("admin_match_faculty_sort_by"):
+            sort_by = session["admin_match_faculty_sort_by"]
+        if sort_by not in ("name", "workload"):
+            sort_by = "name"
+        session["admin_match_faculty_sort_by"] = sort_by
+
+        sort_dir = request.args.get("sort_dir", default=None)
+        if sort_dir is None and session.get("admin_match_faculty_sort_dir"):
+            sort_dir = session["admin_match_faculty_sort_dir"]
+        if sort_dir not in ("asc", "desc"):
+            sort_dir = "desc" if sort_by == "workload" else "asc"
+        session["admin_match_faculty_sort_dir"] = sort_dir
+
         name_filter = request.args.get("name_filter", "").strip()
 
         page = request.args.get("page", 1, type=int)
@@ -2028,7 +2042,10 @@ def matching_workspace(id):
 
             candidates = [fac for fac in candidates if _offers_pclass(fac)]
 
-        candidates.sort(key=lambda fac: ((fac.user.last_name or "").lower(), (fac.user.first_name or "").lower()))
+        if sort_by == "workload":
+            candidates.sort(key=lambda fac: workspace_service.faculty_workload_total(record, fac), reverse=(sort_dir == "desc"))
+        else:
+            candidates.sort(key=lambda fac: ((fac.user.last_name or "").lower(), (fac.user.first_name or "").lower()), reverse=(sort_dir == "desc"))
 
         total_faculty = len(candidates)
         page_start = (page - 1) * per_page
@@ -2038,6 +2055,8 @@ def matching_workspace(id):
             faculty_rows=[workspace_service.faculty_row(record, fac) for fac in page_candidates],
             pclass_lookup={config.pclass_id: config.project_class for config in record.config_members},
             name_filter=name_filter,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
             page=page,
             per_page=per_page,
             total_faculty=total_faculty,

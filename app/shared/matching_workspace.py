@@ -697,8 +697,11 @@ def changes_data(attempt: MatchingAttempt) -> dict:
 
     rows.sort(key=_sort_key)
 
-    score = attempt.score
-    current_score = attempt.current_score
+    # MatchingAttempt.score is a Numeric(10, 2) column and so arrives as a Decimal, whereas
+    # current_score is computed in Python and is a float; coerce both so they are the same type,
+    # both for the subtraction below and for consistent formatting in the template
+    score = float(attempt.score) if attempt.score is not None else None
+    current_score = float(attempt.current_score) if attempt.current_score is not None else None
 
     return {
         "rows": rows,

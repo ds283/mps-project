@@ -3,7 +3,7 @@
   (matching_dashboard.html). Populated by match_statistics_ajax; never rendered at initial page
   load — see .prompts/matching-workspace/PLAN.md ("no new caching" non-goal).
 #}
-{% from "error_block.html" import error_block_popover %}
+{% from "admin/matching_workspace/_macros.html" import score_progression, validation_detail %}
 
 <div class="d-flex flex-wrap gap-2 mb-2">
     {% set pref = stats.prefer_programme_status %}
@@ -30,19 +30,34 @@
             Violated {{ violated }} hint{{ 's' if violated != 1 else '' }}
         </span>
     {% endif %}
-    {% if stats.delta_max is not none %}<span class="badge rounded-pill bg-secondary">&delta; max {{ stats.delta_max }}</span>{% endif %}
-    {% if stats.delta_min is not none %}<span class="badge rounded-pill bg-secondary">&delta; min {{ stats.delta_min }}</span>{% endif %}
-    {% if stats.CATS_max is not none %}<span class="badge rounded-pill bg-secondary">CATS max {{ stats.CATS_max }}</span>{% endif %}
-    {% if stats.CATS_min is not none %}<span class="badge rounded-pill bg-secondary">CATS min {{ stats.CATS_min }}</span>{% endif %}
-</div>
-<div class="d-flex flex-wrap gap-3 small mb-2">
-    <span style="color: var(--bs-success-text-emphasis);"><i class="fas fa-circle"></i> Original score {{ stats.score }}</span>
-    {% if stats.current_score is not none %}
-        <span style="color: var(--bs-primary);"><i class="fas fa-circle"></i> Current score {{ stats.current_score|round(precision=2) }}</span>
-    {% else %}
-        <span class="text-danger"><i class="fas fa-ban"></i> Current score: undefined</span>
+    {# delta and CATS render as ranges (min-max) where both ends are known, as in the reference
+       design; a single available end falls back to a labelled one-sided chip. #}
+    {% if stats.delta_min is not none and stats.delta_max is not none %}
+        <span class="badge rounded-pill bg-secondary">&delta; {{ stats.delta_min }}&ndash;{{ stats.delta_max }}</span>
+    {% elif stats.delta_max is not none %}
+        <span class="badge rounded-pill bg-secondary">&delta; max {{ stats.delta_max }}</span>
+    {% elif stats.delta_min is not none %}
+        <span class="badge rounded-pill bg-secondary">&delta; min {{ stats.delta_min }}</span>
+    {% endif %}
+    {% if stats.CATS_min is not none and stats.CATS_max is not none %}
+        <span class="badge rounded-pill bg-secondary">CATS {{ stats.CATS_min }}&ndash;{{ stats.CATS_max }}</span>
+    {% elif stats.CATS_max is not none %}
+        <span class="badge rounded-pill bg-secondary">CATS max {{ stats.CATS_max }}</span>
+    {% elif stats.CATS_min is not none %}
+        <span class="badge rounded-pill bg-secondary">CATS min {{ stats.CATS_min }}</span>
     {% endif %}
 </div>
-<div>
-    {{ error_block_popover(m.errors, m.warnings) }}
+<div class="d-flex flex-wrap align-items-center gap-2 small mb-2">
+    <span class="text-body-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.4px;">Objective score</span>
+    {% if stats.current_score is none %}
+        <span style="color: var(--bs-success-text-emphasis);">
+            {{ '%0.2f'|format(stats.score) if stats.score is not none else '&mdash;'|safe }}
+        </span>
+        <span class="text-danger"><i class="fas fa-ban me-1"></i>current score undefined</span>
+    {% else %}
+        <span class="fw-semibold">
+            {{ score_progression(stats.score, stats.current_score, stats.score_delta) }}
+        </span>
+    {% endif %}
 </div>
+{{ validation_detail(m.errors, m.warnings, "mdash-validation-" ~ m.id) }}

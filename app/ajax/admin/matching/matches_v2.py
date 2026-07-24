@@ -21,7 +21,7 @@ _card = """
      {% if m.selected %}style="box-shadow: 0 0 0 .2rem var(--bs-primary-bg-subtle);"{% endif %}>
     <div class="card-body">
         <div class="row g-3 align-items-start">
-            <div class="col-12 col-lg-3">
+            <div class="col-12 col-lg-3 mdash-col">
                 {% if m.finished and m.solution_usable %}
                     <a class="text-decoration-none fw-semibold"
                        href="{{ url_for('admin.matching_workspace', id=m.id, view='student', text=text, url=url) }}">{{ m.name }}</a>
@@ -35,7 +35,7 @@ _card = """
                     {% endfor %}
                 </div>
             </div>
-            <div class="col-12 col-lg-2">
+            <div class="col-12 col-lg-2 mdash-col">
                 {% if m.finished %}
                     {% if m.solution_usable %}
                         <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Optimal solution</div>
@@ -63,13 +63,13 @@ _card = """
                     <div class="small text-success fw-semibold"><i class="fas fa-star"></i> Current</div>
                 {% endif %}
             </div>
-            <div class="col-12 col-lg-3">
+            <div class="col-12 col-lg-3 mdash-col">
                 {% if m.solution_usable %}
-                    <div class="small text-body-secondary d-flex flex-column gap-1">
-                        <div>{{ m.records.count() }} selectors</div>
-                        <div>{{ m.supervisors.count() }} supervisors</div>
-                        <div>{{ m.markers.count() }} markers</div>
-                        <div>{{ m.projects.count() }} projects</div>
+                    {# one wrapping line rather than four stacked ones: the counts are secondary
+                       information and should not set the height of the card #}
+                    <div class="small text-body-secondary">
+                        {{ m.records.count() }} selectors &middot; {{ m.supervisors.count() }} supervisors
+                        &middot; {{ m.markers.count() }} markers &middot; {{ m.projects.count() }} projects
                     </div>
                 {% endif %}
             </div>

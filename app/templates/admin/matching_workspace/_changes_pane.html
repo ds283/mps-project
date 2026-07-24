@@ -4,7 +4,7 @@
   .prompts/matching-workspace/PLAN.md.
 #}
 {% from "swatch.html" import small_swatch %}
-{% from "admin/matching_workspace/_macros.html" import field_pill, diff_pair %}
+{% from "admin/matching_workspace/_macros.html" import field_pill, diff_pair, score_progression %}
 
 {% set field_labels = {'project': 'Project', 'supervisor': 'Supervisors', 'marker': 'Markers'} %}
 
@@ -44,20 +44,7 @@
                     <div class="card-body text-center">
                         <div class="small text-body-secondary text-uppercase">Objective score</div>
                         <div class="fs-4 fw-bold">
-                            <span style="color: var(--bs-success-text-emphasis);">
-                                {{ '%0.2f'|format(changes.score) if changes.score is not none else '&mdash;'|safe }}
-                            </span>
-                            <i class="fas fa-arrow-right mx-1 text-body-secondary" style="font-size: 0.7em;"></i>
-                            <span style="color: var(--bs-primary);">
-                                {{ '%0.2f'|format(changes.current_score) if changes.current_score is not none else '&mdash;'|safe }}
-                            </span>
-                            {% if changes.score_delta is not none and '%0.2f'|format(changes.score_delta) != '0.00' %}
-                                {% set delta_severity = 'success' if changes.score_delta > 0 else 'danger' %}
-                                <span class="badge rounded-pill align-middle ms-1"
-                                      style="background: var(--bs-{{ delta_severity }}-bg-subtle); color: var(--bs-{{ delta_severity }}-text-emphasis); font-size: 0.55em;">
-                                    {{ '%+0.2f'|format(changes.score_delta) }}
-                                </span>
-                            {% endif %}
+                            {{ score_progression(changes.score, changes.current_score, changes.score_delta) }}
                         </div>
                         <div class="small text-body-secondary">objective score (optimiser &rarr; current)</div>
                     </div>

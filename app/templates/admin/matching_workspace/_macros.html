@@ -77,6 +77,91 @@
     </span>
 {% endmacro %}
 
+{% macro score_progression(before, after, delta, empty_label='&mdash;') %}
+    {# Objective-score narrative: optimiser baseline -> current, with a signed delta chip coloured by
+       direction (success when manual edits improved the objective, danger when they degraded it).
+       Shared by the Changes tab summary card and the Matches dashboard statistics fragment.
+       `before`/`after`/`delta` must all be floats — see the Decimal/float note in
+       app/shared/matching_workspace.py. #}
+    <span style="color: var(--bs-success-text-emphasis);">
+        {{ '%0.2f'|format(before) if before is not none else empty_label|safe }}
+    </span>
+    <i class="fas fa-arrow-right mx-1 text-body-secondary" style="font-size: 0.7em;"></i>
+    <span style="color: var(--bs-primary);">
+        {{ '%0.2f'|format(after) if after is not none else empty_label|safe }}
+    </span>
+    {% if delta is not none and '%0.2f'|format(delta) != '0.00' %}
+        {% set delta_severity = 'success' if delta > 0 else 'danger' %}
+        <span class="badge rounded-pill align-middle ms-1"
+              style="background: var(--bs-{{ delta_severity }}-bg-subtle); color: var(--bs-{{ delta_severity }}-text-emphasis); font-size: 0.55em;">
+            {{ '%+0.2f'|format(delta) }}
+        </span>
+    {% endif %}
+{% endmacro %}
+
+{% macro _validation_items(items) %}
+    {# Validation messages arrive either as plain strings or as mappings carrying a 'msg' key
+       (see format_inline_item in error_block.html). #}
+    {% for item in items %}
+        {% if item is mapping %}
+            {% if item.msg %}<li>{{ item.msg }}</li>{% endif %}
+        {% else %}
+            <li>{{ item }}</li>
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{% macro validation_detail(errors, warnings, panel_id) %}
+    {# Error/warning summary chips that toggle an inline collapse panel listing every message.
+       A collapse is used rather than a popover deliberately: this fragment is injected into the
+       page by AJAX, and Bootstrap popovers require a JS init step that never runs for
+       dynamically-inserted nodes (base.html binds popovers once, at document ready). #}
+    {% set error_list = errors|list %}
+    {% set warning_list = warnings|list %}
+    {% if error_list or warning_list %}
+        <div class="d-flex flex-wrap gap-2">
+            {% if error_list %}
+                <button type="button" class="badge rounded-pill border-0" data-bs-toggle="collapse" data-bs-target="#{{ panel_id }}"
+                        style="background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); cursor: pointer;">
+                    {{ error_list|length }} error{{ 's' if error_list|length != 1 else '' }}
+                    <i class="fas fa-chevron-right ms-1"></i>
+                </button>
+            {% endif %}
+            {% if warning_list %}
+                <button type="button" class="badge rounded-pill border-0" data-bs-toggle="collapse" data-bs-target="#{{ panel_id }}"
+                        style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); cursor: pointer;">
+                    {{ warning_list|length }} warning{{ 's' if warning_list|length != 1 else '' }}
+                    <i class="fas fa-chevron-right ms-1"></i>
+                </button>
+            {% endif %}
+        </div>
+        <div class="collapse mt-2" id="{{ panel_id }}">
+            <div class="d-flex flex-column gap-2">
+                {% if error_list %}
+                    <div class="p-2 rounded" style="background: var(--bs-danger-bg-subtle); border: 1px solid var(--bs-danger-border-subtle);">
+                        <div class="small fw-bold" style="color: var(--bs-danger-text-emphasis);">
+                            <i class="fas fa-times-circle me-1"></i>Validation errors ({{ error_list|length }})
+                        </div>
+                        <ul class="small mb-0 mt-1 ps-4" style="color: var(--bs-danger-text-emphasis);">
+                            {{ _validation_items(error_list) }}
+                        </ul>
+                    </div>
+                {% endif %}
+                {% if warning_list %}
+                    <div class="p-2 rounded" style="background: var(--bs-warning-bg-subtle); border: 1px solid var(--bs-warning-border-subtle);">
+                        <div class="small fw-bold" style="color: var(--bs-warning-text-emphasis);">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Validation warnings ({{ warning_list|length }})
+                        </div>
+                        <ul class="small mb-0 mt-1 ps-4" style="color: var(--bs-warning-text-emphasis);">
+                            {{ _validation_items(warning_list) }}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% endmacro %}
+
 {% macro capacity_bar(label, value, limit, binding_note=none) %}
     <div class="mb-2">
         <div class="d-flex justify-content-between small">

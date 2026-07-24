@@ -240,6 +240,51 @@ For each surface, compare against its screenshot + the matching README section +
   **Not adopted:** the reference's relative timestamps ("Today 09:14", "Yesterday 16:40") — absolute
   `16 Mar 2026 13:22` is unambiguous and consistent with the rest of the app, and avoids a new
   Jinja filter.
-- **Screen 7 Matches dashboard** — _not started_
+- **Screen 7 Matches dashboard** — ✅ done. Eight divergences reviewed.
+  **Fixed (defect — the headline item):** the errors/warnings chips were **inert**. `base.html`
+  initialises popovers once at `$(document).ready()`, but `matching_dashboard.js` injects the card
+  list and each statistics fragment by `innerHTML` long afterwards, so the `data-bs-toggle="popover"`
+  badges emitted by `error_block_popover` were never bound — on every card, both chips. Replaced
+  with the reference's inline expandable panel via a new `validation_detail()` macro: the chips are
+  `data-bs-toggle="collapse"` buttons (declarative, so they survive AJAX injection with no JS init)
+  opening a two-block panel — danger-subtle "Validation errors (N)" and warning-subtle "Validation
+  warnings (N)", each a full `<ul>`. This also drops `error_block_popover`'s 10-item cap, which was
+  silently truncating an 18-error match. Messages arrive as either plain strings or mappings with a
+  `msg` key, so the macro handles both; `format_inline_item` was *not* reused because it emits
+  `text-warning`, forbidden by `.claude/rules/jinja2-templates.md`. `error_block.html` is untouched —
+  it is used across the app.
+  **Fixed (reference wins):** (2) the list had no card chrome at all — heading and both buttons sat
+  loose in `pillblock`, the only workspace surface not wrapped in the `card border-primary` +
+  `card-header bg-primary text-white` shell used by Screens 1/3/6; now wrapped, with "Compute all
+  statistics" as a `.btn-ghost-header` in the card header (the Screen 6 "Revert all" pattern) and
+  the Return link, root-only Create button and year selector left in `pillblock`; (3) the four
+  stacked count lines — the tallest element on a card, for the least information — collapsed to one
+  wrapping `·`-separated line, keeping full words rather than the reference's `sel/sup/mark/proj`
+  abbreviations; (4) 1px vertical rules between the card columns (`.mdash-col`, suppressed below
+  `lg` where the columns stack); (5) the four `δ max`/`δ min`/`CATS max`/`CATS min` chips collapsed
+  to the reference's two range chips `δ 0–4` / `CATS 0–152`, with a one-sided fallback when only one
+  end is known.
+  **Beat both:** the objective score was two independent lines ("Original score" / "Current score"),
+  losing the optimiser → current narrative that the Changes tab already tells. Both surfaces now
+  share a new `score_progression()` macro — `baseline → current` plus a signed delta chip coloured
+  by direction — extracted from `_changes_pane.html`. The reference has neither the arrow form here
+  nor a delta anywhere.
+  **Fixed (latent bug):** `dashboard_statistics()` returned `score` as a `Decimal` (a stored column)
+  and `current_score` as a `float` sum, so taking a delta across them would have raised — exactly
+  the mismatch fixed for the Changes tab in `8daaaabb`. Both are now coerced to `float` and a
+  `score_delta` key added, mirroring `changes_data()`.
+  **Kept (implementation wins):** the "Open →" primary CTA (the reference relies on the name link
+  alone); the full-width statistics strip below a `border-top` rather than the reference's cramped
+  4th column; the `Violated N hints` chip (absent from the reference); the year selector, root-only
+  Create button and privilege scoping (no prototype equivalent); the spinner-in-button in place of
+  the reference's shimmering placeholder chips.
+  **Accepted divergence:** the reference renders the error/warning chips unconditionally, but
+  `attempt.errors`/`warnings` force full validation via `is_valid` — that would defeat the
+  fast-first-load behaviour, so they stay inside the on-demand bundle. Same reasoning keeps both
+  scores there: `score` is a cheap column but `_MatchingAttempt_current_score` walks every record.
+  **Not adopted:** the reference's "⚡ Fast first load, no cache…" info banner (user decision) — its
+  copy is implementation trivia, and the dashed Compute button is self-explanatory.
+  **Noted, not actioned:** `error_block_popover` uses a positive `tabindex="1"`, which hijacks the
+  global tab order — an app-wide a11y wart, out of scope now that this surface no longer uses it.
 - **Screen 8 Comments panel** — _not started_
 </content>

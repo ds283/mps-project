@@ -731,7 +731,13 @@ def dashboard_statistics(attempt: MatchingAttempt) -> dict:
     On-demand statistics bundle for one MatchingAttempt: programme-preference matched/failed,
     convenor-hint satisfied/violated, delta (rank) range, and CATS range. Computed fresh on every
     call — no caching is added here (see PLAN.md non-goals).
+
+    `score` (the optimiser objective) is a Decimal column while `current_score` is a float sum, so
+    both are coerced to float before the delta is taken — mixing the two raises TypeError.
     """
+    score = float(attempt.score) if attempt.score is not None else None
+    current_score = float(attempt.current_score) if attempt.current_score is not None else None
+
     return {
         "prefer_programme_status": attempt.prefer_programme_status,
         "hint_status": attempt.hint_status,
@@ -739,8 +745,9 @@ def dashboard_statistics(attempt: MatchingAttempt) -> dict:
         "delta_min": attempt.delta_min,
         "CATS_max": attempt.CATS_max,
         "CATS_min": attempt.CATS_min,
-        "score": attempt.score,
-        "current_score": attempt.current_score,
+        "score": score,
+        "current_score": current_score,
+        "score_delta": (current_score - score) if (score is not None and current_score is not None) else None,
     }
 
 

@@ -45,6 +45,74 @@
         #mdash-cards > .card:last-child {
             margin-bottom: 0;
         }
+
+        /* Configuration / Timing & provenance disclosure panels (matching-dashboard handoff,
+           option 1a): grouped chip panels inside the card, toggled by Bootstrap collapse driven
+           purely from data attributes so they survive the AJAX innerHTML injection in
+           matching_dashboard.js. */
+        .cfg-chip {
+            background: var(--bs-tertiary-bg);
+            border: 1px solid var(--bs-border-color);
+            color: var(--bs-secondary-color);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 12px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .cfg-chip b {
+            font-weight: 600;
+            color: var(--bs-body-color);
+        }
+
+        .cfg-grp-h {
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: .6px;
+            font-weight: 700;
+            color: var(--bs-secondary-color);
+            margin-bottom: 7px;
+        }
+
+        .mdash-cfg-toggle, .mdash-tim-toggle {
+            border: 1px solid var(--bs-primary);
+            color: var(--bs-primary);
+            background: var(--bs-body-bg);
+        }
+
+        .mdash-tim-toggle {
+            border-color: var(--bs-secondary);
+            color: var(--bs-secondary);
+        }
+
+        .mdash-cfg-toggle[aria-expanded="true"] {
+            background: var(--bs-primary);
+            color: var(--bs-white);
+        }
+
+        .mdash-tim-toggle[aria-expanded="true"] {
+            background: var(--bs-secondary);
+            color: var(--bs-white);
+        }
+
+        .mdash-toggle-caret {
+            transition: transform .15s ease;
+        }
+
+        [aria-expanded="true"] .mdash-toggle-caret {
+            transform: rotate(180deg);
+        }
+
+        .mdash-toggle-label::before {
+            content: attr(data-closed);
+        }
+
+        [aria-expanded="true"] .mdash-toggle-label::before {
+            content: attr(data-open);
+        }
     </style>
 
     <div class="card border-primary mt-3 mb-3">

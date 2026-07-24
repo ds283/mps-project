@@ -93,6 +93,153 @@ _card = """
                 </button>
                 <div class="mt-2" id="mdash-stats-{{ m.id }}"></div>
             </div>
+
+            <div class="mt-3 pt-2 border-top d-flex flex-wrap gap-2 align-items-center">
+                <button class="btn btn-xs mdash-cfg-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#mdash-cfg-{{ m.id }}"
+                        aria-expanded="false" aria-controls="mdash-cfg-{{ m.id }}">
+                    <i class="fas fa-sliders-h me-1"></i><span class="mdash-toggle-label"
+                        data-closed="Configuration" data-open="Hide configuration"></span><i
+                        class="fas fa-chevron-down ms-2 mdash-toggle-caret"></i>
+                </button>
+                <button class="btn btn-xs mdash-tim-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#mdash-tim-{{ m.id }}"
+                        aria-expanded="false" aria-controls="mdash-tim-{{ m.id }}">
+                    <i class="fas fa-history me-1"></i><span class="mdash-toggle-label"
+                        data-closed="Timing &amp; provenance" data-open="Hide timing &amp; provenance"></span><i
+                        class="fas fa-chevron-down ms-2 mdash-toggle-caret"></i>
+                </button>
+            </div>
+
+            <div class="collapse mt-3" id="mdash-cfg-{{ m.id }}">
+                <div class="p-3 rounded" style="background: var(--bs-tertiary-bg);">
+                    <div class="row g-4">
+                        <div class="col-6 col-xl-4">
+                            <div class="cfg-grp-h">Limits &amp; multiplicities</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="cfg-chip">Supervising CATS <b>{{ m.supervising_limit }}</b></span>
+                                <span class="cfg-chip">Marking CATS <b>{{ m.marking_limit }}</b></span>
+                                <span class="cfg-chip">Marker multiplicity <b>{{ m.max_marking_multiplicity }}</b></span>
+                                <span class="cfg-chip">Max project types
+                                    <b>{% if m.max_different_all_projects is none %}no limit{% else %}{{ m.max_different_all_projects }}{% endif %}</b>
+                                </span>
+                                <span class="cfg-chip">Max group types
+                                    <b>{% if m.max_different_group_projects is none %}no limit{% else %}{{ m.max_different_group_projects }}{% endif %}</b>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-xl-4">
+                            <div class="cfg-grp-h">Policies</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if not m.ignore_per_faculty_limits %}
+                                    <span class="cfg-chip"><i class="fas fa-check-circle text-success"></i>Per-faculty limits applied</span>
+                                {% else %}
+                                    <span class="cfg-chip">Per-faculty limits not applied</span>
+                                {% endif %}
+                                {% if not m.ignore_programme_prefs %}
+                                    <span class="cfg-chip"><i class="fas fa-check-circle text-success"></i>Programme prefs applied</span>
+                                {% else %}
+                                    <span class="cfg-chip">Programme prefs not applied</span>
+                                {% endif %}
+                                {% if m.include_only_submitted %}
+                                    <span class="cfg-chip">Only submitted selectors</span>
+                                {% else %}
+                                    <span class="cfg-chip">All selectors</span>
+                                {% endif %}
+                                {% if m.solver_name %}
+                                    {% if m.solver_name.endswith(' external') %}
+                                        <span class="cfg-chip"><i class="fas fa-microchip"></i>{{ m.solver_name[:-9] }}
+                                            <span class="text-body-secondary">external</span></span>
+                                    {% else %}
+                                        <span class="cfg-chip"><i class="fas fa-microchip"></i>{{ m.solver_name }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6 col-xl-4">
+                            <div class="cfg-grp-h">Convenor hints
+                                {% if m.use_hints %}
+                                    <span class="text-success ms-1"><i class="fas fa-check"></i> enforced</span>
+                                {% else %}
+                                    <span class="ms-1">disabled</span>
+                                {% endif %}
+                            </div>
+                            {% if m.use_hints %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="cfg-chip"><i class="fas fa-arrow-up text-success"></i>Encourage <b>&times;{{ "%.3f"|format(m.encourage_bias) }}</b></span>
+                                    <span class="cfg-chip"><i class="fas fa-arrow-down text-danger"></i>Discourage <b>&times;{{ "%.3f"|format(m.discourage_bias) }}</b></span>
+                                    <span class="cfg-chip"><i class="fas fa-angle-double-up text-success"></i>Strong enc. <b>&times;{{ "%.3f"|format(m.strong_encourage_bias) }}</b></span>
+                                    <span class="cfg-chip"><i class="fas fa-angle-double-down text-danger"></i>Strong disc. <b>&times;{{ "%.3f"|format(m.strong_discourage_bias) }}</b></span>
+                                    {% if m.require_to_encourage %}
+                                        <span class="cfg-chip">Require &rarr; strong encourage</span>
+                                    {% endif %}
+                                    {% if m.forbid_to_discourage %}
+                                        <span class="cfg-chip">Forbid &rarr; strong discourage</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-6 col-xl-4">
+                            <div class="cfg-grp-h">Objective weights</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="cfg-chip">Programme <b>{{ "%.3f"|format(m.programme_bias) }}</b></span>
+                                <span class="cfg-chip">Bookmark <b>{{ "%.3f"|format(m.bookmark_bias) }}</b></span>
+                                <span class="cfg-chip">Levelling <b>{{ "%.3f"|format(m.levelling_bias) }}</b></span>
+                                <span class="cfg-chip">Group tension <b>{{ "%.3f"|format(m.intra_group_tension) }}</b></span>
+                                <span class="cfg-chip">Sup. pressure <b>{{ "%.3f"|format(m.supervising_pressure) }}</b></span>
+                                <span class="cfg-chip">Mark. pressure <b>{{ "%.3f"|format(m.marking_pressure) }}</b></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-xl-4">
+                            <div class="cfg-grp-h">Penalties</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="cfg-chip">CATS violation <b>{{ "%.3f"|format(m.CATS_violation_penalty) }}</b></span>
+                                <span class="cfg-chip">No assignment <b>{{ "%.3f"|format(m.no_assignment_penalty) }}</b></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapse mt-3" id="mdash-tim-{{ m.id }}">
+                <div class="p-3 rounded d-flex flex-wrap gap-4" style="background: var(--bs-tertiary-bg);">
+                    {% if m.base is not none %}
+                        <div>
+                            <div class="cfg-grp-h">Based on</div>
+                            <div class="small">
+                                <i class="fas fa-link text-body-secondary me-1"></i>
+                                {% if m.base.solution_usable %}
+                                    <a class="text-decoration-none"
+                                       href="{{ url_for('admin.matching_workspace', id=m.base.id, view='student', text=text, url=url) }}">{{ m.base.name }}</a>
+                                {% else %}
+                                    <span>{{ m.base.name }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
+                                {% if m.force_base %}
+                                    <span class="badge rounded-pill"
+                                          style="background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);">
+                                        <i class="fas fa-lock me-1"></i>Forced inheritance
+                                    </span>
+                                {% else %}
+                                    <span class="badge rounded-pill"
+                                          style="background: var(--bs-secondary-bg-subtle); color: var(--bs-secondary-text-emphasis);">
+                                        Biased inheritance
+                                    </span>
+                                {% endif %}
+                                <span class="cfg-chip">base bias <b>{{ "%.3f"|format(m.base_bias) }}</b></span>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <div class="cfg-grp-h">Timings</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="cfg-chip"><i class="fas fa-hammer"></i>Build <b>{{ m.formatted_construct_time }}</b></span>
+                            <span class="cfg-chip"><i class="fas fa-stopwatch"></i>Solve <b>{{ m.formatted_compute_time }}</b></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         {% endif %}
 
         <div class="mt-2 text-body-secondary small">

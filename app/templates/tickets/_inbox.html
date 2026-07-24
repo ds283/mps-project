@@ -3,10 +3,11 @@
    their own `endpoint` so the filter links stay within that page's chrome. Import `with context`
    so the macros can read the per-request inbox context (view, labels, metrics, role flags). #}
 
-{% from "tickets/_ledger.html" import ledger_table %}
+{% from "tickets/_ledger.html" import ledger_table, ledger_styles %}
 {% from "select2.html" import import_select2 %}
 
 {% macro inbox_styles() %}
+    {{ ledger_styles() }}
     <style>
         .tk-pill-btn {
             display: inline-block;
@@ -257,27 +258,29 @@
 
         {# ledger #}
         <div class="tk-main">
-            {# subject-kind + specific student/class scope filter #}
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                <a class="tk-pill-btn {{ 'active' if selected_subject_kind is none else '' }}"
-                   href="{{ url_for(endpoint, view=view, label_id=selected_label, subject=selected_subject) }}">All</a>
-                <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'class' else '' }}"
-                   href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='class', subject=selected_subject) }}">Project
-                    class</a>
-                <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'submitter' else '' }}"
-                   href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='submitter', subject=selected_subject) }}">Submitters</a>
-                <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'selector' else '' }}"
-                   href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='selector', subject=selected_subject) }}">Selectors</a>
-                <div style="width:220px">
-                    <select id="tk-scope-subject" style="width:100%">
-                        {% if selected_subject and selected_subject_label %}
-                            <option value="{{ selected_subject }}" selected>{{ selected_subject_label }}</option>
-                        {% endif %}
-                    </select>
+            <div class="tk-ledger-card">
+                {# subject-kind + specific student/class scope filter #}
+                <div class="tk-ledger-toolbar d-flex flex-wrap align-items-center gap-2">
+                    <a class="tk-pill-btn {{ 'active' if selected_subject_kind is none else '' }}"
+                       href="{{ url_for(endpoint, view=view, label_id=selected_label, subject=selected_subject) }}">All</a>
+                    <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'class' else '' }}"
+                       href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='class', subject=selected_subject) }}">Project
+                        class</a>
+                    <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'submitter' else '' }}"
+                       href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='submitter', subject=selected_subject) }}">Submitters</a>
+                    <a class="tk-pill-btn {{ 'active' if selected_subject_kind == 'selector' else '' }}"
+                       href="{{ url_for(endpoint, view=view, label_id=selected_label, subject_kind='selector', subject=selected_subject) }}">Selectors</a>
+                    <div style="width:220px">
+                        <select id="tk-scope-subject" style="width:100%">
+                            {% if selected_subject and selected_subject_label %}
+                                <option value="{{ selected_subject }}" selected>{{ selected_subject_label }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
                 </div>
-            </div>
 
-            {{ ledger_table('inbox-ledger') }}
+                {{ ledger_table('inbox-ledger') }}
+            </div>
         </div>
     </div>
 {% endmacro %}

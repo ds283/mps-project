@@ -812,8 +812,34 @@
         });
     }
 
+    // Rewrite the filter-pill counts for the active tab. The pills reflect only what the visible tab
+    // shows, and the per-tab counts are shipped once as JSON so a client-side tab switch needs no
+    // re-fetch (which would also prematurely clear the "New" pills).
+    function updatePillCounts(scope, tab) {
+        var container = scope.querySelector("#mwCommentFilters");
+        if (!container) {
+            return;
+        }
+        var counts;
+        try {
+            counts = JSON.parse(container.getAttribute("data-pill-counts") || "{}")[tab];
+        } catch (e) {
+            counts = null;
+        }
+        if (!counts) {
+            return;
+        }
+        container.querySelectorAll(".mw-comment-filter").forEach(function (pill) {
+            var span = pill.querySelector(".mw-comment-filter-count");
+            var key = pill.getAttribute("data-state");
+            if (span && typeof counts[key] !== "undefined") {
+                span.textContent = counts[key];
+            }
+        });
+    }
+
     // Tab switching is done here rather than with bootstrap.Tab so the active tab can be part of
-    // the persisted view state and the composer can follow it.
+    // the persisted view state and the composer/banner/pills can follow it.
     function showCommentsTab(scope, panelEl, tab) {
         scope.querySelectorAll(".mw-comment-tab").forEach(function (btn) {
             btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
@@ -826,16 +852,26 @@
         view.tab = tab;
         setCommentsViewState(panelEl, view);
 
-        // the composer posts against whichever scope the visible tab represents
+        // the composer posts against whichever scope the visible tab represents; on the Global tab it
+        // is always whole-match, even when the panel is scoped to a student for the list view
         var scopeInput = scope.querySelector("#mwComposerScope");
         if (scopeInput) {
             scopeInput.value = tab === "student" ? "assignment" : "global";
         }
 
-        var studentGroup = scope.querySelector("#mwComposerStudentGroup");
-        if (studentGroup) {
-            studentGroup.classList.toggle("d-none", tab !== "student");
+        // student context (select or "Scoped to …" caption) belongs to the By-student tab only
+        var studentCtx = scope.querySelector("#mwComposerStudentCtx");
+        if (studentCtx) {
+            studentCtx.classList.toggle("d-none", tab !== "student");
         }
+
+        // the scope banner is a By-student affordance; hide it on the Global tab
+        var scopeBanner = scope.querySelector("#mwCommentsScopeBanner");
+        if (scopeBanner) {
+            scopeBanner.classList.toggle("d-none", tab !== "student");
+        }
+
+        updatePillCounts(scope, tab);
     }
 
     // Filter pills, tab switches and inbox drill-in are all the same operation: change one piece of

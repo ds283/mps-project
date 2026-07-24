@@ -107,12 +107,12 @@
     </div>
 {% endmacro %}
 
-{% macro empty_state(noun) %}
+{% macro empty_state(noun, counts) %}
     <div class="text-body-secondary small py-3">
         {% if data.state == 'unresolved' %}
             No unresolved {{ noun }}.
-            {% if data.counts.resolved %}
-                <a href="#" class="mw-comment-filter-link" data-state="all">Show all {{ data.counts.all }}</a>.
+            {% if counts.resolved %}
+                <a href="#" class="mw-comment-filter-link" data-state="all">Show all {{ counts.all }}</a>.
             {% endif %}
         {% elif data.state == 'resolved' %}
             No resolved {{ noun }} yet.
@@ -203,10 +203,16 @@
         color: var(--bs-success-text-emphasis);
     }
 
+    /* on the green resolved card a bordered button on body-bg reads clearly as an action,
+       where grey-on-green text nearly vanished */
     .mw-thread-resolve.reopen {
-        border-color: var(--bs-border-color);
-        color: var(--bs-secondary-color);
+        background: var(--bs-body-bg);
+        border-color: var(--bs-secondary-color);
+        color: var(--bs-body-color);
+        font-weight: 500;
     }
+
+    .mw-thread-resolve.reopen:hover { background: var(--bs-secondary-bg); }
 
     .mw-thread-resolved-by {
         margin-top: 6px;
@@ -269,13 +275,16 @@
 
 <form id="matchCommentsCsrfForm" class="d-none">{{ resolve_form.hidden_tag() }}</form>
 
+{% set active_tab_name = 'student' if data.scoped else active_tab %}
+{% set active_pills = data.pill_counts[active_tab_name] %}
 <div class="mw-comments d-flex flex-column" id="mwComments" data-state="{{ data.state }}"
      data-record-id="{{ scoped_record_id if scoped_record_id else '' }}"
-     data-tab="{{ 'student' if data.scoped else active_tab }}">
+     data-tab="{{ active_tab_name }}">
 
     <div class="mw-comments-head">
+        {# scope banner belongs to the By-student view; JS hides it on the Global tab #}
         {% if data.scoped %}
-            <div class="mw-comment-scope">
+            <div class="mw-comment-scope" id="mwCommentsScopeBanner">
                 <div>
                     <i class="fas fa-filter fa-fw"></i> Scoped to <strong>{{ data.scoped.student_name }}</strong>
                 </div>
@@ -298,10 +307,12 @@
             </li>
         </ul>
 
-        <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2">
-            {{ state_pill("All", "all", data.counts.all, data.state) }}
-            {{ state_pill("Unresolved", "unresolved", data.counts.unresolved, data.state) }}
-            {{ state_pill("Resolved", "resolved", data.counts.resolved, data.state) }}
+        {# pills count only the active tab's threads; JS rewrites the numbers from data-pill-counts on tab switch #}
+        <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2" id="mwCommentFilters"
+             data-pill-counts="{{ data.pill_counts|tojson }}">
+            {{ state_pill("All", "all", active_pills.all, data.state) }}
+            {{ state_pill("Unresolved", "unresolved", active_pills.unresolved, data.state) }}
+            {{ state_pill("Resolved", "resolved", active_pills.resolved, data.state) }}
         </div>
     </div>
 
@@ -310,7 +321,7 @@
             {% for thread in data.global_threads %}
                 {{ comment_thread(thread) }}
             {% else %}
-                {{ empty_state("whole-match comments") }}
+                {{ empty_state("whole-match comments", data.pill_counts.global) }}
             {% endfor %}
         </div>
 
@@ -319,7 +330,7 @@
                 {% for thread in data.scoped_threads %}
                     {{ comment_thread(thread) }}
                 {% else %}
-                    {{ empty_state("comments on " ~ data.scoped.student_name) }}
+                    {{ empty_state("comments on " ~ data.scoped.student_name, data.pill_counts.student) }}
                 {% endfor %}
             {% else %}
                 {% if data.inbox|length > 10 %}
@@ -350,7 +361,7 @@
                         </div>
                     </button>
                 {% else %}
-                    {{ empty_state("per-student comments") }}
+                    {{ empty_state("per-student comments", data.pill_counts.student) }}
                 {% endfor %}
 
                 {% if data.inbox|length > 25 %}
@@ -369,17 +380,21 @@
 
         <form id="mwComposerForm" class="d-none">
             {{ comment_form.hidden_tag() }}
-            <input type="hidden" name="scope" id="mwComposerScope" value="{{ 'assignment' if data.scoped else 'global' }}">
+            {# scope follows the active tab (set by showCommentsTab), not the panel's scope, so a
+               comment written on the Global tab is always whole-match even when the panel is scoped #}
+            <input type="hidden" name="scope" id="mwComposerScope" value="{{ 'assignment' if active_tab_name == 'student' else 'global' }}">
 
-            {% if data.scoped %}
-                <input type="hidden" name="matching_record" value="{{ data.scoped.record_id }}">
-                <div class="small text-body-secondary mb-2">Scoped to: <strong>{{ data.scoped.student_name }}</strong></div>
-            {% else %}
-                <div class="mb-2 d-none" id="mwComposerStudentGroup">
+            {# student context, shown only on the By-student tab. The scoped hidden matching_record is
+               inert when scope=global (the route ignores it). #}
+            <div class="mb-2" id="mwComposerStudentCtx">
+                {% if data.scoped %}
+                    <input type="hidden" name="matching_record" value="{{ data.scoped.record_id }}">
+                    <div class="small text-body-secondary">Scoped to: <strong>{{ data.scoped.student_name }}</strong></div>
+                {% else %}
                     {{ comment_form.matching_record.label(class="form-label small fw-semibold mb-1") }}
                     {{ comment_form.matching_record(id="mwComposerStudent", class="form-select form-select-sm select2") }}
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
 
             <textarea name="body" id="mwComposerBody" class="form-control form-control-sm" rows="3"
                       placeholder="Record a change or a desired change&hellip;" required></textarea>

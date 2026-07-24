@@ -765,6 +765,59 @@ def _student_name(record: Optional[MatchingRecord]) -> str:
     return "Unknown student"
 
 
+def record_disambiguation_map(records: List[MatchingRecord]) -> Dict[int, str]:
+    """
+    A student can hold several MatchingRecords in one attempt — different submission periods within a
+    project class, or different project classes — so a bare name is ambiguous in the comments panel.
+
+    For each student owning more than one record, build a suffix from only the parts that actually
+    distinguish that student's records: the project-class abbreviation when they span more than one
+    class, and the submission-period display name when a class contributes more than one record.
+    Students with a single record are absent from the map (no suffix needed).
+    """
+    by_student: Dict[int, List[MatchingRecord]] = defaultdict(list)
+    for record in records:
+        if record.selector is not None:
+            by_student[record.selector.student_id].append(record)
+
+    dis_map: Dict[int, str] = {}
+    for student_records in by_student.values():
+        if len(student_records) <= 1:
+            continue
+
+        class_ids = {r.selector.config.pclass_id for r in student_records}
+        multi_class = len(class_ids) > 1
+
+        for record in student_records:
+            config = record.selector.config
+            pclass = config.project_class
+
+            parts: List[str] = []
+            if multi_class:
+                parts.append(pclass.abbreviation)
+
+            same_class = [r for r in student_records if r.selector.config.pclass_id == config.pclass_id]
+            if len(same_class) > 1 and record.period is not None:
+                parts.append(record.period.display_name(config.year))
+
+            # fall back to the class abbreviation if nothing else distinguishes (should not happen for
+            # a duplicated student, but keeps the label non-empty)
+            dis_map[record.id] = " · ".join(parts) if parts else pclass.abbreviation
+
+    return dis_map
+
+
+def scope_label(record: Optional[MatchingRecord], dis_map: Dict[int, str]) -> str:
+    """
+    Student name for a record-scoped comment, with a disambiguating suffix when the student holds
+    more than one record in the attempt (see record_disambiguation_map).
+    """
+    name = _student_name(record)
+    if record is not None and record.id in dis_map:
+        return f"{name} · {dis_map[record.id]}"
+    return name
+
+
 def _comment_thread(
     comment: MatchingReviewComment,
     replies_by_parent: Dict[int, List[MatchingReviewComment]],
@@ -866,7 +919,7 @@ def read_marker(attempt: MatchingAttempt, user) -> Optional[datetime]:
     return marker.last_read_timestamp if marker is not None else None
 
 
-def _empty_inbox_entry(record: MatchingRecord) -> dict:
+def _empty_inbox_entry(record: MatchingRecord, dis_map: Dict[int, str]) -> dict:
     """
     Inbox entry for a record that carries no comments yet. The panel can still be scoped to such a
     record — that is exactly what the Student tab's "add a comment" control does — so the scoped
@@ -875,13 +928,22 @@ def _empty_inbox_entry(record: MatchingRecord) -> dict:
     return {
         "record": record,
         "record_id": record.id,
-        "student_name": _student_name(record),
+        "student_name": scope_label(record, dis_map),
         "threads": [],
         "unresolved": 0,
         "resolved": 0,
         "new": 0,
         "latest_timestamp": None,
         "snippet": "",
+    }
+
+
+def _pill_counts(threads: List[dict]) -> Dict[str, int]:
+    """All / unresolved / resolved thread counts for one tab's thread set (unfiltered)."""
+    return {
+        "all": len(threads),
+        "unresolved": sum(1 for t in threads if not t["comment"].resolved),
+        "resolved": sum(1 for t in threads if t["comment"].resolved),
     }
 
 
@@ -914,6 +976,9 @@ def comments_data(attempt: MatchingAttempt, state: str = DEFAULT_COMMENT_STATE, 
     marker = read_marker(attempt, user) if user is not None else None
     viewer_id = user.id if user is not None else None
 
+    # disambiguating suffixes for students who hold more than one record in this attempt
+    dis_map = record_disambiguation_map(attempt.records.all())
+
     global_threads = [_comment_thread(c, replies_by_parent, marker, viewer_id) for c in top_level if c.matching_record_id is None]
 
     student_top_level: Dict[int, List[MatchingReviewComment]] = defaultdict(list)
@@ -932,7 +997,7 @@ def comments_data(attempt: MatchingAttempt, state: str = DEFAULT_COMMENT_STATE, 
             {
                 "record": record_comments[0].matching_record,
                 "record_id": rec_id,
-                "student_name": _student_name(record_comments[0].matching_record),
+                "student_name": scope_label(record_comments[0].matching_record, dis_map),
                 "threads": threads,
                 "unresolved": sum(1 for t in threads if not t["comment"].resolved),
                 "resolved": sum(1 for t in threads if t["comment"].resolved),
@@ -944,15 +1009,24 @@ def comments_data(attempt: MatchingAttempt, state: str = DEFAULT_COMMENT_STATE, 
 
     scoped_entry = None
     if record is not None:
-        scoped_entry = next((entry for entry in entries if entry["record_id"] == record.id), None) or _empty_inbox_entry(record)
+        scoped_entry = next((entry for entry in entries if entry["record_id"] == record.id), None) or _empty_inbox_entry(record, dis_map)
+
+    all_student_threads = [t for entry in entries for t in entry["threads"]]
 
     counts = {
         "all": len(top_level),
         "unresolved": sum(1 for c in top_level if not c.resolved),
         "resolved": sum(1 for c in top_level if c.resolved),
         "global_total": len(global_threads),
-        "student_total": sum(len(entry["threads"]) for entry in entries),
+        "student_total": len(all_student_threads),
         "new": sum(1 for t in global_threads if t["thread_new"]) + sum(entry["new"] for entry in entries),
+    }
+
+    # per-tab filter-pill counts: the pills reflect only what the active tab shows, not the whole
+    # attempt. The student side is the scoped record's threads when scoped, else every student thread.
+    pill_counts = {
+        "global": _pill_counts(global_threads),
+        "student": _pill_counts(scoped_entry["threads"] if scoped_entry is not None else all_student_threads),
     }
 
     # a student stays in the inbox only while they have a thread matching the current filter
@@ -968,6 +1042,7 @@ def comments_data(attempt: MatchingAttempt, state: str = DEFAULT_COMMENT_STATE, 
         "scoped": scoped_entry,
         "scoped_threads": _filter_threads(scoped_entry["threads"], state) if scoped_entry is not None else [],
         "counts": counts,
+        "pill_counts": pill_counts,
         "total_count": len(comments),
         "unresolved_count": counts["unresolved"],
     }

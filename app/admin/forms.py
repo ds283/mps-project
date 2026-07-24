@@ -1998,6 +1998,13 @@ def MatchCommentFormFactory(attempt):
     meaningful (and required) when scope == 'assignment'.
     """
 
+    # local import avoids a module-load cycle (matching_workspace pulls in the models package)
+    from ..shared.matching_workspace import record_disambiguation_map, scope_label
+
+    # disambiguating suffixes for students who hold more than one record in this attempt, so the
+    # composer's student <select> can tell duplicate names apart
+    dis_map = record_disambiguation_map(attempt.records.all())
+
     def GetAssignmentRecords():
         records = attempt.records.all()
 
@@ -2011,7 +2018,7 @@ def MatchCommentFormFactory(attempt):
 
     def BuildRecordLabel(record):
         if record.selector is not None and record.selector.student is not None:
-            return record.selector.student.user.name
+            return scope_label(record, dis_map)
         return "Selector #{id}".format(id=record.selector_id)
 
     class MatchCommentForm(Form):

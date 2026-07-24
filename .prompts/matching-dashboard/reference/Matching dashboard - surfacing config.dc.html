@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+<style>
+  body{margin:0;background:#f0eee9;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .dv-turn{padding:40px 44px 32px}
+  .dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+  .dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+  .dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+  .dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+  .dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+  .dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+  .dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:860px}
+  .dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+  .dv-stage{position:relative;overflow:hidden;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .dv-next{margin:26px 0 0;font:12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:900px}
+  .mdash-col{border-right:1px solid var(--bs-border-color)}
+  .cfg-chip{--bs-bg-opacity:1;background:var(--bs-tertiary-bg);border:1px solid var(--bs-border-color);color:var(--bs-secondary-color);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:400;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+  .cfg-chip b{font-weight:600;color:var(--bs-body-color)}
+  .cfg-grp-h{text-transform:uppercase;font-size:10px;letter-spacing:.6px;font-weight:700;color:var(--bs-secondary-color);margin-bottom:7px}
+  .prov-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12.5px;color:var(--bs-secondary-color)}
+  .drawer{position:absolute;top:0;right:0;bottom:0;width:400px;max-width:88%;background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;z-index:20}
+  .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.28);z-index:15}
+  .specrow{display:grid;grid-template-columns:1fr auto;gap:12px;padding:7px 0;border-bottom:1px solid var(--bs-border-color);font-size:13px}
+  .specrow:last-child{border-bottom:0}
+  .specrow .k{color:var(--bs-secondary-color)}
+  .specrow .v{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+  a{color:#2a78d6}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Three ways to surface config, timings &amp; inheritance on demand</span></div>
+  <div class="dv-opts">
+
+    <!-- ============ OPTION 1A — inline disclosure ============ -->
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><span><b>Expand in place.</b> Two ghost toggles beside “Compute statistics” open grouped, subtle chip panels right inside the card — same collapse pattern the errors/warnings already use. Nothing to navigate to; several cards can be open at once for comparison.</span></div>
+      <div class="dv-stage" style="width:860px">
+        <div class="card border-0 mb-0">
+          <div class="card-body">
+            <div class="row g-3 align-items-start">
+              <div class="col-12 col-lg-3 mdash-col">
+                <a class="text-decoration-none fw-semibold" href="#1a">1st round MPhys + BSc + MPP + Cameron</a>
+                <div class="mt-1 d-flex flex-wrap gap-1">
+                  <span class="badge rounded-pill" style="background:#0d3b66;color:#fff">MPP</span>
+                  <span class="badge rounded-pill" style="background:#c8a2c8;color:#3a2a3a">FYP MPhys</span>
+                  <span class="badge rounded-pill" style="background:#5bc0de;color:#08363f">FYP BSc</span>
+                </div>
+              </div>
+              <div class="col-12 col-lg-2 mdash-col">
+                <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Optimal solution</div>
+              </div>
+              <div class="col-12 col-lg-3 mdash-col">
+                <div class="small text-body-secondary">41 selectors &middot; 40 supervisors &middot; 37 markers &middot; 142 projects</div>
+              </div>
+              <div class="col-12 col-lg-4 text-lg-end">
+                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                  <a class="btn btn-sm btn-primary" href="#1a">Open <i class="fas fa-arrow-right ms-1"></i></a>
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button">Actions</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top d-flex flex-wrap gap-2 mb-1">
+              <span class="badge rounded-pill" style="background:var(--bs-success-bg-subtle);color:var(--bs-success-text-emphasis)">Matched 9 programme prefs</span>
+              <span class="badge rounded-pill" style="background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)">Failed 4 programme prefs</span>
+              <span class="badge rounded-pill bg-secondary">Satisfied 0 hints</span>
+              <span class="badge rounded-pill bg-secondary">&delta; 0&ndash;4</span>
+              <span class="badge rounded-pill bg-secondary">CATS 0&ndash;117</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 small mb-3">
+              <span class="text-body-secondary text-uppercase" style="font-size:11px;letter-spacing:.4px">Objective score</span>
+              <span class="fw-semibold"><span style="color:var(--bs-success-text-emphasis)">40.65</span> <i class="fas fa-arrow-right mx-1 text-body-secondary" style="font-size:.7em"></i> <span style="color:var(--bs-primary)">33.08</span> <span class="badge rounded-pill align-middle" style="background:var(--bs-danger-bg-subtle);color:var(--bs-danger-text-emphasis);font-size:.7em">-7.57</span></span>
+            </div>
+
+            <!-- new: disclosure control bar -->
+            <div class="d-flex flex-wrap gap-2 align-items-center pt-2 border-top">
+              <button class="btn btn-sm mdash-toggle" aria-expanded="{{ cfgOpen }}" style="{{ cfgBtnStyle }}" onClick="{{ toggleCfg }}"><i class="fas fa-sliders-h me-1"></i>{{ cfgBtnLabel }}<i class="fas fa-chevron-down ms-2" style="{{ cfgCaretStyle }}"></i></button>
+              <button class="btn btn-sm mdash-toggle" aria-expanded="{{ timOpen }}" style="{{ timBtnStyle }}" onClick="{{ toggleTim }}"><i class="fas fa-history me-1"></i>{{ timBtnLabel }}<i class="fas fa-chevron-down ms-2" style="{{ timCaretStyle }}"></i></button>
+              <button class="btn btn-sm btn-link text-decoration-none ms-auto"><i class="fas fa-sync-alt me-1"></i>Recompute statistics</button>
+            </div>
+
+            <sc-if value="{{ cfgOpen }}" hint-placeholder-val="{{ false }}">
+              <div class="mt-3 p-3 rounded" style="background:var(--bs-tertiary-bg)">
+                <div class="row g-4">
+                  <div class="col-6 col-xl-4">
+                    <div class="cfg-grp-h">Limits &amp; multiplicities</div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="cfg-chip">Supervising CATS <b>105</b></span>
+                      <span class="cfg-chip">Marking CATS <b>20</b></span>
+                      <span class="cfg-chip">Marker multiplicity <b>3</b></span>
+                      <span class="cfg-chip">Max project types <b>2</b></span>
+                      <span class="cfg-chip">Max group types <b>1</b></span>
+                    </div>
+                  </div>
+                  <div class="col-6 col-xl-4">
+                    <div class="cfg-grp-h">Policies</div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="cfg-chip"><i class="fas fa-check-circle text-success"></i>Per-faculty limits applied</span>
+                      <span class="cfg-chip"><i class="fas fa-check-circle text-success"></i>Programme prefs applied</span>
+                      <span class="cfg-chip">Only submitted selectors</span>
+                      <span class="cfg-chip"><i class="fas fa-microchip"></i>Gurobi <span class="text-body-secondary">external</span></span>
+                    </div>
+                  </div>
+                  <div class="col-6 col-xl-4">
+                    <div class="cfg-grp-h">Convenor hints <span class="text-success ms-1"><i class="fas fa-check"></i> enforced</span></div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="cfg-chip"><i class="fas fa-arrow-up text-success"></i>Encourage <b>&times;2.000</b></span>
+                      <span class="cfg-chip"><i class="fas fa-arrow-down text-danger"></i>Discourage <b>&times;0.500</b></span>
+                      <span class="cfg-chip"><i class="fas fa-angle-double-up text-success"></i>Strong enc. <b>&times;5.000</b></span>
+                      <span class="cfg-chip"><i class="fas fa-angle-double-down text-danger"></i>Strong disc. <b>&times;0.200</b></span>
+                    </div>
+                  </div>
+                  <div class="col-6 col-xl-4">
+                    <div class="cfg-grp-h">Objective weights</div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="cfg-chip">Programme <b>1.500</b></span>
+                      <span class="cfg-chip">Bookmark <b>0.333</b></span>
+                      <span class="cfg-chip">Levelling <b>0.000</b></span>
+                      <span class="cfg-chip">Group tension <b>0.000</b></span>
+                      <span class="cfg-chip">Sup. pressure <b>0.000</b></span>
+                      <span class="cfg-chip">Mark. pressure <b>10.000</b></span>
+                    </div>
+                  </div>
+                  <div class="col-6 col-xl-4">
+                    <div class="cfg-grp-h">Penalties</div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="cfg-chip">CATS violation <b>50.000</b></span>
+                      <span class="cfg-chip">No assignment <b>0.000</b></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ timOpen }}" hint-placeholder-val="{{ false }}">
+              <div class="mt-3 p-3 rounded d-flex flex-wrap gap-4" style="background:var(--bs-tertiary-bg)">
+                <div>
+                  <div class="cfg-grp-h">Based on</div>
+                  <div class="small"><i class="fas fa-link text-body-secondary me-1"></i><a href="#1a" class="text-decoration-none">1st round MPhys + BSc + MPP</a></div>
+                  <div class="mt-1"><span class="badge rounded-pill" style="background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)"><i class="fas fa-lock me-1"></i>Forced inheritance</span> <span class="cfg-chip ms-1">base bias <b>10.000</b></span></div>
+                </div>
+                <div>
+                  <div class="cfg-grp-h">Timings</div>
+                  <div class="d-flex gap-2">
+                    <span class="cfg-chip"><i class="fas fa-hammer"></i>Build <b>44.464 s</b></span>
+                    <span class="cfg-chip"><i class="fas fa-stopwatch"></i>Solve <b>2.153 s</b></span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <div class="mt-3 text-body-secondary small">Created by <a class="text-decoration-none" href="#1a">Prof David Seery</a> Fri 15 Aug 2025 12:21</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ OPTION 1B — slide-over drawer ============ -->
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><span><b>Details drawer.</b> Card stays clean; a slim provenance strip carries the at-a-glance facts (based-on, mode, timings). A “Details” button slides in a right-hand panel — same off-canvas idiom as the faculty/student drawers in the workspace — with the full configuration laid out as sections. Try the button.</span></div>
+      <div class="dv-stage" style="width:860px;min-height:300px">
+        <div class="card border-0 mb-0">
+          <div class="card-body">
+            <div class="row g-3 align-items-start">
+              <div class="col-12 col-lg-3 mdash-col">
+                <a class="text-decoration-none fw-semibold" href="#1b">1st round MPhys + BSc + MPP + Cameron</a>
+                <div class="mt-1 d-flex flex-wrap gap-1">
+                  <span class="badge rounded-pill" style="background:#0d3b66;color:#fff">MPP</span>
+                  <span class="badge rounded-pill" style="background:#c8a2c8;color:#3a2a3a">FYP MPhys</span>
+                  <span class="badge rounded-pill" style="background:#5bc0de;color:#08363f">FYP BSc</span>
+                </div>
+              </div>
+              <div class="col-12 col-lg-2 mdash-col">
+                <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Optimal solution</div>
+              </div>
+              <div class="col-12 col-lg-3 mdash-col">
+                <div class="small text-body-secondary">41 selectors &middot; 40 supervisors &middot; 37 markers &middot; 142 projects</div>
+              </div>
+              <div class="col-12 col-lg-4 text-lg-end">
+                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                  <a class="btn btn-sm btn-primary" href="#1b">Open <i class="fas fa-arrow-right ms-1"></i></a>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" onClick="{{ openDrawer }}"><i class="fas fa-sliders-h me-1"></i>Details</button>
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button">Actions</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top d-flex flex-wrap gap-2 mb-3">
+              <span class="badge rounded-pill" style="background:var(--bs-success-bg-subtle);color:var(--bs-success-text-emphasis)">Matched 9 programme prefs</span>
+              <span class="badge rounded-pill" style="background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)">Failed 4 programme prefs</span>
+              <span class="badge rounded-pill bg-secondary">&delta; 0&ndash;4</span>
+              <span class="badge rounded-pill bg-secondary">CATS 0&ndash;117</span>
+            </div>
+
+            <div class="prov-strip pt-2 border-top">
+              <span><i class="fas fa-link me-1"></i>Based on <a href="#1b" class="text-decoration-none">1st round MPhys + BSc + MPP</a></span>
+              <span class="badge rounded-pill" style="background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)"><i class="fas fa-lock me-1"></i>Forced</span>
+              <span><i class="fas fa-hammer me-1"></i>Built 44.5 s</span>
+              <span><i class="fas fa-stopwatch me-1"></i>Solved 2.2 s</span>
+            </div>
+
+            <div class="mt-3 text-body-secondary small">Created by <a class="text-decoration-none" href="#1b">Prof David Seery</a> Fri 15 Aug 2025 12:21</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+          <div class="backdrop" onClick="{{ closeDrawer }}"></div>
+          <div class="drawer">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+              <div>
+                <div class="fw-semibold">Match configuration</div>
+                <div class="small text-body-secondary">1st round MPhys + BSc + MPP + Cameron</div>
+              </div>
+              <button class="btn btn-sm btn-outline-secondary border-0" onClick="{{ closeDrawer }}"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-3 overflow-auto">
+              <div class="cfg-grp-h">Provenance &amp; timing</div>
+              <div class="mb-3">
+                <div class="specrow"><span class="k">Based on</span><span class="v"><a href="#1b" class="text-decoration-none">1st round MPhys + BSc + MPP</a></span></div>
+                <div class="specrow"><span class="k">Inheritance</span><span class="v" style="color:var(--bs-warning-text-emphasis)"><i class="fas fa-lock me-1"></i>Forced</span></div>
+                <div class="specrow"><span class="k">Base bias</span><span class="v">10.000</span></div>
+                <div class="specrow"><span class="k">Build time</span><span class="v">44.464 s</span></div>
+                <div class="specrow"><span class="k">Solve time</span><span class="v">2.153 s</span></div>
+                <div class="specrow"><span class="k">Solver</span><span class="v">Gurobi (external)</span></div>
+              </div>
+              <div class="cfg-grp-h">Limits &amp; multiplicities</div>
+              <div class="mb-3">
+                <div class="specrow"><span class="k">Supervising CATS limit</span><span class="v">105</span></div>
+                <div class="specrow"><span class="k">Marking CATS limit</span><span class="v">20</span></div>
+                <div class="specrow"><span class="k">Max marking multiplicity</span><span class="v">3</span></div>
+                <div class="specrow"><span class="k">Max project types / supervisor</span><span class="v">2</span></div>
+                <div class="specrow"><span class="k">Max group types / supervisor</span><span class="v">1</span></div>
+                <div class="specrow"><span class="k">Per-faculty limits</span><span class="v text-success">Applied</span></div>
+                <div class="specrow"><span class="k">Programme preferences</span><span class="v text-success">Applied</span></div>
+                <div class="specrow"><span class="k">Selector pool</span><span class="v">Submitted only</span></div>
+              </div>
+              <div class="cfg-grp-h">Objective weights &amp; penalties</div>
+              <div class="mb-3">
+                <div class="specrow"><span class="k">Programme bias</span><span class="v">1.500</span></div>
+                <div class="specrow"><span class="k">Bookmark bias</span><span class="v">0.333</span></div>
+                <div class="specrow"><span class="k">Levelling</span><span class="v">0.000</span></div>
+                <div class="specrow"><span class="k">Intra-group tension</span><span class="v">0.000</span></div>
+                <div class="specrow"><span class="k">Supervising pressure</span><span class="v">0.000</span></div>
+                <div class="specrow"><span class="k">Marking pressure</span><span class="v">10.000</span></div>
+                <div class="specrow"><span class="k">CATS violation penalty</span><span class="v">50.000</span></div>
+                <div class="specrow"><span class="k">No-assignment penalty</span><span class="v">0.000</span></div>
+              </div>
+              <div class="cfg-grp-h">Convenor hints <span class="text-success ms-1">enforced</span></div>
+              <div>
+                <div class="specrow"><span class="k">Encourage</span><span class="v">&times;2.000</span></div>
+                <div class="specrow"><span class="k">Discourage</span><span class="v">&times;0.500</span></div>
+                <div class="specrow"><span class="k">Strong encourage</span><span class="v">&times;5.000</span></div>
+                <div class="specrow"><span class="k">Strong discourage</span><span class="v">&times;0.200</span></div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ OPTION 1C — split by cadence: inline provenance + config modal ============ -->
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><span><b>Split by cadence.</b> Inheritance + timings are cheap and glanceable, so they live permanently in the footer. The heavy configuration is reference data you audit occasionally — it sits behind one “Configuration” button that opens a readable spec sheet, not badge soup. Try it.</span></div>
+      <div class="dv-stage" style="width:860px;min-height:280px">
+        <div class="card border-0 mb-0">
+          <div class="card-body">
+            <div class="row g-3 align-items-start">
+              <div class="col-12 col-lg-3 mdash-col">
+                <a class="text-decoration-none fw-semibold" href="#1c">1st round MPhys + BSc + MPP + Cameron</a>
+                <div class="mt-1 d-flex flex-wrap gap-1">
+                  <span class="badge rounded-pill" style="background:#0d3b66;color:#fff">MPP</span>
+                  <span class="badge rounded-pill" style="background:#c8a2c8;color:#3a2a3a">FYP MPhys</span>
+                  <span class="badge rounded-pill" style="background:#5bc0de;color:#08363f">FYP BSc</span>
+                </div>
+              </div>
+              <div class="col-12 col-lg-2 mdash-col">
+                <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Optimal solution</div>
+              </div>
+              <div class="col-12 col-lg-3 mdash-col">
+                <div class="small text-body-secondary">41 selectors &middot; 40 supervisors &middot; 37 markers &middot; 142 projects</div>
+              </div>
+              <div class="col-12 col-lg-4 text-lg-end">
+                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                  <a class="btn btn-sm btn-primary" href="#1c">Open <i class="fas fa-arrow-right ms-1"></i></a>
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button">Actions</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top d-flex flex-wrap gap-2 mb-3">
+              <span class="badge rounded-pill" style="background:var(--bs-success-bg-subtle);color:var(--bs-success-text-emphasis)">Matched 9 programme prefs</span>
+              <span class="badge rounded-pill" style="background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)">Failed 4 programme prefs</span>
+              <span class="badge rounded-pill bg-secondary">&delta; 0&ndash;4</span>
+              <span class="badge rounded-pill bg-secondary">CATS 0&ndash;117</span>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-2 border-top">
+              <div class="prov-strip">
+                <span><i class="fas fa-link me-1"></i>Based on <a href="#1c" class="text-decoration-none">1st round MPhys + BSc + MPP</a></span>
+                <span class="badge rounded-pill" style="background:var(--bs-warning-bg-subtle);color:var(--bs-warning-text-emphasis)"><i class="fas fa-lock me-1"></i>Forced</span>
+                <span class="text-body-secondary"><i class="fas fa-hammer me-1"></i>44.5 s <span class="mx-1">·</span><i class="fas fa-stopwatch me-1"></i>2.2 s</span>
+              </div>
+              <button class="btn btn-sm btn-outline-primary text-nowrap" onClick="{{ openModal }}"><i class="fas fa-sliders-h me-1"></i>Configuration</button>
+            </div>
+
+            <div class="mt-3 text-body-secondary small">Created by <a class="text-decoration-none" href="#1c">Prof David Seery</a> Fri 15 Aug 2025 12:21</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+          <div class="backdrop d-flex align-items-center justify-content-center" onClick="{{ closeModal }}"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:660px;max-width:92%;max-height:90%;background:#fff;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.28);z-index:25;display:flex;flex-direction:column">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+              <div class="fw-semibold"><i class="fas fa-sliders-h me-2 text-primary"></i>Configuration &mdash; 1st round MPhys + BSc + MPP + Cameron</div>
+              <button class="btn btn-sm btn-outline-secondary border-0" onClick="{{ closeModal }}"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-3 overflow-auto">
+              <div class="row g-4">
+                <div class="col-6">
+                  <div class="cfg-grp-h">Limits &amp; multiplicities</div>
+                  <div class="specrow"><span class="k">Supervising CATS</span><span class="v">105</span></div>
+                  <div class="specrow"><span class="k">Marking CATS</span><span class="v">20</span></div>
+                  <div class="specrow"><span class="k">Marker multiplicity</span><span class="v">3</span></div>
+                  <div class="specrow"><span class="k">Max project types</span><span class="v">2</span></div>
+                  <div class="specrow"><span class="k">Max group types</span><span class="v">1</span></div>
+                </div>
+                <div class="col-6">
+                  <div class="cfg-grp-h">Policies</div>
+                  <div class="specrow"><span class="k">Per-faculty limits</span><span class="v text-success">Applied</span></div>
+                  <div class="specrow"><span class="k">Programme prefs</span><span class="v text-success">Applied</span></div>
+                  <div class="specrow"><span class="k">Selector pool</span><span class="v">Submitted only</span></div>
+                  <div class="specrow"><span class="k">Solver</span><span class="v">Gurobi (ext.)</span></div>
+                </div>
+                <div class="col-6">
+                  <div class="cfg-grp-h">Objective weights</div>
+                  <div class="specrow"><span class="k">Programme</span><span class="v">1.500</span></div>
+                  <div class="specrow"><span class="k">Bookmark</span><span class="v">0.333</span></div>
+                  <div class="specrow"><span class="k">Levelling</span><span class="v">0.000</span></div>
+                  <div class="specrow"><span class="k">Group tension</span><span class="v">0.000</span></div>
+                  <div class="specrow"><span class="k">Sup. pressure</span><span class="v">0.000</span></div>
+                  <div class="specrow"><span class="k">Mark. pressure</span><span class="v">10.000</span></div>
+                </div>
+                <div class="col-6">
+                  <div class="cfg-grp-h">Penalties</div>
+                  <div class="specrow"><span class="k">CATS violation</span><span class="v">50.000</span></div>
+                  <div class="specrow"><span class="k">No assignment</span><span class="v">0.000</span></div>
+                  <div class="cfg-grp-h mt-3">Convenor hints <span class="text-success">enforced</span></div>
+                  <div class="specrow"><span class="k">Encourage</span><span class="v">&times;2.000</span></div>
+                  <div class="specrow"><span class="k">Discourage</span><span class="v">&times;0.500</span></div>
+                  <div class="specrow"><span class="k">Strong enc. / disc.</span><span class="v">&times;5.000 / &times;0.200</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+  <p class="dv-next">Try next: “combine <a class="dv-oid" href="#1a">1a</a>’s inline chips with <a class="dv-oid" href="#1b">1b</a>’s provenance strip” · “make the <a class="dv-oid" href="#1c">1c</a> config a comparison view across two matches” · “show config diff vs the base match” · “new directions”</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { cfg: false, tim: false, drawer: false, modal: false };
+  renderVals() {
+    const t = (k) => () => this.setState((s) => ({ [k]: !s[k] }));
+    const btn = (open, hue) =>
+      open
+        ? `border:1px solid var(--bs-${hue});color:#fff;background:var(--bs-${hue})`
+        : `border:1px solid var(--bs-${hue});color:var(--bs-${hue});background:#fff`;
+    const caret = (open) =>
+      `transition:transform .15s ease;transform:rotate(${open ? "180deg" : "0deg"})`;
+    return {
+      cfgOpen: this.state.cfg,
+      timOpen: this.state.tim,
+      cfgBtnStyle: btn(this.state.cfg, "primary"),
+      timBtnStyle: btn(this.state.tim, "secondary"),
+      cfgCaretStyle: caret(this.state.cfg),
+      timCaretStyle: caret(this.state.tim),
+      cfgBtnLabel: this.state.cfg ? "Hide configuration" : "Configuration",
+      timBtnLabel: this.state.tim ? "Hide timing & provenance" : "Timing & provenance",
+      drawerOpen: this.state.drawer,
+      modalOpen: this.state.modal,
+      toggleCfg: t("cfg"),
+      toggleTim: t("tim"),
+      openDrawer: () => this.setState({ drawer: true }),
+      closeDrawer: () => this.setState({ drawer: false }),
+      openModal: () => this.setState({ modal: true }),
+      closeModal: () => this.setState({ modal: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>

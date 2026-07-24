@@ -22,23 +22,35 @@
             border-bottom: 1px solid var(--bs-border-color);
         }
 
-        /* DataTables 'l'+'f' top row and 'i'+'p' bottom row (Bootstrap-5 integration
-           wraps each in a .row inside .dataTables_wrapper) */
-        .tk-ledger-card .dataTables_wrapper > .row:first-child {
-            padding: 12px 16px;
-            margin: 0;
-            background: var(--bs-tertiary-bg);
-            border-bottom: 1px solid var(--bs-border-color);
+        /* The 'l'/'f'/'i'/'p' feature elements are plain floated siblings of the table inside
+           .dataTables_wrapper — the Bootstrap-5 .row/.col wrapper markup that DataTables' styling
+           integration normally injects is only added when the *default* dom template is used, and
+           this project always passes an explicit `dom: 'lftipr'` string, which suppresses it. So
+           padding has to go on .dataTables_wrapper itself (for the card's horizontal margin) plus
+           margins around the individual feature elements (for vertical spacing), rather than on a
+           .row wrapper that doesn't exist here. */
+        .tk-ledger-card .dataTables_wrapper {
+            padding: 14px 16px;
         }
 
-        .tk-ledger-card .dataTables_wrapper > .row:last-child {
-            padding: 12px 16px;
-            margin: 0;
-            border-top: 1px solid var(--bs-border-color);
+        .tk-ledger-card .dataTables_length,
+        .tk-ledger-card .dataTables_filter {
+            margin-bottom: 12px;
+        }
+
+        .tk-ledger-card .dataTables_info,
+        .tk-ledger-card .dataTables_paginate {
+            margin-top: 12px;
+            margin-bottom: 0;
         }
 
         .tk-ledger-card table.table {
             margin-bottom: 0;
+        }
+
+        .tk-ledger-card table.table > :not(caption) > * > * {
+            padding-top: 12px;
+            padding-bottom: 12px;
         }
     </style>
 {% endmacro %}

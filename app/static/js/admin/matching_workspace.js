@@ -229,6 +229,7 @@
                 bodyEl.innerHTML = html;
 
                 bindHintDropdowns(bodyEl, recId);
+                bindDrawerSwapRecords(bodyEl);
 
                 var commentsLink = bodyEl.querySelector(".mw-drawer-open-comments");
                 if (commentsLink) {
@@ -291,6 +292,21 @@
                     .catch(function () {
                         showToast("Could not update the selection hint due to a network error.", "error");
                     });
+            });
+        });
+    }
+
+    // Sibling-allocation cards in the period-context header swap the drawer body to that other
+    // MatchingRecord in place — no chain hop is pushed, since this stays within the same
+    // student/drawer, just a different submission period.
+    function bindDrawerSwapRecords(scope) {
+        scope.querySelectorAll(".mw-drawer-swap-record").forEach(function (card) {
+            card.addEventListener("click", function (e) {
+                e.preventDefault();
+                var targetRecId = card.getAttribute("data-rec-id");
+                if (targetRecId) {
+                    loadDrawer(targetRecId);
+                }
             });
         });
     }

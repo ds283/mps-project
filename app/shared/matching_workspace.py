@@ -41,6 +41,7 @@ from ..models import (
     MatchingRecord,
     MatchingReviewComment,
     MatchingRole,
+    SelectingStudent,
     SelectionRecord,
     Ticket,
     TicketSubject,
@@ -434,16 +435,59 @@ def paginate_period_groups(groups: List[dict], page: int, per_page: int) -> Tupl
     return page_groups, total_rows
 
 
+def _sibling_sort_key(sibling: MatchingRecord) -> Tuple[bool, Tuple[str, int]]:
+    spd = sibling.period
+    # a record with no resolvable SubmissionPeriodDefinition sorts after every period-bearing
+    # sibling, rather than raising or silently participating in period_sort_key's tuple compare
+    return (spd is None, period_sort_key(spd) if spd is not None else ("", 0))
+
+
+def _student_siblings(attempt: MatchingAttempt, record: MatchingRecord, student) -> List[dict]:
+    """
+    The student's other MatchingRecords in this attempt: other submission periods within the
+    same ProjectClass (same selector, via `selector.matching_records`) plus any other
+    ProjectClass the student holds an allocation in (a distinct `SelectingStudent`, same
+    underlying `StudentData`). Ordered by `period_sort_key`, with period-less records last.
+    """
+    sibling_records = (
+        MatchingRecord.query.join(SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id)
+        .filter(
+            MatchingRecord.matching_id == attempt.id,
+            SelectingStudent.student_id == student.id,
+            MatchingRecord.id != record.id,
+        )
+        .all()
+    )
+    sibling_records.sort(key=_sibling_sort_key)
+
+    return [
+        {
+            "record_id": sibling.id,
+            "period": build_period_pill(sibling),
+            "project_name": sibling.project.name if sibling.project is not None else None,
+            "rank": sibling.total_rank,
+            "assigned": sibling.project_id is not None,
+        }
+        for sibling in sibling_records
+    ]
+
+
 def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
     """
-    Assemble the view dict for the Student inspector drawer: assigned project, quick
-    reassignment options (ranked selections with current/original tagging), journal preview,
-    open tickets, and recent emails.
+    Assemble the view dict for the Student inspector drawer: period context + sibling
+    allocations, assigned project, quick reassignment options (ranked selections with
+    current/original tagging), journal preview, open tickets, and recent emails.
     """
     selector = record.selector
     student = selector.student
     user = student.user
     project = record.project
+
+    period = build_period_pill(record)
+    position_label = None
+    if period is not None:
+        class_record_count = selector.matching_records.filter(MatchingRecord.matching_id == attempt.id).count()
+        position_label = f"{period['name']} · {period['position']} of {class_record_count}"
 
     ranked_selections = []
     for selection in selector.ordered_selections.all():
@@ -486,6 +530,9 @@ def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
         "selector": selector,
         "student": student,
         "user": user,
+        "period": period,
+        "position_label": position_label,
+        "siblings": _student_siblings(attempt, record, student),
         "project": project,
         "owner": project.owner if project is not None and not project.use_supervisor_pool else None,
         "modified": _record_is_modified(record),

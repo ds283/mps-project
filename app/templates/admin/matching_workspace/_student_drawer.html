@@ -4,7 +4,7 @@
   .prompts/matching-workspace/PLAN.md.
 #}
 {% from "swatch.html" import medium_swatch %}
-{% from "admin/matching_workspace/_macros.html" import modified_pill, hint_badge %}
+{% from "admin/matching_workspace/_macros.html" import modified_pill, hint_badge, period_pill %}
 
 {% set record = drawer.record %}
 {% set selector = drawer.selector %}
@@ -30,9 +30,40 @@
     </div>
 </div>
 
+{% if drawer.period %}
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                {{ period_pill(drawer.period) }}
+                <span class="small text-body-secondary">{{ drawer.position_label }}</span>
+            </div>
+
+            {% if drawer.siblings %}
+                <div class="d-flex flex-column gap-1 mt-2">
+                    {% for sibling in drawer.siblings %}
+                        <a href="#" role="button" class="mw-drawer-swap-record d-flex align-items-center gap-2 p-1 rounded text-decoration-none"
+                           data-rec-id="{{ sibling.record_id }}"
+                           style="border: 1px solid var(--bs-border-color); color: var(--bs-body-color);">
+                            {{ period_pill(sibling.period) }}
+                            <span class="small flex-grow-1 text-truncate">{{ sibling.project_name or 'Unassigned' }}</span>
+                            {% if sibling.rank %}<span class="small text-body-secondary">#{{ sibling.rank }}</span>{% endif %}
+                            <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px;
+                                background: {% if sibling.assigned %}var(--bs-success){% else %}var(--bs-secondary){% endif %};"
+                                  title="{% if sibling.assigned %}Assigned{% else %}Unassigned{% endif %}"></span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
 <div class="card mb-3 border-primary">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Assigned project</span>
+        <span class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">Assigned project</span>
+            {% if drawer.period %}{{ period_pill(drawer.period) }}{% endif %}
+        </span>
         {% if drawer.modified %}{{ modified_pill() }}{% endif %}
     </div>
     <div class="card-body">

@@ -1551,6 +1551,22 @@ def _create_PuLP_problem(
         sup_elastic_CATS = _pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
         mark_elastic_CATS = _pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
+        # likewise, allow violation of the ad-hoc per-project-class CATS limits, mirroring the
+        # global elastic CATS variables above. Previously only the global supervisor/marker CATS
+        # limits could relax to reach a feasible solution, so a too-tight per-pclass limit
+        # (custom_CATS_limits) produced an avoidable hard infeasibility. Sparse: one variable per
+        # (config_id, faculty number) pair that actually has a per-pclass limit set.
+        sup_pclass_elastic_CATS = {
+            (config_id, k): pulp.LpVariable("C_{c}_{k}".format(c=config_id, k=k), lowBound=0, cat=pulp.LpContinuous)
+            for config_id, fac_limits in sup_pclass_limits.items()
+            for k in fac_limits
+        }
+        mark_pclass_elastic_CATS = {
+            (config_id, i): pulp.LpVariable("D_{c}_{i}".format(c=config_id, i=i), lowBound=0, cat=pulp.LpContinuous)
+            for config_id, fac_limits in mark_pclass_limits.items()
+            for i in fac_limits
+        }
+
     print(" -- created decision variables in time {t}".format(t=variable_timer.interval))
 
     # OBJECTIVE FUNCTION
@@ -1586,7 +1602,10 @@ def _create_PuLP_problem(
         # of CATS limits except where really necessary; notice that these elastic variables are measured in
         # units of CATS, not projects, so the coefficients really are large
         elastic_CATS_penalty = abs(CATS_violation_penalty) * (
-            sum(sup_elastic_CATS[i] for i in range(number_sup)) + sum(mark_elastic_CATS[i] for i in range(number_mark))
+            sum(sup_elastic_CATS[i] for i in range(number_sup))
+            + sum(mark_elastic_CATS[i] for i in range(number_mark))
+            + sum(sup_pclass_elastic_CATS.values())
+            + sum(mark_pclass_elastic_CATS.values())
         )
 
         # we also impose a penalty for every supervisor who does not have any project assignments
@@ -2085,7 +2104,7 @@ def _create_PuLP_problem(
 
                 if k in fac_limits and projects is not None:
                     prob += (
-                        sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k],
+                        sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k] + sup_pclass_elastic_CATS[(config_id, k)],
                         "_C{first}{last}_supv_CATS_config_{cfg}".format(first=user.first_name, last=user.last_name, cfg=config_id),
                     )
 
@@ -2121,7 +2140,7 @@ def _create_PuLP_problem(
 
                 if i in fac_limits and projects is not None:
                     prob += (
-                        sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i],
+                        sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i] + mark_pclass_elastic_CATS[(config_id, i)],
                         "_C{first}{last}_mark_CATS_config_C{cfg}".format(first=user.first_name, last=user.last_name, cfg=config_id),
                     )
 

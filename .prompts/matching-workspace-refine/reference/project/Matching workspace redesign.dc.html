@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  body { margin:0; background:#f4ead4; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#212529; -webkit-font-smoothing:antialiased; }
+  a { color:#0d6efd; text-decoration:none; }
+  a:hover { color:#0a58ca; text-decoration:underline; }
+  .lnk { color:#0d6efd; cursor:pointer; }
+  .lnk:hover { text-decoration:underline; }
+</style>
+</helmet>
+
+<section style="display:flex; flex-direction:column; gap:22px; padding:40px 48px 80px;">
+  <div style="max-width:820px;">
+    <div style="font-size:13px; letter-spacing:.5px; text-transform:uppercase; color:#6c757d; font-weight:600;">Turn 2 · period-anchored redesign</div>
+    <h1 style="font-size:26px; margin:6px 0 8px; font-weight:700;">Matching workspace — period identity everywhere</h1>
+    <p style="margin:0; font-size:15px; line-height:1.5; color:#495057; text-wrap:pretty;">One row per <code>MatchingRecord</code>, but every allocation — on the student view, the faculty view and the reassignment workspace — now names its <code>SubmissionPeriodDefinition</code>. Grouping "by period" is anchored on the definition itself, so unrelated period-1s in different project classes never merge. Reference options as <a href="#1a">1a</a>, <a href="#1b">1b</a>, <a href="#1c">1c</a>, <a href="#1d">1d</a> in chat.</p>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:40px; align-items:flex-start;">
+
+    <!-- ============================ OPTION 1a — STUDENT DASHBOARD ============================ -->
+    <div id="1a" style="display:flex; flex-direction:column; gap:12px; width:1480px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="background:#0d6efd; color:#fff; font-weight:700; font-size:14px; padding:4px 12px; border-radius:20px;">1a</span>
+        <span style="font-size:17px; font-weight:600;">Student dashboard — filter preserved, period-anchored grouping</span>
+      </div>
+
+      <div style="background:#fff; border:1px solid #0d6efd; border-radius:8px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <div style="background:#0d6efd; color:#fff; padding:12px 18px; font-size:15px;">Student view <strong>Release candidate #1</strong></div>
+        <div style="padding:18px;">
+
+          <!-- PRESERVED: filter by project class -->
+          <div style="background:#f6f7f9; border:1px solid #e3e7ec; border-radius:8px; padding:14px 16px; margin-bottom:16px;">
+            <div style="font-size:14px; margin-bottom:9px;">Filter by project class</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <span style="background:#0d6efd; color:#fff; border:1px solid #0d6efd; border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">All</span>
+              <span style="background:#fff; color:#212529; border:1px solid #dee2e6; border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">Mathematical Physics Project</span>
+              <span style="background:#fff; color:#212529; border:1px solid #dee2e6; border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">Final Year Project (MPhys)</span>
+              <span style="background:#fff; color:#212529; border:1px solid #dee2e6; border-radius:20px; padding:3px 12px; font-size:12px; cursor:pointer;">Final Year Project (BSc)</span>
+            </div>
+          </div>
+
+          <!-- grouping toggle -->
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:13px; color:#6c757d;">Group by</span>
+              <div style="display:inline-flex; border:1px solid #dee2e6; border-radius:20px; overflow:hidden;">
+                <button onClick="{{ showStudent }}" style="{{ studentTabStyle }}"><i class="fas fa-user-graduate" style="margin-right:6px; font-size:11px;"></i>Student</button>
+                <button onClick="{{ showPeriod }}" style="{{ periodTabStyle }}"><i class="fas fa-layer-group" style="margin-right:6px; font-size:11px;"></i>Submission period</button>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; font-size:12px; color:#6c757d; flex-wrap:wrap;">
+              <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#cfe2ff; border:1px solid #9ec5fe; vertical-align:-1px; margin-right:5px;"></span>MPP · Autumn term</span>
+              <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#e2d9f3; border:1px solid #c5b3e6; vertical-align:-1px; margin-right:5px;"></span>MPP · Spring term</span>
+              <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#ffe9c9; border:1px solid #ffd699; vertical-align:-1px; margin-right:5px;"></span>BSc · Full year</span>
+            </div>
+          </div>
+
+          <!-- column header -->
+          <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:0 14px 10px; border-bottom:2px solid #dee2e6; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#495057;">
+            <div>{{ firstColHead }}</div><div>Project</div><div>Markers</div><div>Rank</div><div>Score</div><div style="text-align:right;">Actions</div>
+          </div>
+
+          <!-- ===== BY STUDENT (grouped on student × project class) ===== -->
+          <sc-if value="{{ isByStudent }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <!-- Harry Golding · MPP -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#eef2f7; border-bottom:1px solid #dde3ea; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:14px; height:14px; border-radius:3px; background:#12796c; display:inline-block;"></span><strong style="font-size:15px;"><span class="lnk">Harry Golding</span></strong><span style="font-size:12.5px; color:#6c757d;">Mathematical Physics Project · Th Phys MPhys · Y2 | 2023 cohort</span></div>
+              <span style="font-size:12px; color:#495057;">2 periods · <span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600; margin-left:2px;">Total 1.5</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Autumn term</span></div>
+              <div><span class="lnk" style="font-weight:600;">Numerical evaluation of loop amplitudes using tree-loop duality</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Dr Jonas Lindert · Responsible supervisor</div><div style="font-size:12.5px; color:#0f5132; margin-top:3px;"><i class="fas fa-check-circle" style="margin-right:5px;"></i>meets programme prefs</div></div>
+              <div style="font-size:13px;">Prof David Seery <i class="fas fa-caret-down lnk"></i><br>Prof Stephan Huber <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#fd7e14; font-weight:700; font-size:20px;">#3</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">0.50</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk" title="Comment on this Autumn-term allocation"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:3px solid #dde3ea; align-items:start;">
+              <div><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Spring term</span></div>
+              <div><span class="lnk" style="font-weight:600;">Theoretical Aspects of Black Holes</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Xavier Calmet · Responsible supervisor</div><div style="font-size:12.5px; color:#0f5132; margin-top:3px;"><i class="fas fa-check-circle" style="margin-right:5px;"></i>meets programme prefs</div></div>
+              <div style="font-size:13px;">Dr Christian Byrnes <i class="fas fa-caret-down lnk"></i><br>Prof Andrea Banfi <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><span style="background:#fff3cd; color:#664d03; border-radius:20px; font-size:11px; padding:1px 8px;"><i class="far fa-comment" style="margin-right:4px;"></i>1</span></span></div>
+            </div>
+
+            <!-- Harry Golding · FYP BSc (same student, different project class → its own group) -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#eef2f7; border-bottom:1px solid #dde3ea; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:14px; height:14px; border-radius:3px; background:#4fb0d4; display:inline-block;"></span><strong style="font-size:15px;"><span class="lnk">Harry Golding</span></strong><span style="font-size:12.5px; color:#6c757d;">Final Year Project (BSc) · Phys BSc · Y3 | 2022 cohort</span></div>
+              <span style="font-size:12px; color:#495057;">1 period · <span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600; margin-left:2px;">Total 1.0</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:3px solid #dde3ea; align-items:start;">
+              <div><span style="background:#ffe9c9; color:#663d00; border:1px solid #ffd699; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Full year</span></div>
+              <div><span class="lnk" style="font-weight:600;">Weak Gravitational Lensing</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof David Seery · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Dr Christian Byrnes <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+
+            <!-- Louis Irish · MPP -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#eef2f7; border-bottom:1px solid #dde3ea; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:14px; height:14px; border-radius:3px; background:#12796c; display:inline-block;"></span><strong style="font-size:15px;"><span class="lnk">Louis Irish</span></strong><span style="font-size:12.5px; color:#6c757d;">Mathematical Physics Project · Th Phys MPhys · Y2 | 2023 cohort</span></div>
+              <span style="font-size:12px; color:#495057;">2 periods · <span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600; margin-left:2px;">Total 2.0</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Autumn term</span></div>
+              <div><span class="lnk" style="font-weight:600;">Numerical evaluation of loop amplitudes using tree-loop duality</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Dr Jonas Lindert · Responsible supervisor</div><div style="font-size:12.5px; color:#0f5132; margin-top:3px;"><i class="fas fa-check-circle" style="margin-right:5px;"></i>meets programme prefs</div></div>
+              <div style="font-size:13px;">Prof Sebastian Jaeger <i class="fas fa-caret-down lnk"></i><br>Prof Stephan Huber <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:3px solid #dde3ea; align-items:start;">
+              <div><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Spring term</span></div>
+              <div><span class="lnk" style="font-weight:600;">Atom–photon interactions</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Barry Garraway · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Prof Daniel Litim <i class="fas fa-caret-down lnk"></i><br>Prof Andrea Banfi <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+
+            <!-- Dimitri Verai · MPP -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#eef2f7; border-bottom:1px solid #dde3ea; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:14px; height:14px; border-radius:3px; background:#12796c; display:inline-block;"></span><strong style="font-size:15px;"><span class="lnk">Dimitri Verai</span></strong><span style="font-size:12.5px; color:#6c757d;">Mathematical Physics Project · Th Phys MPhys · Y2 | 2023 cohort</span></div>
+              <span style="font-size:12px; color:#495057;">2 periods · <span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600; margin-left:2px;">Total 2.0</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Autumn term</span></div>
+              <div><span class="lnk" style="font-weight:600;">Theoretical Aspects of Black Holes</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Xavier Calmet · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Prof Sebastian Jaeger <i class="fas fa-caret-down lnk"></i><br>Prof Daniel Litim <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; align-items:start;">
+              <div><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:2px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;">Spring term</span></div>
+              <div><span class="lnk" style="font-weight:600;">Quantum mechanics and path integrals</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Sebastian Jaeger · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Dr Jonas Lindert <i class="fas fa-caret-down lnk"></i><br>Prof Xavier Calmet <i class="fas fa-caret-down lnk"></i></div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span><div style="font-size:11.5px; color:#6c757d;">preference</div></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ===== BY PERIOD (grouped on SubmissionPeriodDefinition) ===== -->
+          <sc-if value="{{ isByPeriod }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="font-size:12.5px; color:#6c757d; padding:10px 4px 4px; line-height:1.5;"><i class="fas fa-info-circle" style="margin-right:6px; color:#0d6efd;"></i>Groups are keyed on the <strong>SubmissionPeriodDefinition</strong>, not the period number — so MPP's autumn period and the BSc's year-long period stay separate even though both are "period 1" within their class.</div>
+            <!-- MPP · Autumn term -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#dbe9ff; border-bottom:1px solid #b6d0f7; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><strong style="font-size:14.5px; color:#052c65;">Mathematical Physics Project · Autumn term</strong><span style="font-size:12.5px; color:#3a5a8c;">3 allocations</span></div>
+              <span style="font-size:12px; color:#052c65;"><span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600;">Σ 2.5</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Harry Golding</span></div>
+              <div><span class="lnk" style="font-weight:600;">Numerical evaluation of loop amplitudes using tree-loop duality</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Dr Jonas Lindert · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Prof David Seery<br>Prof Stephan Huber</div>
+              <div><span style="color:#fd7e14; font-weight:700; font-size:20px;">#3</span></div>
+              <div style="font-size:15px;">0.50</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Louis Irish</span></div>
+              <div><span class="lnk" style="font-weight:600;">Numerical evaluation of loop amplitudes using tree-loop duality</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Dr Jonas Lindert · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Prof Sebastian Jaeger<br>Prof Stephan Huber</div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:3px solid #dde3ea; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Dimitri Verai</span></div>
+              <div><span class="lnk" style="font-weight:600;">Theoretical Aspects of Black Holes</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Xavier Calmet · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Prof Sebastian Jaeger<br>Prof Daniel Litim</div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <!-- MPP · Spring term -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#ece5f8; border-bottom:1px solid #d4c6ee; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><strong style="font-size:14.5px; color:#341c6b;">Mathematical Physics Project · Spring term</strong><span style="font-size:12.5px; color:#5a4a86;">3 allocations</span></div>
+              <span style="font-size:12px; color:#341c6b;"><span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600;">Σ 3.0</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Harry Golding</span></div>
+              <div><span class="lnk" style="font-weight:600;">Theoretical Aspects of Black Holes</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Xavier Calmet · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Dr Christian Byrnes<br>Prof Andrea Banfi</div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><span style="background:#fff3cd; color:#664d03; border-radius:20px; font-size:11px; padding:1px 8px;"><i class="far fa-comment" style="margin-right:4px;"></i>1</span></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:1px dashed #e3e7ec; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Louis Irish</span></div>
+              <div><span class="lnk" style="font-weight:600;">Atom–photon interactions</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Barry Garraway · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Prof Daniel Litim<br>Prof Andrea Banfi</div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; border-bottom:3px solid #dde3ea; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#12796c; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Dimitri Verai</span></div>
+              <div><span class="lnk" style="font-weight:600;">Quantum mechanics and path integrals</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof Sebastian Jaeger · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Dr Jonas Lindert<br>Prof Xavier Calmet</div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+            <!-- FYP BSc · Full year -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff1de; border-bottom:1px solid #ffdfb0; padding:9px 14px;">
+              <div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:3px; background:#4fb0d4; display:inline-block;"></span><strong style="font-size:14.5px; color:#663d00;">Final Year Project (BSc) · Full year</strong><span style="font-size:12.5px; color:#8a6520;">1 allocation</span></div>
+              <span style="font-size:12px; color:#663d00;"><span style="background:#0d6efd; color:#fff; padding:3px 11px; border-radius:20px; font-weight:600;">Σ 1.0</span></span>
+            </div>
+            <div style="display:grid; grid-template-columns:160px minmax(300px,1fr) 210px 104px 96px 92px; gap:0 18px; padding:14px; align-items:start;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:3px; background:#4fb0d4; display:inline-block;"></span><span class="lnk" style="font-weight:600;">Harry Golding</span></div>
+              <div><span class="lnk" style="font-weight:600;">Weak Gravitational Lensing</span><div style="font-size:12.5px; color:#6c757d; margin-top:4px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i>Prof David Seery · Responsible supervisor</div></div>
+              <div style="font-size:13px;">Dr Christian Byrnes</div>
+              <div><span style="color:#198754; font-weight:700; font-size:20px;">#1</span></div>
+              <div style="font-size:15px;">1.00</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><span class="lnk" style="font-size:12.5px;">Details ›</span><span style="display:inline-flex; gap:8px; color:#6c757d;"><i class="far fa-comment lnk"></i><i class="fas fa-plus lnk"></i></span></div>
+            </div>
+          </div>
+          </sc-if>
+
+        </div>
+      </div>
+      <div style="font-size:13px; color:#6c757d; line-height:1.5; max-width:1040px;"><strong>Fixes:</strong> project-class filter retained; every row leads with its <code>SubmissionPeriodDefinition</code> pill; groups (student × class, or definition) restore both scanning modes; comment anchor lives in each record's Actions cell. Harry appears in two groups because he has records in two project classes — matching the old system's behaviour.</div>
+    </div>
+
+    <!-- ============================ OPTION 1b — STUDENT DRAWER ============================ -->
+    <div id="1b" style="display:flex; flex-direction:column; gap:12px; width:480px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="background:#0d6efd; color:#fff; font-weight:700; font-size:14px; padding:4px 12px; border-radius:20px;">1b</span>
+        <span style="font-size:17px; font-weight:600;">Student drawer — period context + siblings</span>
+      </div>
+
+      <div style="background:#fff; border:1px solid #dee2e6; border-radius:10px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,.12); width:480px;">
+        <div style="background:#0d6efd; color:#fff; padding:16px 20px; display:flex; justify-content:space-between; align-items:flex-start;">
+          <div><div style="font-size:19px; font-weight:600;">Student inspector</div><div style="font-size:14px; opacity:.9;">Louis Irish</div></div>
+          <i class="fas fa-times" style="opacity:.85; cursor:pointer;"></i>
+        </div>
+        <div style="padding:16px 18px; display:flex; flex-direction:column; gap:14px; max-height:760px; overflow:auto;">
+
+          <div style="border:1px solid #e3e7ec; border-radius:8px; padding:14px;">
+            <div style="font-size:17px; font-weight:600;"><span class="lnk">Louis Irish</span></div>
+            <div style="display:flex; align-items:center; gap:9px; margin-top:6px; font-size:13px;"><span style="width:14px; height:14px; border-radius:3px; background:#12796c; display:inline-block;"></span><span style="color:#6c757d;">Mathematical Physics Project</span><span><i class="fas fa-user-circle" style="margin-right:4px;"></i><span class="lnk">Prof David Seery</span></span></div>
+          </div>
+
+          <!-- period context + sibling strip -->
+          <div style="border:1px solid #b6d0f7; background:#f3f8ff; border-radius:8px; padding:12px 14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <span style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#345;">Viewing allocation</span>
+              <span style="font-size:12.5px; color:#345;">{{ dPos }}</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <div onClick="{{ pickSp1 }}" style="{{ sp1CardStyle }}">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;"><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:700;">Autumn term</span><span style="width:8px; height:8px; border-radius:50%; background:#198754; display:inline-block; margin-left:auto;" title="assigned"></span></div>
+                <div style="font-size:12.5px; font-weight:600; line-height:1.3;">Numerical evaluation of loop amplitudes…</div>
+                <div style="font-size:11.5px; color:#6c757d; margin-top:3px;">#1 · MPP</div>
+              </div>
+              <div onClick="{{ pickSp2 }}" style="{{ sp2CardStyle }}">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;"><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:700;">Spring term</span><span style="width:8px; height:8px; border-radius:50%; background:#198754; display:inline-block; margin-left:auto;" title="assigned"></span></div>
+                <div style="font-size:12.5px; font-weight:600; line-height:1.3;">Atom–photon interactions</div>
+                <div style="font-size:11.5px; color:#6c757d; margin-top:3px;">#1 · MPP</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assigned project (scoped to active period) -->
+          <div style="border:1px solid #0d6efd; border-radius:8px; overflow:hidden;">
+            <div style="padding:10px 14px; border-bottom:1px solid #cfe2ff; display:flex; justify-content:space-between; align-items:center; background:#f3f8ff;"><span style="font-weight:600;">Assigned project</span><span style="{{ dPeriodPillStyle }}">{{ dPeriodLabel }}</span></div>
+            <div style="padding:14px;">
+              <div style="font-weight:700; font-size:15px;">{{ dProject }}</div>
+              <div style="font-size:12.5px; color:#6c757d; margin-top:6px;"><i class="fas fa-user-circle" style="margin-right:5px;"></i><span class="lnk">{{ dOwner }}</span></div>
+              <button style="width:100%; margin-top:14px; background:#0d6efd; color:#fff; border:none; border-radius:6px; padding:9px; font-size:13px; cursor:pointer;">Open unified role editor…</button>
+            </div>
+          </div>
+
+          <!-- Comments scoped to record -->
+          <div style="border:1px solid #e3e7ec; border-radius:8px; overflow:hidden;">
+            <div style="padding:10px 14px; border-bottom:1px solid #eceff3; display:flex; justify-content:space-between; align-items:center;"><span>Comments</span><span style="font-size:11.5px; color:#6c757d;">{{ dCommentScope }}</span></div>
+            <div style="padding:14px;">
+              <div style="font-size:13px; color:#6c757d;">{{ dCommentText }}</div>
+              <div style="border:1px solid #dee2e6; border-radius:6px; padding:9px 12px; margin-top:12px; color:#6c757d; font-size:13px;"><i class="far fa-comment" style="margin-right:8px;"></i>Add a comment…</div>
+            </div>
+          </div>
+
+          <div style="border:1px solid #e3e7ec; border-radius:8px; overflow:hidden;">
+            <div style="padding:10px 14px; border-bottom:1px solid #eceff3;">Journal</div>
+            <div style="padding:14px; font-size:13px; color:#6c757d;">No accessible journal entries.<div style="margin-top:10px;"><span style="border:1px solid #dee2e6; border-radius:6px; padding:5px 11px; font-size:12.5px; cursor:pointer;"><i class="fas fa-book" style="margin-right:6px;"></i>View journal…</span></div></div>
+          </div>
+
+        </div>
+      </div>
+      <div style="font-size:13px; color:#6c757d; line-height:1.5; max-width:460px;"><strong>Fixes:</strong> names the period it's showing ("<em>{{ dPos }}</em>") and surfaces the student's other allocations. Click a sibling card to swap the drawer to that record without closing it; comments and the role editor stay scoped to one <code>MatchingRecord</code>.</div>
+    </div>
+
+    <!-- ============================ OPTION 1c — FACULTY VIEW ============================ -->
+    <div id="1c" style="display:flex; flex-direction:column; gap:12px; width:1240px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="background:#0d6efd; color:#fff; font-weight:700; font-size:14px; padding:4px 12px; border-radius:20px;">1c</span>
+        <span style="font-size:17px; font-weight:600;">Faculty view — period tag on every supervising / marking allocation</span>
+      </div>
+      <div style="background:#fff; border:1px solid #0d6efd; border-radius:8px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <div style="background:#0d6efd; color:#fff; padding:12px 18px; font-size:15px;">Faculty view of project matching <strong>Release candidate #1</strong></div>
+        <div style="padding:18px;">
+          <div style="display:grid; grid-template-columns:230px 1fr 1fr 180px; gap:0 20px; padding:0 12px 10px; border-bottom:2px solid #dee2e6; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#495057;">
+            <div>Name</div><div>Supervising</div><div>Marking</div><div>Workload</div>
+          </div>
+
+          <!-- Prof Xavier Calmet — shows same project title in two periods, disambiguated -->
+          <div style="display:grid; grid-template-columns:230px 1fr 1fr 180px; gap:0 20px; padding:16px 12px; border-bottom:1px solid #eceff3; align-items:start;">
+            <div><div style="font-weight:600;"><span class="lnk">Prof Xavier Calmet</span></div><div style="font-size:12px; color:#6c757d; margin-top:4px; line-height:1.6;"><span style="width:10px; height:10px; border-radius:2px; background:#12796c; display:inline-block; margin-right:5px;"></span>MPP · offered 1<br><span style="width:10px; height:10px; border-radius:2px; background:#4fb0d4; display:inline-block; margin-right:5px;"></span>FYP BSc · offered 1</div><div style="margin-top:8px;"><span class="lnk" style="font-size:12.5px;">Show details ›</span></div><div style="margin-top:8px;"><span style="border:1px solid #0d6efd; color:#0d6efd; border-radius:6px; padding:3px 12px; font-size:12.5px; cursor:pointer;">Reassign…</span></div></div>
+            <div style="display:flex; flex-direction:column; gap:11px;">
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Autumn term</span></div><div style="font-size:13px;"><span class="lnk">Dimitri Verai</span> · Theoretical Aspects of Black Holes</div></div>
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Spring term</span></div><div style="font-size:13px;"><span class="lnk">Harry Golding</span> · Theoretical Aspects of Black Holes</div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:11px;">
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Spring term</span></div><div style="font-size:13px;"><span class="lnk">Dimitri Verai</span> · Quantum mechanics and path integrals</div></div>
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#4fb0d4; display:inline-block;"></span><span style="background:#ffe9c9; color:#663d00; border:1px solid #ffd699; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">FYP BSc · Full year</span></div><div style="font-size:13px;"><span class="lnk">Joe Cole</span> · Fixed points and phase transitions…</div></div>
+            </div>
+            <div style="font-size:13px; color:#495057; line-height:1.7;">Supervising <strong>75</strong><br>Marking <strong>12</strong><br><span class="lnk">Total 87</span></div>
+          </div>
+
+          <!-- Dr Jonas Lindert -->
+          <div style="display:grid; grid-template-columns:230px 1fr 1fr 180px; gap:0 20px; padding:16px 12px; align-items:start;">
+            <div><div style="font-weight:600;"><span class="lnk">Dr Jonas Lindert</span></div><div style="font-size:12px; color:#6c757d; margin-top:4px; line-height:1.6;"><span style="width:10px; height:10px; border-radius:2px; background:#12796c; display:inline-block; margin-right:5px;"></span>MPP · offered 1<br><span style="width:10px; height:10px; border-radius:2px; background:#b06fd6; display:inline-block; margin-right:5px;"></span>FYP MPhys · offered 2</div><div style="margin-top:8px;"><span class="lnk" style="font-size:12.5px;">Show details ›</span></div><div style="margin-top:8px;"><span style="border:1px solid #0d6efd; color:#0d6efd; border-radius:6px; padding:3px 12px; font-size:12.5px; cursor:pointer;">Reassign…</span></div></div>
+            <div style="display:flex; flex-direction:column; gap:11px;">
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Autumn term</span></div><div style="font-size:13px;"><span class="lnk">Harry Golding</span> · Numerical evaluation of loop amplitudes…</div></div>
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Autumn term</span></div><div style="font-size:13px;"><span class="lnk">Louis Irish</span> · Numerical evaluation of loop amplitudes…</div></div>
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#b06fd6; display:inline-block;"></span><span style="background:#efe2fb; color:#4a1d78; border:1px solid #dcc6f2; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">FYP MPhys · Full year</span></div><div style="font-size:13px;"><span class="lnk">Joseph Rea</span> · Numerical evaluation of loop amplitudes…</div></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:11px;">
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#e2d9f3; color:#341c6b; border:1px solid #c5b3e6; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Spring term</span></div><div style="font-size:13px;"><span class="lnk">Dimitri Verai</span> · Quantum mechanics and path integrals</div></div>
+              <div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;"><span style="width:11px; height:11px; border-radius:2px; background:#4fb0d4; display:inline-block;"></span><span style="background:#ffe9c9; color:#663d00; border:1px solid #ffd699; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">FYP BSc · Full year</span></div><div style="font-size:13px;"><span class="lnk">Jabez Kent</span> · Fixed points and phase transitions…</div></div>
+            </div>
+            <div style="font-size:13px; color:#495057; line-height:1.7;">Supervising <strong>75</strong><br>Marking <strong>12</strong><br><span class="lnk">Total 87</span><br><span style="background:#fde2cf; color:#7a4100; border-radius:20px; padding:2px 9px; font-size:11px; margin-top:4px; display:inline-block;"><i class="fas fa-balance-scale" style="margin-right:4px;"></i>Capacity binding</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:#6c757d; line-height:1.5; max-width:1040px;"><strong>Fixes:</strong> each supervising and marking allocation now carries a <code>class · period</code> tag. Note Prof Calmet supervises <em>Theoretical Aspects of Black Holes</em> in <strong>both</strong> the autumn and spring MPP periods — previously indistinguishable, now clearly two separate allocations.</div>
+    </div>
+
+    <!-- ============================ OPTION 1d — REASSIGN MODAL ============================ -->
+    <div id="1d" style="display:flex; flex-direction:column; gap:12px; width:1000px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="background:#0d6efd; color:#fff; font-weight:700; font-size:14px; padding:4px 12px; border-radius:20px;">1d</span>
+        <span style="font-size:17px; font-weight:600;">Reassignment workspace — period on capacity + assigned cards</span>
+      </div>
+      <div style="background:#fff; border:1px solid #dee2e6; border-radius:10px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,.12);">
+        <div style="background:#0d6efd; color:#fff; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;"><div style="font-size:18px; font-weight:600;">Reassignment workspace — Dr Jonas Lindert</div><i class="fas fa-times" style="opacity:.85; cursor:pointer;"></i></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; background:#f6f7f9;">
+          <div style="padding:18px 20px; border-right:1px solid #e3e7ec;">
+            <h6 style="font-size:15px; font-weight:600; margin:0 0 12px;">Capacity gauges</h6>
+            <div style="margin-bottom:12px;"><div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:#6c757d;">Supervising</span><strong>75 / 105 CATS</strong></div><div style="height:8px; background:#e9ecef; border-radius:4px; margin-top:4px;"><div style="width:71%; height:100%; background:#198754; border-radius:4px;"></div></div></div>
+            <div style="margin-bottom:18px;"><div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:#6c757d;">Marking</span><strong>12 / 20 CATS</strong></div><div style="height:8px; background:#e9ecef; border-radius:4px; margin-top:4px;"><div style="width:60%; height:100%; background:#198754; border-radius:4px;"></div></div></div>
+
+            <h6 style="font-size:15px; font-weight:600; margin:0 0 12px;">Per-project capacity</h6>
+            <div style="margin-bottom:14px;"><div style="display:flex; justify-content:space-between; gap:8px; font-size:13px;"><span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;"><span style="width:11px; height:11px; border-radius:2px; background:#b06fd6; display:inline-block;"></span><span style="color:#6c757d; font-size:11.5px; white-space:nowrap;">FYP MPHYS</span> Logarithmic structure of higher-order electroweak corrections</span><strong style="white-space:nowrap;">0 / 1</strong></div><div style="height:7px; background:#e9ecef; border-radius:4px; margin-top:5px;"></div><div style="font-size:11.5px; color:#6c757d; margin-top:3px;">capacity enforced</div></div>
+            <div style="margin-bottom:14px;"><div style="display:flex; justify-content:space-between; gap:8px; font-size:13px;"><span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;"><span style="width:11px; height:11px; border-radius:2px; background:#b06fd6; display:inline-block;"></span><span style="color:#6c757d; font-size:11.5px; white-space:nowrap;">FYP MPHYS</span> Numerical evaluation of loop amplitudes using tree-loop duality</span><strong style="white-space:nowrap;">1 / 2</strong></div><div style="height:7px; background:#e9ecef; border-radius:4px; margin-top:5px;"><div style="width:50%; height:100%; background:#198754; border-radius:4px;"></div></div><div style="font-size:11.5px; color:#6c757d; margin-top:3px;">capacity enforced</div></div>
+            <div style="margin-bottom:14px;"><div style="display:flex; justify-content:space-between; gap:8px; font-size:13px;"><span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;"><span style="width:11px; height:11px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="color:#6c757d; font-size:11.5px; white-space:nowrap;">MPP</span> Numerical evaluation of loop amplitudes using tree-loop duality</span><strong style="white-space:nowrap;">2 / 2</strong></div><div style="height:7px; background:#e9ecef; border-radius:4px; margin-top:5px;"><div style="width:100%; height:100%; background:#ffc107; border-radius:4px;"></div></div><div style="font-size:11.5px; color:#997404; margin-top:3px;">at capacity — enforced</div></div>
+
+            <h6 style="font-size:15px; font-weight:600; margin:16px 0 12px;">Currently assigned (3)</h6>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div style="background:#fff; border:1px solid #e3e7ec; border-radius:7px; padding:9px 12px;"><div style="font-weight:600; font-size:13.5px;"><span class="lnk">Joseph Rea</span></div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px; font-size:12.5px; color:#6c757d;"><span style="width:10px; height:10px; border-radius:2px; background:#b06fd6; display:inline-block;"></span><span style="background:#efe2fb; color:#4a1d78; border:1px solid #dcc6f2; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">FYP MPhys · Full year</span> Numerical evaluation of loop…</div></div>
+              <div style="background:#fff; border:1px solid #e3e7ec; border-radius:7px; padding:9px 12px;"><div style="font-weight:600; font-size:13.5px;"><span class="lnk">Harry Golding</span></div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px; font-size:12.5px; color:#6c757d;"><span style="width:10px; height:10px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Autumn term</span> Numerical evaluation of loop…</div></div>
+              <div style="background:#fff; border:1px solid #e3e7ec; border-radius:7px; padding:9px 12px;"><div style="font-weight:600; font-size:13.5px;"><span class="lnk">Louis Irish</span></div><div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px; font-size:12.5px; color:#6c757d;"><span style="width:10px; height:10px; border-radius:2px; background:#12796c; display:inline-block;"></span><span style="background:#cfe2ff; color:#052c65; border:1px solid #9ec5fe; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:600;">MPP · Autumn term</span> Numerical evaluation of loop…</div></div>
+            </div>
+          </div>
+          <div style="padding:18px 20px;">
+            <h6 style="font-size:15px; font-weight:600; margin:0 0 6px;">Assignable pool (0)</h6>
+            <p style="font-size:12.5px; color:#6c757d; margin:0 0 14px; line-height:1.5;">Students who could move here, ranked by strength of preference. Colour shows why.</p>
+            <p style="font-size:12.5px; color:#6c757d; margin:0;">No candidates found who ranked one of this staff member's projects.</p>
+          </div>
+        </div>
+        <div style="background:#f6f7f9; border-top:1px solid #e3e7ec; padding:14px 20px; display:flex; justify-content:flex-end;"><span style="background:#0d6efd; color:#fff; border-radius:6px; padding:8px 20px; font-size:13px; cursor:pointer;">Done</span></div>
+      </div>
+      <div style="font-size:13px; color:#6c757d; line-height:1.5; max-width:960px;"><strong>Fixes:</strong> period labels appear only on the <em>students</em> in the currently-assigned block — a record belongs to a period, a project does not. Per-project capacity stays project-level (accumulated across periods), keeping just the class swatch.</div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { grouping: 'student', sp: 'sp1' };
+
+  tab(active) {
+    const base = 'border:none; padding:7px 16px; font-size:13px; cursor:pointer; background:';
+    return active ? base + '#0d6efd; color:#fff;' : base + 'transparent; color:#495057;';
+  }
+
+  sibCard(active, accent) {
+    const base = 'flex:1; border-radius:7px; padding:9px 10px; cursor:pointer; border:1px solid ';
+    return active
+      ? base + accent + '; background:#fff; box-shadow:0 0 0 2px ' + accent + '55;'
+      : base + '#e3e7ec; background:#fbfcfd; opacity:.85;';
+  }
+
+  renderVals() {
+    const isSp1 = this.state.sp === 'sp1';
+    const rec = isSp1
+      ? { proj: 'Numerical evaluation of loop amplitudes using tree-loop duality', owner: 'Dr Jonas Lindert',
+          label: 'Autumn term', pillBg: '#cfe2ff', pillFg: '#052c65', pillBd: '#9ec5fe' }
+      : { proj: 'Atom–photon interactions', owner: 'Prof Barry Garraway',
+          label: 'Spring term', pillBg: '#e2d9f3', pillFg: '#341c6b', pillBd: '#c5b3e6' };
+
+    return {
+      isByStudent: this.state.grouping === 'student',
+      isByPeriod: this.state.grouping === 'period',
+      firstColHead: this.state.grouping === 'student' ? 'Period' : 'Student',
+      showStudent: () => this.setState({ grouping: 'student' }),
+      showPeriod: () => this.setState({ grouping: 'period' }),
+      studentTabStyle: this.tab(this.state.grouping === 'student'),
+      periodTabStyle: this.tab(this.state.grouping === 'period'),
+
+      pickSp1: () => this.setState({ sp: 'sp1' }),
+      pickSp2: () => this.setState({ sp: 'sp2' }),
+      sp1CardStyle: this.sibCard(isSp1, '#0d6efd'),
+      sp2CardStyle: this.sibCard(!isSp1, '#6f42c1'),
+      dPos: isSp1 ? 'Autumn term · 1 of 2' : 'Spring term · 2 of 2',
+      dProject: rec.proj,
+      dOwner: rec.owner,
+      dPeriodLabel: rec.label,
+      dPeriodPillStyle: `background:${rec.pillBg}; color:${rec.pillFg}; border:1px solid ${rec.pillBd}; border-radius:20px; padding:2px 10px; font-size:11.5px; font-weight:600;`,
+      dCommentScope: isSp1 ? 'this allocation · Autumn term' : 'this allocation · Spring term',
+      dCommentText: 'No comments yet on this allocation.',
+    };
+  }
+}
+</script>
+</body>
+</html>

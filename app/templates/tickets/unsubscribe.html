@@ -1,0 +1,38 @@
+{% extends "security/index.html" %}
+
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}
+    Unsubscribe from ticket
+{% endblock %}
+
+{% block formtitle %}
+    Ticket #{{ ticket.id }}
+{% endblock %}
+
+{% block form_content %}
+    <div class="mb-3">
+        <div class="fw-bold">{{ ticket.title }}</div>
+    </div>
+
+    {% if already_out %}
+        <div class="alert alert-success mb-0">
+            {% call icon_block("check-circle") %}
+                <div>You are no longer watching this ticket. You will not receive any further email notifications about it.</div>
+            {% endcall %}
+        </div>
+    {% else %}
+        <div class="alert alert-info mb-3">
+            {% call icon_block("info-circle") %}
+                <div>You are currently watching this ticket and will receive an email whenever a new comment is added or the status changes.</div>
+            {% endcall %}
+        </div>
+
+        <form action="" method="POST" name="unsubscribe_form">
+            {{ form.hidden_tag() }}
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="fas fa-eye-slash fa-fw"></i> Stop watching this ticket
+            </button>
+        </form>
+    {% endif %}
+{% endblock %}

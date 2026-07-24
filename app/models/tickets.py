@@ -453,6 +453,17 @@ class TicketSubscription(db.Model, TicketSubscriptionReasonMixin):
 
     created_at = db.Column(db.DateTime(), default=datetime.now)
 
+    # who performed the add (None for self-subscribe via watch(), or an automatic reason such as
+    # OPENER/ASSIGNEE/CONVENOR). Drives the "added you as a watcher" notification and its
+    # adder_name/adder_initials tokens — see app.shared.tickets.subscriptions.subscribe().
+    added_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True, index=True)
+    added_by = db.relationship("User", foreign_keys=[added_by_id], uselist=False)
+
+    # True while this subscription still needs its "you were added as a watcher" email; cleared
+    # once app.tasks.ticket_notifications.check_watcher_notifications queues it. Only ever set on
+    # newly-created rows (see subscribe()) — never on the idempotent already-subscribed path.
+    notify_pending = db.Column(db.Boolean(), nullable=False, default=False)
+
     __table_args__ = (db.UniqueConstraint("ticket_id", "user_id", name="uq_ticket_subscription_user"),)
 
 

@@ -67,6 +67,7 @@ from ..shared.tickets import (
     remove_label,
     remove_subject,
     resolve_token,
+    resolve_unsubscribe_token,
     subscribe,
     unassign,
     unsubscribe,
@@ -818,6 +819,9 @@ def subscriber_add(ticket_id, user_id):
 
     form = ConfirmActionForm()
     if form.validate_on_submit():
+        # subscribe() itself (re)schedules the deferred watcher-added notification check — see
+        # app.shared.tickets.subscriptions._schedule_watcher_notification_check — as a persisted
+        # DatabaseSchedulerEntry, in the same transaction as the subscription row.
         subscribe(ticket, target, actor=current_user)
         _commit_or_flash(
             f"Added {target.name} as a subscriber to ticket #{ticket.id}",
@@ -893,6 +897,49 @@ def external_subscriber_remove(ticket_id, ext_id):
         )
 
     return _back(ticket)
+
+
+@tickets.route("/unsubscribe/<token>", methods=["GET", "POST"])
+def unsubscribe_link(token):
+    """
+    One-click unsubscribe landing page reached from a notification email's "Unsubscribe" /
+    "Stop watching this ticket" link. No @login_required — the recipient clicking this may not be
+    logged in, and the signed token (not a session) is what authorizes the action. Handles both
+    internal subscribers (token carries a user id) and external subscribers (token carries an
+    email address, added via the "log email" workflow's external-subscriber picker).
+    """
+    payload = resolve_unsubscribe_token(token)
+    if payload is None or "t" not in payload:
+        abort(404)
+
+    ticket = Ticket.query.get(payload["t"])
+    if ticket is None:
+        abort(404)
+
+    target = None
+    external = None
+    if "u" in payload:
+        target = User.query.get(payload["u"])
+        already_out = target is None or not is_subscribed(target, ticket)
+    else:
+        external = ticket.external_subscribers.filter_by(email=payload.get("e")).first()
+        already_out = external is None
+
+    form = ConfirmActionForm()
+    if not already_out and form.validate_on_submit():
+        if target is not None:
+            unsubscribe(ticket, target, actor=target)
+        elif external is not None:
+            remove_external_subscriber(ticket, external, actor=None)
+        try:
+            log_db_commit(f"Unsubscribed from ticket #{ticket.id} via emailed link", user=target, project_classes=_scope_pclasses(ticket))
+            already_out = True
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=exc)
+            flash("Could not unsubscribe due to a database error. Please contact a system administrator.", "error")
+
+    return render_template_context("tickets/unsubscribe.html", ticket=ticket, already_out=already_out, form=form)
 
 
 @tickets.route("/<int:ticket_id>/subject/people")

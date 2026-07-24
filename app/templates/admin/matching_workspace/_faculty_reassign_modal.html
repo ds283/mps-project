@@ -5,7 +5,7 @@
   .prompts/matching-workspace/PLAN.md.
 #}
 {% from "swatch.html" import small_swatch %}
-{% from "admin/matching_workspace/_macros.html" import capacity_bar %}
+{% from "admin/matching_workspace/_macros.html" import capacity_bar, class_period_tag %}
 
 {% set surname = drawer.faculty.user.last_name %}
 
@@ -88,7 +88,7 @@
 {% set currently_assigned = [] %}
 {% for p in drawer.projects %}
     {% for item in p.assigned %}
-        {% set _ = currently_assigned.append({"student": item.student, "record_id": item.record_id, "project": p.project}) %}
+        {% set _ = currently_assigned.append({"student": item.student, "record_id": item.record_id, "project": p.project, "period": item.period}) %}
     {% endfor %}
 {% endfor %}
 
@@ -153,7 +153,8 @@
                             <a class="text-decoration-none mw-open-student" href="#" data-rec-id="{{ item.record_id }}"
                                data-student-name="{{ item.student.user.name }}">{{ item.student.user.name }}</a>
                         </div>
-                        <div class="d-flex align-items-start gap-2 text-body-secondary" style="min-width: 0;">{{ project_label(item.project, clamp_one=true) }}</div>
+                        <div class="mb-1">{{ class_period_tag(item.period) }}</div>
+                        <div class="text-body-secondary" style="min-width: 0;" title="{{ item.project.name }}">{{ item.project.name }}</div>
                     </div>
                 </div>
             {% else %}

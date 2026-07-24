@@ -723,7 +723,9 @@ def faculty_drawer(attempt: MatchingAttempt, fac: FacultyData) -> dict:
                 "assigned_count": attempt.number_project_assignments(project),
                 "selected_count": project.number_selections,
                 "assigned_students": [record.selector.student for record in assigned_records],
-                "assigned": [{"student": record.selector.student, "record_id": record.id} for record in assigned_records],
+                "assigned": [
+                    {"student": record.selector.student, "record_id": record.id, "period": build_period_pill(record)} for record in assigned_records
+                ],
             }
         )
 

@@ -6,6 +6,7 @@
 {% from "labels.html" import label_text %}
 {% from "admin/matching_workspace/_macros.html" import period_pill, modified_pill, programme_pref_line %}
 {% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, mw_toolbar_end, mw_toolbar_sep, mw_search_form, mw_toggle_pills, mw_pager %}
+{% include "admin/matching_workspace/_list_controls.html" %}
 
 <style>
     .mw-sp-fbtn {
@@ -209,6 +210,7 @@
                         <strong style="font-size: 14.5px; color: {{ group.pill.colours.band_fg }};">{{ group.title }}</strong>
                         <span class="small" style="color: {{ group.pill.colours.band_fg }}; opacity: 0.85;">
                             {{ group.allocation_count }} allocation{{ 's' if group.allocation_count != 1 }}
+                            {% if group.continued %}&middot; continued{% endif %}
                         </span>
                     </div>
                     <span class="mw-sp-total-pill">&Sigma; {{ '%0.2f'|format(group.total_score) if group.total_score is not none else '&mdash;'|safe }}</span>
@@ -337,7 +339,7 @@
             <div class="text-center text-body-secondary py-4">No matching records found.</div>
         {% endfor %}
 
-        {{ mw_pager('admin.matching_workspace', view_args, base_params, page, per_page, total_groups, item_noun='groups') }}
+        {{ mw_pager('admin.matching_workspace', view_args, base_params, page, per_page, total_groups, item_noun=item_noun) }}
     </div>
 </div>
 

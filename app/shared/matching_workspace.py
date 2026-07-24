@@ -400,6 +400,40 @@ def _group_students_by_period(rows: List[dict]) -> List[dict]:
     return result
 
 
+def paginate_period_groups(groups: List[dict], page: int, per_page: int) -> Tuple[List[dict], int]:
+    """
+    Row-based pagination for "by period" groups. Unlike "by student" groups (naturally small — one
+    row per period a student has), a "by period" group holds every allocation sharing one
+    `SubmissionPeriodDefinition`, which can run to dozens of rows for a large cohort. Paginating
+    whole groups per page (as "by student" does) would then make a single page arbitrarily long, so
+    here `per_page` counts individual allocation rows instead: a large group may span several pages,
+    with its band header repeated (`continued=True`) on every page after the first.
+
+    Returns `(page_groups, total_rows)`: `page_groups` mirrors the shape of `groups` entries but
+    `rows` holds only the slice on this page, and `total_rows` is the allocation count across all
+    groups (for the pager's "Showing X-Y of Z" footer).
+    """
+    total_rows = sum(len(g["rows"]) for g in groups)
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    page_groups: List[dict] = []
+    offset = 0
+    for g in groups:
+        g_len = len(g["rows"])
+        g_start, g_end = offset, offset + g_len
+        offset = g_end
+
+        slice_start = max(start, g_start)
+        slice_end = min(end, g_end)
+        if slice_start >= slice_end:
+            continue
+
+        page_groups.append({**g, "rows": g["rows"][slice_start - g_start : slice_end - g_start], "continued": slice_start > g_start})
+
+    return page_groups, total_rows
+
+
 def student_drawer(attempt: MatchingAttempt, record: MatchingRecord) -> dict:
     """
     Assemble the view dict for the Student inspector drawer: assigned project, quick

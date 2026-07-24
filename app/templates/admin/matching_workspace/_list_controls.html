@@ -2,9 +2,17 @@
   Shared list-control macros for the Matching Workspace's server-rendered, paginated Student/
   Faculty panes (see .prompts/matching-workspace-refine/PLAN.md Phase 1). Mirrors the visual
   language of convenor/dashboard/submitters_v2.html's .sv2-* toolbar/pager under an mw-* prefix,
-  so the two tabs read as one system with that dashboard. `{% include %}` this partial once per
-  pane — only one pane renders per page load (see workspace.html), so the <style> block below
-  never appears twice on one page.
+  so the two tabs read as one system with that dashboard.
+
+  Consuming panes need BOTH directives, since Jinja2's `{% from %}` only pulls in the named
+  macros and silently drops any other top-level template content (i.e. the <style> block below
+  never gets rendered by `{% from %}` alone):
+
+    {% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, ... %}
+    {% include "admin/matching_workspace/_list_controls.html" %}
+
+  Only one pane renders per page load (see workspace.html), so the <style> block never appears
+  twice on one page.
 
   Every macro takes:
     - `endpoint`  — a url_for-able view name (both panes are served by the same route, so this is

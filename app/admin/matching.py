@@ -1981,9 +1981,18 @@ def matching_workspace(id):
         ]
 
         all_groups = workspace_service.build_student_groups(record, matching_records, group_by)
-        total_groups = len(all_groups)
-        page_start = (page - 1) * per_page
-        groups = all_groups[page_start : page_start + per_page]
+
+        if group_by == "period":
+            # "by period" groups can each hold dozens of allocations, so paginate by row instead
+            # of by whole group — a large group may then span several pages (see
+            # workspace_service.paginate_period_groups).
+            groups, total_groups = workspace_service.paginate_period_groups(all_groups, page, per_page)
+            item_noun = "allocations"
+        else:
+            total_groups = len(all_groups)
+            page_start = (page - 1) * per_page
+            groups = all_groups[page_start : page_start + per_page]
+            item_noun = "groups"
 
         student_ctx = dict(
             groups=groups,
@@ -1992,6 +2001,7 @@ def matching_workspace(id):
             page=page,
             per_page=per_page,
             total_groups=total_groups,
+            item_noun=item_noun,
         )
 
     return render_template_context(

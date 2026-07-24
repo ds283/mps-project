@@ -189,30 +189,6 @@ def binding_pills(constraints: List[dict]) -> List[dict]:
     return pills
 
 
-def _group_records_by_pclass(records: List[MatchingRecord]) -> Dict[int, List[dict]]:
-    """
-    Group a list of MatchingRecords (as returned by MatchingAttempt.get_supervisor_records() /
-    .get_marker_records()) by the ProjectClass of the owning selector, building a compact dict
-    per record: student, allocated project, and programme-preference match.
-    """
-    grouped: Dict[int, List[dict]] = defaultdict(list)
-
-    for record in records:
-        selector = record.selector
-        pclass = selector.config.project_class
-
-        grouped[pclass.id].append(
-            {
-                "record": record,
-                "student": selector.student,
-                "project": record.project,
-                "programme_pref": record.project.satisfies_preferences(selector) if record.project is not None else None,
-            }
-        )
-
-    return dict(grouped)
-
-
 # ############################
 # PERIOD IDENTITY
 # ############################
@@ -435,10 +411,10 @@ def paginate_period_groups(groups: List[dict], page: int, per_page: int) -> Tupl
     return page_groups, total_rows
 
 
-def _sibling_sort_key(sibling: MatchingRecord) -> Tuple[bool, Tuple[str, int]]:
-    spd = sibling.period
-    # a record with no resolvable SubmissionPeriodDefinition sorts after every period-bearing
-    # sibling, rather than raising or silently participating in period_sort_key's tuple compare
+def _record_period_sort_key(record: MatchingRecord) -> Tuple[bool, Tuple[str, int]]:
+    spd = record.period
+    # a record with no resolvable SubmissionPeriodDefinition sorts last, rather than raising or
+    # silently participating in period_sort_key's tuple compare
     return (spd is None, period_sort_key(spd) if spd is not None else ("", 0))
 
 
@@ -458,7 +434,7 @@ def _student_siblings(attempt: MatchingAttempt, record: MatchingRecord, student)
         )
         .all()
     )
-    sibling_records.sort(key=_sibling_sort_key)
+    sibling_records.sort(key=_record_period_sort_key)
 
     return [
         {
@@ -559,10 +535,33 @@ def faculty_project_ids(attempt: MatchingAttempt, fac: FacultyData) -> FrozenSet
     return frozenset(p.id for p in _faculty_project_ids_query(attempt, fac).all())
 
 
+def _flat_role_records(records: List[MatchingRecord]) -> List[dict]:
+    """
+    Build a flat, period-sorted list of dicts for one Faculty-tab allocation column (supervising
+    or marking): one entry per MatchingRecord `fac` holds that role on, each carrying the student,
+    allocated project, programme-preference match, and a period pill. Sorted by
+    `_record_period_sort_key` — ProjectClass order, then in-class period position — so the column
+    reads consistently with the Student tab's "by period" grouping (see Sorting rule in PLAN.md).
+    """
+    records = sorted(records, key=_record_period_sort_key)
+
+    return [
+        {
+            "record": record,
+            "student": record.selector.student,
+            "project": record.project,
+            "period": build_period_pill(record),
+            "programme_pref": record.project.satisfies_preferences(record.selector) if record.project is not None else None,
+        }
+        for record in records
+    ]
+
+
 def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     """
-    Assemble the view dict for a single Faculty-tab row: offered project counts, supervising/
-    marking loads grouped by project class, workload CATS, and a binding-constraint severity pill.
+    Assemble the view dict for a single Faculty-tab row: offered project counts, flat period-
+    sorted supervising/marking allocation lists, workload CATS, and a binding-constraint severity
+    pill.
     """
     offered_projects = _faculty_project_ids_query(attempt, fac).all()
 
@@ -578,8 +577,8 @@ def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
     for project in offered_projects:
         offered_by_pclass[project.config.pclass_id] += 1
 
-    supervising_by_pclass = _group_records_by_pclass(attempt.get_supervisor_records(fac.id).all())
-    marking_by_pclass = _group_records_by_pclass(attempt.get_marker_records(fac.id).all())
+    supervising = _flat_role_records(attempt.get_supervisor_records(fac.id).all())
+    marking = _flat_role_records(attempt.get_marker_records(fac.id).all())
 
     sup_info = attempt.is_supervisor_overassigned(fac)
     mark_info = attempt.is_marker_overassigned(fac)
@@ -589,8 +588,8 @@ def faculty_row(attempt: MatchingAttempt, fac: FacultyData) -> dict:
         "faculty": fac,
         "offered_by_pclass": dict(offered_by_pclass),
         "offered_total": len(offered_projects),
-        "supervising_by_pclass": supervising_by_pclass,
-        "marking_by_pclass": marking_by_pclass,
+        "supervising": supervising,
+        "marking": marking,
         "workload": {
             "cats_supervising": sup_info["CATS_total"],
             "cats_supervising_limit": sup_info["CATS_limit"],

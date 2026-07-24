@@ -50,7 +50,6 @@ from ..models import (
     SelectingStudent,
     SelectionRecord,
     TaskRecord,
-    User,
 )
 from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm, ConfirmActionForm
 from ..shared.forms.queries import GetWorkflowTemplates
@@ -74,7 +73,6 @@ from ..shared.validators import (
 )
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
-from ..tools import ServerSideInMemoryHandler
 from . import admin
 from .actions import estimate_CATS_load
 from .system import _compute_allowed_matching_years
@@ -2004,6 +2002,47 @@ def matching_workspace(id):
             item_noun=item_noun,
         )
 
+    faculty_ctx = {}
+    if view == "faculty":
+        name_filter = request.args.get("name_filter", "").strip()
+
+        page = request.args.get("page", 1, type=int)
+        _ALLOWED_PER_PAGE = {5, 10, 15, 20}
+        per_page_raw = request.args.get("per_page", 10, type=int)
+        per_page = per_page_raw if per_page_raw in _ALLOWED_PER_PAGE else 10
+
+        pclass_flag, pclass_value = is_integer(pclass_filter)
+
+        candidates = record.faculty_list_query().all()
+
+        if name_filter:
+            name_lower = name_filter.lower()
+            candidates = [fac for fac in candidates if name_lower in fac.user.name.lower()]
+
+        if pclass_flag:
+
+            def _offers_pclass(fac: FacultyData) -> bool:
+                if any(r.selector.config.pclass_id == pclass_value for r in record.get_supervisor_records(fac.id).all()):
+                    return True
+                return any(r.selector.config.pclass_id == pclass_value for r in record.get_marker_records(fac.id).all())
+
+            candidates = [fac for fac in candidates if _offers_pclass(fac)]
+
+        candidates.sort(key=lambda fac: ((fac.user.last_name or "").lower(), (fac.user.first_name or "").lower()))
+
+        total_faculty = len(candidates)
+        page_start = (page - 1) * per_page
+        page_candidates = candidates[page_start : page_start + per_page]
+
+        faculty_ctx = dict(
+            faculty_rows=[workspace_service.faculty_row(record, fac) for fac in page_candidates],
+            pclass_lookup={config.pclass_id: config.project_class for config in record.config_members},
+            name_filter=name_filter,
+            page=page,
+            per_page=per_page,
+            total_faculty=total_faculty,
+        )
+
     return render_template_context(
         "admin/matching_workspace/workspace.html",
         view=view,
@@ -2019,6 +2058,7 @@ def matching_workspace(id):
         text=text,
         url=url,
         **student_ctx,
+        **faculty_ctx,
     )
 
 
@@ -2168,71 +2208,6 @@ def edit_match_roles(rec_id):
         return jsonify(success=False, message="Could not save role changes because a database error was encountered."), 500
 
     return jsonify(success=True)
-
-
-@admin.route("/match_faculty_view_v2_ajax/<int:id>", methods=["POST"])
-@roles_accepted("faculty", "admin", "root")
-def match_faculty_view_v2_ajax(id):
-    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
-
-    if not validate_match_inspector(attempt):
-        return jsonify({})
-
-    if not attempt.finished or not attempt.solution_usable:
-        return jsonify({})
-
-    pclass_filter = request.args.get("pclass_filter", default=None)
-    pclass_flag, pclass_value = is_integer(pclass_filter)
-
-    url = request.args.get("url", default=None)
-    text = request.args.get("text", default=None)
-
-    base_query = attempt.faculty_list_query()
-
-    def search_name(row: FacultyData):
-        return row.user.name
-
-    def sort_name(row: FacultyData):
-        user: User = row.user
-        return [user.last_name, user.first_name]
-
-    def sort_workload(row: FacultyData):
-        sup_info = attempt.is_supervisor_overassigned(row)
-        mark_info = attempt.is_marker_overassigned(row)
-        return sup_info["CATS_total"] + mark_info["CATS_total"]
-
-    name = {"search": search_name, "order": sort_name}
-    workload = {"order": sort_workload}
-    columns = {
-        "name": name,
-        "supervising": {},
-        "marking": {},
-        "workload": workload,
-    }
-
-    row_filter = None
-    if pclass_flag:
-
-        def row_filter(row: FacultyData):
-            sup_records = attempt.get_supervisor_records(row.id).all()
-            if any(r.selector.config.pclass_id == pclass_value for r in sup_records):
-                return True
-
-            mark_records = attempt.get_marker_records(row.id).all()
-            return any(r.selector.config.pclass_id == pclass_value for r in mark_records)
-
-    with ServerSideInMemoryHandler(
-        request,
-        base_query,
-        columns,
-        row_filter=row_filter,
-    ) as handler:
-
-        def row_formatter(records: List[FacultyData]):
-            rows = [workspace_service.faculty_row(attempt, fac) for fac in records]
-            return ajax.admin.faculty_view_v2_data(rows, attempt, text=text, url=url)
-
-        return handler.build_payload(row_formatter)
 
 
 @admin.route("/match_faculty_drawer_ajax/<int:attempt_id>/<int:fac_id>")

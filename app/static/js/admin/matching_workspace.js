@@ -53,10 +53,9 @@
         toast.show();
     }
 
-    // The Student pane (Phase 2) is a server-rendered, paginated list, not a DataTable — the
-    // current URL already carries view + filters + group_by + page + per_page, so a full reload
-    // re-renders it in place. The Faculty pane still uses a DataTable (removed in a later phase),
-    // so that branch is kept as the fast path while it still applies.
+    // Both the Student and Faculty panes are server-rendered, paginated lists, not DataTables —
+    // the current URL already carries view + filters + group_by/page/per_page, so a full reload
+    // re-renders whichever pane is active in place.
     function reloadWorkspace() {
         window.location.reload();
     }
@@ -490,12 +489,6 @@
 
     // ── Faculty drawer ──────────────────────────────────────────────────────
 
-    function reloadFacultyTable() {
-        if (window.matchFacultyTable) {
-            window.matchFacultyTable.ajax.reload(null, false);
-        }
-    }
-
     function loadFacultyDrawer(facId, triggerEl, name) {
         var drawerEl = document.getElementById("matchFacultyDrawer");
         var bodyEl = document.getElementById("matchFacultyDrawerBody");
@@ -587,7 +580,7 @@
                     .then(function (data) {
                         if (data.success) {
                             showToast("Student reassigned.", "success");
-                            reloadFacultyTable();
+                            reloadWorkspace();
                             loadReassignWorkspace(attemptId, facId);
 
                             var drawerEl = document.getElementById("matchFacultyDrawer");

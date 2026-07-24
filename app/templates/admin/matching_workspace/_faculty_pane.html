@@ -1,9 +1,15 @@
 {#
-  Faculty pane for the Matching Workspace (Phase 3). Included from workspace.html when
-  view == 'faculty'. See .prompts/matching-workspace/PLAN.md.
+  Faculty pane for the Matching Workspace (Phase 4, 1c "period-anchored" redesign). Server-
+  rendered, paginated list — replaces the match_faculty_v2 DataTable. Included from workspace.html
+  when view == 'faculty'. See .prompts/matching-workspace-refine/PLAN.md.
 #}
+{% from "swatch.html" import small_swatch %}
+{% from "admin/matching_workspace/_macros.html" import class_period_tag %}
+{% from "admin/matching_workspace/_list_controls.html" import mw_toolbar_start, mw_toolbar_end, mw_search_form, mw_pager %}
+{% include "admin/matching_workspace/_list_controls.html" %}
+
 <style>
-    .mwsp-fbtn {
+    .mw-fp-fbtn {
         font-size: 12px;
         padding: 3px 11px;
         border-radius: 20px;
@@ -15,15 +21,41 @@
         display: inline-block;
     }
 
-    .mwsp-fbtn.active {
+    .mw-fp-fbtn.active {
         background: var(--bs-primary);
         color: #fff;
         border-color: var(--bs-primary);
     }
 
-    .mwsp-fbtn:hover:not(.active) {
+    .mw-fp-fbtn:hover:not(.active) {
         border-color: var(--bs-secondary-color);
         color: var(--bs-body-color);
+    }
+
+    .mw-fp-grid {
+        display: grid;
+        grid-template-columns: 230px minmax(260px, 1fr) minmax(260px, 1fr) 190px;
+        gap: 0 20px;
+        align-items: start;
+    }
+
+    .mw-fp-colhead {
+        padding: 0 14px 10px;
+        border-bottom: 2px solid var(--bs-border-color);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: var(--bs-secondary-color);
+    }
+
+    .mw-fp-row {
+        padding: 14px;
+        border-bottom: 1px dashed var(--bs-border-color-translucent);
+    }
+
+    .mw-fp-row:last-child {
+        border-bottom: 3px solid var(--bs-border-color);
     }
 
     /* project titles in the Supervising/Marking cells are clamped to a single line so that long
@@ -44,24 +76,133 @@
         <div class="card mb-3 card-body bg-well">
             <p class="mb-1">Filter by project class</p>
             <div class="d-flex flex-wrap gap-2">
-                <a class="mwsp-fbtn{% if pclass_filter is none or pclass_filter == 'all' %} active{% endif %}"
-                   href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter='all', text=text, url=url) }}">All</a>
+                <a class="mw-fp-fbtn{% if pclass_filter is none or pclass_filter == 'all' %} active{% endif %}"
+                   href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter='all', name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">All</a>
                 {% for pc in pclasses %}
-                    <a class="mwsp-fbtn{% if pclass_filter == pc.id|string %} active{% endif %}"
-                       href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter=pc.id, text=text, url=url) }}">{{ pc.name }}</a>
+                    <a class="mw-fp-fbtn{% if pclass_filter == pc.id|string %} active{% endif %}"
+                       href="{{ url_for('admin.matching_workspace', id=record.id, view='faculty', pclass_filter=pc.id, name_filter=name_filter, per_page=per_page, page=1, text=text, url=url) }}">{{ pc.name }}</a>
                 {% endfor %}
             </div>
         </div>
 
-        <table id="match_faculty_v2" class="table table-striped">
-            <thead>
-            <tr>
-                <th width="22%">Name</th>
-                <th width="30%">Supervising</th>
-                <th width="30%">Marking</th>
-                <th width="18%">Workload</th>
-            </tr>
-            </thead>
-        </table>
+        {% set view_args = {'id': record.id, 'view': 'faculty'} %}
+        {% set base_params = {
+            'pclass_filter': pclass_filter,
+            'name_filter': name_filter,
+            'per_page': per_page,
+            'text': text,
+            'url': url,
+        } %}
+
+        {{ mw_toolbar_start() }}
+        {{ mw_search_form('admin.matching_workspace', view_args, base_params, name_filter, placeholder='Search faculty…') }}
+        {{ mw_toolbar_end() }}
+
+        <div class="mw-fp-grid mw-fp-colhead mt-3">
+            <div>Name</div>
+            <div>Supervising</div>
+            <div>Marking</div>
+            <div>Workload</div>
+        </div>
+
+        {% for row in faculty_rows %}
+            <div class="mw-fp-grid mw-fp-row">
+                <div>
+                    <div>
+                        <a class="text-decoration-none fw-semibold" role="button" data-bs-toggle="offcanvas"
+                           data-bs-target="#matchFacultyDrawer" data-fac-id="{{ row.faculty.id }}"
+                           data-fac-name="{{ row.faculty.user.name }}">{{ row.faculty.user.name }}</a>
+                    </div>
+                    <div class="d-flex flex-column gap-1 mt-1">
+                        {% for pclass_id, count in row.offered_by_pclass.items() %}
+                            {% set pclass = pclass_lookup.get(pclass_id) %}
+                            {% if pclass %}
+                                <div class="d-flex align-items-center gap-2 small text-body-secondary">
+                                    {{ small_swatch(pclass.make_CSS_style()) }}
+                                    <span>{{ pclass.abbreviation }} &middot; offered {{ count }}</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <a class="small text-decoration-none" role="button" data-bs-toggle="offcanvas"
+                           data-bs-target="#matchFacultyDrawer" data-fac-id="{{ row.faculty.id }}"
+                           data-fac-name="{{ row.faculty.user.name }}">
+                            Show details <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                data-bs-target="#matchFacultyReassignModal" data-fac-id="{{ row.faculty.id }}"
+                                data-fac-name="{{ row.faculty.user.name }}">
+                            Reassign&hellip;
+                        </button>
+                    </div>
+                </div>
+                <div class="d-flex flex-column gap-3">
+                    {% for item in row.supervising %}
+                        <div>
+                            <div class="mb-1">{{ class_period_tag(item.period) }}</div>
+                            <div class="small">
+                                <a class="text-decoration-none" role="button" data-bs-toggle="modal"
+                                   data-bs-target="#matchRoleEditorModal" data-rec-id="{{ item.record.id }}">{{ item.student.user.name }}</a>
+                                &middot;
+                                <span class="mwfp-proj" title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</span>
+                                {% if item.programme_pref is not none %}
+                                    {% if item.programme_pref %}
+                                        <i class="fas fa-check-circle small" style="color: var(--bs-success-text-emphasis);"
+                                           data-bs-toggle="tooltip" title="Meets programme prefs"></i>
+                                    {% else %}
+                                        <i class="fas fa-times-circle small" style="color: var(--bs-warning-text-emphasis);"
+                                           data-bs-toggle="tooltip" title="Programme prefs not met"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <span class="text-body-secondary small">None</span>
+                    {% endfor %}
+                </div>
+                <div class="d-flex flex-column gap-3">
+                    {% for item in row.marking %}
+                        <div>
+                            <div class="mb-1">{{ class_period_tag(item.period) }}</div>
+                            <div class="small">
+                                {{ item.student.user.name }} &middot;
+                                <span class="mwfp-proj" title="{{ item.project.name if item.project else '' }}">{{ item.project.name if item.project else '' }}</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <span class="text-body-secondary small">None</span>
+                    {% endfor %}
+                </div>
+                <div>
+                    <div class="small">
+                        <span class="text-body-secondary">Supervising</span> <strong>{{ row.workload.cats_supervising }}</strong>
+                    </div>
+                    <div class="small">
+                        <span class="text-body-secondary">Marking</span> <strong>{{ row.workload.cats_marking }}</strong>
+                    </div>
+                    <div class="small mt-1">
+                        <span style="color: var(--bs-primary);">Total <strong>{{ row.workload.cats_total }}</strong></span>
+                    </div>
+                    {% if row.binding_pills %}
+                        <div class="d-flex flex-column align-items-start gap-1 mt-2">
+                            {% for pill in row.binding_pills %}
+                                <span class="badge rounded-pill small" style="
+                                    background: {% if pill.severity == 'danger' %}var(--bs-danger-bg-subtle){% else %}var(--bs-warning-bg-subtle){% endif %};
+                                    color: {% if pill.severity == 'danger' %}var(--bs-danger-text-emphasis){% else %}var(--bs-warning-text-emphasis){% endif %};">
+                                    <i class="fas fa-balance-scale me-1"></i>{{ pill.label }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center text-body-secondary py-4">No faculty found.</div>
+        {% endfor %}
+
+        {{ mw_pager('admin.matching_workspace', view_args, base_params, page, per_page, total_faculty, item_noun='faculty') }}
     </div>
 </div>

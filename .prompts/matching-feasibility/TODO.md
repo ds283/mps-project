@@ -10,22 +10,31 @@ Commit each verified phase separately as a clean rollback point.
 - [ ] Verify a previously-infeasible-due-to-pclass-CATS attempt now solves; feasible attempts unchanged.
 
 ## Phase 1 — diagnostic core
-- [ ] New module `app/tasks/matching_diagnostics.py`: `SlackEntry` dataclass, `SlackRegistry`,
+- [x] New module `app/tasks/matching_diagnostics.py`: `SlackEntry` dataclass, `SlackRegistry`,
       weight constants, report renderer, `REMEDIATION` category→action map.
-- [ ] Add `diagnostic: bool = False` param to `_create_PuLP_problem`; branch the elasticizable
+- [x] Add `diagnostic: bool = False` param to `_create_PuLP_problem`; branch the elasticizable
       sites (C1 1654, C2 1668, C3 1689/2017, C4 1725, C6 1812/1822, C7 1875, C9 1993, C11 2087/2123,
       **CP-M/CP-S pool eligibility** — the `M=0`/`P=0` cases at 1875/1725);
       in diagnostic mode skip score + all levelling/bias terms, objective `min Σ w·u` (+ ε·pref
       tiebreaker for a sensible draft). Fold C10 into the registry too. Pool slacks add NO new
       variables (Y/S already exist); register a pool `SlackEntry` only for entries driven nonzero.
-- [ ] Extend `PuLPProblem` namedtuple with `slack_registry` (None in normal mode).
-- [ ] `_diagnose_infeasibility(record, init_data, base_data)`: rebuild diagnostic problem, solve
+      (Implementation note: CP-S required also dropping the `P` factor from the C5 supervisor
+      parity sum in diagnostic mode — otherwise an out-of-pool S assignment is invisible to
+      demand-parity and the solver never uses the slack. CP-M needed no parity change since Ymark
+      isn't pre-multiplied by pool eligibility. See comments at the C4/C5 sites in matching.py.)
+- [x] Extend `PuLPProblem` namedtuple with `slack_registry` (None in normal mode).
+- [x] `_diagnose_infeasibility(record, init_data, base_data)`: rebuild diagnostic problem, solve
       packaged CBC `gapRel=0` timeLimit 600s, progress_update message, render + store report,
       store coarse draft via tolerant `_store_PuLP_solution`. try/except → `{"status":"failed"}`;
       diagnostic-infeasible → `{"status":"unresolved"}`.
-- [ ] Wire into `_process_PuLP_solution` Infeasible branch (matching.py:3205), thread init/base data.
-- [ ] Pre-solve failure collection: convert the 4 RuntimeErrors (matching.py:938, 995, 2070, 2106)
+- [x] Wire into `_process_PuLP_solution` Infeasible branch (matching.py:3205), thread init/base data.
+- [x] Pre-solve failure collection: convert the 4 RuntimeErrors (matching.py:938, 995, 2070, 2106)
       into structured `{"status":"presolve"}` report items + clean OUTCOME_INFEASIBLE finish.
+      Wired into `create_match` only (short-circuits before `_create_PuLP_problem`); `offline_match`
+      and `process_offline_solution` still call the now-tolerant `_build_ranking_matrix` but are not
+      yet wired to short-circuit on `presolve_failures` — left for a follow-up, noted in commit.
+      Also required pulling `infeasibility_report` (PuLPMixin column + migration) forward from
+      Phase 2, since Phase 1 has nowhere else to persist the report.
 
 ## Phase 2 — model, storage, lifecycle
 - [ ] `infeasibility_report` Text column on `PuLPMixin` (collation utf8_bin) + JSON

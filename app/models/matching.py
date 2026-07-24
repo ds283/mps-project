@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import json
 from datetime import datetime
 from typing import List, Optional, Set
 
@@ -96,6 +97,24 @@ class PuLPMixin(PuLPStatusMixin):
 
     # value of objective function, if match was successful
     score = db.Column(db.Numeric(10, 2))
+
+    # INFEASIBILITY DIAGNOSIS
+
+    # structured diagnosis report (JSON-encoded), populated when the production solve returns
+    # infeasible; see app/tasks/matching_diagnostics.py for the schema and
+    # .prompts/matching-feasibility/PLAN.md for the design
+    infeasibility_report = db.Column(db.Text(collation="utf8_bin"), nullable=True)
+
+    @property
+    def infeasibility_report_data(self) -> Optional[dict]:
+        if self.infeasibility_report is None:
+            return None
+
+        return json.loads(self.infeasibility_report)
+
+    @infeasibility_report_data.setter
+    def infeasibility_report_data(self, value: Optional[dict]) -> None:
+        self.infeasibility_report = None if value is None else json.dumps(value)
 
     # FILES FOR OFFLINE SCHEDULING
 

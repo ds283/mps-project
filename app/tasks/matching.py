@@ -62,6 +62,34 @@ from ..shared.timer import Timer
 from ..shared.utils import get_current_year
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update
+from .matching_diagnostics import (
+    CATEGORY_BASE_MATCH,
+    CATEGORY_DISTINCT_PROJECTS,
+    CATEGORY_FORCED_ASSIGNMENT,
+    CATEGORY_GLOBAL_CATS_LIMIT,
+    CATEGORY_MARKER_CAPACITY,
+    CATEGORY_OUT_OF_POOL_MARKER,
+    CATEGORY_OUT_OF_POOL_SUPERVISOR,
+    CATEGORY_PCLASS_CATS_LIMIT,
+    CATEGORY_PRESOLVE_EXISTING_MARKER_CATS,
+    CATEGORY_PRESOLVE_EXISTING_SUPERVISOR_CATS,
+    CATEGORY_PRESOLVE_MISSING_OFFER_PROJECT,
+    CATEGORY_PRESOLVE_NO_RANKED_PROJECTS,
+    CATEGORY_PROJECT_CAPACITY,
+    CATEGORY_SUPERVISOR_IS_MARKER,
+    CATEGORY_UNASSIGNED_STUDENT,
+    DIAGNOSTIC_SCORE_EPSILON,
+    DIAGNOSTIC_TIME_LIMIT,
+    STATUS_DIAGNOSED,
+    STATUS_FAILED,
+    STATUS_PRESOLVE,
+    STATUS_UNRESOLVED,
+    SlackEntry,
+    SlackRegistry,
+    build_infeasibility_report,
+    presolve_violation,
+    weight_for_category,
+)
 from .thumbnails import dispatch_thumbnail_task
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
@@ -139,6 +167,7 @@ InitializationData = namedtuple(
         "M",
         "marker_valence",
         "P",
+        "presolve_failures",
     ],
 )
 
@@ -160,6 +189,7 @@ PuLPProblem = namedtuple(
         "X",
         "Y",
         "S",
+        "slack_registry",
     ],
 )
 
@@ -874,12 +904,19 @@ def _enumerate_marking_faculty_primary(
     )
 
 
-def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record: MatchingAttempt):
+def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record: MatchingAttempt, presolve_failures: list):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
     Also build a weighting matrix that accounts for other factors we wish to weight
-    in the assignment, such as degree programme or convenor-provided hints
+    in the assignment, such as degree programme or convenor-provided hints.
+
+    Rather than raising on the two "trivially infeasible" cases described in
+    .prompts/matching-feasibility/FEASIBILITY.md §1.4 (a custom offer targeting a missing
+    LiveProject, or a selector with no valid ranked LiveProjects), this appends a structured
+    violation dict to `presolve_failures` and leaves the affected selector unranked (R=0 for every
+    project) so the caller can short-circuit to a clean OUTCOME_INFEASIBLE with a report instead
+    of crashing the Celery task.
     :param lp_to_number:
     :param number_sel:
     :param sel_dict:
@@ -935,9 +972,14 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                     ranks[project.id] = 1
                     require.add(project.id)
                 else:
-                    raise RuntimeError(
-                        'Could not assign custom offer to selector "{name}" because target LiveProject does not exist'.format(
-                            name=sel.student.user.name
+                    presolve_failures.append(
+                        presolve_violation(
+                            CATEGORY_PRESOLVE_MISSING_OFFER_PROJECT,
+                            'Could not assign custom offer to selector "{name}" because the target project no longer exists.'.format(
+                                name=sel.student.user.name
+                            ),
+                            selector_id=sel.id,
+                            project_id=project.id,
                         )
                     )
 
@@ -992,9 +1034,11 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                                 alternatives[alt.alternative_id] = new_priority
 
             if valid_projects == 0:
-                raise RuntimeError(
-                    'Could not build rank matrix for selector "{name}" because no LiveProjects on their preference list exist'.format(
-                        name=sel.student.user.name
+                presolve_failures.append(
+                    presolve_violation(
+                        CATEGORY_PRESOLVE_NO_RANKED_PROJECTS,
+                        'Selector "{name}" has no LiveProjects on their preference list.'.format(name=sel.student.user.name),
+                        selector_id=sel.id,
                     )
                 )
 
@@ -1344,13 +1388,23 @@ def _create_PuLP_problem(
     data: InitializationData,
     base_data: BaseData,
     record: MatchingAttempt,
+    diagnostic: bool = False,
 ):
     """
-    Generate a PuLP problem to find an optimal assignment of projects+markers to students
+    Generate a PuLP problem to find an optimal assignment of projects+markers to students.
+
+    When diagnostic=False (the default), this is byte-for-byte the production problem. When
+    diagnostic=True, the resource/demand constraints listed in
+    .prompts/matching-feasibility/PLAN.md are relaxed with weighted slack variables (recorded in
+    the returned `slack_registry`), the score/levelling/bias terms are dropped, and the objective
+    becomes pure slack minimization (with a tiny preference-ranking tiebreaker). Used only by
+    _diagnose_infeasibility() after the production solve has returned Infeasible.
     :param marker_valence:
     :param force_base:
     :param old_S:
     """
+
+    registry = SlackRegistry() if diagnostic else None
 
     levelling_bias = _floatify(record.levelling_bias)
     intra_group_tension = _floatify(record.intra_group_tension)
@@ -1571,58 +1625,66 @@ def _create_PuLP_problem(
 
     # OBJECTIVE FUNCTION
 
-    progress_update(
-        record.celery_id,
-        TaskRecord.RUNNING,
-        23,
-        "Building objective function for optimization...",
-        autocommit=True,
-    )
-
-    with Timer() as obj_timer:
-        # tension top and bottom workloads in each group against each other
-        group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
-        global_levelling = globalMax - globalMin
-
-        # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
-        # these only need to satisfy the constraints, and any one solution is as good as another
-
-        # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
-        # upper and lower limits roughly equal to one ranking place in matching to students
-        group_levelling_term = abs(levelling_bias) * group_levelling / mean_CATS_per_project
-        global_levelling_term = abs(intra_group_tension) * global_levelling / mean_CATS_per_project
-
-        # try to keep marking assignments under control by imposing a penalty for the highest number of marking assignments
-        marking_bias = abs(marking_pressure) * maxMarking
-
-        # likewise for supervising
-        supervising_bias = abs(supervising_pressure) * maxProjects
-
-        # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
-        # of CATS limits except where really necessary; notice that these elastic variables are measured in
-        # units of CATS, not projects, so the coefficients really are large
-        elastic_CATS_penalty = abs(CATS_violation_penalty) * (
-            sum(sup_elastic_CATS[i] for i in range(number_sup))
-            + sum(mark_elastic_CATS[i] for i in range(number_mark))
-            + sum(sup_pclass_elastic_CATS.values())
-            + sum(mark_pclass_elastic_CATS.values())
+    if diagnostic:
+        # the diagnostic objective (pure weighted-slack minimization, plus a tiny preference
+        # tiebreaker) can only be built once every constraint has been constructed, because slack
+        # variables are registered throughout the constraint sections below (including the
+        # WORKLOAD LIMITS section, which folds in the already-elastic C10/C11 CATS variables).
+        # See the end of this function.
+        pass
+    else:
+        progress_update(
+            record.celery_id,
+            TaskRecord.RUNNING,
+            23,
+            "Building objective function for optimization...",
+            autocommit=True,
         )
 
-        # we also impose a penalty for every supervisor who does not have any project assignments
-        no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1 - Z[i] for i in range(number_sup))
+        with Timer() as obj_timer:
+            # tension top and bottom workloads in each group against each other
+            group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
+            global_levelling = globalMax - globalMin
 
-        prob += (
-            _build_score_function(data, PuLPProblem(problem=None, X=X, Y=Y, S=S), base_data, base_bias)
-            - group_levelling_term
-            - global_levelling_term
-            - marking_bias
-            - no_assignment_penalty
-            - supervising_bias
-            - elastic_CATS_penalty,
-            "objective",
-        )
+            # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
+            # these only need to satisfy the constraints, and any one solution is as good as another
 
-    print(" -- created objective function in time {t}".format(t=obj_timer.interval))
+            # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
+            # upper and lower limits roughly equal to one ranking place in matching to students
+            group_levelling_term = abs(levelling_bias) * group_levelling / mean_CATS_per_project
+            global_levelling_term = abs(intra_group_tension) * global_levelling / mean_CATS_per_project
+
+            # try to keep marking assignments under control by imposing a penalty for the highest number of marking assignments
+            marking_bias = abs(marking_pressure) * maxMarking
+
+            # likewise for supervising
+            supervising_bias = abs(supervising_pressure) * maxProjects
+
+            # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
+            # of CATS limits except where really necessary; notice that these elastic variables are measured in
+            # units of CATS, not projects, so the coefficients really are large
+            elastic_CATS_penalty = abs(CATS_violation_penalty) * (
+                sum(sup_elastic_CATS[i] for i in range(number_sup))
+                + sum(mark_elastic_CATS[i] for i in range(number_mark))
+                + sum(sup_pclass_elastic_CATS.values())
+                + sum(mark_pclass_elastic_CATS.values())
+            )
+
+            # we also impose a penalty for every supervisor who does not have any project assignments
+            no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1 - Z[i] for i in range(number_sup))
+
+            prob += (
+                _build_score_function(data, PuLPProblem(problem=None, X=X, Y=Y, S=S, slack_registry=None), base_data, base_bias)
+                - group_levelling_term
+                - global_levelling_term
+                - marking_bias
+                - no_assignment_penalty
+                - supervising_bias
+                - elastic_CATS_penalty,
+                "objective",
+            )
+
+        print(" -- created objective function in time {t}".format(t=obj_timer.interval))
 
     # STUDENT RANKING
 
@@ -1670,10 +1732,28 @@ def _create_PuLP_problem(
             sel: SelectingStudent = sel_dict[l]
             user: User = sel.student.user
 
-            prob += (
-                sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l],
-                "_C{first}{last}_SC{scfg}_assign".format(first=user.first_name, last=user.last_name, scfg=sel.config_id),
-            )
+            cname = "_C{first}{last}_SC{scfg}_assign".format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
+
+            if diagnostic:
+                u_unassigned = pulp.LpVariable("u_unassigned_{l}".format(l=l), lowBound=0, cat=pulp.LpInteger)
+                prob += (
+                    sum(X[(l, j)] for j in range(number_lp)) + u_unassigned == multiplicity[l],
+                    cname,
+                )
+                registry.add(
+                    SlackEntry(
+                        var=u_unassigned,
+                        category=CATEGORY_UNASSIGNED_STUDENT,
+                        weight=weight_for_category(CATEGORY_UNASSIGNED_STUDENT, mean_CATS_per_project),
+                        selector=l,
+                        limit_value=multiplicity[l],
+                    )
+                )
+            else:
+                prob += (
+                    sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l],
+                    cname,
+                )
 
         # Add constraints for any matches marked 'require' by a convenor
         for idx in cstr:
@@ -1683,17 +1763,29 @@ def _create_PuLP_problem(
             proj: LiveProject = lp_dict[j]
             user: User = sel.student.user
 
-            # impose 'force' constraints, where we require a student to be allocated a particular project
-            prob += (
-                X[idx] == 1,
-                "_C{first}{last}_SC{scfg}_force_C{cfg}_P{num}".format(
-                    first=user.first_name,
-                    last=user.last_name,
-                    scfg=sel.config_id,
-                    cfg=proj.config_id,
-                    num=proj.number,
-                ),
+            cname = "_C{first}{last}_SC{scfg}_force_C{cfg}_P{num}".format(
+                first=user.first_name,
+                last=user.last_name,
+                scfg=sel.config_id,
+                cfg=proj.config_id,
+                num=proj.number,
             )
+
+            # impose 'force' constraints, where we require a student to be allocated a particular project
+            if diagnostic:
+                u_forced = pulp.LpVariable("u_forced_{l}_{j}".format(l=l, j=j), lowBound=0, upBound=1, cat=pulp.LpBinary)
+                prob += (X[idx] + u_forced >= 1, cname)
+                registry.add(
+                    SlackEntry(
+                        var=u_forced,
+                        category=CATEGORY_FORCED_ASSIGNMENT,
+                        weight=weight_for_category(CATEGORY_FORCED_ASSIGNMENT, mean_CATS_per_project),
+                        selector=l,
+                        project=j,
+                    )
+                )
+            else:
+                prob += (X[idx] == 1, cname)
 
         # Implement any "force" constraints from base match
         if force_base:
@@ -1705,16 +1797,28 @@ def _create_PuLP_problem(
                 proj: LiveProject = lp_dict[j]
                 user: User = sel.student.user
 
-                prob += (
-                    X[idx] == 1,
-                    "_C{first}{last}_SC{scfg}_base_proj_C{cfg}_P{num}".format(
-                        first=user.first_name,
-                        last=user.last_name,
-                        scfg=sel.config_id,
-                        cfg=proj.config_id,
-                        num=proj.number,
-                    ),
+                cname = "_C{first}{last}_SC{scfg}_base_proj_C{cfg}_P{num}".format(
+                    first=user.first_name,
+                    last=user.last_name,
+                    scfg=sel.config_id,
+                    cfg=proj.config_id,
+                    num=proj.number,
                 )
+
+                if diagnostic:
+                    u_base = pulp.LpVariable("u_base_X_{l}_{j}".format(l=l, j=j), lowBound=0, upBound=1, cat=pulp.LpBinary)
+                    prob += (X[idx] + u_base >= 1, cname)
+                    registry.add(
+                        SlackEntry(
+                            var=u_base,
+                            category=CATEGORY_BASE_MATCH,
+                            weight=weight_for_category(CATEGORY_BASE_MATCH, mean_CATS_per_project),
+                            selector=l,
+                            project=j,
+                        )
+                    )
+                else:
+                    prob += (X[idx] == 1, cname)
 
     print(" -- created selector ranking constraints in time {t}".format(t=sel_timer.interval))
 
@@ -1741,15 +1845,32 @@ def _create_PuLP_problem(
                 # enforce maximum capacity for each project; each supervisor should have no more assignments than
                 # the specified project capacity
                 # print(f"Supervisor: {user.first_name} {user.last_name}, config_id = {proj.config_id}, project number = {proj.number}")
-                prob += (
-                    S[(k, j)] <= capacity[j] * P[(k, j)],
-                    "_CS{first}{last}_C{cfg}_P{num}_supv_capacity".format(
-                        first=user.first_name,
-                        last=user.last_name,
-                        cfg=proj.config_id,
-                        num=proj.number,
-                    ),
+                cname = "_CS{first}{last}_C{cfg}_P{num}_supv_capacity".format(
+                    first=user.first_name,
+                    last=user.last_name,
+                    cfg=proj.config_id,
+                    num=proj.number,
                 )
+
+                if diagnostic:
+                    # P[(k,j)] is a plain 0/1 eligibility flag: P=1 means "in pool but capacity
+                    # may bind" (C4), P=0 means "not in the supervisor pool at all" (CP-S).
+                    u_cap = pulp.LpVariable("u_S_{k}_{j}".format(k=k, j=j), lowBound=0, cat=pulp.LpInteger)
+                    prob += (S[(k, j)] <= capacity[j] * P[(k, j)] + u_cap, cname)
+
+                    category = CATEGORY_PROJECT_CAPACITY if P[(k, j)] else CATEGORY_OUT_OF_POOL_SUPERVISOR
+                    registry.add(
+                        SlackEntry(
+                            var=u_cap,
+                            category=category,
+                            weight=weight_for_category(category, mean_CATS_per_project),
+                            supervisor=k,
+                            project=j,
+                            limit_value=capacity[j] if P[(k, j)] else 0,
+                        )
+                    )
+                else:
+                    prob += (S[(k, j)] <= capacity[j] * P[(k, j)], cname)
 
         # ss[k,j] should be zero if supervisor k has no assignments to project j, and otherwise 1
         for k in range(number_sup):
@@ -1798,10 +1919,20 @@ def _create_PuLP_problem(
             if uses_supervisor:
                 # force that total number of assigned supervisors matches total number of assigned students;
                 # (each S[k,j] can be > 1, meaning that the same supervisor is assigned to > 1 students)
-                prob += (
-                    sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == sum(X[(i, j)] for i in range(number_sel)),
-                    "_CS_C{cfg}_P{num}_supv_parity".format(cfg=proj.config_id, num=proj.number),
-                )
+                # In diagnostic mode the P[(k,j)] factor is dropped: the capacity constraint above
+                # already allows S[(k,j)] to be positive for pool-ineligible (k,j) via u_cap, and
+                # without also crediting it here that slack could never help satisfy demand, so
+                # the "pool too small" conflict would never surface in the solve.
+                if diagnostic:
+                    prob += (
+                        sum(S[(k, j)] for k in range(number_sup)) == sum(X[(i, j)] for i in range(number_sel)),
+                        "_CS_C{cfg}_P{num}_supv_parity".format(cfg=proj.config_id, num=proj.number),
+                    )
+                else:
+                    prob += (
+                        sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == sum(X[(i, j)] for i in range(number_sel)),
+                        "_CS_C{cfg}_P{num}_supv_parity".format(cfg=proj.config_id, num=proj.number),
+                    )
 
             else:
                 # enforce no supervisors assigned to this project
@@ -1828,45 +1959,72 @@ def _create_PuLP_problem(
 
             group_limit = record.max_different_group_projects
             if group_limit is not None and group_limit > 0:
-                prob += (
-                    group_projects <= group_limit,
-                    "_C{first}{last}_group_limit".format(first=user.first_name, last=user.last_name),
-                )
+                cname = "_C{first}{last}_group_limit".format(first=user.first_name, last=user.last_name)
+
+                if diagnostic:
+                    u_group = pulp.LpVariable("u_group_{k}".format(k=k), lowBound=0, cat=pulp.LpInteger)
+                    prob += (group_projects <= group_limit + u_group, cname)
+                    registry.add(
+                        SlackEntry(
+                            var=u_group,
+                            category=CATEGORY_DISTINCT_PROJECTS,
+                            weight=weight_for_category(CATEGORY_DISTINCT_PROJECTS, mean_CATS_per_project),
+                            supervisor=k,
+                            limit_value=group_limit,
+                        )
+                    )
+                else:
+                    prob += (group_projects <= group_limit, cname)
 
             all_limit = record.max_different_all_projects
             if all_limit is not None and all_limit > 0:
                 if group_limit is not None and group_limit > all_limit:
                     all_limit = group_limit
 
+                cname = "_C{first}{last}_all_limit".format(first=user.first_name, last=user.last_name)
+
+                if diagnostic:
+                    u_all = pulp.LpVariable("u_all_{k}".format(k=k), lowBound=0, cat=pulp.LpInteger)
+                    prob += (all_projects <= all_limit + u_all, cname)
+                    registry.add(
+                        SlackEntry(
+                            var=u_all,
+                            category=CATEGORY_DISTINCT_PROJECTS,
+                            weight=weight_for_category(CATEGORY_DISTINCT_PROJECTS, mean_CATS_per_project),
+                            supervisor=k,
+                            limit_value=all_limit,
+                        )
+                    )
+                else:
+                    prob += (all_projects <= all_limit, cname)
+
+        # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects.
+        # Z only feeds the no_assignment_penalty objective term, which is dropped in diagnostic
+        # mode, so skip these constraints entirely there (fewer constraints, faster solve).
+        if not diagnostic:
+            for k in range(number_sup):
+                sup: FacultyData = sup_dict[k]
+                user: User = sup.user
+
+                # force Z[k] to be zero if no projects are assigned to supervisor k
                 prob += (
-                    all_projects <= all_limit,
-                    "_C{first}{last}_all_limit".format(first=user.first_name, last=user.last_name),
+                    Z[k] <= sum(S[(k, j)] for j in range(number_lp)),
+                    "_CZ{first}{last}_upperb".format(first=user.first_name, last=user.last_name),
                 )
 
-        # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
-        for k in range(number_sup):
-            sup: FacultyData = sup_dict[k]
-            user: User = sup.user
+                # force Z[k] to be 1 if any project is assigned to supervisor k
+                for j in range(number_lp):
+                    proj: LiveProject = lp_dict[j]
 
-            # force Z[k] to be zero if no projects are assigned to supervisor k
-            prob += (
-                Z[k] <= sum(S[(k, j)] for j in range(number_lp)),
-                "_CZ{first}{last}_upperb".format(first=user.first_name, last=user.last_name),
-            )
-
-            # force Z[k] to be 1 if any project is assigned to supervisor k
-            for j in range(number_lp):
-                proj: LiveProject = lp_dict[j]
-
-                prob += (
-                    Z[k] >= ss[(k, j)],
-                    "_CZ{first}{last}_C{cfg}_P{num}_lowerb".format(
-                        first=user.first_name,
-                        last=user.last_name,
-                        cfg=proj.config_id,
-                        num=proj.number,
-                    ),
-                )
+                    prob += (
+                        Z[k] >= ss[(k, j)],
+                        "_CZ{first}{last}_C{cfg}_P{num}_lowerb".format(
+                            first=user.first_name,
+                            last=user.last_name,
+                            cfg=proj.config_id,
+                            num=proj.number,
+                        ),
+                    )
 
     print(" -- created supervisor constraints in time {t}".format(t=sup_timer.interval))
 
@@ -1891,15 +2049,35 @@ def _create_PuLP_problem(
 
                 # recall M[(i,j)] is the allowed multiplicity (i.e. maximum number of times marker i can be assigned
                 # to mark a report from project j)
-                prob += (
-                    sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)],
-                    "_CM{first}{last}_C{cfg}_P{num}_mark_capacity".format(
-                        first=user.first_name,
-                        last=user.last_name,
-                        cfg=proj.config_id,
-                        num=proj.number,
-                    ),
+                cname = "_CM{first}{last}_C{cfg}_P{num}_mark_capacity".format(
+                    first=user.first_name,
+                    last=user.last_name,
+                    cfg=proj.config_id,
+                    num=proj.number,
                 )
+
+                if diagnostic:
+                    # M[(i,j)] == 0 means "not in the assessor pool at all" (CP-M); M[(i,j)] > 0
+                    # means "in pool but the multiplicity limit may bind" (C7). Unlike supervisors,
+                    # marker demand parity (Ymark, below) is not pre-multiplied by pool
+                    # eligibility, so relaxing this constraint alone is enough to make an
+                    # out-of-pool marker assignment meaningful.
+                    u_mark = pulp.LpVariable("u_Y_{i}_{j}".format(i=i, j=j), lowBound=0, cat=pulp.LpInteger)
+                    prob += (sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)] + u_mark, cname)
+
+                    category = CATEGORY_MARKER_CAPACITY if M[(i, j)] else CATEGORY_OUT_OF_POOL_MARKER
+                    registry.add(
+                        SlackEntry(
+                            var=u_mark,
+                            category=category,
+                            weight=weight_for_category(category, mean_CATS_per_project),
+                            marker=i,
+                            project=j,
+                            limit_value=M[(i, j)],
+                        )
+                    )
+                else:
+                    prob += (sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], cname)
 
         # Ysel[i,j] should slice Y[i,j,l] by summing over selectors l at fixed i and j
         for i in range(number_mark):
@@ -2009,15 +2187,28 @@ def _create_PuLP_problem(
                     for j in range(number_lp):
                         proj: LiveProject = lp_dict[j]
 
-                        prob += (
-                            ss[(k, j)] + yy[(i, j)] <= 1,
-                            "_C{first}{last}_C{cfg}_P{num}_supv_mark_disjoint".format(
-                                first=sup_user.first_name,
-                                last=sup_user.last_name,
-                                cfg=proj.config_id,
-                                num=proj.number,
-                            ),
+                        cname = "_C{first}{last}_C{cfg}_P{num}_supv_mark_disjoint".format(
+                            first=sup_user.first_name,
+                            last=sup_user.last_name,
+                            cfg=proj.config_id,
+                            num=proj.number,
                         )
+
+                        if diagnostic:
+                            u_disjoint = pulp.LpVariable("u_disjoint_{k}_{i}_{j}".format(k=k, i=i, j=j), lowBound=0, upBound=1, cat=pulp.LpBinary)
+                            prob += (ss[(k, j)] + yy[(i, j)] <= 1 + u_disjoint, cname)
+                            registry.add(
+                                SlackEntry(
+                                    var=u_disjoint,
+                                    category=CATEGORY_SUPERVISOR_IS_MARKER,
+                                    weight=weight_for_category(CATEGORY_SUPERVISOR_IS_MARKER, mean_CATS_per_project),
+                                    supervisor=k,
+                                    marker=i,
+                                    project=j,
+                                )
+                            )
+                        else:
+                            prob += (ss[(k, j)] + yy[(i, j)] <= 1, cname)
 
         # Implement any "force" constraints from base match, if one is in use
         if force_base:
@@ -2033,17 +2224,30 @@ def _create_PuLP_problem(
                 mark_user: User = mark.user
                 sel_user: User = sel.student.user
 
-                prob += (
-                    Y[idx] == base_Y[idx],
-                    "_C{first}{last}_sel{sel}_SC{scfg}_base_mark_C{cfg}_P{num}".format(
-                        first=mark_user.first_name,
-                        last=mark_user.last_name,
-                        sel=sel_user.id,
-                        scfg=sel.config_id,
-                        cfg=proj.config_id,
-                        num=proj.number,
-                    ),
+                cname = "_C{first}{last}_sel{sel}_SC{scfg}_base_mark_C{cfg}_P{num}".format(
+                    first=mark_user.first_name,
+                    last=mark_user.last_name,
+                    sel=sel_user.id,
+                    scfg=sel.config_id,
+                    cfg=proj.config_id,
+                    num=proj.number,
                 )
+
+                if diagnostic:
+                    u_base_mark = pulp.LpVariable("u_base_Y_{i}_{j}_{l}".format(i=i, j=j, l=l), lowBound=0, upBound=1, cat=pulp.LpBinary)
+                    prob += (Y[idx] + u_base_mark >= base_Y[idx], cname)
+                    registry.add(
+                        SlackEntry(
+                            var=u_base_mark,
+                            category=CATEGORY_BASE_MATCH,
+                            weight=weight_for_category(CATEGORY_BASE_MATCH, mean_CATS_per_project),
+                            marker=i,
+                            project=j,
+                            selector=l,
+                        )
+                    )
+                else:
+                    prob += (Y[idx] == base_Y[idx], cname)
 
             # REMOVE? We don't want to force supervisior multiplicities to match the base configuration, because
             # that prevents any extra assignments for all supervisors. So this seems misguided.
@@ -2084,18 +2288,26 @@ def _create_PuLP_problem(
                 if sup_limit < lim:
                     lim = sup_limit
 
+            # existing_CATS <= lim is guaranteed here: _initialize() runs the same check as a
+            # pre-solve failure (CATEGORY_PRESOLVE_EXISTING_SUPERVISOR_CATS) and the caller
+            # short-circuits to a clean OUTCOME_INFEASIBLE before this function is ever invoked
+            # when that check fails.
             existing_CATS = _compute_existing_sup_CATS(record, sup)
-            if existing_CATS > lim:
-                raise RuntimeError(
-                    'Inconsistent matching problem: existing supervisory CATS load {n} for faculty "{name}" exceeds specified CATS limit'.format(
-                        n=existing_CATS, name=user.name
-                    )
-                )
 
             prob += (
                 existing_CATS + sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= lim + sup_elastic_CATS[k],
                 "_C{first}{last}_supv_CATS".format(first=user.first_name, last=user.last_name),
             )
+            if diagnostic:
+                registry.add(
+                    SlackEntry(
+                        var=sup_elastic_CATS[k],
+                        category=CATEGORY_GLOBAL_CATS_LIMIT,
+                        weight=weight_for_category(CATEGORY_GLOBAL_CATS_LIMIT, mean_CATS_per_project),
+                        supervisor=k,
+                        limit_value=lim,
+                    )
+                )
 
             # enforce ad-hoc per-project-class supervisor limits
             for config_id in sup_pclass_limits:
@@ -2107,6 +2319,17 @@ def _create_PuLP_problem(
                         sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k] + sup_pclass_elastic_CATS[(config_id, k)],
                         "_C{first}{last}_supv_CATS_config_{cfg}".format(first=user.first_name, last=user.last_name, cfg=config_id),
                     )
+                    if diagnostic:
+                        registry.add(
+                            SlackEntry(
+                                var=sup_pclass_elastic_CATS[(config_id, k)],
+                                category=CATEGORY_PCLASS_CATS_LIMIT,
+                                weight=weight_for_category(CATEGORY_PCLASS_CATS_LIMIT, mean_CATS_per_project),
+                                supervisor=k,
+                                config_id=config_id,
+                                limit_value=fac_limits[k],
+                            )
+                        )
 
         # CATS assigned to each marker must be within bounds
         for i in range(number_mark):
@@ -2120,18 +2343,26 @@ def _create_PuLP_problem(
                 if mark_limit < lim:
                     lim = mark_limit
 
+            # existing_CATS <= lim is guaranteed here: _initialize() runs the same check as a
+            # pre-solve failure (CATEGORY_PRESOLVE_EXISTING_MARKER_CATS) and the caller
+            # short-circuits to a clean OUTCOME_INFEASIBLE before this function is ever invoked
+            # when that check fails.
             existing_CATS = _compute_existing_mark_CATS(record, mark)
-            if existing_CATS > lim:
-                raise RuntimeError(
-                    'Inconsistent matching problem: existing marking CATS load {n} for faculty "{name}" exceeds specified CATS limit'.format(
-                        n=existing_CATS, name=mark.user.name
-                    )
-                )
 
             prob += (
                 existing_CATS + sum(CATS_marker[j] * Ysel[(i, j)] for j in range(number_lp)) <= lim + mark_elastic_CATS[i],
                 "_C{first}{last}_mark_CATS".format(first=user.first_name, last=user.last_name),
             )
+            if diagnostic:
+                registry.add(
+                    SlackEntry(
+                        var=mark_elastic_CATS[i],
+                        category=CATEGORY_GLOBAL_CATS_LIMIT,
+                        weight=weight_for_category(CATEGORY_GLOBAL_CATS_LIMIT, mean_CATS_per_project),
+                        marker=i,
+                        limit_value=lim,
+                    )
+                )
 
             # enforce ad-hoc per-project-class marking limits
             for config_id in mark_pclass_limits:
@@ -2143,94 +2374,124 @@ def _create_PuLP_problem(
                         sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i] + mark_pclass_elastic_CATS[(config_id, i)],
                         "_C{first}{last}_mark_CATS_config_C{cfg}".format(first=user.first_name, last=user.last_name, cfg=config_id),
                     )
+                    if diagnostic:
+                        registry.add(
+                            SlackEntry(
+                                var=mark_pclass_elastic_CATS[(config_id, i)],
+                                category=CATEGORY_PCLASS_CATS_LIMIT,
+                                weight=weight_for_category(CATEGORY_PCLASS_CATS_LIMIT, mean_CATS_per_project),
+                                marker=i,
+                                config_id=config_id,
+                                limit_value=fac_limits[i],
+                            )
+                        )
 
     print(" -- created faculty workload constraints in time {t}".format(t=fac_work_timer.interval))
 
     # WORKLOAD LEVELLING
+    #
+    # These auxiliary variables/constraints only ever feed the (dropped, in diagnostic mode)
+    # levelling terms in the production objective, so skip them entirely when diagnostic — fewer
+    # constraints means a faster diagnostic solve.
 
-    progress_update(
-        record.celery_id,
-        TaskRecord.RUNNING,
-        48,
-        "Setting up global workload levelling objectives...",
-        autocommit=True,
-    )
+    if not diagnostic:
+        progress_update(
+            record.celery_id,
+            TaskRecord.RUNNING,
+            48,
+            "Setting up global workload levelling objectives...",
+            autocommit=True,
+        )
 
-    with Timer() as level_timer:
-        global_trivial = True
+        with Timer() as level_timer:
+            global_trivial = True
 
-        # supMin and supMax should bracket the CATS workload of faculty who supervise only
-        if len(sup_only_numbers) > 0:
-            for k in sup_only_numbers:
-                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= supMax
-                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) >= supMin
+            # supMin and supMax should bracket the CATS workload of faculty who supervise only
+            if len(sup_only_numbers) > 0:
+                for k in sup_only_numbers:
+                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= supMax
+                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) >= supMin
 
-            prob += globalMin <= supMin
-            prob += globalMax >= supMax
+                prob += globalMin <= supMin
+                prob += globalMax >= supMax
 
-            global_trivial = False
-        else:
-            prob += supMax == 0
-            prob += supMin == 0
+                global_trivial = False
+            else:
+                prob += supMax == 0
+                prob += supMin == 0
 
-        # markMin and markMax should bracket the CATS workload of faculty who mark only
-        if len(mark_only_numbers) > 0:
-            for i in mark_only_numbers:
-                prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= markMax
-                prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= markMin
+            # markMin and markMax should bracket the CATS workload of faculty who mark only
+            if len(mark_only_numbers) > 0:
+                for i in mark_only_numbers:
+                    prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= markMax
+                    prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= markMin
 
-            prob += globalMin <= markMin
-            prob += globalMax >= markMax
+                prob += globalMin <= markMin
+                prob += globalMax >= markMax
 
-            global_trivial = False
-        else:
-            prob += markMax == 0
-            prob += markMin == 0
+                global_trivial = False
+            else:
+                prob += markMax == 0
+                prob += markMin == 0
 
-        # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
-        if len(sup_and_mark_numbers) > 0:
-            for k, i in sup_and_mark_numbers:
-                prob += (
-                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
-                    <= supMarkMax
-                )
-                prob += (
-                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
-                    >= supMarkMin
-                )
+            # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
+            if len(sup_and_mark_numbers) > 0:
+                for k, i in sup_and_mark_numbers:
+                    prob += (
+                        sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
+                        <= supMarkMax
+                    )
+                    prob += (
+                        sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
+                        >= supMarkMin
+                    )
 
-            prob += globalMin <= supMarkMin
-            prob += globalMax >= supMarkMax
+                prob += globalMin <= supMarkMin
+                prob += globalMax >= supMarkMax
 
-            global_trivial = False
-        else:
-            prob += supMarkMax == 0
-            prob += supMarkMin == 0
+                global_trivial = False
+            else:
+                prob += supMarkMax == 0
+                prob += supMarkMin == 0
 
-        # if no constraints have been emitted for the global variables, issue constraints to tie them to zero:
-        if global_trivial:
-            prob += globalMin == 0
-            prob += globalMax == 0
+            # if no constraints have been emitted for the global variables, issue constraints to tie them to zero:
+            if global_trivial:
+                prob += globalMin == 0
+                prob += globalMax == 0
 
-        # maxProjects should be larger than the total number of projects assigned for supervising to any
-        # individual faculty member
-        if number_sup > 0:
-            for i in range(number_sup):
-                prob += sum(S[(k, j)] for j in range(number_lp)) <= maxProjects
-        else:
-            prob += maxProjects == 0
+            # maxProjects should be larger than the total number of projects assigned for supervising to any
+            # individual faculty member
+            if number_sup > 0:
+                for i in range(number_sup):
+                    prob += sum(S[(k, j)] for j in range(number_lp)) <= maxProjects
+            else:
+                prob += maxProjects == 0
 
-        # maxMarking should be larger than the total number of projects assigned for marking to
-        # any individual faculty member
-        if number_mark > 0:
-            for i in range(number_mark):
-                prob += sum(Ysel[(i, j)] for j in range(number_lp)) <= maxMarking
-        else:
-            prob += maxMarking == 0
+            # maxMarking should be larger than the total number of projects assigned for marking to
+            # any individual faculty member
+            if number_mark > 0:
+                for i in range(number_mark):
+                    prob += sum(Ysel[(i, j)] for j in range(number_lp)) <= maxMarking
+            else:
+                prob += maxMarking == 0
 
-    print(" -- created workload levelling objectives in time {t}".format(t=level_timer.interval))
+        print(" -- created workload levelling objectives in time {t}".format(t=level_timer.interval))
 
-    return PuLPProblem(problem=prob, X=X, Y=Y, S=S)
+    if diagnostic:
+        with Timer() as diag_obj_timer:
+            # a tiny preference-ranking tiebreaker, so the draft solution stored from this solve
+            # is a sensible near-miss ranked by student preference (no biases). The coefficient is
+            # small enough that it can never outweigh a unit of slack (see DIAGNOSTIC_SCORE_EPSILON).
+            preference_term = DIAGNOSTIC_SCORE_EPSILON * sum(
+                X[(l, j)] * W[(l, j)] / R[(l, j)] for l in range(number_sel) for j in range(number_lp) if R[(l, j)] > 0
+            )
+            slack_penalty = pulp.lpSum(registry.objective_terms())
+
+            prob += (preference_term - slack_penalty, "objective")
+
+        print(" -- created diagnostic slack-minimization objective in time {t}".format(t=diag_obj_timer.interval))
+
+    return PuLPProblem(problem=prob, X=X, Y=Y, S=S, slack_registry=registry)
 
 
 def _build_score_function(data: InitializationData, pulp_data: PuLPProblem, base_data: BaseData, base_bias):
@@ -2308,9 +2569,15 @@ def _store_PuLP_solution(
     pulp_data: PuLPProblem,
     record: MatchingAttempt,
     data: InitializationData,
+    draft: bool = False,
 ):
     """
-    Store a matching satisfying all the constraints of the pulp problem
+    Store a matching satisfying all the constraints of the pulp problem.
+
+    :param draft: when True (used only for the coarse infeasibility-diagnosis draft solution;
+        see _diagnose_infeasibility), tolerate selectors whose assignment count falls short of
+        their required multiplicity — expected for students left unassigned by the diagnostic
+        slack solve — instead of raising. A count *exceeding* the multiplicity is always an error.
     """
 
     # store configuration data
@@ -2406,7 +2673,7 @@ def _store_PuLP_solution(
             if pulp.value(pulp_data.X[(i, j)]) == 1:
                 assigned.append(j)
 
-        if len(assigned) != data.selector_data.multiplicity[i]:
+        if len(assigned) > data.selector_data.multiplicity[i] or (not draft and len(assigned) != data.selector_data.multiplicity[i]):
             raise RuntimeError("Number of selector assignments in PuLP solution does not match expected selector multiplicity")
 
         print(f">> Storing assigned values for selector = {sel.student.user.name}")
@@ -2684,6 +2951,10 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool = False) ->
         autocommit=True,
     )
 
+    # cheap pre-solve failures (FEASIBILITY.md §1.4), collected rather than raised so the caller
+    # can short-circuit to a clean OUTCOME_INFEASIBLE with a structured report
+    presolve_failures: list = []
+
     try:
         # get list of project classes participating in automatic assignment
         configs = record.config_members.all()
@@ -2790,6 +3061,7 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool = False) ->
                 project_data.project_to_number,
                 project_data.dict,
                 record,
+                presolve_failures,
             )
         print(" -- built student ranking matrix in time {s}".format(s=rank_timer.interval))
 
@@ -2831,6 +3103,61 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool = False) ->
             )
         print(" -- built project-to-supervisor mapping matrix in time {s}".format(s=sup_mapping_timer.interval))
 
+        progress_update(
+            record.celery_id,
+            TaskRecord.RUNNING,
+            19,
+            "Checking pre-existing workload commitments...",
+            autocommit=True,
+        )
+
+        # a faculty member whose *existing* (already-committed, prior-period) CATS load already
+        # exceeds their limit is a data inconsistency, not something the elastic CATS slack should
+        # silently absorb (see _create_PuLP_problem WORKLOAD LIMITS section, C10/C11)
+        with Timer() as cats_check_timer:
+            for k in range(supervisor_data.number):
+                sup: FacultyData = supervisor_data.dict[k]
+
+                lim = record.supervising_limit
+                sup_limit = supervisor_data.global_limit[k]
+                if not record.ignore_per_faculty_limits and sup_limit is not None and sup_limit > 0:
+                    if sup_limit < lim:
+                        lim = sup_limit
+
+                existing_CATS = _compute_existing_sup_CATS(record, sup)
+                if existing_CATS > lim:
+                    presolve_failures.append(
+                        presolve_violation(
+                            CATEGORY_PRESOLVE_EXISTING_SUPERVISOR_CATS,
+                            'Existing supervisory CATS load of {n} for "{name}" already exceeds their CATS limit of {lim}.'.format(
+                                n=existing_CATS, name=sup.user.name, lim=lim
+                            ),
+                            supervisor_id=sup.id,
+                        )
+                    )
+
+            for i in range(marker_data.number):
+                mark: FacultyData = marker_data.dict[i]
+
+                lim = record.marking_limit
+                mark_limit = marker_data.global_limit[i]
+                if not record.ignore_per_faculty_limits and mark_limit is not None and mark_limit > 0:
+                    if mark_limit < lim:
+                        lim = mark_limit
+
+                existing_CATS = _compute_existing_mark_CATS(record, mark)
+                if existing_CATS > lim:
+                    presolve_failures.append(
+                        presolve_violation(
+                            CATEGORY_PRESOLVE_EXISTING_MARKER_CATS,
+                            'Existing marking CATS load of {n} for "{name}" already exceeds their CATS limit of {lim}.'.format(
+                                n=existing_CATS, name=mark.user.name, lim=lim
+                            ),
+                            marker_id=mark.id,
+                        )
+                    )
+        print(" -- checked existing workload commitments in time {s}".format(s=cats_check_timer.interval))
+
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
@@ -2850,6 +3177,7 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool = False) ->
         M=M,
         marker_valence=marker_valence,
         P=P,
+        presolve_failures=presolve_failures,
     )
 
 
@@ -3173,6 +3501,123 @@ def _execute_marker_problem(
     progress_update(task_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=True)
 
 
+def _diagnose_infeasibility(
+    record: MatchingAttempt,
+    init_data: InitializationData,
+    base_data: BaseData,
+) -> None:
+    """
+    Run the diagnostic (elastic, pure slack-minimization) solve after the production solve for
+    `record` has returned Infeasible. Stores a structured `infeasibility_report` and a coarse
+    draft solution on `record`. Never raises: a failure to diagnose must not turn an INFEASIBLE
+    outcome into a Celery task FAILURE, so every failure path degrades to a stored report instead.
+    """
+    progress_update(
+        record.celery_id,
+        TaskRecord.RUNNING,
+        85,
+        "Match was infeasible; diagnosing conflicting constraints...",
+        autocommit=True,
+    )
+
+    try:
+        with Timer() as diag_construct_time:
+            pulp_problem: PuLPProblem = _create_PuLP_problem(init_data, base_data, record, diagnostic=True)
+        print(" -- constructed diagnostic PuLP problem in time {t}".format(t=diag_construct_time.interval))
+
+        with Timer() as diag_solve_time:
+            # always packaged CBC, regardless of record.solver: the point of this feature is that
+            # users don't have commercial solvers available. gapRel=0 because the diagnostic
+            # objective is pure slack minimization, so there is no score to make an early-stop gap
+            # tolerable — a suboptimal slack solution would misattribute blame.
+            status = pulp_problem.problem.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=DIAGNOSTIC_TIME_LIMIT, gapRel=0))
+        print(" -- solved diagnostic PuLP problem in time {t}".format(t=diag_solve_time.interval))
+
+        state = pulp.LpStatus[status]
+
+        if state != "Optimal":
+            # one of the kept-hard (structural/eligibility) constraints is implicated, or the
+            # solve did not finish in time. Either way we cannot isolate the conflict.
+            current_app.logger.warning(
+                'Diagnostic solve for matching attempt "{name}" returned status "{state}"; could not isolate the conflict'.format(
+                    name=record.name, state=state
+                )
+            )
+            record.infeasibility_report_data = build_infeasibility_report(
+                STATUS_UNRESOLVED,
+                diagnostic_solve_time=diag_solve_time.interval,
+            )
+            return
+
+        report = build_infeasibility_report(
+            STATUS_DIAGNOSED,
+            data=init_data,
+            registry=pulp_problem.slack_registry,
+            diagnostic_solve_time=diag_solve_time.interval,
+        )
+        record.infeasibility_report_data = report
+
+        progress_update(
+            record.celery_id,
+            TaskRecord.RUNNING,
+            95,
+            "Storing diagnostic draft solution...",
+            autocommit=True,
+        )
+
+        _store_PuLP_solution(pulp_problem, record, init_data, draft=True)
+
+        log_db_commit(
+            "Stored infeasibility diagnosis for matching attempt '{name}' ({n} violation(s))".format(name=record.name, n=len(report["violations"])),
+            user=None,
+        )
+
+    except Exception as e:
+        # a failure here must never escalate into a Celery task FAILURE: the production outcome
+        # is already (and remains) INFEASIBLE, we simply have no usable diagnosis to show.
+        db.session.rollback()
+        current_app.logger.exception("Exception while diagnosing infeasible matching attempt", exc_info=e)
+
+        # db.session.rollback() reverts pending attribute changes, including the outcome the
+        # caller set before invoking this function, so it must be re-applied here.
+        record.outcome = MatchingAttempt.OUTCOME_INFEASIBLE
+        record.infeasibility_report_data = build_infeasibility_report(STATUS_FAILED)
+
+
+def _finish_presolve_infeasible(self, record: MatchingAttempt, presolve_failures: list) -> None:
+    """
+    Short-circuit finish for a MatchingAttempt whose pre-solve checks (FEASIBILITY.md §1.4)
+    already found it infeasible, without ever building or solving a PuLP problem. These are the
+    cheapest diagnoses of all, so no diagnostic solve is needed.
+    """
+    record.outcome = MatchingAttempt.OUTCOME_INFEASIBLE
+    record.infeasibility_report_data = build_infeasibility_report(STATUS_PRESOLVE, presolve_failures=presolve_failures)
+
+    try:
+        progress_update(
+            record.celery_id,
+            TaskRecord.SUCCESS,
+            100,
+            "Matching task complete",
+            autocommit=False,
+        )
+
+        record.finished = True
+        record.celery_finished = True
+        log_db_commit(
+            "Marked matching attempt '{name}' as finished with outcome '{outcome}' ({n} pre-solve failure(s))".format(
+                name=record.name, outcome=record.outcome, n=len(presolve_failures)
+            ),
+            user=None,
+            endpoint=self.name,
+        )
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        raise self.retry()
+
+
 def _process_PuLP_solution(
     self,
     record,
@@ -3223,6 +3668,7 @@ def _process_PuLP_solution(
         record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
     elif state == "Infeasible":
         record.outcome = MatchingAttempt.OUTCOME_INFEASIBLE
+        _diagnose_infeasibility(record, init_data, base_data)
     elif state == "Unbounded":
         record.outcome = MatchingAttempt.OUTCOME_UNBOUNDED
     elif state == "Undefined":
@@ -3381,21 +3827,26 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             data: InitializationData = _initialize(self, record)
 
-            base_data: BaseData = _build_base_XYS(record, data)
+            if not data.presolve_failures:
+                base_data: BaseData = _build_base_XYS(record, data)
 
-            progress_update(
-                record.celery_id,
-                TaskRecord.RUNNING,
-                20,
-                "Building PuLP linear programming problem...",
-                autocommit=True,
-            )
+                progress_update(
+                    record.celery_id,
+                    TaskRecord.RUNNING,
+                    20,
+                    "Building PuLP linear programming problem...",
+                    autocommit=True,
+                )
 
-            pulp_problem: PuLPProblem = _create_PuLP_problem(data, base_data, record)
+                pulp_problem: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        score = _execute_live(self, record, data, base_data, pulp_problem, create_time)
+        if data.presolve_failures:
+            _finish_presolve_infeasible(self, record, data.presolve_failures)
+            score = None
+        else:
+            score = _execute_live(self, record, data, base_data, pulp_problem, create_time)
 
         if record.created_by is not None:
             if record.is_valid:

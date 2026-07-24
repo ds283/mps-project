@@ -4725,6 +4725,9 @@ def register_matching_tasks(celery):
                 )
             raise Exception(msg)
 
+        # hard-gated on solution_usable, not the broader `publishable`: this task seeds real
+        # SubmittingStudent records and must never run against a diagnostic draft
+        # (PLAN.md Phase 3, item 11).
         if not record.solution_usable:
             msg = "MatchingAttempt solution is not usable"
             current_app.logger.error(msg)

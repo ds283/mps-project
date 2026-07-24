@@ -150,6 +150,17 @@ class PuLPMixin(PuLPStatusMixin):
         # we are happy to use a solution if it is OPTIMAL or FEASIBLE
         return self.outcome == PuLPMixin.OUTCOME_OPTIMAL or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
 
+    @property
+    def publishable(self):
+        # a genuine usable solution can always be published; additionally, an infeasible attempt
+        # that has been diagnosed (so convenors have something to inspect) may be published
+        # read-only. This is deliberately broader than solution_usable, which must stay narrow
+        # because it also gates rollover selection and SubmittingStudent population.
+        if self.solution_usable:
+            return True
+
+        return bool(self.finished) and self.outcome == PuLPMixin.OUTCOME_INFEASIBLE and self.infeasibility_report_data is not None
+
 
 class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     """

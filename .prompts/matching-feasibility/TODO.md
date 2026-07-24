@@ -51,13 +51,19 @@ Commit each verified phase separately as a clean rollback point.
       `9f2a8b1c4d6e` (down_revision `6d4e2a9f1c73`), `is_draft` Boolean on `matching_attempts`.
 
 ## Phase 3 — lifecycle gating
-- [ ] Publish gate relax: `publishable` model helper = usable OR (finished & INFEASIBLE & has report);
+- [x] Publish gate relax: `publishable` model helper = usable OR (finished & INFEASIBLE & has report);
       apply in `publish_match`/`unpublish_match` (admin/matching.py:2978/3019).
-- [ ] Confirm select/deselect (3099/3185), populate (`_validate_match_populate_submitters` 3236,
+- [x] Confirm select/deselect (3099/3185), populate (`_validate_match_populate_submitters` 3236,
       task 4252), rollover `allocated_match` stay hard-blocked; add durable comments.
-- [ ] `matching_workspace` (1888) read-only draft access for INFEASIBLE+is_draft + banner;
-      audit all `solution_usable` gates (276, 922, 986, 1106, 1212, 1271, 1291, 1400, 1717, 1776,
-      1888, 1964, 2206, …): view gates relaxed, mutation gates unchanged.
+- [x] `matching_workspace` (1888) read-only draft access for INFEASIBLE+is_draft + banner;
+      audit all `solution_usable` gates: `match_statistics_ajax`, `compare_match`/`do_match_compare`
+      /`do_match_compare_ajax`, `match_export_excel`, `match_dists_view` need a genuine solved
+      score/comparison and stay `solution_usable`-only (the diagnosis surface itself is a separate
+      Phase 4 endpoint, not these); mutation endpoints (`revert_match_record`, `edit_match_roles`,
+      `faculty_reassign_assign`, `delete_match_record`, `match_set_hint`, `reassign_match_project`,
+      `reassign_match_marker`, `reassign_supervisor_roles`) each gained an `is_draft` read-only
+      guard alongside their existing `selected` guard. `perform_delete_match` verified unaffected
+      (gates only on `selected`/`published`, so infeasible attempts remain deletable).
 
 ## Phase 4 — UI surfacing + editable re-run
 - [ ] Card "View diagnosis" affordance + draft-records summary (matches_v2.py `_card` ~44);

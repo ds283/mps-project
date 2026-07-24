@@ -1526,6 +1526,8 @@ class ProjectClassConfig(
 
     @property
     def allocated_match(self):
+        # transitively blocked for infeasible attempts: select_match refuses anything that
+        # isn't solution_usable, so `selected=True` can never be set on a diagnostic draft.
         return self.matching_attempts.filter_by(selected=True).first()
 
     @property

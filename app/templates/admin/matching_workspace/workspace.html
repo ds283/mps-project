@@ -5,6 +5,7 @@
 {% extends "base_app.html" %}
 
 {% from "select2.html" import import_select2 %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     Matching workspace: {{ record.name }}
@@ -55,6 +56,20 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% if is_diagnostic_draft %}
+        <div class="alert alert-warning">
+            {% call icon_block("exclamation-triangle") %}
+                <div><strong>Diagnostic draft &mdash; not a usable solution.</strong></div>
+                <div class="mt-1">
+                    This matching attempt was infeasible. The records shown here are a coarse
+                    best-available draft produced while diagnosing the conflicting constraints,
+                    ranked only by student preference &mdash; not a genuine optimizer solution.
+                    Records are read-only: they cannot be selected for rollover, used to populate
+                    submitter records, or edited from this workspace.
+                </div>
+            {% endcall %}
+        </div>
+    {% endif %}
     {% if view == 'student' %}
         {% include "admin/matching_workspace/_student_pane.html" %}
     {% elif view == 'faculty' %}

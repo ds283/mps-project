@@ -1035,6 +1035,14 @@ def revert_match_record(rec_id):
         )
         return redirect(redirect_url())
 
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if record.matching_attempt.is_draft:
+        flash(
+            'Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=record.matching_attempt.name),
+            "info",
+        )
+        return redirect(redirect_url())
+
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash(
@@ -1887,7 +1895,12 @@ def matching_workspace(id):
             )
         return redirect(redirect_url())
 
-    if not record.solution_usable:
+    # a diagnosed infeasible attempt gets a read-only path into the workspace (draft records,
+    # not a genuine solution) so convenors can see what does and doesn't work; per-record edit
+    # actions stay blocked below via the `is_draft` guard on each mutation endpoint (PLAN.md
+    # Phase 3, item 12). Anything else that isn't solution_usable is rejected as before.
+    is_diagnostic_draft = record.outcome == MatchingAttempt.OUTCOME_INFEASIBLE and record.is_draft
+    if not record.solution_usable and not is_diagnostic_draft:
         flash(
             'Match "{name}" is not available for inspection because it did not yield a useable solution'.format(name=record.name),
             "error",
@@ -2066,6 +2079,7 @@ def matching_workspace(id):
         "admin/matching_workspace/workspace.html",
         view=view,
         record=record,
+        is_diagnostic_draft=is_diagnostic_draft,
         pclasses=pclasses,
         pclass_filter=pclass_filter,
         type_filter=type_filter,
@@ -2152,6 +2166,16 @@ def edit_match_roles(rec_id):
                 success=False,
                 message='Match "{name}" cannot be edited because an administrative user has marked it as '
                 '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if attempt.is_draft:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=attempt.name),
             ),
             409,
         )
@@ -2298,6 +2322,16 @@ def faculty_reassign_assign(attempt_id, fac_id, selector_id, project_id):
                 success=False,
                 message='Match "{name}" cannot be edited because an administrative user has marked it as '
                 '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
+            ),
+            409,
+        )
+
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if attempt.is_draft:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=attempt.name),
             ),
             409,
         )
@@ -2549,6 +2583,14 @@ def delete_match_record(attempt_id, selector_id):
         )
         return redirect(redirect_url())
 
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if attempt.is_draft:
+        flash(
+            'Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=attempt.name),
+            "info",
+        )
+        return redirect(redirect_url())
+
     year = get_current_year()
     if attempt.year != year:
         flash(
@@ -2657,6 +2699,16 @@ def match_set_hint(rec_id, sel_id, hint):
             409,
         )
 
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if attempt.is_draft:
+        return (
+            jsonify(
+                success=False,
+                message='Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=attempt.name),
+            ),
+            409,
+        )
+
     year = get_current_year()
     if attempt.year != year:
         return (
@@ -2709,6 +2761,14 @@ def reassign_match_project(id, pid):
         )
         return redirect(redirect_url())
 
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if record.matching_attempt.is_draft:
+        flash(
+            'Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=record.matching_attempt.name),
+            "info",
+        )
+        return redirect(redirect_url())
+
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash(
@@ -2738,6 +2798,14 @@ def reassign_match_marker(id, mid):
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
             '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if record.matching_attempt.is_draft:
+        flash(
+            'Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=record.matching_attempt.name),
             "info",
         )
         return redirect(redirect_url())
@@ -2810,6 +2878,14 @@ def reassign_supervisor_roles(rec_id):
             'Match "{name}" cannot be edited because an administrative user has marked it as "selected" for use during rollover of the academic year.'.format(
                 name=record.matching_attempt.name
             ),
+            "info",
+        )
+        return redirect(redirect_url())
+
+    # diagnostic drafts are read-only (PLAN.md: "Out of scope / deferred — Editable drafts")
+    if record.matching_attempt.is_draft:
+        flash(
+            'Match "{name}" is a diagnostic draft and its records are read-only.'.format(name=record.matching_attempt.name),
             "info",
         )
         return redirect(redirect_url())
@@ -3110,7 +3186,11 @@ def publish_match(id):
             )
         return redirect(redirect_url())
 
-    if not record.solution_usable:
+    # publication is deliberately broader than solution_usable: a diagnosed infeasible attempt
+    # may be published read-only so convenors can see what does and doesn't work (PLAN.md
+    # "Infeasible attempts remain unusable for rollover ... but may be published to convenors").
+    # Rollover selection/populate stay gated on solution_usable itself, not publishable.
+    if not record.publishable:
         flash(
             'Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
             "It cannot be shared with convenors.".format(name=record.name),
@@ -3153,7 +3233,9 @@ def unpublish_match(id):
             )
         return redirect(redirect_url())
 
-    if not record.solution_usable:
+    # see publish_match: publication (and therefore unpublication) uses the broader
+    # `publishable` gate, not solution_usable.
+    if not record.publishable:
         flash(
             'Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
             "It cannot be shared with convenors.".format(name=record.name),
@@ -3204,6 +3286,9 @@ def select_match(id):
             )
         return redirect(redirect_url())
 
+    # rollover selection stays hard-gated on solution_usable (not the broader `publishable`):
+    # an infeasible attempt's records are a diagnostic draft, never a genuine solution to roll
+    # forward (PLAN.md Phase 3, item 11).
     if not record.solution_usable:
         flash(
             'Match "{name}" did not yield an optimal solution and is not available for use.'.format(name=record.name),
@@ -3290,6 +3375,7 @@ def deselect_match(id):
             )
         return redirect(redirect_url())
 
+    # see select_match: deselection stays hard-gated on solution_usable.
     if not record.solution_usable:
         flash(
             'Match "{name}" did not yield an optimal solution and is not available for use.'.format(name=record.name),
@@ -3341,6 +3427,9 @@ def _validate_match_populate_submitters(record: MatchingAttempt, config: Project
             )
         return False
 
+    # populating SubmittingStudent records stays hard-gated on solution_usable, even though the
+    # match may now be `publishable` (diagnostic draft records must never seed real submitter
+    # records — PLAN.md Phase 3, item 11).
     if not record.solution_usable:
         flash(
             'Match "{name}" did not yield an optimal solution and is not available for use.'.format(name=record.name),

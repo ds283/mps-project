@@ -38,7 +38,7 @@
                 <button type="button" class="mw-thread-resolve{% if c.resolved %} reopen{% endif %} mw-comment-resolve-btn"
                         data-comment-id="{{ c.id }}">
                     {% if c.resolved %}
-                        <i class="fas fa-rotate-left fa-fw"></i>Reopen
+                        <i class="fas fa-undo fa-fw"></i>Reopen
                     {% else %}
                         <i class="fas fa-check fa-fw"></i>Resolve
                     {% endif %}
@@ -90,7 +90,7 @@
                     {# a closed thread cannot silently accumulate discussion: replying reopens it #}
                     <button type="button" class="btn btn-sm btn-primary mw-comment-reply-submit" data-comment-id="{{ c.id }}"
                             data-transition="reopen">
-                        <i class="fas fa-rotate-left me-1"></i>Reopen and reply
+                        <i class="fas fa-undo me-1"></i>Reopen and reply
                     </button>
                 {% else %}
                     <button type="button" class="btn btn-sm btn-primary mw-comment-reply-submit" data-comment-id="{{ c.id }}"
